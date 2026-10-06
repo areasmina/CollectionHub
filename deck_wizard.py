@@ -416,6 +416,121 @@ def commander_types(cmdr):
         if forms & (low if t in MAIN_TYPES else caps): out.add(t)
     return out
 
+# ------------------------------------------------------- collection-first scoring
+# What a card does / cares about, from its rules text (or its types). A card "fits" a commander when
+# they share one of these. Each entry: rules-text pattern, EDHREC theme names, card types that count.
+# CARES_ABOUT: a stricter pattern for the commander's own text where the card pattern is too broad
+# ("Whenever Ureni attacks" or "Terra gains flying" isn't caring about attackers or fliers).
+CARES_ABOUT = {
+    "attacking": r"whenever (a|another|one or more|each) [^.]{0,40}attacks?|additional combat|extra combat",
+    "flying": r"with flying|flying creatures?|creatures? you control (have|gain) flying",
+}
+MECHANICS = {
+    "tokens":     (r"\btokens?\b", ("tokens", "go wide"), ()),
+    "+1/+1":      (r"\+1/\+1 counters?|\bproliferate\b", ("+1/+1 counters", "counters", "proliferate"), ()),
+    "-1/-1":      (r"-1/-1 counters?|\binfect\b", ("-1/-1 counters", "infect"), ()),
+    "sacrifice":  (r"\bsacrifices? (a|an|another|one or more|x)\b|whenever [^.]{0,40}\bdies\b",
+                   ("aristocrats", "sacrifice"), ()),
+    "graveyard":  (r"from (your|a) graveyard|\bmills?\b|into your graveyard",
+                   ("reanimator", "graveyard", "self-mill", "mill"), ()),
+    "lifegain":   (r"\byou gain [^.]{0,12}life|\bgains? \d+ life|whenever you gain life|\blifelink\b",
+                   ("lifegain", "lifedrain"), ()),
+    "drain":      (r"\b(each opponent|target opponent|each player) loses? \w+ life", ("lifedrain",), ()),
+    "spells":     (r"instant (or|and) sorcery|noncreature spell|whenever you cast (a|an|your) (instant|sorcery|noncreature)",
+                   ("spellslinger", "storm", "spell copy", "cantrips"), ("instant", "sorcery")),
+    "artifacts":  (r"\bartifacts?\b", ("artifacts",), ("artifact",)),
+    "enchantments": (r"\benchantments?\b|\bauras?\b", ("enchantress", "auras", "enchantments"), ("enchantment",)),
+    "equipment":  (r"\bequip(ped|ment)?\b", ("voltron", "equipment"), ("equipment",)),
+    "lands":      (r"landfall|whenever a land|play an additional land|lands? (cards? )?from your graveyard",
+                   ("landfall", "lands matter"), ()),
+    "attacking":  (r"whenever [^.]{0,40}\battacks?\b|additional combat|extra combat",
+                   ("aggro", "extra combats", "attack triggers", "forced combat"), ()),
+    "draw":       (r"whenever (you|a player|an opponent) draws?|draws? (your|their) second card|each player draws",
+                   ("wheels", "card draw", "group hug"), ()),
+    "blink":      (r"exile [^.]*\. return (it|that card|them|those cards)|then return (it|that card|them|those cards) to the battlefield",
+                   ("blink",), ()),
+    "discard":    (r"\bdiscards?\b|\bmadness\b", ("discard", "madness"), ()),
+    "flying":     (r"\bflying\b", ("flying",), ()),
+    "treasure":   (r"\btreasures?\b", ("treasure",), ()),
+    "copies":     (r"\bcop(y|ies)\b|\bclones?\b", ("clones", "spell copy"), ()),
+    "theft":      (r"gain control of|you don't own", ("theft",), ()),
+    "legends":    (r"\blegendary\b|\bhistoric\b", ("legends", "historic"), ("legendary",)),
+    "vehicles":   (r"\bvehicles?\b|\bcrew\b", ("vehicles",), ("vehicle",)),
+}
+THEME_ROLES = {"ramp": "ramp", "big mana": "ramp", "counterspells": "counter", "control": "removal",
+               "card draw": "draw", "wheels": "draw", "bounce": "removal"}
+USEFUL_ROLES = {"ramp", "draw", "removal", "wipe", "tutor", "counter"}
+# Score = play rate (blended) + SYN_W x EDHREC synergy + fit. Fit is in the same units (share of decks),
+# so a card EDHREC doesn't list can still beat a 15-20% card or a loose stand-in if it clearly fits.
+SYN_W = 0.5             # synergy = how much more this commander's decks play the card than usual
+FIT_TRIBE = 0.12        # has a type the commander (or its main theme) names, e.g. a Dragon for Ureni
+FIT_MECH = 0.05         # per shared mechanic (tokens, sacrifice, +1/+1 counters...), up to 3
+FIT_ROLE = (0, 0.03, 0.05)   # ramp/draw/removal/... : one role, two or more
+FIT_THEME_ROLE = 0.03   # the role is the theme itself (e.g. ramp for a Big Mana commander)
+FIT_STAPLE = ((1000, 0.03), (3000, 0.015))   # Scryfall's overall EDHREC rank
+FIT_GC = 0.05           # Game Changers, only in brackets without a cap
+FIT_MV = 0.02           # minus this per mana value above 4
+OFF_LIST = 0.05         # cards below this play rate count as "your pick" rather than "popular"
+COMBO_W = 0.25          # a combo you own, in brackets that allow them (B4, B5)
+COMBO_BRACKETS = {"optimized", "cedh"}
+COMBO_MAX = 2           # combos added on purpose per deck (each adds at most COMBO_NEW cards)
+COMBO_NEW = 2
+_MECH_MEMO = {}
+
+def rules_text(m, drop_keyword_lines=False):
+    """Lower-case rules text with the card's own name removed (so "Treasure Vault" isn't a treasure card)."""
+    text = (m.get("oracle") or "").replace(" // ", "\n")
+    for part in m["name"].split(" // "):
+        text = text.replace(part, "~").replace(part.split(",")[0], "~")
+    if drop_keyword_lines:        # "Flying, trample" on a commander isn't something it cares about
+        kw = {k.lower() for k in m.get("keywords") or []}
+        text = "\n".join(l for l in text.split("\n")
+                         if not (kw and set(x.strip() for x in l.lower().split(",")) <= kw))
+    return text.lower()
+
+def card_mechanics(m):
+    k = norm(m["name"])
+    if k not in _MECH_MEMO:
+        text, tw = rules_text(m), type_words(m)
+        _MECH_MEMO[k] = {name for name, (rx, _, types) in MECHANICS.items()
+                         if re.search(rx, text) or set(types) & tw}
+    return _MECH_MEMO[k]
+
+def commander_profile(cmdr, themes):
+    """What the commander cares about: its rules text plus its top 3 EDHREC themes.
+    Returns (tribe types, mechanics, roles the theme asks for)."""
+    text = rules_text(cmdr, True)
+    mechs = {name for name, (rx, _, _) in MECHANICS.items() if re.search(CARES_ABOUT.get(name, rx), text)}
+    tribe, roles = set(commander_types(cmdr)), set()
+    for t in themes[:3]:
+        t = t[0].lower()
+        mechs |= {name for name, (_, th, _) in MECHANICS.items() if t in th}
+        if t in THEME_ROLES: roles.add(THEME_ROLES[t])
+        for s in (t[:-3] + "f" if t.endswith("ves") else t[:-1] if t.endswith("s") else t, t):
+            if s in TYPE_VOCAB and s not in MAIN_TYPES: tribe.add(s)    # "Dragons" -> dragon
+    return tribe, mechs, roles
+
+def card_fit(m, profile, bracket):
+    """(fit score, short reason) of an owned non-land card for this commander. Rule-based and
+    explainable: shared types/mechanics, useful roles, overall popularity, Game Changer, curve."""
+    tribe, mechs, troles = profile
+    f, why = 0.0, []
+    hit = type_words(m) & tribe
+    if hit or (tribe and is_changeling(m) and card_kind(m) == "creature"):
+        f += FIT_TRIBE; why.append("/".join(sorted(t.title() for t in hit)) or "changeling")
+    shared = sorted(card_mechanics(m) & mechs)
+    if shared:
+        f += FIT_MECH * min(3, len(shared)); why.append(", ".join(shared[:3]))
+    rs = roles_of(m) & USEFUL_ROLES
+    f += FIT_ROLE[min(2, len(rs))]
+    if rs & troles: f += FIT_THEME_ROLE
+    rank = m.get("edhrec_rank")
+    if rank:
+        f += next((v for lim, v in FIT_STAPLE if rank <= lim), 0)
+    if m["gc"] and bracket in COMBO_BRACKETS: f += FIT_GC     # B4/B5: no Game Changer cap
+    f -= FIT_MV * max(0, m["cmc"] - 4)
+    return max(0.0, f), " · ".join(why)
+
 def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), tribe=()):
     """Closest owned stand-ins for missing card `mm`: [(closeness 0-1, key, meta, reason)].
     Closeness = shared roles x same card kind x mana value distance, and x OFF_TYPE when `mm` has a
@@ -492,10 +607,12 @@ def power_profile(roles, gc, avg_cmc):
             "ramp": clamp(roles.get("ramp", 0)), "draw": clamp(roles.get("draw", 0)),
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
-def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None):
-    """`base` = the commander's all-decks page, used to steady small bracket pages."""
+def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None):
+    """`base` = the commander's all-decks page, used to steady small bracket pages.
+    `combos` = combos you own in these colours (combos_for_commander()["own"])."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
     tribe = commander_types(cmdr)
+    profile = commander_profile(cmdr, (base or edh).get("tags") or [])
     pool, by_role = pool_info
     legal = {it[0] for it in pool}      # owned, commander-legal, inside the color identity
     gc_cap = GC_CAP.get(bracket)        # None = no cap
@@ -506,9 +623,21 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None):
     rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]     # as EDHREC shows it (report text, % owned)
     blend = blended_rates(edh, base)
     kind_of = lambda k: card_kind(owned.get(k) or name_meta.get(k) or {"type_line": ""})
+    def syn_of(k):          # EDHREC synergy from this page, else the all-decks page (v3 pages have none)
+        for page in (edh, base or edh):
+            v = page["cards"].get(k)
+            if v and len(v) > 2 and v[2] is not None: return v[2]
+        return 0.0
     # for choosing cards; lands keep the bracket's own rate (they only compete with lands, and
     # blending pushed cEDH-specific lands under the 15% land bar)
-    value_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
+    play_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
+    value_of = lambda k: play_of(k) if kind_of(k) == "land" else play_of(k) + SYN_W * syn_of(k)
+    fits = {}
+    def score(k):           # an owned card: EDHREC value + how well it fits this commander
+        if k not in fits:
+            m = owned[k]
+            fits[k] = (0.0, "") if card_kind(m) == "land" else card_fit(m, profile, bracket)
+        return value_of(k) + fits[k][0]
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
     rec.sort(key=lambda x: -x[2])
     template = [x for x in rec if x[2] >= 0.10][:99] or rec[:99]
@@ -523,23 +652,51 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None):
     # their exact value the first time they reach the top, so the closest stand-in is only searched
     # for cards that could win a slot.
     nonland = 99 - LAND_TARGET
-    used, sub_for, heap = {me}, {}, []
+    used, sub_for, heap, n_combos = {me}, {}, [], 0
     for i, (k, name, _) in enumerate(rec):
         if k in legal:
+            heapq.heappush(heap, (-score(k), i, k, None))
+        elif k not in owned and play_of(k) >= SUB_MIN and name_meta.get(k):
             heapq.heappush(heap, (-value_of(k), i, k, None))
-        elif k not in owned and value_of(k) >= SUB_MIN and name_meta.get(k):
-            heapq.heappush(heap, (-value_of(k), i, k, None))
+    # owned cards EDHREC doesn't list compete too, if they share a type or mechanic with the
+    # commander (cards that only have a role wait for the role fill below)
+    i = len(rec)
+    for k, m, _, kd in pool:
+        if k in cards or kd == "land": continue
+        score(k)
+        if fits[k][1]:
+            heapq.heappush(heap, (-score(k), i, k, None)); i += 1
+    # combos you own go in whole, valued at their weakest piece + COMBO_W (every piece must earn a slot)
+    if bracket in COMBO_BRACKETS:
+        for c in combos or []:
+            ks = [norm(x) for x in c["cards"]]
+            if c.get("req") or len(ks) > 3 or not all(x == me or x in legal for x in ks): continue
+            pieces = [x for x in ks if x != me]
+            v = min([score(x) for x in pieces] or [0]) + COMBO_W
+            heapq.heappush(heap, (-v, i, "combo:" + c["id"], tuple(pieces))); i += 1
     while heap and (len(chosen) < nonland or len(lands) < MAX_LANDS):
         v, i, k, sk = heapq.heappop(heap)
         v = -v
+        if k.startswith("combo:"):                       # a combo package
+            new = [x for x in sk if x not in used]
+            if not new or len(new) > COMBO_NEW or n_combos >= COMBO_MAX: continue
+            nl = [x for x in new if card_kind(owned[x]) == "land"]
+            gcs = sum(1 for x in new if owned[x]["gc"])
+            if len(chosen) + len(new) - len(nl) > nonland or len(lands) + len(nl) > MAX_LANDS: continue
+            if gc_cap is not None and sum(1 for m, _, _ in chosen + lands if m["gc"]) + gcs > gc_cap: continue
+            for x in new:
+                (lands if x in nl else chosen).append((owned[x], "c", None)); used.add(x)
+            n_combos += 1
+            continue
         if k in owned:                                   # a card you own, on its own merit
             m = owned[k]
             if k in used or (m["gc"] and not gc_room()): continue
+            kind, why = ("p", None) if rate_of(k) >= OFF_LIST else ("y", fits[k][1] or None)
             if card_kind(m) == "land":
                 if len(lands) < MAX_LANDS and v >= 0.15:
                     lands.append((m, "p", None)); used.add(k)
             elif len(chosen) < nonland:
-                chosen.append((m, "p", None)); used.add(k)
+                chosen.append((m, kind, why)); used.add(k)
             continue
         mm = name_meta[k]                                # a card you're missing
         is_land = card_kind(mm) == "land"
@@ -563,7 +720,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None):
                 if r in counts: counts[r] += 1
         fill = [(k, m, rs) for k, m, rs, kd in pool
                 if k not in used and kd != "land" and (gc_cap != 0 or not m["gc"])]
-        fill.sort(key=lambda it: (-rate_of(it[0]), it[1]["cmc"]))
+        fill.sort(key=lambda it: (-score(it[0]), it[1]["cmc"], it[0]))
         def take(it):
             chosen.append((it[1], "f", None)); used.add(it[0])
             for r in it[2]:
@@ -614,9 +771,13 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None):
         "rec": sum(1 for c in allc if c[1] == "p"),
         "subs": sum(1 for c in allc if c[1] == "s"),
         "fill": sum(1 for c in allc if c[1] == "f"),
+        "pick": sum(1 for c in allc if c[1] == "y"),
+        "cpc": sum(1 for c in allc if c[1] == "c"),
         "gc": len(gc_names), "gcn": gc_names, "cmc": avg_cmc,
         "pw": power_profile(roles, len(gc_names), avg_cmc),
-        "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f) if f else -1] for m, kind, f in allc],
+        # third field: the missing card a substitute stands in for, or why you picked it ("y")
+        "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f) if kind == "s" else f or -1]
+                 for m, kind, f in allc],
         "basics": [[T.add(b), c] for b, c in tally.items()],
         "gaps": gaps,
         "arena": "\n".join(arena) + "\n",
@@ -782,7 +943,7 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
 HTML = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Deck Wizard v5</title><style>
-:root{--bg:#111827;--ink:#e5e7eb;--mut:#9ca3af;--line:#374151;--acc:#2dd4bf;--card:#1f2937;--bar:#374151;--fill:#a78bfa}
+:root{--bg:#111827;--ink:#e5e7eb;--mut:#9ca3af;--line:#374151;--acc:#2dd4bf;--card:#1f2937;--bar:#374151;--fill:#a78bfa;--pick:#fbbf24;--combo:#f472b6}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
 main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
 h1{font:700 2.2rem/1.1 Georgia,serif;margin:0 0 2px;color:#fff}
@@ -821,17 +982,19 @@ a.tag:hover{background:var(--acc);color:var(--bg)}.tag.dim{color:var(--mut)}
 .bars{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;max-width:420px}
 .seg{height:7px;background:var(--bar);border-radius:3px;overflow:hidden}.sf{height:100%;background:var(--acc)}
 .sl{font-size:.75rem;color:var(--mut);font-variant-numeric:tabular-nums}
-.ks{color:var(--acc)}.kf{color:var(--fill)}
+.ks{color:var(--acc)}.kf{color:var(--fill)}.kp{color:var(--pick)}.kc{color:var(--combo)}
 .vbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
 .vbar h3{margin:0 8px 0 0;font-size:1rem}
 .legend{font-size:.75rem;color:var(--mut);display:flex;gap:6px;align-items:center;margin-left:auto}
-.lg{display:inline-block;width:12px;height:12px;border-radius:3px;border:2px solid}.lg.s{border-color:var(--acc)}.lg.f{border-color:var(--fill)}.lg.m{background:#555;border-color:#555}
+.lg{display:inline-block;width:12px;height:12px;border-radius:3px;border:2px solid}.lg.s{border-color:var(--acc)}.lg.f{border-color:var(--fill)}.lg.y{border-color:var(--pick)}.lg.c{border-color:var(--combo)}.lg.m{background:#555;border-color:#555}
 .grp h5{margin:14px 0 6px;font-size:.85rem;color:var(--mut);font-weight:600}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .ct{position:relative;display:block;line-height:0;border-radius:6px}
 img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--bar);object-fit:cover}
 .ct.sub img.c{outline:3px solid var(--acc);outline-offset:-2px}
 .ct.fill img.c{outline:3px solid var(--fill);outline-offset:-2px}
+.ct.pick img.c{outline:3px solid var(--pick);outline-offset:-2px}
+.ct.combo img.c{outline:3px solid var(--combo);outline-offset:-2px}
 .ct.miss img.c{filter:grayscale(1) brightness(.5)}
 .badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.8);color:#fff;font:700 .75rem/1 system-ui;padding:4px 6px;border-radius:4px}
 .note{position:absolute;left:4px;right:4px;bottom:6px;background:rgba(0,0,0,.82);color:#fff;font:600 .65rem/1.25 system-ui;padding:3px 5px;border-radius:4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -931,8 +1094,9 @@ function grid(cmdrs,items){
   let h=`<div class="grp"><h5>Commander</h5><div class="grid">${cmdrs.map(i=>tile(i)).join("")}</div></div>`;
   Object.keys(GL).forEach(g=>{const L=by[g]; if(!L)return; const cnt=L.reduce((s,it)=>s+(it.n||1),0);
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>tile(it.i,{
-      cls:{s:"sub",f:"fill",m:"miss"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
-      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="f"?"role fill":it.kind==="m"?"missing":""})).join("")+`</div></div>`;});
+      cls:{s:"sub",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
+      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="f"?"role fill":it.kind==="m"?"missing":
+        it.kind==="y"?(typeof it.f==="string"?"fits: "+it.f:"your pick"):it.kind==="c"?"combo piece":""})).join("")+`</div></div>`;});
   return h;}
 function gapsHTML(gaps,deckSet){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
@@ -942,7 +1106,7 @@ function gapsHTML(gaps,deckSet){
     return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
 function deckSection(title,cmdrs,items,text,link){
   return `<div class="vbar"><h3>${title}</h3><button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
-  <span class="legend"><i class="lg s"></i>substitute <i class="lg f"></i>role fill <i class="lg m"></i>missing</span></div>
+  <span class="legend"><i class="lg y"></i>your pick <i class="lg c"></i>combo <i class="lg s"></i>substitute <i class="lg f"></i>role fill <i class="lg m"></i>missing</span></div>
   <div class="view v-cards">${grid(cmdrs,items)}</div>
   <div class="view v-list" hidden><textarea readonly rows="16">${esc(text)}</textarea></div>`;}
 
@@ -969,7 +1133,7 @@ function body(d,b){
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
   <div class="info"><div class="tags">${tags}</div><div class="bks">${bks}</div>
   <p>You own <strong>${x.own_n}</strong> of the top <strong>${x.tmpl_n}</strong> cards in ${n(x.decks)} ${LBL[b]} decks.
-  Deck: ${x.rec} popular + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
+  Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/commanders/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
@@ -1245,11 +1409,13 @@ def main():
     for i, m in enumerate(done, 1):
         pg = pages[m["name"]]
         pool_info = build_pool(set(m["ci"]), owned, norm(m["name"]))
+        combos = None if a.no_combos else combos_for_commander(m, owned, csb_cache, combo_cards)
         entry = {"name": m["name"], "ci": sorted(m["ci"]), "img": m.get("img", ""),
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
-                 "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"])
+                 "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
+                                  (combos or {}).get("own"))
                        for b, p in pg.items()}}
-        entry["combos"] = None if a.no_combos else combos_for_commander(m, owned, csb_cache, combo_cards)
+        entry["combos"] = combos
         for x in entry["b"].values():
             names = x.pop("_names")
             inside = [c for c in (entry["combos"] or {}).get("own", [])

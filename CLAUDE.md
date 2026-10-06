@@ -44,8 +44,9 @@ Useful flags:
 | `--offline` | No network; cached data only (tests, quick reruns) |
 
 Deck metrics for comparing builder versions (offline, ~30 s):
-`py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_pre_step2.json`
-(`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix)
+`py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_step2.json`
+(`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
+`baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in)
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -84,17 +85,30 @@ Main flow in `main()`:
 3. Commander candidates = owned legendary creatures / "can be your commander".
 4. Pass 1: `fetch_page` for each commander's base EDHREC page + bracket pages.
 5. `resolve_names` gets Scryfall data for popular cards not owned (needed for substitutes).
-6. Pass 2 per commander: `build_pool` (owned cards in color identity) → `analyze()` per bracket
-   → `combos_for_commander` → combos-in-deck detection.
+6. Pass 2 per commander: `build_pool` (owned cards in color identity) → `combos_for_commander`
+   → `analyze()` per bracket (gets the owned combos) → combos-in-deck detection.
 7. `analyze_imported` for each `decks_in/*.txt`.
 8. `render_report` injects JSON (`DATA`, `DECKS`, `CARDS`, `BR`, `STATS`) into the `HTML` template.
 
 Key functions:
-- `analyze()` – builds the 99. One ranked list (heap): owned cards at their play rate vs. missing cards
-  (rate ≥ `SUB_MIN`) at rate × closeness of the best owned stand-in × `STANDIN` (0.6; lands ×1) → role
-  fill (`ROLE_TARGETS`) → basics. Non-land rates are `blended_rates()` (bracket page pulled toward the
-  all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate. Only cards from
-  `build_pool` (owned, legal, in color identity). Game Changers capped by `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
+- `analyze()` – builds the 99. One ranked list (heap), all in "share of decks" units:
+  - owned non-land cards at **score** = blended play rate + `SYN_W` (0.5) × EDHREC synergy + `card_fit()`;
+    owned cards EDHREC doesn't list join only if they share a type or mechanic with the commander
+    (deck kind `y` "your pick", with the reason; listed cards under `OFF_LIST` 5% also count as `y`);
+  - missing cards (blended rate ≥ `SUB_MIN`) at (rate + synergy) × closeness of the best owned stand-in
+    × `STANDIN` (0.6; lands ×1) → kind `s`;
+  - B4/B5 only (`COMBO_BRACKETS`): combos you own (≤3 cards, no extra requirements) as a package valued at
+    its weakest piece + `COMBO_W` (0.25); at most `COMBO_MAX` 2 packages adding ≤2 cards each → kind `c`.
+  Then role fill (`ROLE_TARGETS`, sorted by score) → basics. Non-land rates are `blended_rates()` (bracket
+  page pulled toward the all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate
+  and no fit. Only cards from `build_pool` (owned, legal, in color identity). Game Changers capped by
+  `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
+- `card_fit()` – rule-based fit of an owned card to a commander (no invented ratings): `FIT_TRIBE` for a
+  type the commander or its top EDHREC theme names; `FIT_MECH` per shared mechanic (≤3) from `MECHANICS`
+  (rules-text patterns + EDHREC theme names + card types); small bonuses for useful roles, roles the theme
+  asks for (`THEME_ROLES`), Scryfall `edhrec_rank` staples, Game Changers in B4/B5; minus `FIT_MV` per
+  MV above 4. `commander_profile()` reads the commander's text (keyword-only lines and its own name
+  removed; `CARES_ABOUT` stricter patterns so "Ureni attacks" isn't an attack theme) + top 3 themes.
 - `find_subs()` – closeness 0–1 of owned stand-ins: share of the missing card's roles × card kind
   (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
   `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon
@@ -116,14 +130,19 @@ combos, power profile bars, imported decks section.
 
 ## Known limitations / things to verify against real data
 
-- `analyze()` is still **EDHREC-first**: EDHREC order decides the deck; the collection only patches gaps.
-  This is the main thing to change (see roadmap).
+- Step 2 scoring changed ~7 cards per All-decks list (9 at B3, 11 at B4) vs `baseline_pre_step2`:
+  substitutes −4.5, role fill ~0, synergy slightly up. Commanders whose EDHREC list you mostly own still
+  get mostly EDHREC cards (they score high); bracket pages with 1–2 decklists change a lot (25–50 cards),
+  since they carry almost no signal. Fit weights are hand-set; tune with `tests/measure.py`.
+- Lands are still EDHREC-only (≤`MAX_LANDS` listed lands, then basics): owned on-color duals that EDHREC
+  doesn't list aren't considered yet.
 - EDHREC JSON shape is unofficial and could change. Theme tags are read from `panels.taglinks`.
   If many commanders show "no themes found", check the real JSON.
 - EDHREC cardviews include a `synergy` field (how much more a card is played with this commander than
   in general). Stored since v4 cache (`cards[key] = [name, rate, synergy, lift, list_tags]`; v3 pages
-  only have `[name, rate]`), **not used yet**. It is the best available "commander synergy" signal.
-- Scryfall card meta (`SF_VERSION` 2) also stores `mana_cost`, `edhrec_rank`, `keywords`, not used yet.
+  only have `[name, rate]`). Used in scoring since step 2 (`SYN_W`); `lift` and list tags are not.
+- Scryfall card meta (`SF_VERSION` 2) also stores `mana_cost`, `edhrec_rank`, `keywords`; `edhrec_rank` and
+  `keywords` are used by `card_fit()`, `mana_cost` not yet.
 - EDHREC answers missing pages with HTTP 403. Misses are never cached (a 403 can also be a block).
 - Commander Spellbook rate-limits (HTTP 429) and rejects decks over 600 cards (HTTP 400). `http_json`
   waits on 429/5xx (Retry-After, else 15/30/60/120 s) and fails fast on other 4xx. `combo_pool()` sends
@@ -139,7 +158,7 @@ combos, power profile bars, imported decks section.
 ## Roadmap (in order)
 
 1. ✅ Scryfall tags for roles + collection substitutes + visual card view (v5)
-2. **Collection-first scoring and deck construction.** Score every legal owned card per commander:
+2. ✅ (first pass) **Collection-first scoring and deck construction.** Score every legal owned card per commander:
    commander synergy (EDHREC `synergy`, oracle keyword overlap with the commander), theme fit, role,
    curve fit, EDHREC popularity (lower weight than synergy), combo participation, Game Changer status.
    Build the deck from the best-scored owned cards; EDHREC influences scoring but doesn't dictate the list.
