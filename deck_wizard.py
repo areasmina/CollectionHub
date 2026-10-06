@@ -641,7 +641,8 @@ def commander_profile(cmdr, themes):
     return tribe, mechs, roles, kws
 
 FOCUS_W = 0.15         # theme decks: extra score for cards whose text/types match the chosen theme
-THEME_TOP = 3           # archetypes per commander that get their own decks: the ones you own most of
+THEME_TOP = 4           # archetypes per commander that get their own decks: EDHREC's most played theme
+                        # + the ones you own most of
 THEME_FETCH = 8         # EDHREC theme pages read per commander to find those (all its theme tags)
 THEME_MIN_DECKS = 20    # a theme page with fewer decklists says too little to build from
 THEME_MISS_DAYS = 7     # a theme page EDHREC doesn't have is asked for again after this many days
@@ -2420,9 +2421,11 @@ def main():
                 tp = fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh)
                 if tp and tp["cards"] and (tp.get("decks") or 0) >= THEME_MIN_DECKS:
                     found.append((page_match(tp, owned, norm(m["name"])), tslug, name, tp))
-            found.sort(key=lambda t: (-t[0], t[1]))
+            # EDHREC's most played theme always (tags come most played first), then the ones you own most of
+            pick = found[:1] + sorted(found[1:], key=lambda t: (-t[0], t[1]))[:THEME_TOP - 1]
+            pick.sort(key=lambda t: (-t[0], t[1]))
             th = {}
-            for match, tslug, name, tp in found[:THEME_TOP]:     # + that archetype's EDHREC average deck
+            for match, tslug, name, tp in pick:     # + that archetype's EDHREC average deck
                 tap = None if a.no_avg else fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh, avg=True)
                 th[tslug] = (name, tp, tap if tap and tap["cards"] else None, match)
             themes[m["name"]] = th
