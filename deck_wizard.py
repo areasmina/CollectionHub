@@ -1133,6 +1133,45 @@ def combos_for_commander(m, owned, cache, combo_cards):
     cache[key] = out
     return out
 
+WIN_RX = re.compile(r"win the game|loses the game|infinite damage|infinite lifeloss|infinite combat|"
+                    r"infinite mill|infinite turns", re.I)
+
+def combo_wins(c):
+    return bool(WIN_RX.search(" ".join(c.get("prod") or [])))
+
+class ComboTable:
+    """One shared combo list for the report (combos repeat across commanders of the same colours)."""
+    def __init__(self): self.rows, self.idx = [], {}
+    def add(self, c):
+        if c["id"] not in self.idx:
+            sat = c.get("sat") or {}
+            self.rows.append({"id": c["id"], "cards": c["cards"], "req": c.get("req") or [],
+                              "sat": [(sat.get(r) or [])[:3] for r in c.get("req") or []],
+                              "prod": c.get("prod") or [], "miss": c.get("miss") or [], "bt": c.get("bt", ""),
+                              "inf": c.get("inf", 0), "tmv": c.get("tmv", 0), "two": int(two_card_infinite(c)),
+                              "need": combo_need(c), "win": int(combo_wins(c))})
+            self.idx[c["id"]] = len(self.rows) - 1
+        return self.idx[c["id"]]
+
+def best_combos(own, names, legal_names, bnum, n=10):
+    """Most effective combos you own that this bracket allows, in a fixed order: already in the deck,
+    then ones that win the game, then fewer pieces, then cheaper, then more popular.
+    [(combo, 2 = in this deck / 1 = you own every piece)]"""
+    out = []
+    for c in own:
+        if not combo_done(c, legal_names) or not combo_ok(c, bnum): continue
+        st = 2 if combo_done(c, names) else 1
+        out.append((st, c))
+    out.sort(key=lambda t: (-t[0], -combo_wins(t[1]), len(t[1]["cards"]) + len(t[1].get("req") or []),
+                            t[1].get("tmv", 0), -t[1].get("pop", 0)))
+    return [(c, st) for st, c in out[:n]]
+
+def danger_zone(own, legal_names):
+    """Two-card infinite combos you can assemble for this commander (commander + one card counts, and so
+    does one card + a card meeting its condition). Earliest first."""
+    out = [c for c in own if two_card_infinite(c) and combo_done(c, legal_names)]
+    return sorted(out, key=lambda c: (c.get("tmv", 0), -c.get("pop", 0)))[:12]
+
 def rank_combos(combos, deck_names, keep_own=30, keep_near=20):
     """The report's combo lists for one commander: combos whose pieces are in its deck first (they
     fit what it does), then by popularity. The colour-identity query is shared; this ranking isn't."""
@@ -1279,6 +1318,8 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .arrow{align-self:center;font-size:1.4rem;color:var(--mut)}
 .adv{flex:1;min-width:180px;align-self:center;color:var(--mut);font-size:.85rem;margin:0}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.danger{border:1px solid #f87171;background:rgba(248,113,113,.08);border-radius:8px;padding:10px 12px;margin:10px 0}.danger h4{color:#f87171;margin-top:0}
+details.more{margin-top:10px}details.more>summary{display:block;padding:4px 0;cursor:pointer;color:var(--acc)}
 .cl li{margin-bottom:6px}.cl a{text-decoration:none}.cl a:hover{text-decoration:underline}b.miss{color:#f87171}
 #pv{position:fixed;width:300px;border-radius:14px;pointer-events:none;z-index:50;display:none;box-shadow:0 10px 30px rgba(0,0,0,.6)}
 @media(max-width:700px){.cols{grid-template-columns:1fr}.top{flex-direction:column;align-items:center}.cimg{width:160px}
@@ -1306,7 +1347,7 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 <div id="count"></div>
 <div id="list"></div>
 </main><img id="pv" alt=""><script>
-const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__;
+const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__;
 const LBL={all:"All decks",exhibition:"B1 Exhibition",core:"B2 Core",upgraded:"B3 Upgraded",optimized:"B4 Optimized",cedh:"B5 cEDH"};
 const PIP={W:"#e8e2c8",U:"#7fb3e0",B:"#6b5f73",R:"#e07a5f",G:"#7bb274"};
 const GL={Creature:"Creatures",Planeswalker:"Planeswalkers",Battle:"Battles",Instant:"Instants",Sorcery:"Sorceries",Artifact:"Artifacts",Enchantment:"Enchantments",Land:"Lands",Other:"Other"};
@@ -1388,14 +1429,41 @@ function deckSection(title,cmdrs,items,text,link){
 
 /* ---------- combos ---------- */
 const TAGN={E:"Spellbook: Exhibition",C:"Spellbook: Core",O:"Spellbook: Oddball",P:"Spellbook: Powerful",S:"Spellbook: Spicy",R:"Spellbook: Ruthless",B:"Spellbook: Banned"};
-function comboHTML(C,inSkel,labOwn,labNear){
+function comboHTML(C,inSkel,labOwn,labNear,bare){
   if(!C) return '<h4>Combos</h4><p class="dim">Combo data unavailable (rerun to retry).</p>';
   const inS=new Set(inSkel||[]);
   const own=[...C.own].sort((a,z)=>inS.has(z.id)-inS.has(a.id));
-  const li=c=>`<li><a href="https://commanderspellbook.com/combo/${esc(c.id)}/" target="_blank" rel="noopener">${c.cards.map(x=>c.miss.includes(x)?`<b class="miss">${esc(x)}</b>`:esc(x)).join(" + ")}</a>${c.req.length?` <small>+ ${c.req.map(esc).join(", ")}</small>`:""}${c.bt?` <span class="tag" title="Commander Spellbook bracket tag">${esc(TAGN[c.bt]||c.bt)}</span>`:""}${c.inf?' <span class="tag" title="infinite">∞</span>':""}${inS.has(c.id)?' <span class="tag">in deck</span>':""}<br><small>${c.prod.map(esc).join(" · ")}</small></li>`;
+  const li=c=>`<li>${c.sat?comboName(c):`<a href="https://commanderspellbook.com/combo/${esc(c.id)}/" target="_blank" rel="noopener">${c.cards.map(x=>c.miss.includes(x)?`<b class="miss">${esc(x)}</b>`:esc(x)).join(" + ")}</a>${c.req.length?` <small>+ ${c.req.map(esc).join(", ")}</small>`:""}`}${comboTags(c)}${inS.has(c.id)?' <span class="tag">in deck</span>':""}<br><small>${c.prod.map(esc).join(" · ")}</small></li>`;
   const more=(k,l)=>k>l?`<li class="dim">+${k-l} more on Commander Spellbook</li>`:"";
-  return `<div class="vbar"><h3>Combos</h3></div><div class="cols"><div><h4>${labOwn} (${C.n_own})</h4><ul class="cl">${own.map(li).join("")||"<li>None found</li>"}${more(C.n_own,C.own.length)}</ul></div>
+  return `${bare?"":'<div class="vbar"><h3>Combos</h3></div>'}<div class="cols"><div><h4>${labOwn} (${C.n_own})</h4><ul class="cl">${own.map(li).join("")||"<li>None found</li>"}${more(C.n_own,C.own.length)}</ul></div>
   <div><h4>${labNear} (${C.n_near}) <small>missing card in red</small></h4><ul class="cl">${C.near.map(li).join("")||"<li>None found</li>"}${more(C.n_near,C.near.length)}</ul></div></div>`;}
+
+const BNUM={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5};
+function comboName(c){
+  const named=c.cards.map(x=>(c.miss||[]).includes(x)?`<b class="miss">${esc(x)}</b>`:esc(x));
+  const conds=c.req.map((r,j)=>(c.sat&&c.sat[j]&&c.sat[j].length)?`<span title="${esc(r)}">${esc(c.sat[j].join(" / "))}</span>`:`<small>(${esc(r)})</small>`);
+  return `<a href="https://commanderspellbook.com/combo/${esc(c.id)}/" target="_blank" rel="noopener">${named.concat(conds).join(" + ")}</a>`;}
+function comboTags(c){
+  return (c.win?' <span class="tag">wins</span>':"")+(c.inf?' <span class="tag" title="infinite">∞</span>':"")+
+    (c.bt?` <span class="tag" title="Commander Spellbook's own tag, information only">${esc(TAGN[c.bt]||c.bt)}</span>`:"");}
+function dangerHTML(d,b,x){
+  if(!d.dz||!d.dz.length) return "";
+  const sel=BNUM[b], inS=new Set(x.cin||[]);
+  const li=d.dz.map(i=>{const c=COMBOS[i], ok=!sel||sel>=4||(sel===3&&c.need===3);
+    const rule=c.need===3?`late game (${c.tmv} mana total): allowed from B3`:`early game (${c.tmv} mana total): B4+ only`;
+    return `<li>${comboName(c)}${comboTags(c)}${inS.has(c.id)?' <span class="tag">in this deck</span>':""}<br><small>${rule}${sel?(ok?` · OK in ${LBL[b].split(" ")[0]}`:` · <b class="miss">not allowed in ${LBL[b].split(" ")[0]}</b>, the deck leaves it out`):""}</small></li>`;}).join("");
+  return `<div class="danger"><h4>⚠ Danger zone: two-card infinite combos you can assemble (${d.dz.length})</h4>
+  <small>Official bracket rules: none in B1–B2, only late-game ones in B3, anything in B4–B5. A card that meets a condition counts as the second card.</small><ul class="cl">${li}</ul></div>`;}
+function bestHTML(d,b,x){
+  const L=(x.cl||[]).map(([i,st])=>{const c=COMBOS[i];
+    return `<li>${comboName(c)}${comboTags(c)} <span class="tag">${st===2?"in this deck":"you own every piece"}</span><br><small>${c.prod.map(esc).join(" · ")}${c.two?" · two-card infinite":""}</small></li>`;}).join("");
+  const scope=b==="all"?"(all decks: no bracket rules)":`allowed in ${LBL[b]}`;
+  return `<h4>Best combos you own, ${scope}</h4><small>Order: in this deck first, then combos that win the game, then fewer pieces, then cheaper.</small><ul class="cl">${L||"<li>None you can assemble in these colours.</li>"}</ul>`;}
+function combosSection(d,b,x){
+  if(!d.combos) return '<div class="vbar"><h3>Combos</h3></div><p class="dim">Combo data unavailable (rerun to retry).</p>';
+  const C={own:(d.co||[]).map(i=>COMBOS[i]),near:(d.cn||[]).map(i=>COMBOS[i]),n_own:d.combos.n_own,n_near:d.combos.n_near};
+  return `<div class="vbar"><h3>Combos</h3></div>${dangerHTML(d,b,x)}${bestHTML(d,b,x)}
+  <details class="more"><summary>All combos in your collection (${C.n_own}) and one card away (${C.n_near})</summary>${comboHTML(C,x.cin,"In your collection","One card away",true)}</details>`;}
 
 /* ---------- the three numbers ---------- */
 const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill"};
@@ -1429,7 +1497,7 @@ function body(d,b){
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/commanders/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} popular cards missing, top ${x.gaps.length} shown</span></div>
   ${gapsHTML(x.gaps,deckSet)}
-  ${comboHTML(d.combos,x.cin,"Combos in your collection","One card away")}`;}
+  ${combosSection(d,b,x)}`;}
 
 function render(){
   const b=bk(); $("bv").textContent=LBL[b];
@@ -1486,8 +1554,9 @@ render();
 def js_data(obj):
     return json.dumps(obj, separators=(",", ":")).replace("</", "<\\/")
 
-def render_report(results, stats, brackets, decks, cards):
+def render_report(results, stats, brackets, decks, cards, combos=()):
     return (HTML.replace("__DATA__", js_data(results))
+                .replace("__COMBOS__", js_data(list(combos)))
                 .replace("__BR__", json.dumps(["all"] + brackets))
                 .replace("__STATS__", json.dumps(stats))
                 .replace("__DECKS__", js_data(decks))
@@ -1699,7 +1768,7 @@ def main():
     combo_cards = {} if a.no_combos else fetch_combo_cards(os.path.join(cache_dir, "spellbook_cards.json"), a.refresh)
     tpl_path = os.path.join(cache_dir, "spellbook_templates.json")
     fetch_templates(set(), tpl_path, a.refresh)        # load the cache
-    T, results = CardTable(), []
+    T, CT, results = CardTable(), ComboTable(), []
     done = [m for m in cands if m["name"] in pages]
     for i, m in enumerate(done, 1):
         pg = pages[m["name"]]
@@ -1714,10 +1783,19 @@ def main():
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
                                   (combos or {}).get("own"))
                        for b, p in pg.items()}}
-        entry["combos"] = rank_combos(combos, entry["b"]["all"]["_names"])
-        for x in entry["b"].values():
+        ranked = rank_combos(combos, entry["b"]["all"]["_names"])
+        own = (combos or {}).get("own", [])
+        legal_names = {k for k, _, _, _ in pool_info[0]} | {norm(m["name"])}
+        if combos:
+            entry["combos"] = {"n_own": combos["n_own"], "n_near": combos["n_near"]}
+            entry["co"] = [CT.add(c) for c in ranked["own"]]
+            entry["cn"] = [CT.add(c) for c in ranked["near"]]
+            entry["dz"] = [CT.add(c) for c in danger_zone(own, legal_names)]
+        else:
+            entry["combos"] = None
+        for b, x in entry["b"].items():
             names = x.pop("_names")
-            own = (combos or {}).get("own", [])
+            x["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names, legal_names, BRACKET_NUM.get(b))]
             inside = [c for c in own if combo_done(c, names)]
             maybe = [c for c in own if combo_done(c, names) is None and two_card_infinite(c)]
             x["cin"] = [c["id"] for c in inside]
@@ -1763,7 +1841,7 @@ def main():
                                for k2, v in ((k, l[:40]), (k + "_n", len(l)))} if diff else None}}
     out_html = os.path.join(a.out, "report.html")
     with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
-        f.write(render_report(results, stats, brackets, decks, T.rows))
+        f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows))
     os.replace(out_html + ".tmp", out_html)
     no_tags = sum(1 for r in results if not r["tags"])
     print(f"\nDone. {len(results)} analyzed, {skipped} had no EDHREC page, {no_tags} without theme tags."

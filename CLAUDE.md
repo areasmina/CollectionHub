@@ -159,6 +159,12 @@ child process with the same options. `collection_changes()` keeps the added/remo
 Report features: collection bar (file, changes, upload button when served), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
 combos, power profile bars, imported decks section.
+Combos per commander (report): **Danger zone** (red box, `danger_zone()`): every two-card infinite you can
+assemble in its colours (commander + 1 card, or card + a card meeting its condition), earliest first, with
+the official rule and whether the selected bracket allows it. **Best combos** per bracket (`best_combos()`,
+`x.cl`): combos you can assemble that the bracket allows, ordered in this deck → wins the game (`WIN_RX` on
+what it produces) → fewer pieces → cheaper (`tmv`) → popularity. Full lists are behind "All combos…".
+Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commanders hold indices `co`, `cn`, `dz`).
 
 ## Known limitations / things to verify against real data
 
