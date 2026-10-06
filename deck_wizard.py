@@ -4,7 +4,9 @@ Deck Wizard v5 - ManaBox collection vs EDHREC (per bracket) + Commander Spellboo
 + collection substitutes for missing cards + visual card view (Scryfall images).
 No AI, no accounts: only free public sites (Scryfall, EDHREC, Commander Spellbook).
 
-Usage (Windows):  py deck_wizard.py --csv "Collection_ (1).csv"
+Usage (Windows):  py deck_wizard.py            (newest ManaBox CSV in the "collection" folder)
+                  py deck_wizard.py --csv "Collection_ (1).csv"
+                  py deck_wizard.py --serve    (local app with an "Upload collection" button)
 Options:
   --brackets core,upgraded,optimized,cedh   EDHREC bracket pages to pull
                                             (add exhibition if you want B1)
@@ -15,8 +17,12 @@ Options:
   --no-combos       skip Commander Spellbook
   --decks-in DIR    folder of decklists (.txt) to score, default "decks_in"
   --offline         no network: use cached data only (for tests and quick reruns)
+  --serve           open the report through a local app (http://127.0.0.1:8765) with an
+                    upload button; uploads go to the "collection" folder and trigger a rebuild
+  --port 8765       port for --serve
 """
 import argparse, csv, glob, hashlib, json, os, re, sys, time, unicodedata
+import http.server, subprocess, threading
 import urllib.error, urllib.parse, urllib.request, webbrowser
 
 UA = "DeckWizard/0.5 (personal collection tool)"
@@ -72,10 +78,47 @@ def load_json(path):
     return {}
 
 def save_json(path, obj):
+    """Write to a temp file, then swap it in: an interrupted run never leaves a half-written cache."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f: json.dump(obj, f)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f: json.dump(obj, f)
+    os.replace(tmp, path)
 
 # ------------------------------------------------------------ collection
+COLLECTION_DIR = "collection"   # drop new ManaBox exports here; the newest one is used
+
+def manabox_error(head):
+    """None if `head` (the CSV's first line) looks like a ManaBox export, else a message."""
+    cols = next(csv.reader([head]), [])
+    if "Name" in cols and "Scryfall ID" in cols: return None
+    return "Not a ManaBox collection export (needs 'Name' and 'Scryfall ID' columns)."
+
+def find_collection():
+    """Newest ManaBox CSV: the collection folder first, then the current folder."""
+    for folder in (COLLECTION_DIR, "."):
+        found = []
+        for p in glob.glob(os.path.join(folder, "*.csv")):
+            try:
+                with open(p, encoding="utf-8-sig") as f:
+                    if not manabox_error(f.readline()): found.append(p)
+            except (OSError, UnicodeDecodeError): pass
+        if found: return max(found, key=os.path.getmtime)
+    return None
+
+def collection_changes(csv_path, owned, cmdr_names, cache_dir):
+    """Cards and commanders added/removed since the previous collection file. Kept until the
+    CSV changes again, so rerunning the same file still shows what it added."""
+    path = os.path.join(cache_dir, "last_collection.json")
+    with open(csv_path, "rb") as f: h = hashlib.md5(f.read()).hexdigest()
+    prev = load_json(path)
+    if prev.get("hash") == h: return prev.get("diff")
+    names, diff = {m["name"] for m in owned.values()}, None
+    if prev.get("names"):
+        old = set(prev["names"])
+        diff = {"added": sorted(names - old), "removed": sorted(old - names),
+                "new_cmdrs": sorted(set(cmdr_names) - set(prev.get("cmdrs", [])))}
+    save_json(path, {"hash": h, "names": sorted(names), "cmdrs": sorted(cmdr_names), "diff": diff})
+    return diff
 def load_collection(path):
     cards = {}
     with open(path, newline="", encoding="utf-8-sig") as f:
@@ -607,6 +650,10 @@ h2{font:700 1.3rem Georgia,serif;margin:8px 0 12px;color:#fff}
 .slider input{flex:1;accent-color:var(--acc)}#bv{font-weight:700;color:var(--acc);min-width:120px}
 input[type=search],select{padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit}
 #count{color:var(--mut);font-size:.85rem;margin:4px 0 12px}#imp{margin-bottom:24px}
+#coll{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:-8px 0 16px;font-size:.88rem;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center}
+#coll details{flex-basis:100%;font-size:.8rem;color:var(--mut)}#coll summary{display:inline;padding:0;cursor:pointer;color:var(--acc)}
+.up{padding:6px 14px;border:1px solid var(--acc);color:var(--acc);border-radius:6px;cursor:pointer}.up:hover{background:var(--acc);color:var(--bg)}
+#ups{color:var(--mut);font-size:.82rem;overflow-wrap:anywhere}.add{color:#4ade80}.rem{color:#f87171}
 .row{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden}
 summary{display:grid;grid-template-columns:auto 1fr 100px 56px 70px 44px;gap:10px;align-items:center;padding:12px 14px;cursor:pointer;list-style:none}
 summary::-webkit-details-marker{display:none}
@@ -660,6 +707,7 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 <h1>Deck Wizard</h1>
 <p class="sub">Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own.</p>
 <ul class="stats" id="stats"></ul>
+<div id="coll"></div>
 <div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span></div>
 <div class="tools">
 <input id="q" type="search" placeholder="Search commanders" aria-label="Search">
@@ -684,6 +732,41 @@ const n=v=>Number(v).toLocaleString();
 const front=i=>CARDS[i][0].split(" // ")[0];
 DATA.forEach((d,i)=>d.i=i);
 $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>${n(ST.unique)}</strong>unique</li><li><strong>${ST.cands}</strong>commanders</li><li><strong>${DATA.length}</strong>analyzed</li>`;
+
+/* ---------- collection file + upload (upload works when opened through Deck Wizard App) ---------- */
+(function(){
+  const C=ST.coll||{}, D=C.diff, served=location.protocol.startsWith("http");
+  const names=(l,k)=>l.slice(0,40).map(esc).join(", ")+(k>l.length?` … +${k-l.length} more`:"");
+  let h=`<span>Collection: <b>${esc(C.csv||"?")}</b> <small>(${esc(C.at||"")})</small></span>`;
+  if(D) h+=`<span>${[D.added_n?`<b class="add">+${D.added_n} new cards</b>`:"", D.removed_n?`<b class="rem">−${D.removed_n} removed</b>`:"",
+    D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")||"No changes since the previous collection"}</span>`;
+  h+=served?`<label class="up">Upload new collection CSV<input type="file" id="upf" accept=".csv,text/csv" hidden></label><span id="ups"></span>`
+    :`<small class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>, or open <b>Deck Wizard App.bat</b> for an upload button.</small>`;
+  if(D&&(D.added_n||D.removed_n||D.new_cmdrs_n)) h+=`<details><summary>What changed since the previous collection</summary>
+    ${D.new_cmdrs_n?`<p>New commanders: ${names(D.new_cmdrs,D.new_cmdrs_n)}</p>`:""}
+    ${D.added_n?`<p class="add">Added: ${names(D.added,D.added_n)}</p>`:""}
+    ${D.removed_n?`<p class="rem">Removed: ${names(D.removed,D.removed_n)}</p>`:""}</details>`;
+  $("coll").innerHTML=h;
+  if(!served) return;
+  const ups=$("ups");
+  const poll=()=>fetch("/status").then(r=>r.json()).then(s=>{
+    if(s.running){ups.textContent="Rebuilding… "+(s.line||""); setTimeout(poll,1000);}
+    else if(s.ok===true&&s.started>ST.built){ups.textContent="Done, reloading…"; location.reload();}
+    else if(s.ok===false) ups.textContent="Rebuild failed: "+(s.line||"see the Deck Wizard window");
+  }).catch(()=>{ups.textContent="Lost connection to Deck Wizard App (is its window still open?)";});
+  $("upf").addEventListener("change",async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    ups.textContent="Uploading "+f.name+"…";
+    try{
+      const r=await fetch("/upload",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"text/csv"},body:f});
+      const j=await r.json();
+      if(!r.ok){ups.textContent=j.error||"Upload failed"; return;}
+      poll();
+    }catch(err){ups.textContent="Upload failed: is the Deck Wizard App window still open?";}
+    e.target.value="";
+  });
+  poll();   // a rebuild may already be running (e.g. started from another tab)
+})();
 const br=$("br"); br.max=BR.length-1;
 const themes=new Set(); DATA.forEach(d=>d.tags.slice(0,3).forEach(t=>themes.add(t[0])));
 [...themes].sort().forEach(t=>{const o=document.createElement("option");o.value=o.textContent=t;$("th").appendChild(o);});
@@ -810,10 +893,121 @@ def render_report(results, stats, brackets, decks, cards):
                 .replace("__DECKS__", js_data(decks))
                 .replace("__CARDS__", js_data(cards)))
 
+# ------------------------------------------------------------ app mode (--serve)
+WAIT_PAGE = """<!doctype html><meta charset="utf-8"><title>Deck Wizard</title>
+<body style="background:#111827;color:#e5e7eb;font:15px system-ui;padding:40px">
+<h1 style="font-family:Georgia">Deck Wizard</h1><p>Building your report for the first time&hellip;</p>
+<pre id="l" style="color:#9ca3af;white-space:pre-wrap"></pre><script>
+(function p(){fetch("/status").then(r=>r.json()).then(s=>{document.getElementById("l").textContent=s.line||"";
+ if(s.running)setTimeout(p,1000);else if(s.ok)location.reload();else document.getElementById("l").textContent+="\\nFailed - see the Deck Wizard window.";});})();
+</script>"""
+
+class Rebuild:
+    """Runs the normal pipeline as a child process (fresh state each time) and keeps its output."""
+    def __init__(self, args):
+        self.args, self.proc, self.lines, self.ok, self.started = args, None, [], None, 0
+        self.lock = threading.Lock()
+
+    def running(self):
+        return self.proc is not None and self.ok is None
+
+    def start(self, csv_path):
+        with self.lock:
+            if self.running(): return False
+            cmd = [sys.executable, "-u", os.path.abspath(__file__), "--csv", csv_path, "--no-open"] + self.args
+            env = dict(os.environ, PYTHONIOENCODING="utf-8")   # card names aren't all cp1252
+            self.lines, self.ok, self.started = [], None, time.time()
+            self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                         text=True, encoding="utf-8", errors="replace", env=env)
+            threading.Thread(target=self._pump, daemon=True).start()
+            return True
+
+    def _pump(self):
+        for line in self.proc.stdout:
+            line = line.rstrip()
+            print("  " + line)
+            if line: self.lines = (self.lines + [line])[-200:]
+        self.ok = self.proc.wait() == 0
+        print("Rebuild " + ("finished." if self.ok else "FAILED.") + " Waiting for uploads (Ctrl+C to quit).")
+
+    def status(self):
+        return {"running": self.running(), "ok": self.ok, "started": self.started,
+                "line": self.lines[-1] if self.lines else ""}
+
+def serve(a, csv_path, child_args):
+    """Local-only web app: serves report.html and accepts collection uploads."""
+    out_html = os.path.join(a.out, "report.html")
+    rb = Rebuild(child_args)
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *args): pass
+
+        def reply(self, code, body, ctype="application/json"):
+            if isinstance(body, dict): body = json.dumps(body)
+            data = body if isinstance(body, bytes) else body.encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            if path in ("/", "/report.html"):
+                if os.path.exists(out_html):
+                    with open(out_html, "rb") as f: self.reply(200, f.read(), "text/html; charset=utf-8")
+                else:
+                    self.reply(200, WAIT_PAGE, "text/html; charset=utf-8")
+            elif path == "/status":
+                self.reply(200, rb.status())
+            else:
+                self.reply(404, {"error": "not found"})
+
+        def do_POST(self):
+            size = int(self.headers.get("Content-Length") or 0)
+            if size > 50_000_000:
+                self.close_connection = True
+                return self.reply(413, {"error": "The file is larger than 50 MB."})
+            data = self.rfile.read(size)   # read before replying, or Windows resets the connection
+            # The custom header can't be sent cross-site without a CORS preflight we never answer,
+            # so other websites open in the browser can't trigger uploads.
+            if self.path != "/upload" or self.headers.get("X-Deck-Wizard") != "1":
+                return self.reply(403, {"error": "forbidden"})
+            if not data: return self.reply(400, {"error": "The file is empty."})
+            try:
+                text = data.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                return self.reply(400, {"error": "Not a text CSV file (expected a ManaBox export)."})
+            err = manabox_error(text.split("\n", 1)[0].strip("\r"))
+            if err: return self.reply(400, {"error": err})
+            if rb.running(): return self.reply(409, {"error": "A rebuild is already running. Try again when it's done."})
+            os.makedirs(COLLECTION_DIR, exist_ok=True)
+            path = os.path.join(COLLECTION_DIR, time.strftime("ManaBox %Y-%m-%d %H%M%S.csv"))
+            with open(path, "wb") as f: f.write(data)
+            print(f"\nNew collection uploaded -> {path}")
+            if not rb.start(path): return self.reply(409, {"error": "A rebuild is already running."})
+            self.reply(202, {"ok": True, "saved": path})
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Handler)
+    url = f"http://127.0.0.1:{a.port}/"
+    print(f"Deck Wizard App running at {url}  (only reachable from this PC; Ctrl+C to quit)")
+    if not os.path.exists(out_html):   # the browser shows WAIT_PAGE until this first build is done
+        print(f"No report yet: building one from {csv_path}")
+        rb.start(csv_path)
+    if not a.no_open: webbrowser.open(url)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping.")
+        if rb.running():
+            rb.proc.terminate()   # caches are written atomically, so stopping mid-run is safe
+    srv.server_close()
+
 # -------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--csv", required=True)
+    ap.add_argument("--csv", default="", help="ManaBox export; default: newest CSV in the collection folder")
     ap.add_argument("--out", default=".")
     ap.add_argument("--brackets", default="core,upgraded,optimized,cedh")
     ap.add_argument("--only", default="")
@@ -823,14 +1017,27 @@ def main():
     ap.add_argument("--no-combos", action="store_true")
     ap.add_argument("--decks-in", default="decks_in")
     ap.add_argument("--offline", action="store_true")
+    ap.add_argument("--serve", action="store_true", help="local app with an upload button")
+    ap.add_argument("--port", type=int, default=8765)
     a = ap.parse_args()
     if a.offline and a.refresh: ap.error("--offline and --refresh can't be combined")
+    if a.serve and a.refresh: ap.error("--serve and --refresh can't be combined")
+    csv_path = a.csv or find_collection()
+    if not csv_path:
+        ap.error(f"no ManaBox CSV found: put your export in the '{COLLECTION_DIR}' folder or pass --csv")
+    if a.serve:   # rebuilds after an upload use the same options
+        child = ["--out", a.out, "--brackets", a.brackets, "--decks-in", a.decks_in]
+        child += ["--only", a.only] if a.only else []
+        child += ["--limit", str(a.limit)] if a.limit else []
+        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline)) if on]
+        return serve(a, csv_path, child)
     global OFFLINE
     OFFLINE = a.offline
     brackets = [b for b in VALID_BRACKETS if b in {x.strip().lower() for x in a.brackets.split(",")}]
 
     cache_dir = os.path.join(a.out, "cache")
-    coll = load_collection(a.csv)
+    coll = load_collection(csv_path)
+    print(f"Collection file: {csv_path}")
     print(f"Collection: {len(coll)} printings, {sum(q for _, q in coll.values())} cards")
     meta = enrich_scryfall(list(coll), os.path.join(cache_dir, "scryfall.json"), a.refresh)
     owned = {}
@@ -847,6 +1054,10 @@ def main():
            ("Creature" in front or "can be your commander" in m["oracle"].lower()):
             cands.append(m)
     cands.sort(key=lambda m: m["name"])
+    diff = collection_changes(csv_path, owned, [m["name"] for m in cands], cache_dir)
+    if diff:
+        print(f"Since the previous collection: +{len(diff['added'])} cards, -{len(diff['removed'])} cards, "
+              f"{len(diff['new_cmdrs'])} new commanders")
     if a.only:
         wanted = {norm(x) for x in a.only.split(";") if x.strip()}
         cands = [m for m in cands if norm(m["name"]) in wanted]
@@ -929,10 +1140,16 @@ def main():
         for b, x in r["b"].items():
             with open(os.path.join(a.out, "decks", f"{r['slug']}_{b}.txt"), "w", encoding="utf-8") as f:
                 f.write(x.pop("arena"))
-    stats = {"cards": sum(q for _, q in coll.values()), "unique": len(owned), "cands": len(cands)}
+    stats = {"cards": sum(q for _, q in coll.values()), "unique": len(owned), "cands": len(cands),
+             "built": time.time(),
+             "coll": {"csv": os.path.basename(csv_path),
+                      "at": time.strftime("saved %Y-%m-%d %H:%M", time.localtime(os.path.getmtime(csv_path))),
+                      "diff": {k2: v for k, l in (diff or {}).items()
+                               for k2, v in ((k, l[:40]), (k + "_n", len(l)))} if diff else None}}
     out_html = os.path.join(a.out, "report.html")
-    with open(out_html, "w", encoding="utf-8") as f:
+    with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
         f.write(render_report(results, stats, brackets, decks, T.rows))
+    os.replace(out_html + ".tmp", out_html)
     no_tags = sum(1 for r in results if not r["tags"])
     print(f"\nDone. {len(results)} analyzed, {skipped} had no EDHREC page, {no_tags} without theme tags."
           f"\nReport: {os.path.getsize(out_html) / 1e6:.1f} MB -> {out_html}")

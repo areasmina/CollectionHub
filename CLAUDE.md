@@ -19,13 +19,21 @@ MY COLLECTION → COMMANDER → SYNERGY → BEST DECK I CAN BUILD → MISSING UP
 ## How to run (Windows)
 
 ```powershell
-py deck_wizard.py --csv "Collection_ (1).csv"
+py deck_wizard.py                              # newest ManaBox CSV in collection\ (else in this folder)
+py deck_wizard.py --csv "Collection_ (1).csv"  # a specific file
+py deck_wizard.py --serve                      # local app with an "Upload new collection CSV" button
 ```
+
+Shortcuts: `Update Deck Wizard.bat` (rebuild + open report), `Deck Wizard App.bat` (`--serve`).
+Updating the collection: export from ManaBox into `collection\` and run the .bat, or upload in the app.
+Only new cards hit Scryfall; the report header shows the file used and what changed since the previous one.
 
 Useful flags:
 
 | Flag | Purpose |
 |---|---|
+| `--csv FILE` | Collection file (default: newest ManaBox CSV in `collection\`, then this folder) |
+| `--serve` / `--port 8765` | Local app at http://127.0.0.1:8765 with upload button (only reachable from this PC) |
 | `--only "Sephiroth, Fabled SOLDIER;Terra, Herald of Hope"` | Run selected commanders only (fast test) |
 | `--limit 20` | First 20 commanders only (fast test) |
 | `--brackets core,upgraded,optimized,cedh` | EDHREC bracket pages to pull (add `exhibition` for B1) |
@@ -89,7 +97,13 @@ Key functions:
 - `CardTable` – deduplicated card list for the report; decks reference cards by index (keeps HTML small).
 - "% owned" = weighted share of the EDHREC template (top ≤99 cards at ≥10% inclusion) that is owned.
 
-Report features: bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
+App mode (`--serve`, `serve()` + `Rebuild`): stdlib `ThreadingHTTPServer` on 127.0.0.1. `GET /` serves
+report.html, `GET /status` reports rebuild progress, `POST /upload` (needs header `X-Deck-Wizard: 1`, blocks
+cross-site posts) checks the CSV header, saves it to `collection/`, and reruns the normal pipeline as a
+child process with the same options. `collection_changes()` keeps the added/removed diff in
+`cache/last_collection.json`. `save_json` and the report write are atomic (temp file + `os.replace`).
+
+Report features: collection bar (file, changes, upload button when served), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
 combos, power profile bars, imported decks section.
 

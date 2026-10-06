@@ -13,6 +13,13 @@ Checks your ManaBox collection against EDHREC and builds a deck skeleton for eve
 Output: `report.html` (opens in your browser) and one text file per commander in `decks/`.
 Single commander: `py deck_wizard.py --csv Collection_.csv --only "Sephiroth, Fabled SOLDIER"`
 
+## Updating your collection
+- Export your collection from ManaBox (CSV) into the `collection` folder and double-click
+  `Update Deck Wizard.bat`. The newest CSV there is used automatically.
+- Or double-click `Deck Wizard App.bat` and use the **Upload new collection CSV** button in the report.
+  Keep its window open while you use it.
+- The report shows which file was used and what changed (new cards, removed cards, new commanders).
+
 ## Notes
 - Scryfall and EDHREC responses are cached in `cache/`, so reruns are fast. `--refresh` ignores the cache.
 - EDHREC has no official API. The tool reads the same JSON the site uses, so it may break if they change it.
