@@ -1098,7 +1098,7 @@ def fetch_templates(names, cache_path, refresh=False):
         save_json(cache_path, {"_ts": time.time() if fresh else cache.get("_ts", time.time()), "t": t})
     TEMPLATES.clear(); TEMPLATES.update({k: set(v) for k, v in t.items() if v is not None})
     known = [n for n in names if n in TEMPLATES]
-    if names: print(f"Combo conditions: {len(known)}/{len(set(names))} resolved to cards")
+    if todo: print(f"Combo conditions: {len(known)}/{len(set(names))} resolved to cards")
 
 def annotate_combos(combos, owned, ci):
     """Copies of the combos with, for this colour identity:
@@ -1137,13 +1137,27 @@ def is_xturn(m):
     return bool(f[2]) if f else bool(XTURN_RX.search(rules_text(m)))
 
 def combo_pool(ci, owned, combo_cards):
-    """Your legal cards in these colours that are part of some combo. Spellbook takes at most
-    CSB_MAX_MAIN cards per request; if there are more, the ones in the most combos are kept."""
+    """Your legal cards in these colours that are part of some combo, split in two: what fits in one
+    find-my-combos request (CSB_MAX_MAIN, the cards in most combos first) and the rest, which
+    combos_for_commander looks up card by card so no combo is missed."""
     pool = [x["name"] for x in owned.values() if set(x["ci"]) <= ci and x["commander_legal"]
             and (not combo_cards or norm(x["name"]) in combo_cards)]
-    if len(pool) > CSB_MAX_MAIN and combo_cards:   # without the list the caller skips combos
-        pool = sorted(pool, key=lambda n: (-combo_cards.get(norm(n), 0), n))[:CSB_MAX_MAIN]
-    return sorted(pool)
+    if len(pool) <= CSB_MAX_MAIN or not combo_cards: return sorted(pool), []
+    pool = sorted(pool, key=lambda n: (-combo_cards.get(norm(n), 0), n))
+    return sorted(pool[:CSB_MAX_MAIN]), sorted(pool[CSB_MAX_MAIN:])
+
+def csb_card_combos(name, legal):
+    """Combos using `name` whose pieces are all in `legal` (normalized names), via /variants/ search.
+    None if Spellbook doesn't answer."""
+    url, out, pages = (CSB.replace("find-my-combos", "variants/") + "?limit=100&q="
+                       + urllib.parse.quote(f'card="{name}" legal:commander')), [], 0
+    while url and pages < 10:
+        r = http_json(url, retries=5); time.sleep(CSB_DELAY)
+        if r is None: return None
+        out += [v for v in r.get("results", [])
+                if all(isinstance(u.get("card"), dict) and norm(u["card"]["name"]) in legal for u in v.get("uses", []))]
+        url = r.get("next"); pages += 1
+    return out
 
 def compact_combos(variants, have, keep):
     out, seen = [], set()
@@ -1167,10 +1181,10 @@ def combos_for_commander(m, owned, cache, combo_cards):
     """Combos among your cards in this commander's colours (the commander included). The answer
     only depends on the colours, so commanders sharing an identity share one cached query."""
     ci = set(m["ci"])
-    pool = combo_pool(ci, owned, combo_cards)
+    pool, extra = combo_pool(ci, owned, combo_cards)
     if len(pool) > CSB_MAX_MAIN: return None   # no combo-card list to trim with
     key = "ci2:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
-          + hashlib.md5("\n".join(pool).encode()).hexdigest()[:10]
+          + hashlib.md5("\n".join(pool + extra).encode()).hexdigest()[:10]
     if key in cache: return cache[key]        # (--refresh starts from an empty cache)
     if OFFLINE or CSB_DOWN[0]: return None
     res = csb_find([], pool)
@@ -1180,6 +1194,14 @@ def combos_for_commander(m, owned, cache, combo_cards):
               " Rerun later; finished colour identities are cached.")
         return None
     have = set(owned)
+    if extra:                                 # cards that didn't fit: their combos, one card at a time
+        legal = {k for k, x in owned.items() if set(x["ci"]) <= ci and x["commander_legal"]}
+        print(f"  {len(extra)} cards over Spellbook's {CSB_MAX_MAIN}-card limit: looking them up one by one")
+        for n in extra:
+            got = csb_card_combos(n, legal)
+            if got is None:
+                CSB_DOWN[0] = True; print("  ! Commander Spellbook isn't answering; rerun later"); return None
+            res.setdefault("included", []).extend(got)
     own = compact_combos(res.get("included", []), have, 10 ** 6)        # all: the builder checks them
     near = compact_combos(res.get("almostIncluded", []), have, 150)     # ranked per commander later
     out = {"own": own["list"], "n_own": own["n"], "near": near["list"], "n_near": near["n"]}

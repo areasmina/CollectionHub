@@ -194,7 +194,10 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
 - EDHREC answers missing pages with HTTP 403. Misses are never cached (a 403 can also be a block).
 - Commander Spellbook rate-limits (HTTP 429) and rejects decks over 600 cards (HTTP 400). `http_json`
   waits on 429/5xx (Retry-After, else 15/30/60/120 s) and fails fast on other 4xx. `combo_pool()` sends
-  only owned on-color cards that are in some combo (5-color: top 600 by combo count). If Spellbook stops
+  only owned on-color cards that are in some combo; cards over the 600 limit (5-color: 8 today) are looked
+  up one by one (`csb_card_combos`, `/variants/?q=card="…"`), so no owned combo is missed.
+- Combos come from Spellbook's curated database, not from reading card text ourselves: Oracle text (full,
+  with reminder text and both faces) drives fit/mechanics/roles, but rules interactions are Spellbook's job. If Spellbook stops
   answering, `CSB_DOWN` makes the rest of the run skip combos. Failed/partial lookups are not cached.
 - Scryfall Tagger tag names in `TAG_QUERIES` are best guesses; the run prints card counts per role.
   A role with 0 cards means a wrong tag name.
