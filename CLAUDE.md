@@ -38,6 +38,7 @@ Useful flags:
 | `--limit 20` | First 20 commanders only (fast test) |
 | `--brackets core,upgraded,optimized,cedh` | EDHREC bracket pages to pull (add `exhibition` for B1) |
 | `--no-combos` | Skip Commander Spellbook |
+| `--no-themes` | Skip EDHREC theme pages and theme decks (faster) |
 | `--decks-in DIR` | Folder of decklists (.txt) to score, default `decks_in` |
 | `--refresh` | Ignore all caches (slow: re-downloads everything) |
 | `--no-open` | Don't open the report in the browser |
@@ -48,7 +49,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
-`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes)
+`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -71,6 +72,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | ManaBox CSV | What Guillermo owns (`Name`, `Scryfall ID`, `Quantity`) | – |
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
+| EDHREC theme pages `…/commanders/<slug>/<theme>.json` | Real per-theme deck data for each commander's top `THEME_TOP` 3 themes (`fetch_theme_page`; misses remembered `THEME_MISS_DAYS` 7 in `_theme_miss`) | `cache/edhrec_v4.json` |
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
 | Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
@@ -166,6 +168,12 @@ Key functions:
   `n_sugg` make a suggested deck, weaker fits, no home; commanders whose suggested 99 uses the most of them
   (click → filters the list). Stored in `STATS.unused`. Adds ~10–30 s to a full run.
 - `CardTable` – deduplicated card list for the report; decks reference cards by index (keeps HTML small).
+  `T.s(text)` = shared string table for reasons (`STRS` in the page, `W(i)` in JS): reasons repeat thousands
+  of times across commanders/brackets/themes (report 18.6 → 10.7 MB).
+- Speed: `sub_candidates()` memoizes stand-in candidates per missing card within one `analyze()` (cleared
+  at its start; `rate_of.key` tells pages apart), `fit_cached()` keeps `card_fit` per commander, `main()`
+  computes the commander profile once, theme decks skip gaps (`want_gaps=False`). Full offline run with
+  ~5,000 decks (themes included): ~2.5 min; `--no-themes` ~1 min.
 - "% owned" = weighted share of the EDHREC template (top ≤99 cards at ≥10% inclusion) that is owned.
 
 App mode (`--serve`, `serve()` + `Rebuild`): stdlib `ThreadingHTTPServer` on 127.0.0.1. `GET /` serves
@@ -177,6 +185,14 @@ child process with the same options. `collection_changes()` keeps the added/remo
 Report features: collection bar (file, changes, upload button when served), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
 combos, power profile bars, imported decks section.
+Theme decks: each top theme gets a deck per bracket: `analyze(theme page, base = theme page, bracket
+rules, focus=theme)`; cards matching the theme (`theme_profile`/`hits_theme`: tribe, MECHANICS, roles,
+keywords from the theme name, via Oracle text) get `FOCUS_W` 0.15 ("theme: discard" reason). Stored as
+`entry["th"][slug] = {name, decks, b: {bracket: deck_diff(...)}}` (numbers + added entries + removed
+[card, kind]); JS `themed()` applies the diff. EDHREC has theme × bracket pages too (`<slug>/<bracket>/<theme>`)
+but they're thin (Doom Discard B4: 26 decks) and 4× the requests, so not used. Theme tags are buttons
+(`data-tsel`, row `data-t`; click again → overview); themes without a cached page stay EDHREC links ↗.
+Substitute choices are saved per commander + bracket + theme.
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
 Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
 (alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). In the report

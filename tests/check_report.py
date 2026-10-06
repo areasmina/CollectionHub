@@ -29,6 +29,17 @@ try{const r=document.querySelector('details.row[data-i]');if(r){r.open=true;r.qu
   out.clicks=(out.clicks||0)+r.querySelectorAll('[data-bsel]').length;
   }}
 catch(e){out.errs.push('clicks: '+e.message);}
+try{for(const k of DECKS){const h=ibody(k);if(!h||h.includes('undefined'))out.errs.push('imported '+k.title+': "undefined"');out.panels++;}}
+catch(e){out.errs.push('imported decks: '+e.message);}
+// themes: every theme deck renders for every bracket; clicking a theme switches and clicking again returns
+try{for(const d of DATA)for(const t of Object.keys(d.th||{}))for(const b of BR){if(!d.b[b])continue;
+    const fake={dataset:{t,b}};const h=body(d,b,fake);if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+' | '+t+': theme panel has "undefined"');out.panels++;}
+  const d=DATA.find(d=>Object.keys(d.th||{}).length), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;rerow(r);const t=Object.keys(d.th)[0];
+    r.querySelector('[data-tsel="'+t+'"]').click(); if(!r.querySelector('.thm.on'))out.errs.push('theme click did not select it');
+    r.querySelector('.thm[data-tsel="'+t+'"]').click(); if(r.querySelector('.thm.on'))out.errs.push('second theme click did not go back');
+    out.clicks=(out.clicks||0)+2;}}
+catch(e){out.errs.push('themes: '+e.message);}
 // substitute chooser: open a slot, pick an alternative, then "buy", then reset
 try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length));
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');

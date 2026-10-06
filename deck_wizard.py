@@ -299,7 +299,13 @@ def type_group(type_line):
 class CardTable:
     """One shared card list for the report; decks reference cards by index."""
     PREFIX = "https://cards.scryfall.io/normal/"
-    def __init__(self): self.rows, self.idx = [], {}
+    def __init__(self): self.rows, self.idx, self.strs, self.sidx = [], {}, [], {}
+    def s(self, text):
+        """Index of a reason text in the shared string table (-1 for none): the same reasons repeat
+        thousands of times across commanders, brackets and themes."""
+        if not text: return -1
+        if text not in self.sidx: self.sidx[text] = len(self.strs); self.strs.append(text)
+        return self.sidx[text]
     def add(self, name, meta=None):
         k = norm(name)
         img = (meta or {}).get("img", "")
@@ -590,6 +596,58 @@ def commander_profile(cmdr, themes):
             if s in TYPE_VOCAB and s not in MAIN_TYPES: tribe.add(s)    # "Dragons" -> dragon
     return tribe, mechs, roles, kws
 
+FOCUS_W = 0.15         # theme decks: extra score for cards whose text/types match the chosen theme
+THEME_TOP = 3           # themes per commander that get their own decks (EDHREC theme pages)
+THEME_MISS_DAYS = 7     # a theme page EDHREC doesn't have is asked for again after this many days
+
+def theme_profile(name):
+    """What a theme name means in card terms: (tribe, mechanics, roles, keywords), e.g.
+    "Discard" -> discard mechanic, "Villains" -> Villain type, "Control" -> removal role."""
+    t = name.lower()
+    tribe = {s for s in (t[:-3] + "f" if t.endswith("ves") else t[:-1] if t.endswith("s") else t, t)
+             if s in TYPE_VOCAB and s not in MAIN_TYPES}
+    mechs = {k for k, (_, th, _) in MECHANICS.items() if t in th}
+    roles = {THEME_ROLES[t]} if t in THEME_ROLES else set()
+    return tribe, mechs, roles, ({t} & KEYWORD_VOCAB)
+
+def hits_theme(m, tp):
+    tribe, mechs, roles, kws = tp
+    return bool(type_words(m) & tribe or card_mechanics(m) & mechs or roles_of(m) & roles
+                or any(has_keyword(m, k) for k in kws))
+
+def fetch_theme_page(path, cache, refresh=False):
+    """fetch_page for a theme page; pages EDHREC doesn't have are remembered for THEME_MISS_DAYS
+    (a commander has 3 themes, so re-asking every run would cost minutes)."""
+    miss = cache.setdefault("_theme_miss", {})
+    if not refresh and time.time() - miss.get(path, 0) < THEME_MISS_DAYS * 86400: return None
+    p = fetch_page(path, cache, refresh)
+    if p is None and not OFFLINE: miss[path] = time.time()
+    elif p is not None: miss.pop(path, None)
+    return p
+
+DIFF_KEYS = ("decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
+             "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl")
+
+def deck_diff(base_x, tx):
+    """A theme deck stored as changes to the normal deck of the same bracket (keeps the page small):
+    numbers of the theme deck + cards added + [card, kind] removed."""
+    key = lambda e: (e[0], e[1])
+    bset, tset = {key(e) for e in base_x["deck"]}, {key(e) for e in tx["deck"]}
+    out = {k: tx[k] for k in DIFF_KEYS if k in tx}
+    out["add"] = [e for e in tx["deck"] if key(e) not in bset]
+    out["rem"] = [e[0] for e in base_x["deck"] if key(e) not in tset]   # a card is in a deck once
+    return out
+
+_FIT_MEMO = {"who": None}
+
+def fit_cached(cmdr, m, profile, bracket):
+    """card_fit, remembered per commander (it only depends on the bracket through Game Changers)."""
+    if _FIT_MEMO["who"] != (cmdr["name"], id(profile)):
+        _FIT_MEMO.clear(); _FIT_MEMO["who"] = (cmdr["name"], id(profile))
+    key = (norm(m["name"]), bracket in ("optimized", "cedh"))
+    if key not in _FIT_MEMO: _FIT_MEMO[key] = card_fit(m, profile, bracket)
+    return _FIT_MEMO[key]
+
 def built_around(profile, cards):
     """How many of the deck's non-land cards hit each thing the commander cares about:
     [[label, count]], biggest first (e.g. [["connive", 9], ["discard", 14]])."""
@@ -620,17 +678,19 @@ def card_fit(m, profile, bracket):
     f -= FIT_MV * max(0, m["cmc"] - 4)
     return max(0.0, f), " · ".join(why)
 
-def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), tribe=(), ci="WUBRG"):
-    """Closest owned stand-ins for missing card `mm`: [(closeness 0-1, key, meta, reason)].
-    Closeness = shared roles x same card kind x mana value distance, and x OFF_TYPE when `mm` has a
-    type the commander cares about (`tribe`, e.g. Dragon) that the stand-in lacks. `rate_of` is only
-    used for the reason text and to pick synergy-piece candidates."""
+_SUB_MEMO = {}          # stand-in candidates per missing card, reused within one deck build (analyze clears it)
+
+def sub_candidates(mm, rate_of, pool, by_role, tribe=(), ci="WUBRG"):
+    """Every owned stand-in for missing card `mm` with its closeness before deck-specific filters:
+    [(closeness, key, meta, reason)], best first."""
+    key = (id(pool), norm(mm["name"]), frozenset(tribe), "".join(sorted(ci)), getattr(rate_of, "key", id(rate_of)))
+    if key in _SUB_MEMO: return _SUB_MEMO[key]
     kind = card_kind(mm)
     mroles = roles_of(mm) - {"land"}
     mtypes = type_words(mm) & set(tribe)
     if kind == "land":
         need = set(mm.get("produced") or []) & set(ci)
-        if len(need) < 2: return []     # utility or mono-colour land: a basic does that job
+        if len(need) < 2: _SUB_MEMO[key] = []; return []   # utility or mono-colour land: a basic does that job
         cands = [it for it in pool if it[3] == "land" and not restricted_mana(it[1])]
     elif mroles:
         seen, cands = set(), []
@@ -644,14 +704,14 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), trib
         sig, idx = text_sig(mm), by_role.get("_text") or {}
         hits = {}
         for bg in sig:
-            for it in idx.get(bg, ()): hits[it[0]] = hits.get(it[0], (it, 0))[0], hits.get(it[0], (it, 0))[1] + 1
-        for k2, (it, n) in hits.items():
-            sims[k2] = n / (len(sig) + len(text_sig(it[1])) - n)
+            for it in idx.get(bg, ()):
+                h = hits.get(it[0]); hits[it[0]] = (it, (h[1] if h else 0) + 1)
+        for k2, (it, cnt) in hits.items():
+            sims[k2] = cnt / (len(sig) + len(text_sig(it[1])) - cnt)
         seen = {it[0] for it in cands}
         cands += [it for k2, (it, _) in hits.items() if k2 not in seen and sims[k2] >= TEXT_ALT]
     out = []
     for k, m, rs, kd in cands:
-        if k in used or (m["gc"] and not allow_gc): continue
         rate, why = rate_of(k), []
         if kind == "land":
             hit = (set(m.get("produced") or []) & set("WUBRG")) & need
@@ -680,10 +740,24 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), trib
             if sim >= 0.5: why.append("similar text")
             why.append(f"{int(m['cmc'])} MV")
         if rate > 0: why.append(f"in {round(rate * 100)}% of these decks")
-        if k in penalize: q -= 0.15        # already in the deck: prefer fresh cards
-        if q < SUB_MATCH_MIN: continue
-        out.append((round(q, 4), k, m, " · ".join(why)))
+        if q >= SUB_MATCH_MIN:
+            out.append((round(q, 4), k, m, " · ".join(why)))
     out.sort(key=lambda x: (-x[0], -rate_of(x[1]), x[1]))   # name breaks ties: same input, same deck
+    _SUB_MEMO[key] = out
+    return out
+
+def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), tribe=(), ci="WUBRG"):
+    """Closest owned stand-ins for missing card `mm`: [(closeness 0-1, key, meta, reason)].
+    Closeness = shared roles x same card kind x mana value distance (x Oracle-text likeness), and
+    x OFF_TYPE when `mm` has a type the commander cares about (`tribe`, e.g. Dragon) that the stand-in
+    lacks. Cards in `used` are skipped; cards in `penalize` (already in the deck) lose 0.15."""
+    out = []
+    for q, k, m, why in sub_candidates(mm, rate_of, pool, by_role, tribe, ci):
+        if k in used or (m["gc"] and not allow_gc): continue
+        if k in penalize: q = round(q - 0.15, 4)        # already in the deck: prefer fresh cards
+        if q < SUB_MATCH_MIN: continue
+        out.append((q, k, m, why))
+    if penalize: out.sort(key=lambda x: (-x[0], -rate_of(x[1]), x[1]))
     return out[:n]
 
 def blended_rates(edh, base):
@@ -810,6 +884,7 @@ def card_values(edh, base, owned, name_meta):
     only compete with lands), and play rate + SYN_W x EDHREC synergy (lands: rate only)."""
     cards = edh["cards"]
     rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]
+    rate_of.key = id(cards)
     blend = blended_rates(edh, base)
     kind_of = lambda k: card_kind(owned.get(k) or name_meta.get(k) or {"type_line": ""})
     def syn_of(k):          # EDHREC synergy from this page, else the all-decks page (v3 pages have none)
@@ -862,12 +937,18 @@ def power_profile(roles, gc, avg_cmc):
             "ramp": clamp(roles.get("ramp", 0)), "draw": clamp(roles.get("draw", 0)),
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
-def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None):
+def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
+            want_gaps=True, profile=None):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
-    `combos` = combos you own in these colours (combos_for_commander()["own"])."""
+    `combos` = combos you own in these colours (combos_for_commander()["own"]).
+    `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
+    `want_gaps` = False skips the gaps list (theme decks show the overview's). `profile` = the
+    commander's profile (computed once per commander by the caller; else from the page's themes)."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
+    _SUB_MEMO.clear()
     tribe = commander_types(cmdr)
-    profile = commander_profile(cmdr, (base or edh).get("tags") or [])
+    profile = profile or commander_profile(cmdr, (base or edh).get("tags") or [])
+    tprof = theme_profile(focus) if focus else None
     pool, by_role = pool_info
     legal = {it[0] for it in pool}      # owned, commander-legal, inside the color identity
     gc_cap = GC_CAP.get(bracket)        # None = no cap
@@ -880,7 +961,9 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     def score(k):           # an owned card: EDHREC value + how well it fits this commander
         if k not in fits:
             m = owned[k]
-            fits[k] = (0.0, "") if card_kind(m) == "land" else card_fit(m, profile, bracket)
+            fits[k] = (0.0, "") if card_kind(m) == "land" else fit_cached(cmdr, m, profile, bracket)
+            if tprof and card_kind(m) != "land" and hits_theme(m, tprof):
+                fits[k] = (fits[k][0] + FOCUS_W, ("theme: " + focus.lower() + (" · " + fits[k][1] if fits[k][1] else "")))
         return value_of(k) + fits[k][0]
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
     rec.sort(key=lambda x: -x[2])
@@ -1050,22 +1133,22 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         for _, k2, m2, w in cands:
             if k2 == sk: why = w; continue
             if len(alts) >= 3 or (m2["gc"] and gc_cap is not None and n_gc - m["gc"] >= gc_cap) or blocked(k2): continue
-            alts.append([T.add(m2["name"], m2), w])
+            alts.append([T.add(m2["name"], m2), T.s(w)])
         used.add(sk)
-        slot_alts[id(mm)] = (why, alts)
+        slot_alts[id(mm)] = (T.s(why), alts)
 
     # gaps: top missing cards with up to 3 owned alternatives
     gaps = []
-    for k, name, rate in missing[:GAP_SHOW]:
+    for k, name, rate in (missing[:GAP_SHOW] if want_gaps else []):
         mm = name_meta.get(k)
         subs = find_subs(mm, rate_of, pool, by_role, {me}, gc_cap != 0, 3, used, tribe, ci) if mm else []
-        rows = [[T.add(sm["name"], sm), why] for _, sk, sm, why in subs]
+        rows = [[T.add(sm["name"], sm), T.s(why)] for _, sk, sm, why in subs]
         used_sub = sub_for.get(k)
         if used_sub and used_sub not in [s[1] for s in subs]:
             sm = owned[used_sub]
-            rows = ([[T.add(sm["name"], sm), "swapped into your deck"]] + rows)[:3]
+            rows = ([[T.add(sm["name"], sm), T.s("swapped into your deck")]] + rows)[:3]
         gaps.append([T.add(name, mm), round(rate * 100), rows,
-                     T.add(owned[used_sub]["name"], owned[used_sub]) if used_sub else -1, role_text(mm)])
+                     T.add(owned[used_sub]["name"], owned[used_sub]) if used_sub else -1, T.s(role_text(mm))])
 
     roles = {r: 0 for r in ROLE_NAMES}
     for m, _, _ in chosen:
@@ -1095,8 +1178,8 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "tut": roles.get("tutor", 0),
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         # substitutes also carry [why the advised card, [[alternative, why] x up to 3]]
-        "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f), *slot_alts.get(id(f), ("", []))] if kind == "s"
-                 else [T.add(m["name"], m), kind, f or -1] for m, kind, f in allc],
+        "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f), *slot_alts.get(id(f), (-1, []))] if kind == "s"
+                 else [T.add(m["name"], m), kind, T.s(f) if isinstance(f, str) else -1] for m, kind, f in allc],
         "basics": [[T.add(b), c] for b, c in tally.items()],
         "gaps": gaps,
         "arena": "\n".join(arena) + "\n",
@@ -1411,7 +1494,7 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
         mm = meta(n)
         subs = find_subs(mm, rate_of, pool, by_role, deck_keys, True, 3, tribe=tribe) if mm else []
         gaps.append([T.add(mm["name"] if mm else n, mm), round(rate_of(norm(n)) * 100),
-                     [[T.add(sm["name"], sm), why] for _, _, sm, why in subs], -1, role_text(mm)])
+                     [[T.add(sm["name"], sm), T.s(why)] for _, _, sm, why in subs], -1, T.s(role_text(mm))])
     combos = None
     if do_combos and not OFFLINE and not CSB_DOWN[0]:
         res = csb_find([n for _, n in cmdrs], [n for _, n in main])
@@ -1494,6 +1577,8 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .adv{flex:1;min-width:180px;align-self:center;color:var(--mut);font-size:.85rem;margin:0}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .danger{border:1px solid #f87171;background:rgba(248,113,113,.08);border-radius:8px;padding:10px 12px;margin:10px 0}.danger h4{color:#f87171;margin-top:0}
+.tag.thm{cursor:pointer;background:transparent;border:1px solid var(--line)}.tag.thm.on{border-color:var(--acc);background:rgba(45,212,191,.18);color:var(--ink)}
+.tnote{font-size:.85rem;margin:4px 0 8px}.tnote .tag{cursor:pointer}
 .slotw{display:flex;flex-direction:column;gap:4px}.swap{font-size:.72rem;padding:3px 6px}
 .ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
 .chooser{border:1px solid var(--acc);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(45,212,191,.06)}
@@ -1530,7 +1615,8 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 <div id="count"></div>
 <div id="list"></div>
 </main><img id="pv" alt=""><script>
-const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__;
+const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__, STRS=__STRS__;
+const W=i=>typeof i==="number"?(i>=0?STRS[i]:""):(i||"");   // a reason from the shared string table
 const LBL={all:"All decks",exhibition:"B1 Exhibition",core:"B2 Core",upgraded:"B3 Upgraded",optimized:"B4 Optimized",cedh:"B5 cEDH"};
 const PIP={W:"#e8e2c8",U:"#7fb3e0",B:"#6b5f73",R:"#e07a5f",G:"#7bb274"};
 const GL={Creature:"Creatures",Planeswalker:"Planeswalkers",Battle:"Battles",Instant:"Instants",Sorcery:"Sorceries",Artifact:"Artifacts",Enchantment:"Enchantments",Land:"Lands",Other:"Other"};
@@ -1596,37 +1682,41 @@ function grid(cmdrs,items){
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>tile(it.i,{
       cls:{s:"sub",s2:"sub",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
       note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="s2"?"for "+front(it.f)+" (your choice)":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
-        it.kind==="y"?(typeof it.f!=="string"?"your pick":CARDS[it.i][2]==="Land"?it.f:"fits: "+it.f):it.kind==="c"?"combo piece":""})
+        it.kind==="y"?(!W(it.f)?"your pick":CARDS[it.i][2]==="Land"?W(it.f):"fits: "+W(it.f)):it.kind==="c"?"combo piece":""})
       +(it.slot!=null?`<button class="swap" data-swap="${it.slot}" title="Choose what fills this slot">⇄ options</button>`:"")).map(h=>h.includes('data-swap')?`<div class="slotw">${h}</div>`:h).join("")+`</div></div>`;});
   return h;}
 function gapsHTML(gaps,deckSet,slots){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
-  return gaps.map(([i,r,subs,used,roles])=>{
+  return gaps.map(([i,r,subs,used,roles])=>{roles=W(roles);
     const isSlot=slots&&slots.has(i);
-    const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{cls:s===used?"sub":"",note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(why)}</small>${isSlot&&!deckSet.has(s)?`<button class="opt mini" data-pick="${s}" data-slot="${i}">Use this</button>`:""}</div>`).join("")
+    const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{cls:s===used?"sub":"",note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(W(why))}</small>${isSlot&&!deckSet.has(s)?`<button class="opt mini" data-pick="${s}" data-slot="${i}">Use this</button>`:""}</div>`).join("")
       +(isSlot&&!deckSet.has(i)?`<div class="alt"><button class="opt mini" data-pick="-1" data-slot="${i}">Buy ${esc(front(i))} instead</button></div>`:"");
     const adv=subs.length?"":`<p class="adv">No close match in your collection for this ${esc(roles||"synergy")} slot.${r>=25?" It's a core card for this commander, worth picking up.":" The deck fills this slot with other cards you own."}</p>`;
     return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
 /* ---------- your choices for substitute slots (saved in this browser) ---------- */
-const chKey=(d,b)=>"dw:"+d.slug+":"+b;
-function getCh(d,b){try{return JSON.parse(localStorage.getItem(chKey(d,b))||"{}")||{};}catch(e){return {};}}
-function setCh(d,b,o){try{Object.keys(o).length?localStorage.setItem(chKey(d,b),JSON.stringify(o)):localStorage.removeItem(chKey(d,b));}catch(e){}}
+const chKey=(d,b,t)=>"dw:"+d.slug+":"+b+(t?":"+t:"");
+function getCh(d,b,t){try{return JSON.parse(localStorage.getItem(chKey(d,b,t))||"{}")||{};}catch(e){return {};}}
+function setCh(d,b,o,t){try{Object.keys(o).length?localStorage.setItem(chKey(d,b,t),JSON.stringify(o)):localStorage.removeItem(chKey(d,b,t));}catch(e){}}
+// the deck for a theme: the normal deck of this bracket with the theme deck's differences applied
+function themed(d,b,t){const x=d.b[b], th=t&&d.th&&d.th[t], df=th&&th.b[b]; if(!df) return x;
+  const rem=new Set(df.rem);
+  return Object.assign({},x,df,{deck:x.deck.filter(e=>!rem.has(e[0])).concat(df.add),theme:th.name,tdecks:th.decks});}
 // the deck as you chose it: slot = the missing card's index; buy = keep the missing card
-function effDeck(d,b,x){const ch=getCh(d,b);
+function effDeck(d,b,x,t){const ch=getCh(d,b,t);
   return x.deck.map(([i,k,f])=>{if(k!=="s"||f<0)return {i,kind:k,f};
     const c=ch[f]; if(c===undefined)return {i,kind:"s",f,slot:f}; if(c===-1)return {i:f,kind:"buy",f,slot:f}; return {i:c,kind:"s2",f,slot:f};});}
-function chooserHTML(d,b,x,slot){
+function chooserHTML(d,b,x,slot,t){
   const e=x.deck.find(r=>r[1]==="s"&&r[2]===slot); if(!e) return "";
-  const [adv,,f,why,alts]=e, ch=getCh(d,b)[f], cur=ch===undefined?adv:ch;
-  const taken=new Set(effDeck(d,b,x).filter(it=>it.slot!==f).map(it=>it.i));
+  const [adv,,f,why,alts]=e, ch=getCh(d,b,t)[f], cur=ch===undefined?adv:ch;
+  const taken=new Set(effDeck(d,b,x,t).filter(it=>it.slot!==f).map(it=>it.i));
   const opt=(pick,card,label)=>{const dis=pick!==-1&&pick!=="adv"&&taken.has(card);
     const on=(pick==="adv"&&ch===undefined)||(pick===-1&&ch===-1)||(typeof pick==="number"&&pick>=0&&ch===pick);
     return `<button class="opt ${on?"on":""}" data-pick="${pick}" data-slot="${f}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><span><b>${esc(front(card))}</b><br><small>${label}</small></span></button>`;};
   return `<div class="chooser"><div class="vbar"><h4>Slot for ${esc(front(f))}: pick what goes in</h4><button class="opt-close" data-slot="">Close</button></div>
-  <div class="opts">${opt(-1,f,"keep it: add to shopping list")}${opt("adv",adv,"advised · "+esc(why||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(w))).join("")}</div>
+  <div class="opts">${opt(-1,f,"keep it: add to shopping list")}${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}</div>
   ${(alts||[]).length?"":`<small class="dim">No other close match in your collection.</small>`}</div>`;}
-function shopHTML(d,b,items){
-  const buy=items.filter(it=>it.kind==="buy"); if(!buy.length&&!Object.keys(getCh(d,b)).length) return "";
+function shopHTML(d,b,items,t){
+  const buy=items.filter(it=>it.kind==="buy"); if(!buy.length&&!Object.keys(getCh(d,b,t)).length) return "";
   const list=buy.map(it=>"1 "+front(it.i)).join("\n");
   return `<div class="shop"><b>Shopping list (${buy.length})</b> ${buy.map(it=>esc(front(it.i))).join(", ")||"<span class='dim'>nothing yet</span>"}
   ${buy.length?`<button class="cps" data-text="${esc(list)}">Copy shopping list</button>`:""}<button class="reset-ch">Reset my choices</button></div>`;}
@@ -1683,29 +1773,35 @@ function numsHTML(x,b){
   const lbl=bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3";
   const fit=!sel?"":bf.est<=Math.max(sel,2)||sel===5?` <span class="ok">✓ fits ${LBL[b].split(" ")[0]}</span>`:` <span class="bad">above ${LBL[b].split(" ")[0]}</span>`;
   return `<div class="nums">
-  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${LBL[b]} decks.</div>
+  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${x.theme?esc(x.theme)+" decks (all brackets)":LBL[b]+" decks"}.</div>
   <div class="num"><span class="t">Build Readiness</span><b>${ok}/${rd.length} checks</b>${fail?`<ul>${fail}</ul>`:"Roles, curve, mana and real cards all look fine."}</div>
   <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
 
 /* ---------- commander rows ---------- */
 function body(d,b,r){
-  const x=d.b[b], tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
-  const tags=d.tags.slice(0,3).map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}${pre}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} · ${Math.round(100*t[2]/tot)}%</a>`).join("")||'<span class="tag dim">no themes found</span>';
+  const tsel=r&&r.dataset.t&&d.th&&d.th[r.dataset.t]?r.dataset.t:"";
+  const x=themed(d,b,tsel), tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
+  const tags=d.tags.slice(0,3).map(t=>{const has=d.th&&d.th[t[1]];
+    return has?`<button class="tag thm ${t[1]===tsel?"on":""}" data-tsel="${t[1]}" title="${t[1]===tsel?"Back to the overview":"Build this deck around "+esc(t[0])}">${esc(t[0])} · ${Math.round(100*t[2]/tot)}%</button>`
+      :`<a class="tag" href="https://edhrec.com/commanders/${d.slug}${pre}/${t[1]}" target="_blank" rel="noopener" title="No EDHREC theme page cached: opens EDHREC">${esc(t[0])} · ${Math.round(100*t[2]/tot)}% ↗</a>`;}).join("")||'<span class="tag dim">no themes found</span>';
+  const tnote=tsel?`<p class="tnote">Theme: <b>${esc(x.theme)}</b> · ${LBL[b]} rules · built from EDHREC's ${n(x.tdecks)} ${esc(x.theme)} decks and your cards, leaning into cards that ${esc(x.theme.toLowerCase())} decks need.
+    <a href="https://edhrec.com/commanders/${d.slug}/${tsel}" target="_blank" rel="noopener">EDHREC ↗</a> <button class="tag" data-tsel="${tsel}">Back to overview</button></p>`
+    :(d.th&&Object.keys(d.th).length?`<p class="tnote dim">Overview: the most common ${LBL[b]} deck. Click a theme above to build around it.</p>`:"");
   const bks=BR.filter(k=>d.b[k]).map(k=>`<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${d.b[k].pct}% <small>(${n(d.b[k].decks)})</small></button>`).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
-  const eff=effDeck(d,b,x), deckSet=new Set(eff.map(it=>it.i));
+  const eff=effDeck(d,b,x,tsel), deckSet=new Set(eff.map(it=>it.i));
   const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
   const slot=r&&r.dataset.slot?+r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
-  <div class="info"><div class="tags">${tags}</div><div class="bks">${bks}</div>
+  <div class="info"><div class="tags">${tags}</div>${tnote}<div class="bks">${bks}</div>
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
   <p>Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
-  ${slot!=null?chooserHTML(d,b,x,slot):""}${shopHTML(d,b,items)}
+  ${slot!=null?chooserHTML(d,b,x,slot,tsel):""}${shopHTML(d,b,items,tsel)}
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/commanders/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} popular cards missing, top ${x.gaps.length} shown</span></div>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
@@ -1769,14 +1865,16 @@ document.addEventListener("click",e=>{const t=e.target;
   const bs=t.closest&&t.closest("[data-bsel]");
   if(bs){const r=bs.closest("details.row"); r.dataset.b=bs.dataset.bsel; r.dataset.slot=""; rerow(r); return;}
   const row=t.closest&&t.closest("details.row[data-i]");
-  if(row){const d=DATA[+row.dataset.i], b=rowB(row);
+  const ts=t.closest&&t.closest("[data-tsel]");
+  if(ts){const r=ts.closest("details.row"); r.dataset.t=r.dataset.t===ts.dataset.tsel?"":ts.dataset.tsel; r.dataset.slot=""; rerow(r); return;}
+  if(row){const d=DATA[+row.dataset.i], b=rowB(row), tt=row.dataset.t||"";
     const sw=t.closest("[data-swap]");
     if(sw){e.preventDefault(); row.dataset.slot=sw.dataset.swap; rerow(row); const c=row.querySelector(".chooser"); if(c&&c.scrollIntoView)c.scrollIntoView({block:"nearest"}); return;}
     const op=t.closest("[data-pick]");
-    if(op&&!op.disabled){const ch=getCh(d,b), f=op.dataset.slot, p=op.dataset.pick;
-      if(p==="adv") delete ch[f]; else ch[f]=+p; setCh(d,b,ch); row.dataset.slot=""; rerow(row); return;}
+    if(op&&!op.disabled){const ch=getCh(d,b,tt), f=op.dataset.slot, p=op.dataset.pick;
+      if(p==="adv") delete ch[f]; else ch[f]=+p; setCh(d,b,ch,tt); row.dataset.slot=""; rerow(row); return;}
     if(t.closest(".opt-close")){row.dataset.slot=""; rerow(row); return;}
-    if(t.closest(".reset-ch")){setCh(d,b,{}); row.dataset.slot=""; rerow(row); return;}
+    if(t.closest(".reset-ch")){setCh(d,b,{},tt); row.dataset.slot=""; rerow(row); return;}
     const cps=t.closest(".cps"); if(cps){navigator.clipboard.writeText(cps.dataset.text); cps.textContent="Copied"; return;}}
   if(t.dataset&&t.dataset.cmdr){e.preventDefault();$("q").value=t.dataset.cmdr;render();$("list").scrollIntoView();}
   if(t.classList.contains("cp")){navigator.clipboard.writeText(t.closest(".body").querySelector("textarea").value);t.textContent="Copied";}});
@@ -1794,8 +1892,9 @@ render();
 def js_data(obj):
     return json.dumps(obj, separators=(",", ":")).replace("</", "<\\/")
 
-def render_report(results, stats, brackets, decks, cards, combos=()):
+def render_report(results, stats, brackets, decks, cards, combos=(), strs=()):
     return (HTML.replace("__DATA__", js_data(results))
+                .replace("__STRS__", js_data(list(strs)))
                 .replace("__COMBOS__", js_data(list(combos)))
                 .replace("__BR__", json.dumps(["all"] + brackets))
                 .replace("__STATS__", json.dumps(stats))
@@ -1924,6 +2023,7 @@ def main():
     ap.add_argument("--refresh", action="store_true")
     ap.add_argument("--no-open", action="store_true")
     ap.add_argument("--no-combos", action="store_true")
+    ap.add_argument("--no-themes", action="store_true", help="skip EDHREC theme pages and theme decks")
     ap.add_argument("--decks-in", default="decks_in")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--serve", action="store_true", help="local app with an upload button")
@@ -1938,7 +2038,7 @@ def main():
         child = ["--out", a.out, "--brackets", a.brackets, "--decks-in", a.decks_in]
         child += ["--only", a.only] if a.only else []
         child += ["--limit", str(a.limit)] if a.limit else []
-        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline)) if on]
+        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline), ("--no-themes", a.no_themes)) if on]
         return serve(a, csv_path, child)
     global OFFLINE
     OFFLINE = a.offline
@@ -1978,7 +2078,7 @@ def main():
     # pass 1: EDHREC pages
     edh_path = os.path.join(cache_dir, EDH_CACHE)
     cache = load_edhrec_cache(cache_dir, a.refresh)
-    pages, skipped = {}, 0
+    pages, themes, skipped = {}, {}, 0
     for i, m in enumerate(cands, 1):
         slug = slugify(m["name"])
         base = fetch_page(slug, cache, a.refresh)
@@ -1989,13 +2089,19 @@ def main():
             p = fetch_page(f"{slug}/{b}", cache, a.refresh)
             if p and p["cards"]: pg[b] = p
         pages[m["name"]] = pg
+        if not a.no_themes:
+            th = {}
+            for name, tslug, _ in base.get("tags", [])[:THEME_TOP]:
+                tp = fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh)
+                if tp and tp["cards"]: th[tslug] = (name, tp)
+            themes[m["name"]] = th
         if i % 25 == 0:
             save_json(edh_path, cache); print(f"[{i}/{len(cands)}] EDHREC pages loaded")
     save_json(edh_path, cache)
 
     # Scryfall data for popular cards you don't own (needed to find substitutes)
     want = set()
-    for pg in pages.values():
+    for pg in list(pages.values()) + [{t: tp for t, (_, tp) in th.items()} for th in themes.values()]:
         for p in pg.values():
             for k, (name, rate, *_) in p["cards"].items():
                 if rate >= 0.10 and k not in owned and name not in BASIC_NAMES: want.add(name)
@@ -2019,10 +2125,11 @@ def main():
             fetch_templates({r for c in combos["own"] + combos["near"] for r in c.get("req") or []}
                             - set(TEMPLATES), tpl_path)
             combos = annotate_combos(combos, owned, set(m["ci"]))
+        prof = commander_profile(m, pg["all"].get("tags") or [])
         entry = {"name": m["name"], "ci": sorted(m["ci"]), "img": m.get("img", ""),
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
-                                  (combos or {}).get("own"))
+                                  (combos or {}).get("own"), profile=prof)
                        for b, p in pg.items()}}
         ranked = rank_combos(combos, entry["b"]["all"]["_names"])
         own = (combos or {}).get("own", [])
@@ -2035,7 +2142,27 @@ def main():
         else:
             entry["combos"] = None
         home_src.append((len(results), m, pg["all"], set(entry["b"]["all"]["_names"])))
+        # theme decks: the commander's EDHREC theme page (all brackets) built with each bracket's rules,
+        # leaning into cards that match the theme; stored as differences from the normal deck
+        entry["th"] = {}
+        for tslug, (tname, tp) in (themes.get(m["name"]) or {}).items():
+            per = {}
+            for b in entry["b"]:
+                tx = analyze(m, tp, owned, name_meta, pool_info, b, T, tp, own, focus=tname,
+                             want_gaps=False, profile=prof)
+                names_t = tx.pop("_names")
+                inside = [c for c in own if combo_done(c, names_t)]
+                maybe = [c for c in own if combo_done(c, names_t) is None and two_card_infinite(c)]
+                tx["cin"] = [c["id"] for c in inside]
+                tx["c2"] = sum(1 for c in inside if two_card_infinite(c))
+                tx["pw"]["combo"] = max(0, min(10, len(inside) * 3))
+                tx["bf"] = bracket_fit(tx, inside, maybe)
+                tx["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names_t, legal_names, BRACKET_NUM.get(b))]
+                per[b] = tx
+            entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "b": per}
         for b, x in entry["b"].items():
+            for t in entry["th"].values():         # now that the normal deck is final, keep only differences
+                if b in t["b"]: t["b"][b] = deck_diff(x, t["b"][b])
             names = x.pop("_names")
             x["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names, legal_names, BRACKET_NUM.get(b))]
             inside = [c for c in own if combo_done(c, names)]
@@ -2091,7 +2218,7 @@ def main():
                                for k2, v in ((k, l[:40]), (k + "_n", len(l)))} if diff else None}}
     out_html = os.path.join(a.out, "report.html")
     with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
-        f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows))
+        f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows, T.strs))
     os.replace(out_html + ".tmp", out_html)
     no_tags = sum(1 for r in results if not r["tags"])
     print(f"\nDone. {len(results)} analyzed, {skipped} had no EDHREC page, {no_tags} without theme tags."
