@@ -47,7 +47,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_step2.json`
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
-`baseline_lands.json` = + owned dual lands)
+`baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket)
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -104,6 +104,12 @@ Key functions:
   page pulled toward the all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate
   and no fit. Only cards from `build_pool` (owned, legal, in color identity). Game Changers capped by
   `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
+- Three numbers per deck (report tiles): **Collection Match** = `pct`; **Build Readiness** = `readiness()`
+  pass/fail checks (`ROLE_TARGETS`, avg MV ≤ `READY_MV`, weakest colour's land sources, stand-ins + role
+  fill ≤ `READY_ODD`), stored as `rd` = [[check, value, target, ok]]; **Bracket Fit** = `bracket_fit()`
+  (set in `main()` after combos-in-deck): lowest bracket the 99 fits (2 = "B1–2", 4 = "B4+"), from Game
+  Changers (>3 → B4), mass land denial (`MLD_RX` → B4), 2+ extra-turn cards (`XTURN_RX` → B4), two-card
+  combos in the deck (→ B3, "B4 if it can win early"). Tutors shown as info only (rules say "few").
 - `card_fit()` – rule-based fit of an owned card to a commander (no invented ratings): `FIT_TRIBE` for a
   type the commander or its top EDHREC theme names; `FIT_MECH` per shared mechanic (≤3) from `MECHANICS`
   (rules-text patterns + EDHREC theme names + card types); small bonuses for useful roles, roles the theme
@@ -157,6 +163,10 @@ combos, power profile bars, imported decks section.
   useful for the planned rule-based Bracket Fit.
 - Scryfall Tagger tag names in `TAG_QUERIES` are best guesses; the run prints card counts per role.
   A role with 0 cards means a wrong tag name.
+- Bracket Fit limits: combos-in-deck only sees the 30 most popular owned combos per colour identity
+  (`compact_combos` keep); can't tell early vs late two-card combos; MLD/extra turns are text patterns
+  (Spellbook `/cards/` has exact `massLandDenial`/`extraTurn` flags, not downloaded). The builder does not
+  avoid combos at B1–B3 yet: 25 B2 lists contain a two-card combo from EDHREC's own B2 list and are flagged.
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
 - Imported deck commander detection: `Commander` header, `*CMDR*` tag, or a guess from color identity.
 
@@ -167,7 +177,7 @@ combos, power profile bars, imported decks section.
    commander synergy (EDHREC `synergy`, oracle keyword overlap with the commander), theme fit, role,
    curve fit, EDHREC popularity (lower weight than synergy), combo participation, Game Changer status.
    Build the deck from the best-scored owned cards; EDHREC influences scoring but doesn't dictate the list.
-3. Three separate numbers: **Collection Match** (current %), **Build Readiness** (quality of the
+3. ✅ (first pass) Three separate numbers: **Collection Match** (current %), **Build Readiness** (quality of the
    generated 99), **Bracket Fit** (rule-based: Game Changer count, two-card combos, tutors,
    mass land denial, chained extra turns; Commander Spellbook also has an estimate-bracket endpoint).
 4. Unused cards: cards not in any `decks_in` deck → find commanders/archetypes that use them.

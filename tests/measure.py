@@ -14,8 +14,8 @@ import deck_wizard as dw
 GC_CAP = {"exhibition": 0, "core": 0, "upgraded": 3}
 ROLES = ["ramp", "draw", "removal", "wipe", "counter", "tutor"]
 NUM = ["size", "popular", "picks", "combo_pieces", "subs", "fill", "basics", "nonbasic_lands",
-       "owned_lands", "avg_mv", "gc", "pct", "on_list", "low_rate", "avg_syn", "combos_in"] + ROLES
-CHECKS = ["bad_size", "dupes", "off_color", "illegal", "gc_over_cap"]
+       "owned_lands", "avg_mv", "gc", "pct", "on_list", "low_rate", "avg_syn", "combos_in", "ready", "bracket_est"] + ROLES
+CHECKS = ["bad_size", "dupes", "off_color", "illegal", "gc_over_cap", "over_bracket"]
 
 def setup(csv_path):
     dw.OFFLINE = True
@@ -53,7 +53,14 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     syn = [v[0] if v and v[0] is not None else 0 for v in syn]
     r["avg_syn"] = round(sum(syn) / max(1, len(syn)), 4)
     names = set(keys) | {dw.norm(m["name"])}
-    r["combos_in"] = sum(1 for c in combos or [] if all(dw.norm(n) in names for n in c["cards"]))
+    inside = [c for c in combos or [] if all(dw.norm(n) in names for n in c["cards"])]
+    r["combos_in"] = len(inside)
+    x["c2"] = sum(1 for c in inside if len(c["cards"]) <= 2)
+    bf = dw.bracket_fit(x)
+    r["ready"] = sum(1 for c in x["rd"] if c[3])
+    r["bracket_est"] = bf["est"]
+    sel = dw.BRACKET_NUM.get(bracket)
+    r["over_bracket"] = int(sel is not None and sel < 5 and bf["est"] > max(sel, 2))
     for role in ROLES:
         r[role] = sum(1 for c in nonland if role in dw.roles_of(c))
     r["bad_size"] = int(r["size"] != 99)

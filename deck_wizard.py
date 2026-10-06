@@ -602,6 +602,40 @@ def role_text(mm):
     if card_kind(mm) == "land": return "land"
     return ", ".join(sorted(roles_of(mm)))
 
+# ---------------------------------------------------- readiness + bracket fit
+# Build Readiness: plain checks on the generated 99 (no invented score). Bracket Fit: the lowest
+# bracket the 99 fits under the official Commander Brackets rules we can check from card data.
+READY_MV = 3.5          # average mana value of non-land cards at most this
+READY_ODD = 16          # stand-ins + role fill: at most this many of the 64 non-land slots
+MLD_RX = re.compile(r"destroy all [^.]*\blands\b|exile all [^.]*\blands\b|sacrifices? (all|each) [^.]*\blands?\b"
+                    r"|lands don't untap|lands your opponents control don't untap")
+XTURN_RX = re.compile(r"takes? an extra turn")
+BRACKET_NUM = {"exhibition": 1, "core": 2, "upgraded": 3, "optimized": 4, "cedh": 5}
+
+def readiness(roles, avg_cmc, odd, sources):
+    """[[check, value, target, passed]]; sources = {colour: lands making it} (empty for colourless)."""
+    out = [[r, roles.get(r, 0), t, roles.get(r, 0) >= t] for r, t in ROLE_TARGETS.items()]
+    out.append(["mv", avg_cmc, READY_MV, avg_cmc <= READY_MV])
+    if len(sources) >= 2:
+        need = max(8, 20 // len(sources))
+        c, v = min(sources.items(), key=lambda kv: (kv[1], kv[0]))
+        out.append(["src", f"{c} {v}", need, v >= need])
+    out.append(["odd", odd, READY_ODD, odd <= READY_ODD])
+    return out
+
+def bracket_fit(x):
+    """Lowest bracket this deck fits, with reasons. B1 and B2 differ by intent, not card rules, so
+    the lowest answer is 2. B5 (cEDH) is about the field, so the highest answer is 4."""
+    est, why = 2, []
+    if x["gc"] > 3: est = 4; why.append(f"{x['gc']} Game Changers (B3 allows 3)")
+    elif x["gc"]: est = 3; why.append(f"{x['gc']} Game Changer{'s' if x['gc'] > 1 else ''}")
+    if x.get("mld"): est = 4; why.append("mass land denial: " + ", ".join(x["mld"]))
+    if len(x.get("xt") or []) >= 2: est = 4; why.append("extra turns could chain: " + ", ".join(x["xt"]))
+    if x.get("c2"):
+        est = max(est, 3)
+        why.append(f"{x['c2']} two-card combo{'s' if x['c2'] > 1 else ''} (B3 only if it can't win early, else B4)")
+    return {"est": est, "why": why}
+
 def enters_tapped(m):
     """Always enters tapped (Guildgates, Temples). Shocks, checklands, snarls... are conditional."""
     return bool(re.search(r"(^|\n|\. )(this land|~|it) enters (the battlefield )?tapped\.", rules_text(m)))
@@ -803,6 +837,9 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     cmcs = [m["cmc"] for m, _, _ in chosen]
     avg_cmc = round(sum(cmcs) / max(len(cmcs), 1), 2)
     allc = chosen + lands
+    sources = {c: sum(cnt for b, cnt in tally.items() if b == BASICS[c])
+                  + sum(1 for m, _, _ in lands if c in (m.get("produced") or [])) for c in colors}
+    odd = sum(1 for c in chosen if c[1] in "sf")
     return {
         "decks": edh["decks"], "pct": round(100 * own_w / tot_w, 1),
         "own_n": own_n, "tmpl_n": len(template), "n_miss": len(missing),
@@ -813,6 +850,10 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "cpc": sum(1 for c in allc if c[1] == "c"),
         "gc": len(gc_names), "gcn": gc_names, "cmc": avg_cmc,
         "pw": power_profile(roles, len(gc_names), avg_cmc),
+        "rd": readiness(roles, avg_cmc, odd, sources),
+        "mld": [m["name"] for m, _, _ in allc if MLD_RX.search(rules_text(m))],
+        "xt": [m["name"] for m, _, _ in allc if XTURN_RX.search(rules_text(m))],
+        "tut": roles.get("tutor", 0),
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f) if kind == "s" else f or -1]
                  for m, kind, f in allc],
@@ -1020,6 +1061,9 @@ a.tag:hover{background:var(--acc);color:var(--bg)}.tag.dim{color:var(--mut)}
 .bars{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;max-width:420px}
 .seg{height:7px;background:var(--bar);border-radius:3px;overflow:hidden}.sf{height:100%;background:var(--acc)}
 .sl{font-size:.75rem;color:var(--mut);font-variant-numeric:tabular-nums}
+.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.num{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--mut)}
+.num b{display:block;font-size:1.25rem;color:var(--ink)}.num .t{font-weight:600;color:var(--ink);font-size:.8rem}.num ul{padding-left:16px;margin:4px 0 0}.num .bad{color:#fbbf24}.num .ok{color:#34d399}
+@media(max-width:700px){.nums{grid-template-columns:1fr}}
 .ks{color:var(--acc)}.kf{color:var(--fill)}.kp{color:var(--pick)}.kc{color:var(--combo)}
 .vbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
 .vbar h3{margin:0 8px 0 0;font-size:1rem}
@@ -1062,7 +1106,7 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 <select id="p" aria-label="Min owned"><option value="0">Any %</option><option value="40">40%+</option><option value="60">60%+</option><option value="80">80%+</option></select>
 <select id="dk" aria-label="Min decks"><option value="0">Any deck count</option><option value="20">20+ decks</option><option value="100">100+ decks</option><option value="500">500+ decks</option><option value="1000">1000+ decks</option><option value="5000">5000+ decks</option></select>
 <select id="cf" aria-label="Combos"><option value="">Any combos</option><option value="own">Owns 1+ combo</option><option value="skel">Combo in deck</option></select>
-<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option></select>
+<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select>
 </div>
 <div id="imp"></div>
 <div id="count"></div>
@@ -1158,6 +1202,19 @@ function comboHTML(C,inSkel,labOwn,labNear){
   return `<div class="vbar"><h3>Combos</h3></div><div class="cols"><div><h4>${labOwn} (${C.n_own})</h4><ul class="cl">${own.map(li).join("")||"<li>None found</li>"}${more(C.n_own,C.own.length)}</ul></div>
   <div><h4>${labNear} (${C.n_near}) <small>missing card in red</small></h4><ul class="cl">${C.near.map(li).join("")||"<li>None found</li>"}${more(C.n_near,C.near.length)}</ul></div></div>`;}
 
+/* ---------- the three numbers ---------- */
+const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill"};
+function numsHTML(x,b){
+  const rd=x.rd||[], ok=rd.filter(c=>c[3]).length;
+  const fail=rd.filter(c=>!c[3]).map(([k,v,t])=>`<li>${RDL[k]}: ${esc(v)} <small>(${k==="mv"||k==="odd"?"max":"want"} ${t})</small></li>`).join("");
+  const bf=x.bf||{est:2,why:[]}, sel={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b];
+  const lbl=bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3";
+  const fit=!sel?"":bf.est<=Math.max(sel,2)||sel===5?` <span class="ok">✓ fits ${LBL[b].split(" ")[0]}</span>`:` <span class="bad">above ${LBL[b].split(" ")[0]}</span>`;
+  return `<div class="nums">
+  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${LBL[b]} decks.</div>
+  <div class="num"><span class="t">Build Readiness</span><b>${ok}/${rd.length} checks</b>${fail?`<ul>${fail}</ul>`:"Roles, curve, mana and real cards all look fine."}</div>
+  <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
+
 /* ---------- commander rows ---------- */
 function body(d,b){
   const x=d.b[b], tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
@@ -1170,8 +1227,8 @@ function body(d,b){
   const text=["Commander","1 "+front(d.cidx),"","Deck",...x.deck.map(([i])=>"1 "+front(i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
   <div class="info"><div class="tags">${tags}</div><div class="bks">${bks}</div>
-  <p>You own <strong>${x.own_n}</strong> of the top <strong>${x.tmpl_n}</strong> cards in ${n(x.decks)} ${LBL[b]} decks.
-  Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
+  ${numsHTML(x,b)}
+  <p>Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/commanders/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
@@ -1187,7 +1244,8 @@ function render(){
     &&x.pct>=p&&x.decks>=dk&&(!th||d.tags.slice(0,3).some(t=>t[0]===th))
     &&(!cf||(cf==="own"?nc(d)>0:(x.cin||[]).length>0));});
   const so=$("so").value;
-  rows.sort(so==="decks"?(a,z)=>z.b[b].decks-a.b[b].decks:so==="combos"?(a,z)=>nc(z)-nc(a)||z.b[b].pct-a.b[b].pct:(a,z)=>z.b[b].pct-a.b[b].pct);
+  const rdy=x=>(x.rd||[]).filter(c=>c[3]).length;
+  rows.sort(so==="ready"?(a,z)=>rdy(z.b[b])-rdy(a.b[b])||z.b[b].pct-a.b[b].pct:so==="decks"?(a,z)=>z.b[b].decks-a.b[b].decks:so==="combos"?(a,z)=>nc(z)-nc(a)||z.b[b].pct-a.b[b].pct:(a,z)=>z.b[b].pct-a.b[b].pct);
   $("count").textContent=`${rows.length} commanders with ${LBL[b]} data`;
   $("list").innerHTML=rows.map(d=>{const x=d.b[b]; return `<details class="row" data-i="${d.i}"><summary>
     <span class="pips">${pips(d.ci)}</span>
@@ -1461,6 +1519,7 @@ def main():
             x["cin"] = [c["id"] for c in inside]
             x["c2"] = sum(1 for c in inside if len(c["cards"]) <= 2)
             x["pw"]["combo"] = max(0, min(10, len(inside) * 3))
+            x["bf"] = bracket_fit(x)
         results.append(entry)
         if i % 10 == 0: save_json(csb_path, csb_cache)
         al = entry["b"]["all"]
