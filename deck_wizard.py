@@ -14,6 +14,7 @@ Options:
   --no-open         don't open the report automatically
   --no-combos       skip Commander Spellbook
   --decks-in DIR    folder of decklists (.txt) to score, default "decks_in"
+  --offline         no network: use cached data only (for tests and quick reruns)
 """
 import argparse, csv, glob, hashlib, json, os, re, sys, time, unicodedata
 import urllib.error, urllib.parse, urllib.request, webbrowser
@@ -30,6 +31,7 @@ SUB_MIN = 0.25          # missing cards played in 25%+ of decks get a substitute
 GAP_SHOW = 20           # missing cards shown in the report, with alternatives
 ROLE_TARGETS = {"ramp": 10, "draw": 9, "removal": 8, "wipe": 2}
 VALID_BRACKETS = ["exhibition", "core", "upgraded", "optimized", "cedh"]
+OFFLINE = False         # --offline: never touch the network, use caches only
 
 # ----------------------------------------------------------------- helpers
 def norm(name):
@@ -42,7 +44,8 @@ def slugify(name):
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 def http_json(url, data=None, retries=3):
-    body = json.dumps(data).encode() if data is not None else None
+    if OFFLINE: return None
+    body =json.dumps(data).encode() if data is not None else None
     headers = {"User-Agent": UA, "Accept": "application/json"}
     if body: headers["Content-Type"] = "application/json"
     last = None
@@ -95,6 +98,9 @@ def compact_card(c):
 def enrich_scryfall(ids, cache_path, refresh=False):
     cache = {} if refresh else load_json(cache_path)
     todo = [i for i in ids if i not in cache or "img" not in cache[i]]
+    if OFFLINE:
+        print(f"Scryfall: {len(ids) - len(todo)} cached, {len(todo)} skipped (offline)")
+        return cache
     print(f"Scryfall: {len(ids) - len(todo)} cached, {len(todo)} to fetch")
     for n in range(0, len(todo), 75):
         batch = todo[n:n + 75]
@@ -113,6 +119,9 @@ def resolve_names(names, cache_path, refresh=False):
     """Scryfall data for cards you don't own (missing cards, imported decks)."""
     cache = {} if refresh else load_json(cache_path)
     todo = sorted({n for n in names if norm(n) not in cache and n not in BASIC_NAMES})
+    if OFFLINE:
+        if todo: print(f"Scryfall: {len(todo)} cards you don't own skipped (offline)")
+        return cache
     if todo: print(f"Scryfall: looking up {len(todo)} cards you don't own")
     for i in range(0, len(todo), 75):
         batch = todo[i:i + 75]
@@ -145,6 +154,10 @@ def fetch_role_tags(cache_path, refresh=False):
     if cache.get("roles") and time.time() - cache.get("_ts", 0) < 30 * 86400:
         roles = {r: set(v) for r, v in cache["roles"].items()}
         print("Role tags: cached (" + ", ".join(f"{r} {len(v)}" for r, v in roles.items()) + ")")
+        return roles
+    if OFFLINE:   # any cached tags beat none, even if older than a month
+        roles = {r: set(v) for r, v in (cache.get("roles") or {}).items()}
+        print("Role tags: " + ("cached, may be stale (offline)" if roles else "none cached; text matching (offline)"))
         return roles
     print("Role tags: downloading from Scryfall Tagger (once a month, ~1-2 min)")
     roles = {}
@@ -254,7 +267,8 @@ def parse_edhrec(data):
 
 def fetch_page(path, cache, refresh=False):
     if not refresh and path in cache: return cache[path]
-    data = http_json(EDH + path + ".json")
+    if OFFLINE: return None             # not cached, and not recorded as missing
+    data =http_json(EDH + path + ".json")
     time.sleep(0.8)
     out = parse_edhrec(data) if data else None
     cache[path] = out
@@ -775,7 +789,11 @@ def main():
     ap.add_argument("--no-open", action="store_true")
     ap.add_argument("--no-combos", action="store_true")
     ap.add_argument("--decks-in", default="decks_in")
+    ap.add_argument("--offline", action="store_true")
     a = ap.parse_args()
+    if a.offline and a.refresh: ap.error("--offline and --refresh can't be combined")
+    global OFFLINE
+    OFFLINE = a.offline
     brackets = [b for b in VALID_BRACKETS if b in {x.strip().lower() for x in a.brackets.split(",")}]
 
     cache_dir = os.path.join(a.out, "cache")

@@ -33,6 +33,10 @@ Useful flags:
 | `--decks-in DIR` | Folder of decklists (.txt) to score, default `decks_in` |
 | `--refresh` | Ignore all caches (slow: re-downloads everything) |
 | `--no-open` | Don't open the report in the browser |
+| `--offline` | No network; cached data only (tests, quick reruns) |
+
+Deck metrics for comparing builder versions (offline, ~30 s):
+`py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_v5.json`
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
