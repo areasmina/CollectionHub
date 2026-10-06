@@ -388,11 +388,15 @@ STANDIN = 0.6           # a stand-in is a guess at the real card's job: it count
 MAIN_TYPES = {"artifact", "enchantment", "spell", "planeswalker", "battle"}   # named in lower case
 SHRINK_DECKS = 200      # bracket pages with few decklists lean on the all-decks page (blended_rates)
 
+_TW_MEMO = {}
 def type_words(m):
     """Front-face types and subtypes, lower case; instant and sorcery both count as 'spell'."""
-    words = set(re.findall(r"[a-z]+", (m.get("type_line") or "").split(" // ")[0].lower()))
-    if words & {"instant", "sorcery"}: words |= {"spell"}
-    return words
+    tl = m.get("type_line") or ""
+    if tl not in _TW_MEMO:
+        words = set(re.findall(r"[a-z]+", tl.split(" // ")[0].lower()))
+        if words & {"instant", "sorcery"}: words |= {"spell"}
+        _TW_MEMO[tl] = frozenset(words)
+    return _TW_MEMO[tl]
 
 def is_changeling(m):
     return "Changeling" in (m.get("keywords") or []) or "is every creature type" in m["oracle"].lower()
@@ -761,6 +765,56 @@ def owned_duals(pool, ci, used, n_lands, n_tapped):
         out.append(m); n_tapped += tapped
     return out
 
+def card_values(edh, base, owned, name_meta):
+    """(rate_of, play_of, value_of) for one EDHREC page: the play rate as EDHREC shows it, the rate
+    used for choosing (non-lands blended with the all-decks page; lands keep the page's own rate, they
+    only compete with lands), and play rate + SYN_W x EDHREC synergy (lands: rate only)."""
+    cards = edh["cards"]
+    rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]
+    blend = blended_rates(edh, base)
+    kind_of = lambda k: card_kind(owned.get(k) or name_meta.get(k) or {"type_line": ""})
+    def syn_of(k):          # EDHREC synergy from this page, else the all-decks page (v3 pages have none)
+        for page in (edh, base or edh):
+            v = page["cards"].get(k)
+            if v and len(v) > 2 and v[2] is not None: return v[2]
+        return 0.0
+    play_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
+    value_of = lambda k: play_of(k) if kind_of(k) == "land" else play_of(k) + SYN_W * syn_of(k)
+    return rate_of, play_of, value_of
+
+# ------------------------------------------------------------ unused cards
+HOME_MIN = 0.12         # a commander is a "home" for a card if the card scores at least this there
+HOMES = 3               # homes shown per card
+UNUSED_SHOW = 150       # cards listed in the report (best homes first)
+
+def find_homes(cmdrs, owned, name_meta, used, T):
+    """Owned cards outside `used` (your decks) and where they'd fit best.
+    cmdrs = [(DATA index, commander meta, all-decks EDHREC page, names in its suggested 99)].
+    Score is the deck builder's own (play rate + synergy + fit), on the all-decks page."""
+    cand = {k: m for k, m in owned.items() if k not in used and m["commander_legal"]
+            and m["name"] not in BASIC_NAMES and m["layout"] not in ("token", "emblem")}
+    homes = {k: [] for k in cand}
+    for i, m, page, names in cmdrs:
+        ci, me = set(m["ci"]), norm(m["name"])
+        prof = commander_profile(m, page.get("tags") or [])
+        rate_of, _, value_of = card_values(page, page, owned, name_meta)
+        for k, c in cand.items():
+            if k == me or not set(c["ci"]) <= ci: continue
+            f, why = (0.0, "") if card_kind(c) == "land" else card_fit(c, prof, "all")
+            sc = value_of(k) + f
+            if sc >= HOME_MIN: homes[k].append((sc, i, rate_of(k), why, k in names))
+    rows = []
+    for k, L in homes.items():
+        L.sort(key=lambda h: (-h[0], h[1]))
+        if L: rows.append((L[0][0], k, L[:HOMES]))
+    rows.sort(key=lambda r: (-r[0], r[1]))
+    by_cmdr = sorted(((i, sorted(names & set(cand))) for i, _, _, names in cmdrs), key=lambda t: (-len(t[1]), t[0]))
+    in_any = set().union(*(names for _, _, _, names in cmdrs)) if cmdrs else set()
+    return {"n_unused": len(cand), "n_home": len(rows), "n_sugg": len(set(cand) & in_any),
+            "cards": [[T.add(cand[k]["name"], cand[k]), [[i, round(r * 100), why, int(ind)] for _, i, r, why, ind in L]]
+                      for _, k, L in rows[:UNUSED_SHOW]],
+            "by_cmdr": [[i, len(ks), [T.add(cand[k]["name"], cand[k]) for k in ks[:40]]] for i, ks in by_cmdr[:15] if ks]}
+
 # --------------------------------------------------------------- analysis
 def power_profile(roles, gc, avg_cmc):
     clamp = lambda v: max(0, min(10, int(v)))
@@ -782,18 +836,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     def gc_room():
         return gc_cap is None or sum(1 for m, _, _ in chosen + lands if m["gc"]) < gc_cap
     cards = edh["cards"]
-    rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]     # as EDHREC shows it (report text, % owned)
-    blend = blended_rates(edh, base)
-    kind_of = lambda k: card_kind(owned.get(k) or name_meta.get(k) or {"type_line": ""})
-    def syn_of(k):          # EDHREC synergy from this page, else the all-decks page (v3 pages have none)
-        for page in (edh, base or edh):
-            v = page["cards"].get(k)
-            if v and len(v) > 2 and v[2] is not None: return v[2]
-        return 0.0
-    # for choosing cards; lands keep the bracket's own rate (they only compete with lands, and
-    # blending pushed cEDH-specific lands under the 15% land bar)
-    play_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
-    value_of = lambda k: play_of(k) if kind_of(k) == "land" else play_of(k) + SYN_W * syn_of(k)
+    rate_of, play_of, value_of = card_values(edh, base, owned, name_meta)
     fits = {}
     def score(k):           # an owned card: EDHREC value + how well it fits this commander
         if k not in fits:
@@ -1419,6 +1462,7 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 <select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select>
 </div>
 <div id="imp"></div>
+<div id="unused"></div>
 <div id="count"></div>
 <div id="list"></div>
 </main><img id="pv" alt=""><script>
@@ -1608,6 +1652,19 @@ $("imp").innerHTML=DECKS.length?`<h2>Your imported decks</h2>`+DECKS.map((k,j)=>
   <span class="bar"><b style="width:${k.pct}%"></b></span><span class="pct">${k.pct}%</span><span class="dk">${k.own}/${k.total}</span>
   <span class="cb">${k.combos?k.combos.n_own+"⚡":"–"}</span></summary><div class="body"></div></details>`).join(""):"";
 
+/* ---------- unused cards ---------- */
+(function(){
+  const U=ST.unused; if(!U) return;
+  const intro=U.src==="decks_in"
+    ?`<p><b>${n(U.n_unused)}</b> cards you own aren't in any of your ${U.n_decks} decks in <b>decks_in</b>. <b>${n(U.n_sugg)}</b> of them make it into the suggested deck of one of your commanders; ${n(U.n_home-U.n_sugg)} more are a weaker fit somewhere; ${n(U.n_unused-U.n_home)} have no real home.</p>`
+    :`<p class="dim">Put your real decklists (.txt exports from Moxfield, Archidekt or ManaBox) in the <b>decks_in</b> folder and rerun to see which of your cards sit unused. For now this shows the <b>${n(U.n_unused)}</b> cards that none of the suggested decks use; ${n(U.n_home)} of them are a weaker fit somewhere.</p>`;
+  const who=U.by_cmdr.map(([i,k])=>`<a href="#" class="tag" data-cmdr="${esc(DATA[i].name)}">${esc(DATA[i].name)} · ${k}</a>`).join(" ");
+  const cards=U.cards.map(([c,H])=>`<div class="alt">${tile(c)}<small>${H.map(([i,r,why,ind])=>`<a href="#" data-cmdr="${esc(DATA[i].name)}">${esc(DATA[i].name.split(" // ")[0])}</a>${r?` ${r}% of decks`:""}${why?` · fits: ${esc(why)}`:""}${ind?" · in its suggested deck":""}`).join("<br>")}</small></div>`).join("");
+  $("unused").innerHTML=`<h2>Unused cards</h2>${intro}
+  ${who?`<h4>Commanders whose suggested deck uses the most of them</h4><div class="tags">${who}</div>`:""}
+  <details class="more"><summary>Best homes for each card (${U.cards.length} shown, best first)</summary><div class="gap">${cards||"<p class='dim'>None.</p>"}</div></details>`;
+})();
+
 /* ---------- events ---------- */
 document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open||r.dataset.f)return;
   r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],bk()); r.dataset.f=1;},true);
@@ -1615,6 +1672,7 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.classList.contains("vt")){const bd=t.closest(".body");
     bd.querySelectorAll(".vt").forEach(x=>x.classList.toggle("on",x===t));
     bd.querySelectorAll(".view").forEach(v=>v.hidden=!v.classList.contains("v-"+t.dataset.v));}
+  if(t.dataset&&t.dataset.cmdr){e.preventDefault();$("q").value=t.dataset.cmdr;render();$("list").scrollIntoView();}
   if(t.classList.contains("cp")){navigator.clipboard.writeText(t.closest(".body").querySelector("textarea").value);t.textContent="Copied";}});
 const pv=$("pv");
 if(matchMedia("(hover:hover)").matches){
@@ -1845,7 +1903,7 @@ def main():
     fetch_keyword_catalog(os.path.join(cache_dir, "keywords.json"), a.refresh)
     tpl_path = os.path.join(cache_dir, "spellbook_templates.json")
     fetch_templates(set(), tpl_path, a.refresh)        # load the cache
-    T, CT, results = CardTable(), ComboTable(), []
+    T, CT, results, home_src = CardTable(), ComboTable(), [], []
     done = [m for m in cands if m["name"] in pages]
     for i, m in enumerate(done, 1):
         pg = pages[m["name"]]
@@ -1870,6 +1928,7 @@ def main():
             entry["dz"] = [CT.add(c) for c in danger_zone(own, legal_names)]
         else:
             entry["combos"] = None
+        home_src.append((len(results), m, pg["all"], set(entry["b"]["all"]["_names"])))
         for b, x in entry["b"].items():
             names = x.pop("_names")
             x["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names, legal_names, BRACKET_NUM.get(b))]
@@ -1887,7 +1946,7 @@ def main():
     save_json(csb_path, csb_cache)
 
     # imported decklists
-    decks = []
+    decks, in_decks = [], set()
     files = sorted(glob.glob(os.path.join(a.decks_in, "*.txt")))
     if files:
         print(f"\nImported decks: {len(files)} in {a.decks_in}")
@@ -1895,6 +1954,7 @@ def main():
         for fp in files:
             c_, m_ = parse_decklist(fp)
             extra |= {nm for _, nm in c_ + m_ if norm(nm) not in owned}
+            in_decks |= {norm(nm) for _, nm in c_ + m_}
         name_meta = resolve_names(extra, os.path.join(cache_dir, "scryfall_names.json"))
         for fp in files:
             d = analyze_imported(fp, owned, name_meta, not a.no_combos, cache, T)
@@ -1905,13 +1965,20 @@ def main():
     else:
         os.makedirs(a.decks_in, exist_ok=True)
 
+    # unused cards: not in any of your decks (decks_in), else not in any suggested deck
+    used = in_decks if files else set().union(*(t[3] for t in home_src)) if home_src else set()
+    unused = find_homes(home_src, owned, name_meta, used, T)
+    unused.update({"src": "decks_in" if files else "suggested", "n_decks": len(files)})
+    print(f"Unused cards: {unused['n_unused']} not in any {'of your decks' if files else 'suggested deck'};"
+          f" {unused['n_sugg']} make a suggested deck, {unused['n_home'] - unused['n_sugg']} weaker fits")
+
     os.makedirs(os.path.join(a.out, "decks"), exist_ok=True)
     for r in results:
         for b, x in r["b"].items():
             with open(os.path.join(a.out, "decks", f"{r['slug']}_{b}.txt"), "w", encoding="utf-8") as f:
                 f.write(x.pop("arena"))
     stats = {"cards": sum(q for _, q in coll.values()), "unique": len(owned), "cands": len(cands),
-             "built": time.time(),
+             "built": time.time(), "unused": unused,
              "coll": {"csv": os.path.basename(csv_path),
                       "at": time.strftime("saved %Y-%m-%d %H:%M", time.localtime(os.path.getmtime(csv_path))),
                       "diff": {k2: v for k, l in (diff or {}).items()

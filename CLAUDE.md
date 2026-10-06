@@ -153,6 +153,13 @@ Key functions:
   for Ureni; from `TYPE_VOCAB`, subtypes only when capitalised) and the stand-in doesn't. Below
   `SUB_MATCH_MIN` (0.35) nothing is offered. Lands matched by colors produced. Example that motivated
   this: v5 put Spider-Man in Ureni's deck "for" Bloomvine Regent because both fetch lands.
+- `card_values()` – shared per-page card value (rate, blended rate, rate + synergy) used by `analyze()` and
+  `find_homes()`, so "best home" scores match the deck builder.
+- `find_homes()` (roadmap 4) – unused cards = owned, legal, non-basic cards not in any `decks_in` deck (no
+  decklists: not in any suggested All-decks 99). For each, every commander scores it (value + `card_fit`,
+  all-decks page); homes ≥ `HOME_MIN` 0.12, top `HOMES` 3, `UNUSED_SHOW` 150 listed. Report summary:
+  `n_sugg` make a suggested deck, weaker fits, no home; commanders whose suggested 99 uses the most of them
+  (click → filters the list). Stored in `STATS.unused`. Adds ~10–30 s to a full run.
 - `CardTable` – deduplicated card list for the report; decks reference cards by index (keeps HTML small).
 - "% owned" = weighted share of the EDHREC template (top ≤99 cards at ≥10% inclusion) that is owned.
 
@@ -220,7 +227,8 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
 3. ✅ (first pass) Three separate numbers: **Collection Match** (current %), **Build Readiness** (quality of the
    generated 99), **Bracket Fit** (rule-based: Game Changer count, two-card combos, tutors,
    mass land denial, chained extra turns; Commander Spellbook also has an estimate-bracket endpoint).
-4. Unused cards: cards not in any `decks_in` deck → find commanders/archetypes that use them.
+4. ✅ (first pass) Unused cards: cards not in any `decks_in` deck → find commanders/archetypes that use them.
+   Needs real decklists in `decks_in/` to be meaningful (empty today → falls back to suggested decks).
 5. Shared cores / hidden archetypes: group commanders that draw on the same owned cards
    (e.g. an Izzet spellslinger core shared by Stella Lee, The Locust God, Niv-Mizzet).
 6. Later: missing-card prices (Scryfall USD/EUR → CAD), Archidekt real-deck matching,
