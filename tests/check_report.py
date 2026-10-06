@@ -52,6 +52,16 @@ try{for(const d of DATA)for(const b of Object.keys(d.av||{})){const h=body(d,b,{
     if(r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('card stats switch did not go back');
     out.clicks=(out.clicks||0)+4;}}
 catch(e){out.errs.push('average decks: '+e.message);}
+// page-wide source selector: "Average deck" switches the list and the panels, "Commander page" goes back
+try{const tb=document.querySelector('[data-src="avg"]');
+  if(!tb)out.errs.push('no Average deck selector at the top');
+  else{tb.click(); if(!$('count').textContent.includes('average deck'))out.errs.push('top selector did not switch the list');
+    const r=document.querySelector('details.row[data-i]');
+    if(r){r.open=true; rerow(r); if(!r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('panel did not follow the top selector');
+      if(!r.querySelector('.shape .mvc .rf'))out.errs.push('deck shape chart has no average-deck marker');}
+    document.querySelector('[data-src=""]').click(); if($('count').textContent.includes('average deck'))out.errs.push('top selector did not go back');
+    out.clicks=(out.clicks||0)+2;}}
+catch(e){out.errs.push('top selector: '+e.message);}
 // substitute chooser: open a slot, pick an alternative, then "buy", then reset
 try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length));
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');

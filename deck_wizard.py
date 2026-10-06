@@ -315,8 +315,9 @@ class CardTable:
             i = self.idx[k]
             if img and not self.rows[i][1]: self.rows[i][1] = img
             return i
-        if meta: row = [meta["name"], img, type_group(meta["type_line"]), 1 if meta.get("gc") else 0]
-        else: row = [name, "", "Land" if name in BASIC_NAMES else "Other", 0]
+        if meta: row = [meta["name"], img, type_group(meta["type_line"]), 1 if meta.get("gc") else 0,
+                        int(meta.get("cmc") or 0)]
+        else: row = [name, "", "Land" if name in BASIC_NAMES else "Other", 0, 0]
         self.rows.append(row); self.idx[k] = len(self.rows) - 1
         return self.idx[k]
 
@@ -381,6 +382,19 @@ def avg_as_page(ap, page, base, bracket):
     counts = ap.get("counts") or {}
     decks = counts.get(str(BRACKET_NUM.get(bracket))) if bracket != "all" else sum(counts.values())
     return {"decks": decks or page["decks"], "cards": cards, "tags": base.get("tags") or []}, show
+
+def avg_shape(ap, owned, name_meta):
+    """Card types and mana curve (non-lands, 7+ together) of an EDHREC average deck, for the
+    report's charts: your deck against the average."""
+    mv, ty = [0] * 8, {}
+    for k, (name, q) in ap["cards"].items():
+        m = owned.get(k) or name_meta.get(k)
+        if name in BASIC_NAMES: g = "Land"
+        elif not m: continue                # no Scryfall data for it: left out of the charts
+        else: g = type_group(m["type_line"])
+        ty[g] = ty.get(g, 0) + q
+        if g != "Land": mv[min(int(m.get("cmc") or 0), 7)] += q
+    return {"mv": mv, "ty": ty}
 
 def load_edhrec_cache(cache_dir, refresh=False):
     """EDHREC pages by path. The first time, seeds from the v3 cache so old pages stay usable
@@ -1612,6 +1626,21 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .danger{border:1px solid #f87171;background:rgba(248,113,113,.08);border-radius:8px;padding:10px 12px;margin:10px 0}.danger h4{color:#f87171;margin-top:0}
 .tag.thm{cursor:pointer;background:transparent;border:1px solid var(--line)}.tag.thm.on{border-color:var(--acc);background:rgba(45,212,191,.18);color:var(--ink)}
 .tnote{font-size:.85rem;margin:4px 0 8px}.tnote .tag{cursor:pointer}
+.srcsel{display:flex;gap:4px}.srcsel .srcb{font-size:.85rem;padding:4px 12px}
+.shape{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px;margin:4px 0 12px}
+.shape h4{margin:0 0 6px;font-size:.85rem;color:var(--mut)}
+.mvc{display:flex;align-items:flex-end;gap:2px;height:110px;padding-top:16px;border-bottom:1px solid var(--line)}
+.mvc .col{flex:1;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center}
+.mvc .b{width:70%;background:var(--fill);border-radius:4px 4px 0 0}
+.mvc .rf,.tyb .rf{position:absolute;background:var(--ink)}.mvc .rf{left:6%;right:6%;height:2px}
+.mvc .v{position:absolute;font-size:.7rem;color:var(--mut)}
+.mvx{display:flex;gap:2px;margin-top:2px}.mvx span{flex:1;text-align:center;font-size:.7rem;color:var(--mut)}
+.tyr{display:grid;grid-template-columns:96px 1fr 26px;gap:3px 8px;align-items:center;font-size:.75rem}
+.tyl{color:var(--mut)}.tyn{text-align:right}
+.tyb{height:10px;position:relative}.tyb .b{height:100%;background:var(--fill);border-radius:0 4px 4px 0}.tyb .rf{top:-3px;bottom:-3px;width:2px}
+.lgd{font-size:.75rem;color:var(--mut);display:flex;gap:14px;margin-bottom:6px}.lgd i{display:inline-block;vertical-align:middle;margin-right:4px}
+.lgd .ly{width:10px;height:10px;border-radius:2px;background:var(--fill)}.lgd .lr{width:12px;height:2px;background:var(--ink)}
+table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{padding:2px 10px;text-align:right;border-bottom:1px solid var(--line)}table.st td:first-child{text-align:left}
 .srcs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:.8rem}
 .srcb{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut);background:transparent;cursor:pointer}.srcb:hover{border-color:var(--acc);color:var(--ink);background:transparent}.srcb.on{border-color:var(--acc);color:var(--ink);background:rgba(45,212,191,.12)}.srcb:disabled{opacity:.5;cursor:default}
 .slotw{display:flex;flex-direction:column;gap:4px}.swap{font-size:.72rem;padding:3px 6px}
@@ -1635,7 +1664,8 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 <p class="sub">Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own.</p>
 <ul class="stats" id="stats"></ul>
 <div id="coll"></div>
-<div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span></div>
+<div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span>
+<div class="srcsel" role="group" aria-label="Deck source"><button class="srcb" data-src="">Commander page</button><button class="srcb" data-src="avg">Average deck</button></div></div>
 <div class="tools">
 <input id="q" type="search" placeholder="Search commanders" aria-label="Search">
 <select id="th" aria-label="Archetype"><option value="">Any archetype</option></select>
@@ -1701,6 +1731,9 @@ const themes=new Set(); DATA.forEach(d=>d.tags.slice(0,3).forEach(t=>themes.add(
 [...themes].sort().forEach(t=>{const o=document.createElement("option");o.value=o.textContent=t;$("th").appendChild(o);});
 const pips=ci=>ci.length?ci.map(c=>`<i class="pip" style="background:${PIP[c]}">${c}</i>`).join(""):`<i class="pip" style="background:#bbb">C</i>`;
 const bk=()=>BR[+br.value];
+// deck source for the whole page, like EDHREC: "" = commander page (card stats), "avg" = average deck
+let SRC=""; try{SRC=localStorage.getItem("dw:src")||"";}catch(e){}
+const X=(d,b)=>SRC==="avg"?(d.av&&d.av[b])||null:d.b[b];
 
 /* ---------- card images (Scryfall) ---------- */
 function IMG(i){const s=CARDS[i][1];
@@ -1741,8 +1774,31 @@ function themed(d,b,t){const x=d.b[b], th=t&&d.th&&d.th[t], df=th&&th.b[b]; if(!
 const hasAvg=(d,b)=>!!(d.av&&d.av[b]);
 const avgd=(d,b)=>applyDiff(d.b[b],d.av[b],{avg:1});
 // which deck a row shows: "avg" = average deck, else a theme slug or "" (also the key for saved choices)
-function rowSel(d,b,r){if(r&&r.dataset.a==="1"&&hasAvg(d,b))return "avg";
-  return r&&r.dataset.t&&d.th&&d.th[r.dataset.t]?r.dataset.t:"";}
+// a row's own choice (data-a "1"/"0", a theme) wins over the page's source
+function rowSel(d,b,r){const a=r&&r.dataset.a;
+  if(a==="1"&&hasAvg(d,b))return "avg";
+  if(r&&r.dataset.t&&d.th&&d.th[r.dataset.t])return r.dataset.t;
+  return a!=="0"&&SRC==="avg"&&hasAvg(d,b)?"avg":"";}
+/* ---------- deck shape: your deck (bars) against EDHREC's average deck (line) ---------- */
+const TYO=["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Other","Land"];
+function shapeHTML(items,ref,b){
+  const mv=[0,0,0,0,0,0,0,0], ty={};
+  items.forEach(it=>{const c=CARDS[it.i]; if(!c)return; const q=it.n||1; ty[c[2]]=(ty[c[2]]||0)+q;
+    if(c[2]!=="Land") mv[Math.min(7,c[4]||0)]+=q;});
+  const tip=(l,y,r)=>`${l}: your deck ${y}`+(r==null?"":` · average deck ${r}`);
+  const top=Math.max(1,...mv,...(ref?ref.mv:[]));
+  const cols=mv.map((v,k)=>{const r=ref?ref.mv[k]||0:null, lab="MV "+(k===7?"7+":k);
+    return `<div class="col" title="${tip(lab,v,r)}"><span class="v" style="bottom:calc(${100*Math.max(v,r||0)/top}% + 3px)">${v||""}</span><div class="b" style="height:${100*v/top}%"></div>${r==null?"":`<div class="rf" style="bottom:${100*r/top}%"></div>`}</div>`;}).join("");
+  const tys=TYO.filter(g=>ty[g]||(ref&&ref.ty[g])), tmax=Math.max(1,...tys.map(g=>Math.max(ty[g]||0,ref?ref.ty[g]||0:0)));
+  const rows=tys.map(g=>{const v=ty[g]||0, r=ref?ref.ty[g]||0:null, tt=tip(g,v,r);
+    return `<span class="tyl" title="${tt}">${g}</span><div class="tyb" title="${tt}"><div class="b" style="width:${100*v/tmax}%"></div>${r==null?"":`<div class="rf" style="left:${100*r/tmax}%"></div>`}</div><span class="tyn" title="${tt}">${v}</span>`;}).join("");
+  const lgd=`<div class="lgd"><span><i class="ly"></i>Your deck</span>${ref?`<span><i class="lr"></i>EDHREC average ${b==="all"?"":LBL[b]+" "}deck</span>`:""}</div>`;
+  const tbl=`<details class="more"><summary>As a table</summary><table class="st"><tr><th></th><th>Your deck</th>${ref?"<th>Average deck</th>":""}</tr>
+    ${mv.map((v,k)=>`<tr><td>MV ${k===7?"7+":k}</td><td>${v}</td>${ref?`<td>${ref.mv[k]||0}</td>`:""}</tr>`).join("")}
+    ${tys.map(g=>`<tr><td>${g}</td><td>${ty[g]||0}</td>${ref?`<td>${ref.ty[g]||0}</td>`:""}</tr>`).join("")}</table></details>`;
+  return `<div class="vbar"><h3>Deck shape</h3>${ref?"":`<span class="dim">no EDHREC average deck for ${LBL[b]}</span>`}</div>${lgd}
+  <div class="shape"><div><h4>Mana curve (non-land cards)</h4><div class="mvc">${cols}</div><div class="mvx">${mv.map((_,k)=>`<span>${k===7?"7+":k}</span>`).join("")}</div></div>
+  <div><h4>Card types</h4><div class="tyr">${rows}</div></div></div>${tbl}`;}
 // the deck as you chose it: slot = the missing card's index; buy = keep the missing card
 function effDeck(d,b,x,t){const ch=getCh(d,b,t);
   return x.deck.map(([i,k,f])=>{if(k!=="s"||f<0)return {i,kind:k,f};
@@ -1833,7 +1889,7 @@ function body(d,b,r){
     <a href="https://edhrec.com/average-decks/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC average deck ↗</a></p>`
     :(d.th&&Object.keys(d.th).length?`<p class="tnote dim">Overview: the most common ${LBL[b]} deck. Click a theme above to build around it.</p>`:"");
   const anyAvg=d.av&&Object.keys(d.av).length;
-  const srcs=anyAvg?`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played with this commander (EDHREC commander page) and your collection">Card stats</button><button class="srcb ${asel?"on":""}" data-asel="1" ${hasAvg(d,b)?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for ${LBL[b]}"`}>Average deck${hasAvg(d,b)?": "+d.av[b].pct+"%":""}</button></div>`:"";
+  const srcs=anyAvg?`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played with this commander (EDHREC commander page) and your collection">Commander page</button><button class="srcb ${asel?"on":""}" data-asel="1" ${hasAvg(d,b)?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for ${LBL[b]}"`}>Average deck${hasAvg(d,b)?": "+d.av[b].pct+"%":""}</button></div>`:"";
   const bks=BR.filter(k=>d.b[k]).map(k=>{const pc=asel&&hasAvg(d,k)?d.av[k].pct:d.b[k].pct, dk=asel&&hasAvg(d,k)?d.av[k].decks:d.b[k].decks;
     return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${pc}% <small>(${n(dk)})</small></button>`;}).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
@@ -1850,6 +1906,7 @@ function body(d,b,r){
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
   ${slot!=null?chooserHTML(d,b,x,slot,sel):""}${shopHTML(d,b,items,sel)}
+  ${shapeHTML(items,hasAvg(d,b)?d.av[b].ref:null,b)}
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/${asel?"average-decks":"commanders"}/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown${x.avg?" (most played first)":""}</span></div>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
@@ -1859,14 +1916,15 @@ function render(){
   const b=bk(); $("bv").textContent=LBL[b];
   const q=$("q").value.toLowerCase(), c=$("c").value, p=+$("p").value, dk=+$("dk").value, th=$("th").value, cf=$("cf").value;
   const nc=d=>d.combos?d.combos.n_own:0;
-  const rows=DATA.filter(d=>{const x=d.b[b]; return x&&d.name.toLowerCase().includes(q)&&(!c||d.ci.includes(c))
+  document.querySelectorAll(".srcsel .srcb").forEach(x=>x.classList.toggle("on",x.dataset.src===SRC));
+  const rows=DATA.filter(d=>{const x=X(d,b); return x&&d.name.toLowerCase().includes(q)&&(!c||d.ci.includes(c))
     &&x.pct>=p&&x.decks>=dk&&(!th||d.tags.slice(0,3).some(t=>t[0]===th))
     &&(!cf||(cf==="own"?nc(d)>0:(x.cin||[]).length>0));});
   const so=$("so").value;
   const rdy=x=>(x.rd||[]).filter(c=>c[3]).length;
-  rows.sort(so==="ready"?(a,z)=>rdy(z.b[b])-rdy(a.b[b])||z.b[b].pct-a.b[b].pct:so==="decks"?(a,z)=>z.b[b].decks-a.b[b].decks:so==="combos"?(a,z)=>nc(z)-nc(a)||z.b[b].pct-a.b[b].pct:(a,z)=>z.b[b].pct-a.b[b].pct);
-  $("count").textContent=`${rows.length} commanders with ${LBL[b]} data`;
-  $("list").innerHTML=rows.map(d=>{const x=d.b[b]; return `<details class="row" data-i="${d.i}"><summary>
+  rows.sort(so==="ready"?(a,z)=>rdy(X(z,b))-rdy(X(a,b))||X(z,b).pct-X(a,b).pct:so==="decks"?(a,z)=>X(z,b).decks-X(a,b).decks:so==="combos"?(a,z)=>nc(z)-nc(a)||X(z,b).pct-X(a,b).pct:(a,z)=>X(z,b).pct-X(a,b).pct);
+  $("count").textContent=`${rows.length} commanders with ${SRC==="avg"?"an EDHREC average deck for "+LBL[b]:LBL[b]+" data"}`;
+  $("list").innerHTML=rows.map(d=>{const x=X(d,b); return `<details class="row" data-i="${d.i}"><summary>
     <span class="pips">${pips(d.ci)}</span>
     <span class="nm">${esc(d.name)}<span class="mini">${d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("")}</span></span>
     <span class="bar"><b style="width:${x.pct}%"></b></span><span class="pct">${x.pct}%</span>
@@ -1916,7 +1974,9 @@ document.addEventListener("click",e=>{const t=e.target;
   const ts=t.closest&&t.closest("[data-tsel]");
   if(ts){const r=ts.closest("details.row"); r.dataset.t=r.dataset.t===ts.dataset.tsel?"":ts.dataset.tsel; r.dataset.a=""; r.dataset.slot=""; rerow(r); return;}
   const as=t.closest&&t.closest("[data-asel]");
-  if(as&&!as.disabled){const r=as.closest("details.row"); r.dataset.a=as.dataset.asel==="1"?"1":""; if(r.dataset.a)r.dataset.t=""; r.dataset.slot=""; rerow(r); return;}
+  if(as&&!as.disabled){const r=as.closest("details.row"); r.dataset.a=as.dataset.asel==="1"?"1":"0"; if(r.dataset.a==="1")r.dataset.t=""; r.dataset.slot=""; rerow(r); return;}
+  const sr=t.closest&&t.closest("[data-src]");
+  if(sr){SRC=sr.dataset.src; try{localStorage.setItem("dw:src",SRC);}catch(e){} render(); return;}
   if(row){const d=DATA[+row.dataset.i], b=rowB(row), tt=rowSel(d,b,row);
     const sw=t.closest("[data-swap]");
     if(sw){e.preventDefault(); row.dataset.slot=sw.dataset.swap; rerow(row); const c=row.querySelector(".chooser"); if(c&&c.scrollIntoView)c.scrollIntoView({block:"nearest"}); return;}
@@ -2232,12 +2292,13 @@ def main():
             apage, show = avg_as_page(ap_, pg[b], pg["all"], b)
             ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, profile=prof, show=show)
             entry["av"][b] = combo_info(ax, b)
+            ax["ref"] = avg_shape(ap_, owned, name_meta)
         for b, x in entry["b"].items():
             for t in entry["th"].values():         # now that the normal deck is final, keep only differences
                 if b in t["b"]: t["b"][b] = deck_diff(x, t["b"][b])
             if b in entry["av"]:
                 ax = entry["av"][b]
-                entry["av"][b] = dict(deck_diff(x, ax), gaps=ax["gaps"])
+                entry["av"][b] = dict(deck_diff(x, ax), gaps=ax["gaps"], ref=ax["ref"])
             combo_info(x, b)
         results.append(entry)
         if i % 10 == 0: save_json(csb_path, csb_cache)

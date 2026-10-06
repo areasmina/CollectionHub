@@ -195,11 +195,16 @@ keywords from the theme name, via Oracle text) get `FOCUS_W` 0.15 ("theme: disca
 but they're thin (Doom Discard B4: 26 decks) and 4× the requests, so not used. Theme tags are buttons
 (`data-tsel`, row `data-t`; click again → overview); themes without a cached page stay EDHREC links ↗.
 Substitute choices are saved per commander + bracket + theme.
-Average decks ("Deck from: Card stats | Average deck" switch per commander, row `data-a`): `avg_as_page()` turns
+Average decks: page-wide **Commander page | Average deck** selector next to the bracket slider (JS `SRC`, saved in
+localStorage "dw:src"; `X(d,b)` drives the list, filters and sorts), plus the same switch per panel (row `data-a`
+"1"/"0" overrides the page; a theme click overrides both). `avg_as_page()` turns
 EDHREC's average 99 into a page where every card has rate 1.0 (synergy from the commander's bracket page), then
 `analyze(..., show=real play rates)` rebuilds it with your cards (owned cards stay, missing → stand-ins, same
 bracket rules; `show` orders/labels the gaps). Stored as `entry["av"][bracket] = deck_diff(...) + gaps`; JS
 `avgd()`/`applyDiff()`, `rowSel()` gives the saved-choices key ("avg"). Average deck and theme are exclusive.
+**Deck shape** charts per panel (`shapeHTML`): mana curve (non-lands, 7+) and card types of your deck (bars) vs
+EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
+mana value as field 4. Table view under "As a table".
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
 Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
 (alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). In the report
