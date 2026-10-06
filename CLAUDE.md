@@ -73,6 +73,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
 | Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
+| Commander Spellbook `GET /templates/` + Scryfall search | Combo conditions ("Persist Creature") → the Scryfall query Spellbook attaches → card names (`fetch_templates`, monthly; 17/20 resolve, e.g. "Haste Enabler" has no query) | `cache/spellbook_templates.json` |
 | Commander Spellbook `GET /cards/?ordering=-variant_count` | Which cards are in any combo (pool filter; find-my-combos takes ≤600 cards) | `cache/spellbook_cards.json` (monthly) |
 
 Decisions:
@@ -113,8 +114,12 @@ Key functions:
     before turn ~6; the rules give no number, this is our measure). Three-card combos aren't restricted.
     B1–B3 also no mass land denial and ≤`XTURN_CAP` 1 extra-turn card ("low quantities, not chained").
     "All decks" has no bracket, so no rules. Spellbook's `bracketTag` is shown as information only.
-    Combos with an extra condition (`req`, e.g. Stella Lee + "an instant that untaps a creature") count a
-    condition as a card but can't be verified from the list: never blocked, shown as "possible".
+    Combos with an extra condition (`req`, e.g. Stella Lee + "an instant that untaps a creature") count the
+    condition as a card. `annotate_combos()` (per commander) adds `sat` = your legal cards meeting each
+    condition (`TEMPLATES`) and `tmv`; `combo_done()` = named cards + a card meeting each condition present
+    (None when a condition can't be resolved → shown as "possible", never blocks). Combo packages may add
+    the best-scoring card meeting the condition. Sac outlets are usually named pieces already (Spellbook
+    lists Plunderer + Gravecrawler + Viscera Seer / Ashnod's Altar as separate combos).
   Then role fill (`ROLE_TARGETS`, sorted by score) → `owned_duals()` → basics. Non-land rates are `blended_rates()` (bracket
   page pulled toward the all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate
   and no fit. Only cards from `build_pool` (owned, legal, in color identity). Game Changers capped by

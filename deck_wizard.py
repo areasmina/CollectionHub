@@ -31,6 +31,8 @@ CSB = "https://backend.commanderspellbook.com/find-my-combos"
 CSB_CARDS = "https://backend.commanderspellbook.com/cards/"
 CSB_BRACKET = "https://backend.commanderspellbook.com/estimate-bracket"
 CARD_FLAGS = {}         # normalized name -> [game changer, mass land denial, extra turn] from Spellbook
+CSB_TEMPLATES = "https://backend.commanderspellbook.com/templates/"
+TEMPLATES = {}          # combo condition ("Persist Creature") -> normalized names of cards that meet it
 CSB_DELAY = 1.0         # seconds between Commander Spellbook requests (it rate-limits bursts)
 CSB_MAX_MAIN = 600      # find-my-combos rejects decks with more cards than this
 CSB_DOWN = [False]      # set when Spellbook stops answering; the rest of the run skips combos
@@ -642,8 +644,8 @@ def two_card_infinite(c):
 
 def combo_ok(c, bnum):
     """May this combo be complete in a deck for bracket `bnum` (None = all decks: no rule)?
-    Combos with an extra condition can't be checked from the card list, so they never block."""
-    if bnum is None or bnum >= 4 or not two_card_infinite(c) or c.get("req"): return True
+    Only called for combos known to be complete (conditions resolved via combo_done)."""
+    if bnum is None or bnum >= 4 or not two_card_infinite(c): return True
     return bnum == 3 and c.get("tmv", 0) > EARLY_MV
 
 def combo_need(c):
@@ -652,28 +654,30 @@ def combo_need(c):
     return 3 if c.get("tmv", 0) > EARLY_MV else 4
 
 def combo_text(c):
-    s = " + ".join(c["cards"] + [f"({r})" for r in c.get("req") or []])
+    sat = c.get("sat") or {}
+    s = " + ".join(c["cards"] + [f"{r} ({', '.join(sat[r][:2])}{'…' if len(sat[r]) > 2 else ''})"
+                                 if sat.get(r) else f"({r})" for r in c.get("req") or []])
     if two_card_infinite(c):
         s += f": two-card infinite, {c.get('tmv', 0)} mana total ({'late game, B3' if combo_need(c) == 3 else 'early game, B4'})"
     if c.get("bt"): s += f" · Spellbook: {TAG_NAME.get(c['bt'], c['bt'])}"
     return s
 
-def bracket_fit(x, deck_combos=()):
+def bracket_fit(x, deck_combos=(), possible=()):
     """Lowest bracket this deck fits under the official rules, with reasons. B1 and B2 differ by
     intent, not card rules, so the lowest answer is 2. B5 (cEDH) is about the field, so the
-    highest answer is 4. `deck_combos` = combos complete in the deck."""
+    highest answer is 4. `deck_combos` = combos complete in the deck; `possible` = two-card infinites
+    whose condition can't be resolved to cards."""
     est, why = 2, []
     if x["gc"] > 3: est = 4; why.append(f"{x['gc']} Game Changers (B3 allows 3)")
     elif x["gc"]: est = 3; why.append(f"{x['gc']} Game Changer{'s' if x['gc'] > 1 else ''} (B1-2 allow none)")
     if x.get("mld"): est = 4; why.append("mass land denial: " + ", ".join(x["mld"]))
     if len(x.get("xt") or []) > XTURN_CAP: est = 4; why.append("extra turns could chain: " + ", ".join(x["xt"]))
-    two = [c for c in deck_combos if two_card_infinite(c)]
-    bad = sorted((c for c in two if not c.get("req")), key=lambda c: (-combo_need(c), -c.get("pop", 0)))
+    bad = sorted((c for c in deck_combos if two_card_infinite(c)), key=lambda c: (-combo_need(c), -c.get("pop", 0)))
     for c in bad: est = max(est, combo_need(c))
     why += [combo_text(c) for c in bad[:3]]
     if len(bad) > 3: why.append(f"+{len(bad) - 3} more two-card infinites")
     why += ["possible: " + combo_text(c) + " if the deck has " + " and ".join(c["req"]).lower()
-            for c in two if c.get("req")][:2]
+            for c in possible][:2]
     return {"est": est, "why": why}
 
 def enters_tapped(m):
@@ -775,18 +779,23 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     # bracket rules on the cards themselves: combos too strong for the bracket never get completed,
     # B1-B3 get no mass land denial and at most one extra-turn card
     bnum = BRACKET_NUM.get(bracket)
-    live = [c for c in combos or [] if all(norm(x) == me or norm(x) in legal for x in c["cards"])]
-    by_card = {}
+    ok_card = lambda x: x == me or x in legal
+    live = [c for c in combos or [] if all(ok_card(norm(x)) for x in c["cards"])
+            and all((c.get("sat") or {}).get(r) and any(ok_card(norm(y)) for y in c["sat"][r])
+                    for r in c.get("req") or [])]
+    by_card = {}                 # named pieces and cards that meet a condition -> combos they're part of
     for c in live:
-        for x in c["cards"]: by_card.setdefault(norm(x), []).append(c)
+        for x in set(map(norm, c["cards"])) | {norm(y) for r in c.get("req") or [] for y in c["sat"][r]}:
+            if ok_card(x): by_card.setdefault(x, []).append(c)
     state = {"xt": 0}
     def blocked(k):
         """Would adding owned card k break this bracket's rules?"""
         if bnum is None: return False
         m = owned[k]
         if bnum <= 3 and (is_mld(m) or (is_xturn(m) and state["xt"] >= XTURN_CAP)): return True
+        have = used | {k}
         return any(not combo_ok(c, bnum) for c in by_card.get(k, [])     # k would complete a combo
-                   if all(norm(x) in used or norm(x) == k for x in c["cards"]))   # the rules forbid
+                   if combo_done(c, have) and not combo_done(c, used))   # the rules forbid
     def note(k):            # call after adding k
         if bnum is None: return
         state["xt"] += is_xturn(owned[k])
@@ -795,18 +804,26 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     # slot on its own synergy/fit, and the combo must be allowed in this bracket
     if bracket in COMBO_BRACKETS:
         for c in live:
-            ks = [norm(x) for x in c["cards"]]
-            if c.get("req") or len(ks) > 3 or not combo_ok(c, bnum): continue
+            ks, req = [norm(x) for x in c["cards"]], c.get("req") or []
+            if len(req) > 1 or len(ks) + len(req) > 3 or not combo_ok(c, bnum): continue
             pieces = [x for x in ks if x != me]
-            low = min([score(x) for x in pieces] or [0])
+            extra = None         # the best card you own that meets the condition (e.g. a persist creature)
+            if req:
+                sat = [norm(y) for y in c["sat"][req[0]]]
+                if me not in sat:
+                    extra = max((y for y in sat if y in legal), key=lambda y: (score(y), y), default=None)
+                    if extra is None: continue
+            low = min([score(x) for x in pieces + ([extra] if extra else [])] or [0])
             if low < COMBO_PIECE_MIN: continue
             v = low + COMBO_W[bracket]
-            heapq.heappush(heap, (-v, i, "combo:" + c["id"], tuple(pieces))); i += 1
+            heapq.heappush(heap, (-v, i, "combo:" + c["id"], (tuple(pieces), extra, c))); i += 1
     while heap and (len(chosen) < nonland or len(lands) < MAX_LANDS):
         v, i, k, sk = heapq.heappop(heap)
         v = -v
         if k.startswith("combo:"):                       # a combo package
-            new = [x for x in sk if x not in used]
+            pieces, extra, c = sk
+            new = [x for x in pieces if x not in used]
+            if extra and extra not in used and not combo_done(c, used | set(new)): new.append(extra)
             if not new or len(new) > COMBO_NEW or n_combos >= COMBO_MAX: continue
             nl = [x for x in new if card_kind(owned[x]) == "land"]
             gcs = sum(1 for x in new if owned[x]["gc"])
@@ -1000,6 +1017,64 @@ def fetch_card_flags(owned, cache_path, refresh=False):
     print(f"Card flags: {len(CARD_FLAGS)} known ({sum(v[1] for v in CARD_FLAGS.values())} mass land denial,"
           f" {sum(v[2] for v in CARD_FLAGS.values())} extra turn, {sum(v[0] for v in CARD_FLAGS.values())} Game Changers)")
 
+def fetch_templates(names, cache_path, refresh=False):
+    """Spellbook combo conditions ("Persist Creature", "Haste Enabler"...) resolved to cards. Spellbook
+    gives each condition a Scryfall search (keyword:persist t:creature); we run it once and keep the
+    card names (monthly recheck). Conditions without a Scryfall search stay unknown."""
+    cache = {} if refresh else load_json(cache_path)
+    t = cache.get("t") or {}
+    if time.time() - cache.get("_ts", 0) > 30 * 86400 and not OFFLINE: t = {}
+    todo = sorted(n for n in names if n not in t)
+    if todo and not OFFLINE and not CSB_DOWN[0]:
+        print(f"Combo conditions: resolving {len(todo)} with Spellbook + Scryfall")
+        fresh = not t
+        for name in todo:
+            res = http_json(CSB_TEMPLATES + "?limit=20&q=" + urllib.parse.quote(name), retries=5)
+            time.sleep(CSB_DELAY)
+            if res is None: print("  ! Spellbook didn't answer; rest stay unknown this run"); break
+            hit = next((x for x in res.get("results", []) if x.get("name") == name), None)
+            api = (hit or {}).get("scryfallApi")
+            if not api: t[name] = None; continue          # no Scryfall search for this condition
+            cards, url, pages = set(), api + "&unique=cards", 0
+            while url and pages < 12:
+                r = http_json(url); time.sleep(0.11)
+                if r is None: break                 # 404 = no card matches (or a failure)
+                cards |= {norm(c["name"]) for c in r.get("data", [])}
+                url = r.get("next_page") if r.get("has_more") else None; pages += 1
+            t[name] = sorted(cards)
+        save_json(cache_path, {"_ts": time.time() if fresh else cache.get("_ts", time.time()), "t": t})
+    TEMPLATES.clear(); TEMPLATES.update({k: set(v) for k, v in t.items() if v is not None})
+    known = [n for n in names if n in TEMPLATES]
+    if names: print(f"Combo conditions: {len(known)}/{len(set(names))} resolved to cards")
+
+def annotate_combos(combos, owned, ci):
+    """Copies of the combos with, for this colour identity:
+    tmv = Scryfall mana value of the named pieces + mana the combo needs (how early it can happen),
+    sat = {condition: your legal cards that meet it} (None = condition can't be resolved)."""
+    if not combos: return combos
+    mine = {k: m for k, m in owned.items() if m["commander_legal"] and set(m["ci"]) <= ci}
+    out = {k: v for k, v in combos.items() if k not in ("own", "near")}
+    for part in ("own", "near"):
+        out[part] = []
+        for c in combos[part]:
+            c = dict(c)
+            named = {norm(x) for x in c["cards"]}
+            c["tmv"] = int(sum((owned.get(x) or {}).get("cmc", 0) for x in named) + (c.get("mv") or 0))
+            c["sat"] = {r: (sorted(mine[k]["name"] for k in TEMPLATES[r] & set(mine) if k not in named)
+                            if r in TEMPLATES else None) for r in c.get("req") or []}
+            out[part].append(c)
+    return out
+
+def combo_done(c, have):
+    """Is combo c complete among the normalized names `have`? None = depends on a condition that
+    can't be resolved to cards."""
+    if not all(norm(x) in have for x in c["cards"]): return False
+    for r in c.get("req") or []:
+        sat = (c.get("sat") or {}).get(r)
+        if sat is None: return None
+        if not any(norm(x) in have for x in sat): return False
+    return True
+
 def is_mld(m):
     f = CARD_FLAGS.get(norm(m["name"]))
     return bool(f[1]) if f else bool(MLD_RX.search(rules_text(m)))
@@ -1035,12 +1110,6 @@ def compact_combos(variants, have, keep):
     out.sort(key=lambda c: -c["pop"])
     return {"n": len(out), "list": out[:keep]}
 
-def with_speed(combos, owned):
-    """Adds tmv = Scryfall mana value of the pieces + mana the combo needs (how early it can happen)."""
-    for c in combos["own"] + combos["near"]:
-        c["tmv"] = int(sum((owned.get(norm(x)) or {}).get("cmc", 0) for x in c["cards"]) + (c.get("mv") or 0))
-    return combos
-
 def combos_for_commander(m, owned, cache, combo_cards):
     """Combos among your cards in this commander's colours (the commander included). The answer
     only depends on the colours, so commanders sharing an identity share one cached query."""
@@ -1049,7 +1118,7 @@ def combos_for_commander(m, owned, cache, combo_cards):
     if len(pool) > CSB_MAX_MAIN: return None   # no combo-card list to trim with
     key = "ci2:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
           + hashlib.md5("\n".join(pool).encode()).hexdigest()[:10]
-    if key in cache: return with_speed(cache[key], owned)   # (--refresh starts from an empty cache)
+    if key in cache: return cache[key]        # (--refresh starts from an empty cache)
     if OFFLINE or CSB_DOWN[0]: return None
     res = csb_find([], pool)
     if res is None:                           # don't cache failures; stop asking for this run
@@ -1062,7 +1131,7 @@ def combos_for_commander(m, owned, cache, combo_cards):
     near = compact_combos(res.get("almostIncluded", []), have, 150)     # ranked per commander later
     out = {"own": own["list"], "n_own": own["n"], "near": near["list"], "n_near": near["n"]}
     cache[key] = out
-    return with_speed(out, owned)
+    return out
 
 def rank_combos(combos, deck_names, keep_own=30, keep_near=20):
     """The report's combo lists for one commander: combos whose pieces are in its deck first (they
@@ -1628,12 +1697,18 @@ def main():
     csb_path = os.path.join(cache_dir, "spellbook.json")
     csb_cache = {} if a.refresh else load_json(csb_path)
     combo_cards = {} if a.no_combos else fetch_combo_cards(os.path.join(cache_dir, "spellbook_cards.json"), a.refresh)
+    tpl_path = os.path.join(cache_dir, "spellbook_templates.json")
+    fetch_templates(set(), tpl_path, a.refresh)        # load the cache
     T, results = CardTable(), []
     done = [m for m in cands if m["name"] in pages]
     for i, m in enumerate(done, 1):
         pg = pages[m["name"]]
         pool_info = build_pool(set(m["ci"]), owned, norm(m["name"]))
         combos = None if a.no_combos else combos_for_commander(m, owned, csb_cache, combo_cards)
+        if combos:
+            fetch_templates({r for c in combos["own"] + combos["near"] for r in c.get("req") or []}
+                            - set(TEMPLATES), tpl_path)
+            combos = annotate_combos(combos, owned, set(m["ci"]))
         entry = {"name": m["name"], "ci": sorted(m["ci"]), "img": m.get("img", ""),
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
@@ -1642,11 +1717,13 @@ def main():
         entry["combos"] = rank_combos(combos, entry["b"]["all"]["_names"])
         for x in entry["b"].values():
             names = x.pop("_names")
-            inside = [c for c in (combos or {}).get("own", []) if all(norm(nm) in names for nm in c["cards"])]
+            own = (combos or {}).get("own", [])
+            inside = [c for c in own if combo_done(c, names)]
+            maybe = [c for c in own if combo_done(c, names) is None and two_card_infinite(c)]
             x["cin"] = [c["id"] for c in inside]
-            x["c2"] = sum(1 for c in inside if len(c["cards"]) <= 2)
+            x["c2"] = sum(1 for c in inside if two_card_infinite(c))
             x["pw"]["combo"] = max(0, min(10, len(inside) * 3))
-            x["bf"] = bracket_fit(x, inside)
+            x["bf"] = bracket_fit(x, inside, maybe)
         results.append(entry)
         if i % 10 == 0: save_json(csb_path, csb_cache)
         al = entry["b"]["all"]

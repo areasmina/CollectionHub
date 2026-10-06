@@ -28,6 +28,7 @@ def setup(csv_path):
             owned[dw.norm(m["name"])] = m
     dw.ROLE_TAGS.update(dw.fetch_role_tags("cache/role_tags.json"))
     dw.fetch_card_flags(owned, "cache/spellbook_flags.json")
+    dw.fetch_templates(set(), "cache/spellbook_templates.json")
     name_meta = dw.resolve_names(set(), "cache/scryfall_names.json")
     dw.prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
     edh = dw.load_edhrec_cache("cache")
@@ -54,10 +55,11 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     syn = [v[0] if v and v[0] is not None else 0 for v in syn]
     r["avg_syn"] = round(sum(syn) / max(1, len(syn)), 4)
     names = set(keys) | {dw.norm(m["name"])}
-    inside = [c for c in combos or [] if all(dw.norm(n) in names for n in c["cards"])]
+    inside = [c for c in combos or [] if dw.combo_done(c, names)]
+    maybe = [c for c in combos or [] if dw.combo_done(c, names) is None and dw.two_card_infinite(c)]
     r["combos_in"] = len(inside)
-    x["c2"] = sum(1 for c in inside if len(c["cards"]) <= 2)
-    bf = dw.bracket_fit(x, inside)
+    x["c2"] = sum(1 for c in inside if dw.two_card_infinite(c))
+    bf = dw.bracket_fit(x, inside, maybe)
     r["ready"] = sum(1 for c in x["rd"] if c[3])
     r["bracket_est"] = bf["est"]
     sel = dw.BRACKET_NUM.get(bracket)
@@ -82,7 +84,8 @@ def run(csv_path):
         base = edh.get(slug)
         if not base or not base["cards"]: continue
         pool_info = dw.build_pool(set(m["ci"]), owned, dw.norm(m["name"]))
-        combos = (dw.combos_for_commander(m, owned, csb, combo_cards) or {}).get("own")
+        combos = (dw.annotate_combos(dw.combos_for_commander(m, owned, csb, combo_cards), owned, set(m["ci"]))
+                  or {}).get("own")
         for b in ["all"] + dw.VALID_BRACKETS:
             page = base if b == "all" else edh.get(f"{slug}/{b}")
             if page and page["cards"]:
