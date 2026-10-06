@@ -50,7 +50,8 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
-`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups)
+`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
+`baseline_synergy.json` = + card-to-card synergy swaps)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -152,6 +153,22 @@ Key functions:
   Scryfall `keywords` include it or its text mentions it (`has_keyword`, word forms via `kw_rx`).
   `built_around()` → `x.core`: deck cards per tribe/mechanic/keyword ("Built around: connive 13 …").
   Synergy engines that aren't combos (connive, landfall…) live here, not in Spellbook.
+- **Card-to-card synergy** (roadmap phase "synergy first", step 3b of `analyze()`): `ENGINES` pairs what cards
+  PROVIDE with what they CONSUME, read from Oracle text incl. reminder text (`card_engines`): discard outlets ↔
+  discard payoffs, graveyard fillers ↔ graveyard use, sac outlets ↔ death triggers, fodder ↔ outlets, tokens,
+  +1/+1 counters, lifegain, spells, artifacts, enchantments, ETB ↔ blink, landfall, draw triggers, land cards ↔
+  "discard a land". Opponent discard ("that player discards") is not your outlet; "whenever you discard" is a
+  payoff, not an outlet. `DeckSynergy` counts both sides in the deck (commander ×`SYN_CMDR` 3; the commander's
+  tribe is one more engine: members ↔ cards naming the type). Deck synergy = `SYN_DECK_W` 0.05 × Σ sqrt(min(links,
+  `SYN_CAP` 12)). After role fill, up to `SWAP_MAX` 15 swaps: best owned candidate (top `SWAP_POOL` 40 by score +
+  synergy) replaces the weakest p/y/f card if it gains ≥ `SWAP_MARGIN`; protected: combo pieces, substitutes,
+  Game Changers (unless swapped for one), cards in `SWAP_KEEP` roles (removal/wipe/counter/ramp/tutor; only for a
+  card sharing the role), roles at/below `ROLE_TARGETS`, pieces of a combo complete in the deck; bracket rules via
+  `blocked()`. Stored as `x.sw` [[in, out, why]] and `x.bench` (next `BENCH_SHOW` 8 owned cards, with why); report:
+  "Synergy: N swaps · next in line" (`synHTML`). Effect vs `baseline_avg`: ~11 swaps per All-decks list,
+  removal/wipes/ramp/counters kept, draw +4.5, combos in deck +0.05, run 33 → 46 s.
+  Test case (user): Doctor Doom, King of Latveria discard cards (Captain Howler, Library of Leng, Brallin, Gamble…)
+  still rank below other owned discard cards that EDHREC lists; Howler is closest.
 - `find_subs()` – closeness 0–1 of owned stand-ins: share of the missing card's roles × card kind
   (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
   `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon

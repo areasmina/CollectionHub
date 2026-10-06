@@ -21,7 +21,7 @@ Options:
                     upload button; uploads go to the "collection" folder and trigger a rebuild
   --port 8765       port for --serve
 """
-import argparse, csv, glob, hashlib, json, os, re, sys, time, unicodedata
+import argparse, csv, glob, hashlib, json, math, os, re, sys, time, unicodedata
 import heapq, http.server, subprocess, threading
 import urllib.error, urllib.parse, urllib.request, webbrowser
 
@@ -670,7 +670,7 @@ def fetch_theme_page(path, cache, refresh=False, avg=False):
     return p
 
 DIFF_KEYS = ("decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
-             "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl")
+             "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl", "sw", "bench")
 
 def deck_diff(base_x, tx):
     """A theme deck stored as changes to the normal deck of the same bracket (keeps the page small):
@@ -721,6 +721,139 @@ def card_fit(m, profile, bracket):
     if m["gc"] and bracket in ("optimized", "cedh"): f += FIT_GC     # B4/B5: no Game Changer cap
     f -= FIT_MV * max(0, m["cmc"] - 4)
     return max(0.0, f), " · ".join(why)
+
+# ------------------------------------------------------- card-to-card synergy
+# What cards do for each other, read from Oracle text (reminder text included, both faces): each
+# engine pairs PROVIDERS (a discard outlet, a token maker, a sac outlet...) with CONSUMERS (a discard
+# payoff, a token payoff, a death trigger...). A card earns deck synergy for every card already in the
+# deck on the other side of an engine; the commander counts SYN_CMDR times. Rules interactions
+# (combos) stay Spellbook's job; this is about engines and payoffs.
+# Each engine: (label, provider pattern, card types that provide, consumer pattern)
+ENGINES = [
+    ("discard",
+     r"(?<!they )(?<!that player )(?<!opponent )(?<!target player )(?<!each opponent )(?<!whenever you )(?<!if you )"
+     r"(?<!causes you to )\bdiscards? (a|an|one|two|three|x|that|those|this|any number of|up to \w+|your hand|cards?)\b|"
+     r"\bthen discards?\b|\bconnives?\b|\bcycling\b|by discarding|as an additional cost to cast this spell, discard",
+     (), r"whenever you discard|whenever (a player|one or more players) discards|\bmadness\b|"
+         r"if you discarded|for each card discarded|causes you to discard|discarded this way"),
+    ("graveyard",
+     r"\bmills?\b|\bsurveil\b|\bdiscard|\bconnives?\b|put [^.]{0,40}into your graveyard|\bdredge\b",
+     (), r"from your graveyard|\bflashback\b|\bescape\b|\bunearth\b|\bdelve\b|\bthreshold\b|\bjump-start\b|"
+         r"\bretrace\b|\bembalm\b|\beternalize\b|\bdisturb\b|cards? in your graveyard|\bdescend\b"),
+    ("sacrifice",
+     r"sacrifice (a|an|another|one or more|any number of|x) [^.:]{0,30}:|, sacrifice (a|an|another) (creature|artifact|permanent)",
+     (), r"whenever (a|an|another|one or more) [^.]{0,40}(creatures?|permanents?|artifacts?)[^.]{0,25}\b(dies|die|is put into a graveyard)|"
+         r"whenever you sacrifice"),
+    ("fodder",
+     r"creates? [^.]{0,60}creature tokens?|when [^.]{0,15}~ dies|\bpersist\b|\bundying\b|return ~ from your graveyard",
+     (), r"sacrifice (a|an|another|one or more|any number of|x) (creature|nontoken creature|permanent)s?[^.:]{0,20}:|"
+         r", sacrifice (a|an|another) creature"),
+    ("tokens",
+     r"creates? [^.]{0,60}\btokens?\b|\bpopulate\b|\bamass\b|\bincubate\b",
+     (), r"tokens? you control|whenever (a|one or more|another) [^.]{0,40}\btokens?\b[^.]{0,20}enters?|\bpopulate\b|"
+         r"for each (creature|token) you control|creatures you control get \+"),
+    ("+1/+1 counters",
+     r"put (a|an|one|two|three|x|that many|\w+) \+1/\+1 counters?|\bconnives?\b|\bproliferate\b|\bbolster\b|\badapt\b|"
+     r"\bsupport\b|\bmodular\b|\boutlast\b|\bevolve\b|\bmentor\b|\btraining\b|enters with [^.]{0,20}\+1/\+1 counter",
+     (), r"with (a|one or more) \+1/\+1 counters? on (it|them)|for each \+1/\+1 counter|whenever one or more \+1/\+1 counters|"
+         r"\bproliferate\b|double the number of [^.]{0,20}counters|counters? on it, put|moves? [^.]{0,20}counters"),
+    ("lifegain",
+     r"\byou gain \w+ life|\bgain \w+ life|\blifelink\b|you gain life equal",
+     (), r"whenever you gain life|if you('ve| have) gained|whenever you gain one or more life"),
+    ("spells",
+     r"$^", ("instant", "sorcery"),
+     r"whenever you cast (an?|your first|your second) (instant|sorcery|noncreature)|instant (and|or) sorcery spells? you cast|"
+     r"\bmagecraft\b|\bprowess\b|whenever you cast a noncreature|whenever you cast or copy"),
+    ("artifacts",
+     r"create[^.]{0,40}\b(treasure|clue|food|blood|map|powerstone|gold|junk|artifact)\b", ("artifact",),
+     r"whenever (an?|one or more|another) [^.]{0,25}artifacts? [^.]{0,25}enters|artifacts? you control|for each artifact|"
+     r"\baffinity for artifacts\b|\bimprovise\b|\bmetalcraft\b|sacrifice an artifact|artifact creatures? you control|whenever you cast an artifact"),
+    ("enchantments",
+     r"$^", ("enchantment",),
+     r"whenever you cast an enchantment|enchantments? you control|\bconstellation\b|for each enchantment|whenever (an?|another) enchantment [^.]{0,25}enters"),
+    ("enter triggers",
+     r"when (~|this creature) enters", (),
+     r"exile [^.]{0,60}(you control|target creature)[^.]{0,30}\. return (it|that card|them|those cards)|"
+     r"then return (it|that card|them|those cards) to the battlefield|triggers an additional time|\bblink\b"),
+    ("landfall",
+     r"search your library for [^.]{0,40}land cards?[^.]{0,60}onto the battlefield|play an additional land|"
+     r"put (a|up to \w+) land cards? [^.]{0,40}onto the battlefield|return [^.]{0,30}land[^.]{0,30}to (its owner's|your) hand",
+     (), r"\blandfall\b|whenever a land (you control )?enters|whenever one or more lands (you control )?enter"),
+    ("card draw",
+     r"\bdraws? (a|an|one|two|three|x|that many|\w+) cards?\b", (),
+     r"whenever you draw|draw your second card|whenever a player draws|whenever an opponent draws"),
+    ("lands in hand",
+     r"$^", (), r"discard (one or more )?land cards?|whenever you discard (one or more )?lands?"),
+]
+_ENG_RX = [(lab, re.compile(pr), set(ty), re.compile(co)) for lab, pr, ty, co in ENGINES]
+SYN_CMDR = 3            # the commander counts as this many cards on each side of its engines
+SYN_CAP = 12            # linked cards per engine that count (a 40th discard outlet adds nothing new)
+SYN_DECK_W = 0.05       # score per unit of deck synergy (sum over engines of sqrt(linked cards))
+SWAP_MAX = 15           # synergy swaps per deck at most
+SWAP_MARGIN = 0.04      # a swap must gain at least this much (keeps the deck from churning)
+SWAP_KEEP = {"removal", "wipe", "counter", "ramp", "tutor"}   # a card doing one of these jobs only
+                        # leaves for a card doing the same job (synergy must not eat the interaction)
+BENCH_SHOW = 8          # "next in line" cards listed per deck
+SWAP_POOL = 40          # candidates re-checked per swap (best by score + synergy at the start)
+_ENG_MEMO = {}
+
+def card_engines(m):
+    """(engines the card provides, engines it consumes), as sets of engine indices."""
+    k = norm(m["name"])
+    if k not in _ENG_MEMO:
+        text, tw = rules_text(m), type_words(m)
+        prov, cons = set(), set()
+        for i, (_, pr, ty, co) in enumerate(_ENG_RX):
+            if pr.search(text) or ty & tw: prov.add(i)
+            if co.search(text): cons.add(i)
+        if "land" in tw: prov.add(len(_ENG_RX) - 1)          # land cards feed "discard a land card"
+        _ENG_MEMO[k] = (frozenset(prov), frozenset(cons))
+    return _ENG_MEMO[k]
+
+class DeckSynergy:
+    """Running count of providers / consumers per engine in a deck (commander weighted). The
+    commander's tribe is one more engine: members feed cards that name the type (the commander
+    included), e.g. Villains for Doctor Doom."""
+    def __init__(self, cmdr, cards, tribe=()):
+        n = len(_ENG_RX) + 1
+        self.tribe, self.rx = set(tribe), None
+        if self.tribe:
+            forms = "|".join(re.escape(t) + "s?" for t in sorted(self.tribe))
+            self.rx = re.compile(r"(" + forms + r")")
+        self.prov, self.cons, self.memo = [0] * n, [0] * n, {}
+        p, c = self.engines(cmdr)
+        for i in p: self.prov[i] += SYN_CMDR
+        for i in c | {n - 1} if self.tribe else c: self.cons[i] += SYN_CMDR
+        for m in cards: self.add(m)
+    def engines(self, m):
+        k = norm(m["name"])
+        if k not in self.memo:
+            p, c = card_engines(m)
+            if self.tribe:
+                t = len(_ENG_RX)
+                if type_words(m) & self.tribe or (is_changeling(m) and card_kind(m) == "creature"): p = p | {t}
+                if self.rx.search(rules_text(m)): c = c | {t}
+            self.memo[k] = (p, c)
+        return self.memo[k]
+    def add(self, m, sign=1):
+        p, c = self.engines(m)
+        for i in p: self.prov[i] += sign
+        for i in c: self.cons[i] += sign
+    def links(self, m, inside=False):
+        """[(links, engine label)] for card m against the deck (inside=True: m is in the deck, don't
+        count it against itself)."""
+        p, c = self.engines(m)
+        out = []
+        for i in p | c:
+            n = (self.cons[i] - (inside and i in c) if i in p else 0) + (self.prov[i] - (inside and i in p) if i in c else 0)
+            lab = _ENG_RX[i][0] if i < len(_ENG_RX) else "/".join(sorted(self.tribe))
+            if n > 0: out.append((n, lab))
+        return out
+    def score(self, m, inside=False):
+        return SYN_DECK_W * sum(math.sqrt(min(n, SYN_CAP)) for n, _ in self.links(m, inside))
+    def why(self, m):
+        ls = sorted(self.links(m), reverse=True)[:2]
+        return "synergy: " + ", ".join(f"{lab} ×{n}" for n, lab in ls) if ls else ""
 
 _SUB_MEMO = {}          # stand-in candidates per missing card, reused within one deck build (analyze clears it)
 
@@ -1150,6 +1283,52 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             if len(chosen) >= nonland: break
             if ok(it): take(it)
 
+    # 3b) synergy swaps: an owned card that feeds (or is fed by) many cards already in the deck replaces
+    # the weakest pick, popular card or role fill, by score + deck synergy. Role counts that are at or
+    # below their target are protected; combo pieces and substitutes stay.
+    swaps = []
+    syn = DeckSynergy(cmdr, [m for m, _, _ in chosen], profile[0])
+    rcount = {r: sum(1 for m, _, _ in chosen if r in roles_of(m)) for r in ROLE_TARGETS}
+    def total(m, inside):
+        return score(norm(m["name"])) + syn.score(m, inside)
+    cands = sorted(((k, m) for k, m, _, kd in pool if kd != "land" and k not in used),
+                   key=lambda it: -total(it[1], False))[:SWAP_POOL]
+    for _ in range(SWAP_MAX):
+        best, bv = None, -1
+        for k, m in cands:
+            if k in used or (m["gc"] and not gc_room()) or blocked(k): continue
+            v = total(m, False)
+            if v > bv: best, bv = (k, m), v
+        if not best: break
+        k, m = best
+        rs = roles_of(m)
+        out, ov = None, None
+        for j, (dm, kind, _) in enumerate(chosen):
+            if kind not in "pyf" or (dm["gc"] and not m["gc"]): continue
+            dk = norm(dm["name"])
+            if any(combo_done(c, used) for c in by_card.get(dk, [])): continue    # completes a combo here
+            drs = roles_of(dm)
+            if drs & SWAP_KEEP and not drs & SWAP_KEEP & rs: continue
+            if any(rcount[r] <= ROLE_TARGETS[r] and r not in rs for r in drs if r in rcount): continue
+            v = total(dm, True)
+            if ov is None or v < ov: out, ov = j, v
+        if out is None or bv < ov + SWAP_MARGIN: break
+        dm = chosen[out][0]
+        dk = norm(dm["name"])
+        used.discard(dk); syn.add(dm, -1)
+        if bnum is not None: state["xt"] -= is_xturn(dm)
+        if blocked(k):                                   # without dm the rules still hold for k?
+            used.add(dk); syn.add(dm); state["xt"] += is_xturn(dm) if bnum is not None else 0
+            cands = [c for c in cands if c[0] != k]; continue
+        why = syn.why(m)
+        chosen[out] = (m, "y", why); used.add(k); note(k); syn.add(m)
+        for r in rcount: rcount[r] += (r in rs) - (r in roles_of(dm))
+        swaps.append([T.add(m["name"], m), T.add(dm["name"], dm), T.s(why)])
+    # next in line: the owned cards that came closest, with why (so a near miss is visible, not silent)
+    bench = sorted(((total(m, False), k, m) for k, m in cands if k not in used and not blocked(k)
+                    and (not m["gc"] or gc_room())), key=lambda t: (-t[0], t[1]))[:BENCH_SHOW]
+    bench = [[T.add(m["name"], m), T.s(syn.why(m) or fits[k][1] or role_text(m))] for _, k, m in bench]
+
     # 4) owned dual lands in the commander's colours replace basics (EDHREC lists few of them)
     for m in owned_duals(pool, ci, used, len(lands), sum(1 for m, _, _ in lands if enters_tapped(m))):
         if blocked(norm(m["name"])): continue
@@ -1223,6 +1402,8 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "mld": [m["name"] for m, _, _ in allc if is_mld(m)],
         "xt": [m["name"] for m, _, _ in allc if is_xturn(m)],
         "tut": roles.get("tutor", 0),
+        "sw": swaps,            # synergy swaps: [card in, card out, why]
+        "bench": bench,         # next in line from your collection: [card, why]
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         # substitutes also carry [why the advised card, [[alternative, why] x up to 3]]
         "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f), *slot_alts.get(id(f), (-1, []))] if kind == "s"
@@ -1779,6 +1960,13 @@ function rowSel(d,b,r){const a=r&&r.dataset.a;
   if(a==="1"&&hasAvg(d,b))return "avg";
   if(r&&r.dataset.t&&d.th&&d.th[r.dataset.t])return r.dataset.t;
   return a!=="0"&&SRC==="avg"&&hasAvg(d,b)?"avg":"";}
+/* ---------- synergy swaps and next in line (cards read by what they do with the rest of the deck) ---------- */
+function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length) return "";
+  const nm=i=>`<a href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">${esc(front(i))}</a>`;
+  return `<details class="more"><summary>Synergy: ${sw.length} swap${sw.length===1?"":"s"} from your collection · ${bn.length} next in line</summary>
+  <small class="dim">Cards are read by what they do with the cards already in this deck (Oracle and reminder text): outlets and payoffs, tribe, engines. ×N = linked cards (the commander counts 3).</small>
+  ${sw.length?`<h4>Swapped in</h4><ul class="cl">${sw.map(([a,o,w])=>`<li>+ ${nm(a)} <small>for ${esc(front(o))} · ${esc(W(w))}</small></li>`).join("")}</ul>`:""}
+  ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small></li>`).join("")}</ul>`:""}</details>`;}
 /* ---------- deck shape: your deck (bars) against EDHREC's average deck (line) ---------- */
 const TYO=["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Other","Land"];
 function shapeHTML(items,ref,b){
@@ -1902,6 +2090,7 @@ function body(d,b,r){
   <div class="info"><div class="tags">${tags}</div>${srcs}${tnote}<div class="bks">${bks}</div>
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
+  ${synHTML(x)}
   <p>Deck: ${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
