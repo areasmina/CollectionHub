@@ -475,8 +475,9 @@ FIT_STAPLE = ((1000, 0.03), (3000, 0.015))   # Scryfall's overall EDHREC rank
 FIT_GC = 0.05           # Game Changers, only in brackets without a cap
 FIT_MV = 0.02           # minus this per mana value above 4
 OFF_LIST = 0.05         # cards below this play rate count as "your pick" rather than "popular"
-COMBO_W = 0.25          # a combo you own, in brackets that allow them (B4, B5)
-COMBO_BRACKETS = {"optimized", "cedh"}
+COMBO_W = {"upgraded": 0.12, "optimized": 0.25, "cedh": 0.25}   # bonus for a combo you own, per bracket
+COMBO_BRACKETS = set(COMBO_W)
+COMBO_PIECE_MIN = 0.12  # every piece must score this on its own (synergy/fit), not just be in colour
 COMBO_MAX = 2           # combos added on purpose per deck (each adds at most COMBO_NEW cards)
 COMBO_NEW = 2
 _MECH_MEMO = {}
@@ -531,7 +532,7 @@ def card_fit(m, profile, bracket):
     rank = m.get("edhrec_rank")
     if rank:
         f += next((v for lim, v in FIT_STAPLE if rank <= lim), 0)
-    if m["gc"] and bracket in COMBO_BRACKETS: f += FIT_GC     # B4/B5: no Game Changer cap
+    if m["gc"] and bracket in ("optimized", "cedh"): f += FIT_GC     # B4/B5: no Game Changer cap
     f -= FIT_MV * max(0, m["cmc"] - 4)
     return max(0.0, f), " · ".join(why)
 
@@ -625,17 +626,47 @@ def readiness(roles, avg_cmc, odd, sources):
     out.append(["odd", odd, READY_ODD, odd <= READY_ODD])
     return out
 
-def bracket_fit(x):
+# Spellbook bracket tags -> lowest bracket a combo belongs in (B = has a banned card)
+TAG_BRACKET = {"E": 1, "C": 2, "O": 2, "P": 3, "S": 3, "R": 4, "B": 9}
+TAG_NAME = {"E": "Exhibition", "C": "Core", "O": "Oddball", "P": "Powerful", "S": "Spicy", "R": "Ruthless", "B": "Banned"}
+# Nearly every Spellbook combo is "infinite" something; the tag says whether it matters. Exhibition-tagged
+# loops (e.g. infinite death triggers with no payoff) are free; the rest count against a per-bracket cap.
+REL_CAP = {1: 0, 2: 1, 3: 2}   # game-relevant (not Exhibition) combos allowed complete per deck
+rel = lambda c: 0 if c.get("bt") == "E" else 1
+XTURN_CAP = 1                  # B1-B3: no chaining extra turns -> at most one extra-turn card
+
+def combo_ok(c, bnum):
+    """May this combo be complete in a deck for bracket `bnum` (None = all decks: no rule)?"""
+    r = TAG_BRACKET.get(c.get("bt"), 3)
+    if r == 9: return False
+    if bnum is None or bnum >= 4: return True
+    if r > bnum: return False
+    return not (bnum <= 2 and c.get("inf") and len(c["cards"]) <= 2)   # B1-B2: no two-card infinites
+
+def combo_text(c):
+    bt = c.get("bt")
+    tag = TAG_NAME.get(bt, "untagged") + (f" (B{TAG_BRACKET[bt]})" if bt in TAG_BRACKET and bt != "B" else "")
+    return " + ".join(c["cards"]) + ": " + tag + (", infinite" if c.get("inf") else "")
+
+def bracket_fit(x, deck_combos=()):
     """Lowest bracket this deck fits, with reasons. B1 and B2 differ by intent, not card rules, so
-    the lowest answer is 2. B5 (cEDH) is about the field, so the highest answer is 4."""
+    the lowest answer is 2. B5 (cEDH) is about the field, so the highest answer is 4.
+    `deck_combos` = combos complete in the deck (with Spellbook tags)."""
     est, why = 2, []
     if x["gc"] > 3: est = 4; why.append(f"{x['gc']} Game Changers (B3 allows 3)")
     elif x["gc"]: est = 3; why.append(f"{x['gc']} Game Changer{'s' if x['gc'] > 1 else ''}")
     if x.get("mld"): est = 4; why.append("mass land denial: " + ", ".join(x["mld"]))
-    if len(x.get("xt") or []) >= 2: est = 4; why.append("extra turns could chain: " + ", ".join(x["xt"]))
-    if x.get("c2"):
-        est = max(est, 3)
-        why.append(f"{x['c2']} two-card combo{'s' if x['c2'] > 1 else ''} (B3 only if it can't win early, else B4)")
+    if len(x.get("xt") or []) > XTURN_CAP: est = 4; why.append("extra turns could chain: " + ", ".join(x["xt"]))
+    need = lambda c: max(min(4, TAG_BRACKET.get(c.get("bt"), 3)),
+                         3 if c.get("inf") and len(c["cards"]) <= 2 else 0)   # no two-card infinites in B1-B2
+    worst = sorted(deck_combos, key=lambda c: (-need(c), -rel(c), -c.get("pop", 0)))
+    for c in worst: est = max(est, need(c))
+    n_rel = sum(rel(c) for c in deck_combos)
+    for b in (2, 3):
+        if est == b and n_rel > REL_CAP[b]:
+            est = b + 1; why.append(f"{n_rel} game-relevant combos (B{b}: at most {REL_CAP[b]})")
+    why += [combo_text(c) for c in worst[:3]]
+    if len(worst) > 3: why.append(f"+{len(worst) - 3} more combos")
     return {"est": est, "why": why}
 
 def enters_tapped(m):
@@ -734,13 +765,40 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         score(k)
         if fits[k][1]:
             heapq.heappush(heap, (-score(k), i, k, None)); i += 1
-    # combos you own go in whole, valued at their weakest piece + COMBO_W (every piece must earn a slot)
+    # bracket rules on the cards themselves: combos too strong for the bracket never get completed,
+    # B1-B3 get no mass land denial and at most one extra-turn card
+    bnum = BRACKET_NUM.get(bracket)
+    live = [c for c in combos or [] if all(norm(x) == me or norm(x) in legal for x in c["cards"])]
+    by_card = {}
+    for c in live:
+        for x in c["cards"]: by_card.setdefault(norm(x), []).append(c)
+    state = {"rel": 0, "xt": 0}
+    def blocked(k):
+        """Would adding owned card k break this bracket's rules?"""
+        if bnum is None: return False
+        m = owned[k]
+        if bnum <= 3 and (is_mld(m) or (is_xturn(m) and state["xt"] >= XTURN_CAP)): return True
+        n_rel = state["rel"]
+        for c in by_card.get(k, []):
+            if all(norm(x) in used or norm(x) == k for x in c["cards"]):   # k would complete c
+                if not combo_ok(c, bnum): return True
+                n_rel += rel(c)
+        return bnum <= 3 and n_rel > REL_CAP[bnum]
+    def note(k):            # call after adding k
+        if bnum is None: return
+        state["xt"] += is_xturn(owned[k])
+        state["rel"] += sum(rel(c) for c in by_card.get(k, []) if all(norm(x) in used for x in c["cards"]))
+
+    # combos you own go in whole, valued at their weakest piece + COMBO_W: every piece must earn a
+    # slot on its own synergy/fit, and the combo must be allowed in this bracket
     if bracket in COMBO_BRACKETS:
-        for c in combos or []:
+        for c in live:
             ks = [norm(x) for x in c["cards"]]
-            if c.get("req") or len(ks) > 3 or not all(x == me or x in legal for x in ks): continue
+            if c.get("req") or len(ks) > 3 or not combo_ok(c, bnum): continue
             pieces = [x for x in ks if x != me]
-            v = min([score(x) for x in pieces] or [0]) + COMBO_W
+            low = min([score(x) for x in pieces] or [0])
+            if low < COMBO_PIECE_MIN: continue
+            v = low + COMBO_W[bracket]
             heapq.heappush(heap, (-v, i, "combo:" + c["id"], tuple(pieces))); i += 1
     while heap and (len(chosen) < nonland or len(lands) < MAX_LANDS):
         v, i, k, sk = heapq.heappop(heap)
@@ -752,25 +810,32 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             gcs = sum(1 for x in new if owned[x]["gc"])
             if len(chosen) + len(new) - len(nl) > nonland or len(lands) + len(nl) > MAX_LANDS: continue
             if gc_cap is not None and sum(1 for m, _, _ in chosen + lands if m["gc"]) + gcs > gc_cap: continue
+            trial, fine = [], True
+            for x in new:                                # check the pieces in order, as if added
+                if blocked(x): fine = False; break
+                used.add(x); trial.append(x)
+            used.difference_update(trial)
+            if not fine: continue
             for x in new:
-                (lands if x in nl else chosen).append((owned[x], "c", None)); used.add(x)
+                (lands if x in nl else chosen).append((owned[x], "c", None)); used.add(x); note(x)
             n_combos += 1
             continue
         if k in owned:                                   # a card you own, on its own merit
             m = owned[k]
-            if k in used or (m["gc"] and not gc_room()): continue
+            if k in used or (m["gc"] and not gc_room()) or blocked(k): continue
             kind, why = ("p", None) if rate_of(k) >= OFF_LIST else ("y", fits[k][1] or None)
             if card_kind(m) == "land":
                 if len(lands) < MAX_LANDS and v >= 0.15:
-                    lands.append((m, "p", None)); used.add(k)
+                    lands.append((m, "p", None)); used.add(k); note(k)
             elif len(chosen) < nonland:
-                chosen.append((m, kind, why)); used.add(k)
+                chosen.append((m, kind, why)); used.add(k); note(k)
             continue
         mm = name_meta[k]                                # a card you're missing
         is_land = card_kind(mm) == "land"
         if (is_land and len(lands) >= MAX_LANDS) or (not is_land and len(chosen) >= nonland): continue
-        if sk is None or sk in used or (owned[sk]["gc"] and not gc_room()):
-            subs = find_subs(mm, rate_of, pool, by_role, used, gc_room(), 1, tribe=tribe, ci=ci)
+        if sk is None or sk in used or (owned[sk]["gc"] and not gc_room()) or blocked(sk):
+            subs = [x for x in find_subs(mm, rate_of, pool, by_role, used, gc_room(), 3, tribe=tribe, ci=ci)
+                    if not blocked(x[1])][:1]
             if not subs: continue
             # lands only compete with lands, and making the right colours is the whole job
             exact = value_of(k) * subs[0][0] * (1 if is_land else STANDIN)
@@ -778,7 +843,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
                 heapq.heappush(heap, (-exact, i, k, subs[0][1]))
             continue
         used.add(sk); sub_for[k] = sk                    # still the top offer at its exact value
-        (lands if is_land else chosen).append((owned[sk], "s", mm))
+        (lands if is_land else chosen).append((owned[sk], "s", mm)); note(sk)
 
     # 3) still short: fill by role need (ramp, draw, removal, wipes), then best leftovers
     if len(chosen) < nonland:
@@ -790,10 +855,10 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
                 if k not in used and kd != "land" and (gc_cap != 0 or not m["gc"])]
         fill.sort(key=lambda it: (-score(it[0]), it[1]["cmc"], it[0]))
         def take(it):
-            chosen.append((it[1], "f", None)); used.add(it[0])
+            chosen.append((it[1], "f", None)); used.add(it[0]); note(it[0])
             for r in it[2]:
                 if r in counts: counts[r] += 1
-        ok = lambda it: it[0] not in used and (not it[1]["gc"] or gc_room())
+        ok = lambda it: it[0] not in used and (not it[1]["gc"] or gc_room()) and not blocked(it[0])
         for role, target in ROLE_TARGETS.items():
             for it in fill:
                 if len(chosen) >= nonland or counts[role] >= target: break
@@ -804,6 +869,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
 
     # 4) owned dual lands in the commander's colours replace basics (EDHREC lists few of them)
     for m in owned_duals(pool, ci, used, len(lands), sum(1 for m, _, _ in lands if enters_tapped(m))):
+        if blocked(norm(m["name"])): continue
         lands.append((m, "y", "makes " + "".join(c for c in "WUBRG" if c in set(m["produced"]) & ci)
                       + ("" if enters_tapped(m) else " · untapped")))
         used.add(norm(m["name"]))
@@ -957,10 +1023,13 @@ def compact_combos(variants, have, keep):
         seen.add(vid)
         cards = [u["card"]["name"] for u in v.get("uses", []) if isinstance(u.get("card"), dict)]
         req = [r["template"]["name"] for r in v.get("requires", []) if isinstance(r.get("template"), dict)]
-        prod = [p["feature"]["name"] for p in v.get("produces", []) if isinstance(p.get("feature"), dict)]
-        out.append({"id": vid, "cards": cards, "req": req[:3], "prod": prod[:3],
+        feats = [p["feature"] for p in v.get("produces", []) if isinstance(p.get("feature"), dict)]
+        out.append({"id": vid, "cards": cards, "req": req[:3], "prod": [f["name"] for f in feats][:3],
                     "pop": v.get("popularity") or 0,
-                    "miss": [c for c in cards if norm(c) not in have]})
+                    "miss": [c for c in cards if norm(c) not in have],
+                    "bt": v.get("bracketTag") or "",                       # Spellbook's bracket tag
+                    "inf": int(any(f.get("uncountable") for f in feats)),  # infinite (uncountable) result
+                    "mv": v.get("manaValueNeeded") or 0})
     out.sort(key=lambda c: -c["pop"])
     return {"n": len(out), "list": out[:keep]}
 
@@ -970,7 +1039,7 @@ def combos_for_commander(m, owned, cache, combo_cards):
     ci = set(m["ci"])
     pool = combo_pool(ci, owned, combo_cards)
     if len(pool) > CSB_MAX_MAIN: return None   # no combo-card list to trim with
-    key = "ci:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
+    key = "ci2:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
           + hashlib.md5("\n".join(pool).encode()).hexdigest()[:10]
     if key in cache: return cache[key]        # (--refresh starts from an empty cache)
     if OFFLINE or CSB_DOWN[0]: return None
@@ -981,11 +1050,20 @@ def combos_for_commander(m, owned, cache, combo_cards):
               " Rerun later; finished colour identities are cached.")
         return None
     have = set(owned)
-    own = compact_combos(res.get("included", []), have, 30)
-    near = compact_combos(res.get("almostIncluded", []), have, 20)
+    own = compact_combos(res.get("included", []), have, 10 ** 6)        # all: the builder checks them
+    near = compact_combos(res.get("almostIncluded", []), have, 150)     # ranked per commander later
     out = {"own": own["list"], "n_own": own["n"], "near": near["list"], "n_near": near["n"]}
     cache[key] = out
     return out
+
+def rank_combos(combos, deck_names, keep_own=30, keep_near=20):
+    """The report's combo lists for one commander: combos whose pieces are in its deck first (they
+    fit what it does), then by popularity. The colour-identity query is shared; this ranking isn't."""
+    if not combos: return combos
+    inn = lambda c: sum(1 for x in c["cards"] if norm(x) in deck_names) / max(1, len(c["cards"]))
+    pick = lambda L, n: sorted(L, key=lambda c: (-inn(c), -c["pop"]))[:n]
+    return {"own": pick(combos["own"], keep_own), "n_own": combos["n_own"],
+            "near": pick(combos["near"], keep_near), "n_near": combos["n_near"]}
 
 # ---------------------------------------------------------- imported decks
 def parse_decklist(path):
@@ -1232,11 +1310,12 @@ function deckSection(title,cmdrs,items,text,link){
   <div class="view v-list" hidden><textarea readonly rows="16">${esc(text)}</textarea></div>`;}
 
 /* ---------- combos ---------- */
+const TAGN={E:"Exhibition · B1",C:"Core · B2",O:"Oddball · B2",P:"Powerful · B3",S:"Spicy · B3",R:"Ruthless · B4",B:"Banned"};
 function comboHTML(C,inSkel,labOwn,labNear){
   if(!C) return '<h4>Combos</h4><p class="dim">Combo data unavailable (rerun to retry).</p>';
   const inS=new Set(inSkel||[]);
   const own=[...C.own].sort((a,z)=>inS.has(z.id)-inS.has(a.id));
-  const li=c=>`<li><a href="https://commanderspellbook.com/combo/${esc(c.id)}/" target="_blank" rel="noopener">${c.cards.map(x=>c.miss.includes(x)?`<b class="miss">${esc(x)}</b>`:esc(x)).join(" + ")}</a>${c.req.length?` <small>+ ${c.req.map(esc).join(", ")}</small>`:""}${inS.has(c.id)?' <span class="tag">in deck</span>':""}<br><small>${c.prod.map(esc).join(" · ")}</small></li>`;
+  const li=c=>`<li><a href="https://commanderspellbook.com/combo/${esc(c.id)}/" target="_blank" rel="noopener">${c.cards.map(x=>c.miss.includes(x)?`<b class="miss">${esc(x)}</b>`:esc(x)).join(" + ")}</a>${c.req.length?` <small>+ ${c.req.map(esc).join(", ")}</small>`:""}${c.bt?` <span class="tag" title="Commander Spellbook bracket tag">${esc(TAGN[c.bt]||c.bt)}</span>`:""}${c.inf?' <span class="tag" title="infinite">∞</span>':""}${inS.has(c.id)?' <span class="tag">in deck</span>':""}<br><small>${c.prod.map(esc).join(" · ")}</small></li>`;
   const more=(k,l)=>k>l?`<li class="dim">+${k-l} more on Commander Spellbook</li>`:"";
   return `<div class="vbar"><h3>Combos</h3></div><div class="cols"><div><h4>${labOwn} (${C.n_own})</h4><ul class="cl">${own.map(li).join("")||"<li>None found</li>"}${more(C.n_own,C.own.length)}</ul></div>
   <div><h4>${labNear} (${C.n_near}) <small>missing card in red</small></h4><ul class="cl">${C.near.map(li).join("")||"<li>None found</li>"}${more(C.n_near,C.near.length)}</ul></div></div>`;}
@@ -1552,15 +1631,14 @@ def main():
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
                                   (combos or {}).get("own"))
                        for b, p in pg.items()}}
-        entry["combos"] = combos
+        entry["combos"] = rank_combos(combos, entry["b"]["all"]["_names"])
         for x in entry["b"].values():
             names = x.pop("_names")
-            inside = [c for c in (entry["combos"] or {}).get("own", [])
-                      if all(norm(nm) in names for nm in c["cards"])]
+            inside = [c for c in (combos or {}).get("own", []) if all(norm(nm) in names for nm in c["cards"])]
             x["cin"] = [c["id"] for c in inside]
             x["c2"] = sum(1 for c in inside if len(c["cards"]) <= 2)
             x["pw"]["combo"] = max(0, min(10, len(inside) * 3))
-            x["bf"] = bracket_fit(x)
+            x["bf"] = bracket_fit(x, inside)
         results.append(entry)
         if i % 10 == 0: save_json(csb_path, csb_cache)
         al = entry["b"]["all"]

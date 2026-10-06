@@ -47,7 +47,11 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_step2.json`
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
-`baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket)
+`baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
+`baseline_combos.json` = bracket rules enforced in the builder)
+
+Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
+commander × bracket panel and fails on any JavaScript error. Run it after any change to the HTML template.
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -67,7 +71,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
-| Commander Spellbook `POST /find-my-combos` | Combos owned and one card away, one query per color identity (`ci:<WUBRG>:<hash>`) | `cache/spellbook.json` |
+| Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
 | Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
 | Commander Spellbook `GET /cards/?ordering=-variant_count` | Which cards are in any combo (pool filter; find-my-combos takes ≤600 cards) | `cache/spellbook_cards.json` (monthly) |
 
@@ -99,8 +103,16 @@ Key functions:
     (deck kind `y` "your pick", with the reason; listed cards under `OFF_LIST` 5% also count as `y`);
   - missing cards (blended rate ≥ `SUB_MIN`) at (rate + synergy) × closeness of the best owned stand-in
     × `STANDIN` (0.6; lands ×1) → kind `s`;
-  - B4/B5 only (`COMBO_BRACKETS`): combos you own (≤3 cards, no extra requirements) as a package valued at
-    its weakest piece + `COMBO_W` (0.25); at most `COMBO_MAX` 2 packages adding ≤2 cards each → kind `c`.
+  - B3–B5 (`COMBO_BRACKETS`): combos you own (≤3 cards, no extra requirements, allowed in the bracket) as
+    a package valued at its weakest piece + `COMBO_W` (B3 0.12, B4/B5 0.25); every piece must score
+    ≥ `COMBO_PIECE_MIN` on its own (synergy/fit, not just colour); ≤`COMBO_MAX` 2 packages adding ≤2 cards.
+  - Bracket rules are enforced while building (`blocked()`/`note()` in `analyze()`), for every way a card
+    gets in (popular, pick, stand-in, combo, role fill, duals): a card that would complete a combo not
+    allowed by `combo_ok()` is skipped (Spellbook tag above the bracket via `TAG_BRACKET`: E→1, C/O→2,
+    P/S→3, R→4, B banned; B1–B2 also no two-card infinites); game-relevant (non-Exhibition) combos capped
+    by `REL_CAP` (B1 0, B2 1, B3 2); B1–B3 no mass land denial and ≤`XTURN_CAP` 1 extra-turn card.
+    "All decks" has no bracket, so no rules. Nearly every Spellbook combo is "infinite" something; the tag,
+    not the infinite flag, says whether it threatens the game (Plunderer + Altar + Skeleton = Exhibition).
   Then role fill (`ROLE_TARGETS`, sorted by score) → `owned_duals()` → basics. Non-land rates are `blended_rates()` (bracket
   page pulled toward the all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate
   and no fit. Only cards from `build_pool` (owned, legal, in color identity). Game Changers capped by
@@ -109,8 +121,8 @@ Key functions:
   pass/fail checks (`ROLE_TARGETS`, avg MV ≤ `READY_MV`, weakest colour's land sources, stand-ins + role
   fill ≤ `READY_ODD`), stored as `rd` = [[check, value, target, ok]]; **Bracket Fit** = `bracket_fit()`
   (set in `main()` after combos-in-deck): lowest bracket the 99 fits (2 = "B1–2", 4 = "B4+"), from Game
-  Changers (>3 → B4), mass land denial (`MLD_RX` → B4), 2+ extra-turn cards (`XTURN_RX` → B4), two-card
-  combos in the deck (→ B3, "B4 if it can win early"). Tutors shown as info only (rules say "few"). MLD / extra turns use
+  Changers (>3 → B4), mass land denial (→ B4), 2+ extra-turn cards (→ B4), combos complete in the deck
+  (each by its Spellbook tag; two-card infinites ≥ B3; more than `REL_CAP` relevant ones → next bracket). Tutors shown as info only (rules say "few"). MLD / extra turns use
   Spellbook's flags (`is_mld`, `is_xturn`; `MLD_RX`/`XTURN_RX` only for cards Spellbook doesn't know).
   Tutors stay on Scryfall's `otag:tutor`: Spellbook's card search is name-only (no bulk flags; full list is
   300+ pages) and its `tutor` flag is narrow (Diabolic Tutor = false).
@@ -163,14 +175,13 @@ combos, power profile bars, imported decks section.
   waits on 429/5xx (Retry-After, else 15/30/60/120 s) and fails fast on other 4xx. `combo_pool()` sends
   only owned on-color cards that are in some combo (5-color: top 600 by combo count). If Spellbook stops
   answering, `CSB_DOWN` makes the rest of the run skip combos. Failed/partial lookups are not cached.
-- Spellbook `/cards/` also has `tutor`, `extraTurn`, `massLandDenial`, `gameChanger` flags per card:
-  useful for the planned rule-based Bracket Fit.
 - Scryfall Tagger tag names in `TAG_QUERIES` are best guesses; the run prints card counts per role.
   A role with 0 cards means a wrong tag name.
-- Bracket Fit limits: combos-in-deck only sees the 30 most popular owned combos per colour identity
-  (`compact_combos` keep); can't tell early vs late two-card combos; MLD/extra turns are text patterns
-  (now exact flags from Spellbook when cached). The builder does not
-  avoid combos at B1–B3 yet: 25 B2 lists contain a two-card combo from EDHREC's own B2 list and are flagged.
+- Bracket Fit / enforcement: all owned combos per colour identity are checked; the report lists 30 owned
+  and 20 one-card-away per commander, ranked by how many pieces are in its deck (`rank_combos`). Combos
+  needing extra requirements (`req`, e.g. "a sac outlet") are listed but not added as packages. A commander
+  that is itself a combo (Stella Lee, Wild Card: Spicy) can't be fixed by the builder and stays flagged
+  (1 B2 list). The REL_CAP numbers are a judgement call on "not too many", not official rules.
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
 - Imported deck commander detection: `Commander` header, `*CMDR*` tag, or a guess from color identity.
 

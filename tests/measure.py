@@ -57,7 +57,7 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     inside = [c for c in combos or [] if all(dw.norm(n) in names for n in c["cards"])]
     r["combos_in"] = len(inside)
     x["c2"] = sum(1 for c in inside if len(c["cards"]) <= 2)
-    bf = dw.bracket_fit(x)
+    bf = dw.bracket_fit(x, inside)
     r["ready"] = sum(1 for c in x["rd"] if c[3])
     r["bracket_est"] = bf["est"]
     sel = dw.BRACKET_NUM.get(bracket)
