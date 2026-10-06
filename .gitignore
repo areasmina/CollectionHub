@@ -1,0 +1,18 @@
+# Downloaded data (rebuilt automatically, can be large)
+cache/
+
+# Generated output
+decks/
+report.html
+
+# Python
+__pycache__/
+*.pyc
+
+# OS clutter
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Your collection export is personal. Uncomment if you ever push this repo to GitHub:
+# *.csv
