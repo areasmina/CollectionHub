@@ -405,16 +405,21 @@ def load_edhrec_cache(cache_dir, refresh=False):
         cache = {k: v for k, v in load_json(os.path.join(cache_dir, "edhrec_v3.json")).items() if v}
     return cache
 
-def fetch_page(path, cache, refresh=False, avg=False):
-    """A commander page (`avg` = the average-deck page, cached as "avg:<path>")."""
+EDH_MAX_DAYS = 14       # a commander's main page (theme stats, play rates) is refetched after this many days
+
+def fetch_page(path, cache, refresh=False, avg=False, max_days=None):
+    """A commander page (`avg` = the average-deck page, cached as "avg:<path>"). `max_days`: refetch
+    when the cached copy is older (pages cached before ages were recorded count as old)."""
     key = "avg:" + path if avg else path
     old = cache.get(key)
-    if not refresh and old and old.get("v") == EDH_VERSION: return old
+    fresh = max_days is None or time.time() - (old or {}).get("at", 0) < max_days * 86400
+    if not refresh and old and old.get("v") == EDH_VERSION and fresh: return old
     if OFFLINE: return old              # older data beats none; nothing new is recorded
     data = http_json((EDH_AVG if avg else EDH) + path + ".json")
     time.sleep(0.8)
     if not data: return old             # missing page (EDHREC answers 403) or failure: never cached
     cache[key] = parse_avg(data) if avg else parse_edhrec(data)
+    cache[key]["at"] = int(time.time())
     return cache[key]
 
 # ------------------------------------------------------------ substitutes
@@ -641,10 +646,7 @@ def commander_profile(cmdr, themes):
     return tribe, mechs, roles, kws
 
 FOCUS_W = 0.15         # theme decks: extra score for cards whose text/types match the chosen theme
-THEME_TOP = 4           # archetypes per commander that get their own decks: EDHREC's most played theme
-                        # + the ones you own most of
-THEME_FETCH = 8         # EDHREC theme pages read per commander to find those (all its theme tags)
-THEME_MIN_DECKS = 20    # a theme page with fewer decklists says too little to build from
+THEME_TOP = 4           # archetypes per commander: EDHREC's top themes by deck count, in EDHREC's order
 THEME_MISS_DAYS = 7     # a theme page EDHREC doesn't have is asked for again after this many days
 
 def theme_profile(name):
@@ -2088,12 +2090,12 @@ function body(d,b,r){
   const st=rowState(d,b,r), sel=st.key, asel=st.a, tsel=st.t;
   const x=deckOf(d,b,st), pre=b==="all"?"":"/"+b;
   // level 1: archetype (overview + the archetypes you own most of)
-  const ths=Object.entries(d.th||{});
+  const ths=Object.entries(d.th||{}), tot=d.b.all.decks||1, tcount=Object.fromEntries(d.tags.map(t=>[t[1],t[2]]));
   const arch=`<div class="srcs"><span class="dim">Archetype:</span><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
-    +ths.map(([k,t])=>`<button class="srcb thm ${k===tsel?"on":""}" data-tsel="${k}" title="You own ${t.own}% of the cards EDHREC's ${n(t.decks)} ${esc(t.name)} decks play">${esc(t.name)} · you own ${t.own}%</button>`).join("")
+    +ths.map(([k,t])=>`<button class="srcb thm ${k===tsel?"on":""}" data-tsel="${k}" title="EDHREC: ${n(tcount[k]||0)} of ${n(tot)} decks are ${esc(t.name)} · you own ${t.own}% of the cards those decks play">${esc(t.name)} · ${Math.round(100*(tcount[k]||0)/tot)}% of decks · you own ${t.own}%</button>`).join("")
     +(ths.length?"":`<span class="dim">no archetype pages</span>`)+`</div>`;
   const other=d.tags.filter(t=>!(d.th&&d.th[t[1]])).slice(0,5);
-  const more=other.length?`<div class="tags"><span class="dim">Other EDHREC themes:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
+  const more=other.length?`<div class="tags"><span class="dim">More EDHREC themes:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
   // level 2: source within the archetype
   const avOK=tsel?hasTAvg(d,b,tsel):hasAvg(d,b), cmdX=tsel?themed(d,b,tsel):d.b[b], avX=avOK?(tsel?tavgd(d,b,tsel):avgd(d,b)):null;
   const srcs=`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
@@ -2407,7 +2409,7 @@ def main():
     pages, themes, avgs, skipped = {}, {}, {}, 0
     for i, m in enumerate(cands, 1):
         slug = slugify(m["name"])
-        base = fetch_page(slug, cache, a.refresh)
+        base = fetch_page(slug, cache, a.refresh, max_days=EDH_MAX_DAYS)
         if not base or not base["cards"]:
             skipped += 1; print(f"[{i}/{len(cands)}] {m['name']}: no EDHREC page"); continue
         pg = {"all": base}
@@ -2415,19 +2417,13 @@ def main():
             p = fetch_page(f"{slug}/{b}", cache, a.refresh)
             if p and p["cards"]: pg[b] = p
         pages[m["name"]] = pg
-        if not a.no_themes:     # archetypes: every theme tag's page, ranked by how much of it you own
-            found = []
-            for name, tslug, _ in base.get("tags", [])[:THEME_FETCH]:
-                tp = fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh)
-                if tp and tp["cards"] and (tp.get("decks") or 0) >= THEME_MIN_DECKS:
-                    found.append((page_match(tp, owned, norm(m["name"])), tslug, name, tp))
-            # EDHREC's most played theme always (tags come most played first), then the ones you own most of
-            pick = found[:1] + sorted(found[1:], key=lambda t: (-t[0], t[1]))[:THEME_TOP - 1]
-            pick.sort(key=lambda t: (-t[0], t[1]))
+        if not a.no_themes:     # archetypes: EDHREC's top THEME_TOP theme tags (most decks first), as is
             th = {}
-            for match, tslug, name, tp in pick:     # + that archetype's EDHREC average deck
+            for name, tslug, _ in base.get("tags", [])[:THEME_TOP]:
+                tp = fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh)
+                if not (tp and tp["cards"]): continue        # no theme page: stays an EDHREC link
                 tap = None if a.no_avg else fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh, avg=True)
-                th[tslug] = (name, tp, tap if tap and tap["cards"] else None, match)
+                th[tslug] = (name, tp, tap if tap and tap["cards"] else None, page_match(tp, owned, norm(m["name"])))
             themes[m["name"]] = th
         if not a.no_avg:        # EDHREC's average deck, for each bracket the commander page has
             av = {}

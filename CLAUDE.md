@@ -74,9 +74,9 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | ManaBox CSV | What Guillermo owns (`Name`, `Scryfall ID`, `Quantity`) | – |
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
-| EDHREC theme pages `…/commanders/<slug>/<theme>.json` | Real per-theme deck data for every theme tag (≤`THEME_FETCH` 8, ≥`THEME_MIN_DECKS` 20 decks); EDHREC's most played theme + the 3 you own most of (`page_match`) become the `THEME_TOP` 4 archetypes, each also with its average deck `average-decks/<slug>/<theme>` (`fetch_theme_page`; misses remembered `THEME_MISS_DAYS` 7 in `_theme_miss`) | `cache/edhrec_v4.json` |
+| EDHREC theme pages `…/commanders/<slug>/<theme>.json` | Real per-theme deck data for EDHREC's top `THEME_TOP` 4 theme tags by deck count (EDHREC order, never re-ranked; a tag without a theme page stays an EDHREC link), the archetypes; "you own N%" = `page_match`; each also with its average deck `average-decks/<slug>/<theme>` (`fetch_theme_page`; misses remembered `THEME_MISS_DAYS` 7 in `_theme_miss`) | `cache/edhrec_v4.json` |
 | EDHREC `json.edhrec.com/pages/average-decks/<slug>[/<bracket>].json` | EDHREC's average 99 per bracket (`parse_avg`: card → copies, `bracket_counts`), fetched for each bracket the commander page has; misses remembered 7 days in `_theme_miss` (`avg:` prefix) | `cache/edhrec_v4.json` (key `avg:<path>`) |
-| EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
+| EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online; the main commander page is refetched after `EDH_MAX_DAYS` 14, field `at`, so theme stats stay current) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
 | Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
 | Scryfall `/catalog/keyword-abilities`, `keyword-actions`, `ability-words` | Mechanic names (connive, landfall, mobilize…) → `KEYWORD_VOCAB` minus `KW_SKIP` (evergreen/generic) | `cache/keywords.json` (monthly) |
@@ -219,8 +219,8 @@ EDHREC's average 99 into a page where every card has rate 1.0 (synergy from the 
 `analyze(..., show=real play rates)` rebuilds it with your cards (owned cards stay, missing → stand-ins, same
 bracket rules; `show` orders/labels the gaps). Stored as `entry["av"][bracket] = deck_diff(...) + gaps`; JS
 `avgd()`/`applyDiff()`, `rowSel()` gives the saved-choices key ("avg"). Average deck and theme used to be exclusive; now they form a tree (below).
-**Archetype tree** (per commander panel): Bracket chips → **Archetype** (Overview + `THEME_TOP` 4 archetypes: EDHREC's most played theme always, the rest ranked
-by your Collection Match of their theme page, "you own N%"; other tags = EDHREC links) → **Deck from: Commander page |
+**Archetype tree** (per commander panel): Bracket chips → **Archetype** (Overview + EDHREC's top `THEME_TOP` 4 themes in EDHREC order, showing "% of decks" (EDHREC) and
+"you own N%" (your Collection Match of their theme page); other tags = EDHREC links) → **Deck from: Commander page |
 Average deck**. Four decks per bracket: overview `d.b[b]`, overview average `d.av[b]`, archetype `d.th[t].b[b]`
 (theme page, `focus`), archetype average `d.th[t].av[b]` (theme average deck via `avg_as_page(..., "all")`, `focus`,
 + gaps + `ref`; `d.th[t].own`, `.adecks`). All stored as diffs of `d.b[b]`. JS `rowState()` → {t, a, key}
