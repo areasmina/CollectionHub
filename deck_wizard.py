@@ -626,47 +626,54 @@ def readiness(roles, avg_cmc, odd, sources):
     out.append(["odd", odd, READY_ODD, odd <= READY_ODD])
     return out
 
-# Spellbook bracket tags -> lowest bracket a combo belongs in (B = has a banned card)
-TAG_BRACKET = {"E": 1, "C": 2, "O": 2, "P": 3, "S": 3, "R": 4, "B": 9}
+# Official Commander Brackets rules on combos (Wizards, Feb 2025; unchanged by the Feb 2026 update):
+#   B1-B2: no intentional two-card infinite combos.  B3: none in the early game.  B4-B5: anything.
+# Three-card combos aren't restricted. "Early game" has no number in the rules: a two-card infinite
+# counts as early when its pieces' mana values (Scryfall) plus the mana it needs (Spellbook) total
+# EARLY_MV or less, i.e. it can come together before turn ~6.
+EARLY_MV = 6
+XTURN_CAP = 1          # B1-B3: extra turns "in low quantities, not chained": one extra-turn card can't chain
 TAG_NAME = {"E": "Exhibition", "C": "Core", "O": "Oddball", "P": "Powerful", "S": "Spicy", "R": "Ruthless", "B": "Banned"}
-# Nearly every Spellbook combo is "infinite" something; the tag says whether it matters. Exhibition-tagged
-# loops (e.g. infinite death triggers with no payoff) are free; the rest count against a per-bracket cap.
-REL_CAP = {1: 0, 2: 1, 3: 2}   # game-relevant (not Exhibition) combos allowed complete per deck
-rel = lambda c: 0 if c.get("bt") == "E" else 1
-XTURN_CAP = 1                  # B1-B3: no chaining extra turns -> at most one extra-turn card
+
+def two_card_infinite(c):
+    """The commander counts as one of the two; an extra condition ("an instant that untaps a
+    creature") counts as a card too."""
+    return bool(c.get("inf")) and len(c["cards"]) + len(c.get("req") or []) <= 2
 
 def combo_ok(c, bnum):
-    """May this combo be complete in a deck for bracket `bnum` (None = all decks: no rule)?"""
-    r = TAG_BRACKET.get(c.get("bt"), 3)
-    if r == 9: return False
-    if bnum is None or bnum >= 4: return True
-    if r > bnum: return False
-    return not (bnum <= 2 and c.get("inf") and len(c["cards"]) <= 2)   # B1-B2: no two-card infinites
+    """May this combo be complete in a deck for bracket `bnum` (None = all decks: no rule)?
+    Combos with an extra condition can't be checked from the card list, so they never block."""
+    if bnum is None or bnum >= 4 or not two_card_infinite(c) or c.get("req"): return True
+    return bnum == 3 and c.get("tmv", 0) > EARLY_MV
+
+def combo_need(c):
+    """Lowest bracket that allows this combo, by the official rules."""
+    if not two_card_infinite(c): return 2
+    return 3 if c.get("tmv", 0) > EARLY_MV else 4
 
 def combo_text(c):
-    bt = c.get("bt")
-    tag = TAG_NAME.get(bt, "untagged") + (f" (B{TAG_BRACKET[bt]})" if bt in TAG_BRACKET and bt != "B" else "")
-    return " + ".join(c["cards"]) + ": " + tag + (", infinite" if c.get("inf") else "")
+    s = " + ".join(c["cards"] + [f"({r})" for r in c.get("req") or []])
+    if two_card_infinite(c):
+        s += f": two-card infinite, {c.get('tmv', 0)} mana total ({'late game, B3' if combo_need(c) == 3 else 'early game, B4'})"
+    if c.get("bt"): s += f" · Spellbook: {TAG_NAME.get(c['bt'], c['bt'])}"
+    return s
 
 def bracket_fit(x, deck_combos=()):
-    """Lowest bracket this deck fits, with reasons. B1 and B2 differ by intent, not card rules, so
-    the lowest answer is 2. B5 (cEDH) is about the field, so the highest answer is 4.
-    `deck_combos` = combos complete in the deck (with Spellbook tags)."""
+    """Lowest bracket this deck fits under the official rules, with reasons. B1 and B2 differ by
+    intent, not card rules, so the lowest answer is 2. B5 (cEDH) is about the field, so the
+    highest answer is 4. `deck_combos` = combos complete in the deck."""
     est, why = 2, []
     if x["gc"] > 3: est = 4; why.append(f"{x['gc']} Game Changers (B3 allows 3)")
-    elif x["gc"]: est = 3; why.append(f"{x['gc']} Game Changer{'s' if x['gc'] > 1 else ''}")
+    elif x["gc"]: est = 3; why.append(f"{x['gc']} Game Changer{'s' if x['gc'] > 1 else ''} (B1-2 allow none)")
     if x.get("mld"): est = 4; why.append("mass land denial: " + ", ".join(x["mld"]))
     if len(x.get("xt") or []) > XTURN_CAP: est = 4; why.append("extra turns could chain: " + ", ".join(x["xt"]))
-    need = lambda c: max(min(4, TAG_BRACKET.get(c.get("bt"), 3)),
-                         3 if c.get("inf") and len(c["cards"]) <= 2 else 0)   # no two-card infinites in B1-B2
-    worst = sorted(deck_combos, key=lambda c: (-need(c), -rel(c), -c.get("pop", 0)))
-    for c in worst: est = max(est, need(c))
-    n_rel = sum(rel(c) for c in deck_combos)
-    for b in (2, 3):
-        if est == b and n_rel > REL_CAP[b]:
-            est = b + 1; why.append(f"{n_rel} game-relevant combos (B{b}: at most {REL_CAP[b]})")
-    why += [combo_text(c) for c in worst[:3]]
-    if len(worst) > 3: why.append(f"+{len(worst) - 3} more combos")
+    two = [c for c in deck_combos if two_card_infinite(c)]
+    bad = sorted((c for c in two if not c.get("req")), key=lambda c: (-combo_need(c), -c.get("pop", 0)))
+    for c in bad: est = max(est, combo_need(c))
+    why += [combo_text(c) for c in bad[:3]]
+    if len(bad) > 3: why.append(f"+{len(bad) - 3} more two-card infinites")
+    why += ["possible: " + combo_text(c) + " if the deck has " + " and ".join(c["req"]).lower()
+            for c in two if c.get("req")][:2]
     return {"est": est, "why": why}
 
 def enters_tapped(m):
@@ -772,22 +779,17 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     by_card = {}
     for c in live:
         for x in c["cards"]: by_card.setdefault(norm(x), []).append(c)
-    state = {"rel": 0, "xt": 0}
+    state = {"xt": 0}
     def blocked(k):
         """Would adding owned card k break this bracket's rules?"""
         if bnum is None: return False
         m = owned[k]
         if bnum <= 3 and (is_mld(m) or (is_xturn(m) and state["xt"] >= XTURN_CAP)): return True
-        n_rel = state["rel"]
-        for c in by_card.get(k, []):
-            if all(norm(x) in used or norm(x) == k for x in c["cards"]):   # k would complete c
-                if not combo_ok(c, bnum): return True
-                n_rel += rel(c)
-        return bnum <= 3 and n_rel > REL_CAP[bnum]
+        return any(not combo_ok(c, bnum) for c in by_card.get(k, [])     # k would complete a combo
+                   if all(norm(x) in used or norm(x) == k for x in c["cards"]))   # the rules forbid
     def note(k):            # call after adding k
         if bnum is None: return
         state["xt"] += is_xturn(owned[k])
-        state["rel"] += sum(rel(c) for c in by_card.get(k, []) if all(norm(x) in used for x in c["cards"]))
 
     # combos you own go in whole, valued at their weakest piece + COMBO_W: every piece must earn a
     # slot on its own synergy/fit, and the combo must be allowed in this bracket
@@ -1033,6 +1035,12 @@ def compact_combos(variants, have, keep):
     out.sort(key=lambda c: -c["pop"])
     return {"n": len(out), "list": out[:keep]}
 
+def with_speed(combos, owned):
+    """Adds tmv = Scryfall mana value of the pieces + mana the combo needs (how early it can happen)."""
+    for c in combos["own"] + combos["near"]:
+        c["tmv"] = int(sum((owned.get(norm(x)) or {}).get("cmc", 0) for x in c["cards"]) + (c.get("mv") or 0))
+    return combos
+
 def combos_for_commander(m, owned, cache, combo_cards):
     """Combos among your cards in this commander's colours (the commander included). The answer
     only depends on the colours, so commanders sharing an identity share one cached query."""
@@ -1041,7 +1049,7 @@ def combos_for_commander(m, owned, cache, combo_cards):
     if len(pool) > CSB_MAX_MAIN: return None   # no combo-card list to trim with
     key = "ci2:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
           + hashlib.md5("\n".join(pool).encode()).hexdigest()[:10]
-    if key in cache: return cache[key]        # (--refresh starts from an empty cache)
+    if key in cache: return with_speed(cache[key], owned)   # (--refresh starts from an empty cache)
     if OFFLINE or CSB_DOWN[0]: return None
     res = csb_find([], pool)
     if res is None:                           # don't cache failures; stop asking for this run
@@ -1054,7 +1062,7 @@ def combos_for_commander(m, owned, cache, combo_cards):
     near = compact_combos(res.get("almostIncluded", []), have, 150)     # ranked per commander later
     out = {"own": own["list"], "n_own": own["n"], "near": near["list"], "n_near": near["n"]}
     cache[key] = out
-    return out
+    return with_speed(out, owned)
 
 def rank_combos(combos, deck_names, keep_own=30, keep_near=20):
     """The report's combo lists for one commander: combos whose pieces are in its deck first (they
@@ -1310,7 +1318,7 @@ function deckSection(title,cmdrs,items,text,link){
   <div class="view v-list" hidden><textarea readonly rows="16">${esc(text)}</textarea></div>`;}
 
 /* ---------- combos ---------- */
-const TAGN={E:"Exhibition · B1",C:"Core · B2",O:"Oddball · B2",P:"Powerful · B3",S:"Spicy · B3",R:"Ruthless · B4",B:"Banned"};
+const TAGN={E:"Spellbook: Exhibition",C:"Spellbook: Core",O:"Spellbook: Oddball",P:"Spellbook: Powerful",S:"Spellbook: Spicy",R:"Spellbook: Ruthless",B:"Spellbook: Banned"};
 function comboHTML(C,inSkel,labOwn,labNear){
   if(!C) return '<h4>Combos</h4><p class="dim">Combo data unavailable (rerun to retry).</p>';
   const inS=new Set(inSkel||[]);

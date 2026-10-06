@@ -48,7 +48,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
-`baseline_combos.json` = bracket rules enforced in the builder)
+`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error. Run it after any change to the HTML template.
@@ -107,12 +107,14 @@ Key functions:
     a package valued at its weakest piece + `COMBO_W` (B3 0.12, B4/B5 0.25); every piece must score
     ≥ `COMBO_PIECE_MIN` on its own (synergy/fit, not just colour); ≤`COMBO_MAX` 2 packages adding ≤2 cards.
   - Bracket rules are enforced while building (`blocked()`/`note()` in `analyze()`), for every way a card
-    gets in (popular, pick, stand-in, combo, role fill, duals): a card that would complete a combo not
-    allowed by `combo_ok()` is skipped (Spellbook tag above the bracket via `TAG_BRACKET`: E→1, C/O→2,
-    P/S→3, R→4, B banned; B1–B2 also no two-card infinites); game-relevant (non-Exhibition) combos capped
-    by `REL_CAP` (B1 0, B2 1, B3 2); B1–B3 no mass land denial and ≤`XTURN_CAP` 1 extra-turn card.
-    "All decks" has no bracket, so no rules. Nearly every Spellbook combo is "infinite" something; the tag,
-    not the infinite flag, says whether it threatens the game (Plunderer + Altar + Skeleton = Exhibition).
+    gets in (popular, pick, stand-in, combo, role fill, duals): a card that would complete a combo the
+    **official rules** forbid is skipped (`combo_ok()`): B1–B2 no two-card infinite combos, B3 none in the
+    early game (`tmv` = Scryfall mana value of the pieces + Spellbook mana needed ≤ `EARLY_MV` 6, i.e.
+    before turn ~6; the rules give no number, this is our measure). Three-card combos aren't restricted.
+    B1–B3 also no mass land denial and ≤`XTURN_CAP` 1 extra-turn card ("low quantities, not chained").
+    "All decks" has no bracket, so no rules. Spellbook's `bracketTag` is shown as information only.
+    Combos with an extra condition (`req`, e.g. Stella Lee + "an instant that untaps a creature") count a
+    condition as a card but can't be verified from the list: never blocked, shown as "possible".
   Then role fill (`ROLE_TARGETS`, sorted by score) → `owned_duals()` → basics. Non-land rates are `blended_rates()` (bracket
   page pulled toward the all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate
   and no fit. Only cards from `build_pool` (owned, legal, in color identity). Game Changers capped by
@@ -121,8 +123,10 @@ Key functions:
   pass/fail checks (`ROLE_TARGETS`, avg MV ≤ `READY_MV`, weakest colour's land sources, stand-ins + role
   fill ≤ `READY_ODD`), stored as `rd` = [[check, value, target, ok]]; **Bracket Fit** = `bracket_fit()`
   (set in `main()` after combos-in-deck): lowest bracket the 99 fits (2 = "B1–2", 4 = "B4+"), from Game
-  Changers (>3 → B4), mass land denial (→ B4), 2+ extra-turn cards (→ B4), combos complete in the deck
-  (each by its Spellbook tag; two-card infinites ≥ B3; more than `REL_CAP` relevant ones → next bracket). Tutors shown as info only (rules say "few"). MLD / extra turns use
+  Changers (>3 → B4), mass land denial (→ B4), 2+ extra-turn cards (→ B4), two-card infinite combos
+  complete in the deck (late → B3, early → B4; `combo_need()`), "possible" ones listed without raising it.
+  Rules source: Wizards "Introducing Commander Brackets Beta" (Feb 2025); Feb 2026 update changed only
+  the Game Changers list (53 cards). Stick to these rules; don't add house caps. Tutors shown as info only (rules say "few"). MLD / extra turns use
   Spellbook's flags (`is_mld`, `is_xturn`; `MLD_RX`/`XTURN_RX` only for cards Spellbook doesn't know).
   Tutors stay on Scryfall's `otag:tutor`: Spellbook's card search is name-only (no bulk flags; full list is
   300+ pages) and its `tutor` flag is narrow (Diabolic Tutor = false).
@@ -181,7 +185,8 @@ combos, power profile bars, imported decks section.
   and 20 one-card-away per commander, ranked by how many pieces are in its deck (`rank_combos`). Combos
   needing extra requirements (`req`, e.g. "a sac outlet") are listed but not added as packages. A commander
   that is itself a combo (Stella Lee, Wild Card: Spicy) can't be fixed by the builder and stays flagged
-  (1 B2 list). The REL_CAP numbers are a judgement call on "not too many", not official rules.
+  (now shown as "possible", since her combo needs an untap spell the list can't confirm).
+  `EARLY_MV` and `XTURN_CAP` are our measurable readings of "early game" and "not chained".
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
 - Imported deck commander detection: `Commander` header, `*CMDR*` tag, or a guess from color identity.
 
