@@ -48,7 +48,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
-`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics)
+`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error. Run it after any change to the HTML template.
@@ -151,7 +151,11 @@ Key functions:
   (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
   `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon
   for Ureni; from `TYPE_VOCAB`, subtypes only when capitalised) and the stand-in doesn't. Below
-  `SUB_MATCH_MIN` (0.35) nothing is offered. Lands matched by colors produced. Example that motivated
+  `SUB_MATCH_MIN` (0.35) nothing is offered. Lands matched by colors produced. Oracle-text likeness
+  (`text_sig`: word pairs of the full text incl. reminder text, numbers → #, name → ~; Jaccard via the pool's
+  `text_index`, stored as `by_role["_text"]`, pairs on >`TEXT_COMMON` 4% of the pool dropped): role match ×
+  (0.8 + 0.4 × likeness/`TEXT_FULL`), and a card reading like the missing one (≥ `TEXT_ALT`) is a candidate
+  even without a shared role (Blood Artist ↔ Zulaport Cutthroat). "similar text" in the reason. Example that motivated
   this: v5 put Spider-Man in Ureni's deck "for" Bloomvine Regent because both fetch lands.
 - `card_values()` – shared per-page card value (rate, blended rate, rate + synergy) used by `analyze()` and
   `find_homes()`, so "best home" scores match the deck builder.

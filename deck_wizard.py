@@ -368,8 +368,31 @@ def fetch_page(path, cache, refresh=False):
     return cache[path]
 
 # ------------------------------------------------------------ substitutes
+STOP = set("a an the of to and or in on at for from with by as is it its this that your you their they "
+           "be are can may then if each any one card cards".split())
+TEXT_COMMON = 0.04      # word pairs on more than this share of the pool ("target creature") say nothing
+_SIG_MEMO = {}
+
+def text_sig(m):
+    """Word pairs of the full Oracle text, reminder text included (card name -> ~, numbers -> #)."""
+    k = norm(m["name"])
+    if k not in _SIG_MEMO:
+        words = [w for w in re.findall(r"[a-z~+/#'-]+", re.sub(r"\d+", "#", rules_text(m))) if w not in STOP]
+        _SIG_MEMO[k] = frozenset(zip(words, words[1:]))
+    return _SIG_MEMO[k]
+
+def text_index(pool):
+    """{word pair: [pool items]} without the pairs most cards have."""
+    idx = {}
+    for it in pool:
+        if it[3] == "land": continue
+        for bg in text_sig(it[1]): idx.setdefault(bg, []).append(it)
+    limit = max(8, TEXT_COMMON * len(pool))
+    return {bg: L for bg, L in idx.items() if len(L) <= limit}
+
 def build_pool(ci, owned, exclude=""):
-    """Owned cards a commander with color identity `ci` could play, indexed by role."""
+    """Owned cards a commander with color identity `ci` could play, indexed by role
+    (and by_role["_text"] = text_index of the pool, for finding cards that read alike)."""
     pool, by_role = [], {}
     for k, m in owned.items():
         if k == exclude or not m["commander_legal"] or not set(m["ci"]) <= ci: continue
@@ -377,12 +400,15 @@ def build_pool(ci, owned, exclude=""):
         it = (k, m, roles_of(m), card_kind(m))
         pool.append(it)
         for r in it[2]: by_role.setdefault(r, []).append(it)
+    by_role["_text"] = text_index(pool)
     return pool, by_role
 
 # Types a commander's text can name (Dragon, Elf, artifact, Equipment...). Filled by prepare_types()
 # from every type line we already have, so no extra download is needed.
 TYPE_VOCAB = set()
 SUB_MATCH_MIN = 0.35    # closeness (0-1) below which an owned card isn't offered as a stand-in
+TEXT_FULL = 0.3         # Oracle-text likeness (Jaccard of word pairs) that counts as "reads the same"
+TEXT_ALT = 0.15         # likeness from which a card is a stand-in candidate even without a shared role
 OFF_TYPE = 0.4          # closeness multiplier when a stand-in lacks the type the commander cares about
 STANDIN = 0.6           # a stand-in is a guess at the real card's job: it counts for 60% of its closeness
 MAIN_TYPES = {"artifact", "enchantment", "spell", "planeswalker", "battle"}   # named in lower case
@@ -613,6 +639,16 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), trib
                 if it[0] not in seen: seen.add(it[0]); cands.append(it)
     else:   # pure synergy piece: same card type, and played with this commander
         cands = [it for it in pool if it[3] == kind and rate_of(it[0]) > 0]
+    sims = {}   # Oracle-text likeness (Jaccard of word pairs), via the pool's text index
+    if kind != "land":
+        sig, idx = text_sig(mm), by_role.get("_text") or {}
+        hits = {}
+        for bg in sig:
+            for it in idx.get(bg, ()): hits[it[0]] = hits.get(it[0], (it, 0))[0], hits.get(it[0], (it, 0))[1] + 1
+        for k2, (it, n) in hits.items():
+            sims[k2] = n / (len(sig) + len(text_sig(it[1])) - n)
+        seen = {it[0] for it in cands}
+        cands += [it for k2, (it, _) in hits.items() if k2 not in seen and sims[k2] >= TEXT_ALT]
     out = []
     for k, m, rs, kd in cands:
         if k in used or (m["gc"] and not allow_gc): continue
@@ -625,7 +661,9 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), trib
         else:
             if kd == "land": continue
             shared = rs & mroles
-            q = len(shared) / len(mroles) if mroles else 0.6
+            sim = min(1.0, sims.get(k, 0.0) / TEXT_FULL)
+            q = (len(shared) / len(mroles) if mroles else 0.6) if (shared or not mroles) else 0.0
+            q = min(1.0, max(q * (0.8 + 0.4 * sim), 0.85 * sim))   # reads alike: closer; reads like it: a candidate
             if kd != kind: q *= 0.6                         # creature vs non-creature
             elif type_group(m["type_line"]).replace("Sorcery", "Instant") != \
                  type_group(mm["type_line"]).replace("Sorcery", "Instant"):
@@ -639,6 +677,7 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), trib
                     q *= OFF_TYPE
                     why.append("not a " + "/".join(sorted(t.title() for t in mtypes)))
             if shared: why.append("same role: " + ", ".join(sorted(shared)))
+            if sim >= 0.5: why.append("similar text")
             why.append(f"{int(m['cmc'])} MV")
         if rate > 0: why.append(f"in {round(rate * 100)}% of these decks")
         if k in penalize: q -= 0.15        # already in the deck: prefer fresh cards
