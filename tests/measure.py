@@ -28,12 +28,13 @@ def setup(csv_path):
             owned[dw.norm(m["name"])] = m
     dw.ROLE_TAGS.update(dw.fetch_role_tags("cache/role_tags.json"))
     name_meta = dw.resolve_names(set(), "cache/scryfall_names.json")
+    dw.prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
     edh = dw.load_edhrec_cache("cache")
     return owned, name_meta, edh
 
-def measure_deck(m, page, bracket, owned, name_meta, pool_info):
+def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None):
     T = dw.CardTable()
-    x = dw.analyze(m, page, owned, name_meta, pool_info, bracket, T)
+    x = dw.analyze(m, page, owned, name_meta, pool_info, bracket, T, base)
     ci, rate = set(m["ci"]), lambda k: (page["cards"].get(k) or (None, 0.0))[1]
     deck = [owned[dw.norm(T.rows[i][0])] for i, _, _ in x["deck"]]
     keys = [dw.norm(c["name"]) for c in deck]
@@ -69,7 +70,7 @@ def run(csv_path):
         for b in ["all"] + dw.VALID_BRACKETS:
             page = base if b == "all" else edh.get(f"{slug}/{b}")
             if page and page["cards"]:
-                out[f"{m['name']}|{b}"] = measure_deck(m, page, b, owned, name_meta, pool_info)
+                out[f"{m['name']}|{b}"] = measure_deck(m, page, b, owned, name_meta, pool_info, base)
     return out
 
 def summarize(res):

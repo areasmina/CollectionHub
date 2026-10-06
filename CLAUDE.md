@@ -44,7 +44,8 @@ Useful flags:
 | `--offline` | No network; cached data only (tests, quick reruns) |
 
 Deck metrics for comparing builder versions (offline, ~30 s):
-`py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_v5.json`
+`py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_pre_step2.json`
+(`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix)
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -88,12 +89,17 @@ Main flow in `main()`:
 8. `render_report` injects JSON (`DATA`, `DECKS`, `CARDS`, `BR`, `STATS`) into the `HTML` template.
 
 Key functions:
-- `analyze()` – builds the 99. Order: popular owned cards (EDHREC rate order) → substitutes for missing
-  cards with rate ≥ `SUB_MIN` (0.25) → role fill (`ROLE_TARGETS`) → basics. Only cards from `build_pool`
-  (owned, legal, in color identity). Game Changers capped by `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
-- `find_subs()` – scores owned replacements: shared roles, same card kind, mana value distance, EDHREC rate
-  for this commander; lands matched by colors produced; pure synergy cards only replaced by same-kind cards
-  this commander's players also run.
+- `analyze()` – builds the 99. One ranked list (heap): owned cards at their play rate vs. missing cards
+  (rate ≥ `SUB_MIN`) at rate × closeness of the best owned stand-in × `STANDIN` (0.6; lands ×1) → role
+  fill (`ROLE_TARGETS`) → basics. Non-land rates are `blended_rates()` (bracket page pulled toward the
+  all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate. Only cards from
+  `build_pool` (owned, legal, in color identity). Game Changers capped by `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
+- `find_subs()` – closeness 0–1 of owned stand-ins: share of the missing card's roles × card kind
+  (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
+  `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon
+  for Ureni; from `TYPE_VOCAB`, subtypes only when capitalised) and the stand-in doesn't. Below
+  `SUB_MATCH_MIN` (0.35) nothing is offered. Lands matched by colors produced. Example that motivated
+  this: v5 put Spider-Man in Ureni's deck "for" Bloomvine Regent because both fetch lands.
 - `CardTable` – deduplicated card list for the report; decks reference cards by index (keeps HTML small).
 - "% owned" = weighted share of the EDHREC template (top ≤99 cards at ≥10% inclusion) that is owned.
 

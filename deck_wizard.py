@@ -22,7 +22,7 @@ Options:
   --port 8765       port for --serve
 """
 import argparse, csv, glob, hashlib, json, os, re, sys, time, unicodedata
-import http.server, subprocess, threading
+import heapq, http.server, subprocess, threading
 import urllib.error, urllib.parse, urllib.request, webbrowser
 
 UA = "DeckWizard/0.5 (personal collection tool)"
@@ -356,10 +356,57 @@ def build_pool(ci, owned, exclude=""):
         for r in it[2]: by_role.setdefault(r, []).append(it)
     return pool, by_role
 
-def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=()):
-    """Best owned replacements for missing card `mm`: [(score, key, meta, reason)]."""
+# Types a commander's text can name (Dragon, Elf, artifact, Equipment...). Filled by prepare_types()
+# from every type line we already have, so no extra download is needed.
+TYPE_VOCAB = set()
+SUB_MATCH_MIN = 0.35    # closeness (0-1) below which an owned card isn't offered as a stand-in
+OFF_TYPE = 0.4          # closeness multiplier when a stand-in lacks the type the commander cares about
+STANDIN = 0.6           # a stand-in is a guess at the real card's job: it counts for 60% of its closeness
+MAIN_TYPES = {"artifact", "enchantment", "spell", "planeswalker", "battle"}   # named in lower case
+SHRINK_DECKS = 200      # bracket pages with few decklists lean on the all-decks page (blended_rates)
+
+def type_words(m):
+    """Front-face types and subtypes, lower case; instant and sorcery both count as 'spell'."""
+    words = set(re.findall(r"[a-z]+", (m.get("type_line") or "").split(" // ")[0].lower()))
+    if words & {"instant", "sorcery"}: words |= {"spell"}
+    return words
+
+def is_changeling(m):
+    return "Changeling" in (m.get("keywords") or []) or "is every creature type" in m["oracle"].lower()
+
+def prepare_types(cards):
+    """Collect creature/artifact/enchantment subtypes (no land types) into TYPE_VOCAB."""
+    TYPE_VOCAB.update(MAIN_TYPES)
+    for m in cards:
+        front = (m.get("type_line") or "").split(" // ")[0]
+        if "—" in front and "Land" not in front:
+            TYPE_VOCAB.update(re.findall(r"[a-z]+", front.split("—", 1)[1].lower()))
+
+def commander_types(cmdr):
+    """Types the commander's own rules text names, e.g. {'dragon'} for Ureni of the Unwritten."""
+    text = cmdr["oracle"]
+    parts = cmdr["name"].split(" // ")        # its own names ("Lathliss, Dragon Queen") aren't rules;
+    for part in parts + [p.split(",")[0] for p in parts]:   # full names first, then short ones
+        text = text.replace(part, " ")
+    low = set(re.findall(r"[a-z]+", text.lower()))
+    if low & {"instant", "instants", "sorcery", "sorceries"}: low.add("spell")
+    caps = {w.lower() for w in re.findall(r"\b[A-Z][a-z]+", text)}   # subtypes are capitalised in rules
+    out = set()                                                      # text ("Dragon"), so "each time"
+    for t in TYPE_VOCAB:                                             # isn't the Time Lord type
+        forms = {t, t + "s", t + "es"}
+        if t.endswith("f"): forms.add(t[:-1] + "ves")       # elf -> elves, wolf -> wolves
+        if t.endswith("fe"): forms.add(t[:-2] + "ves")
+        if forms & (low if t in MAIN_TYPES else caps): out.add(t)
+    return out
+
+def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), tribe=()):
+    """Closest owned stand-ins for missing card `mm`: [(closeness 0-1, key, meta, reason)].
+    Closeness = shared roles x same card kind x mana value distance, and x OFF_TYPE when `mm` has a
+    type the commander cares about (`tribe`, e.g. Dragon) that the stand-in lacks. `rate_of` is only
+    used for the reason text and to pick synergy-piece candidates."""
     kind = card_kind(mm)
     mroles = roles_of(mm) - {"land"}
+    mtypes = type_words(mm) & set(tribe)
     if kind == "land":
         need = set(mm.get("produced") or []) & set("WUBRG")
         cands = [it for it in pool if it[3] == "land"]
@@ -377,23 +424,43 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=()):
         if kind == "land":
             hit = (set(m.get("produced") or []) & set("WUBRG")) & need
             if need and not hit: continue
-            s = 2 * len(hit)
+            q = len(hit) / len(need) if need else 0.5
             if hit: why.append("makes " + "".join(c for c in "WUBRG" if c in hit))
         else:
             if kd == "land": continue
             shared = rs & mroles
-            s = 3 * len(shared) + (1.5 if kd == kind else 0)
-            s -= 0.6 * abs(m["cmc"] - mm["cmc"])
+            q = len(shared) / len(mroles) if mroles else 0.6
+            if kd != kind: q *= 0.6                         # creature vs non-creature
+            elif type_group(m["type_line"]).replace("Sorcery", "Instant") != \
+                 type_group(mm["type_line"]).replace("Sorcery", "Instant"):
+                q *= 0.75                                   # e.g. an instant for an enchantment engine
+            q *= max(0.3, 1 - 0.12 * abs(m["cmc"] - mm["cmc"]))
+            if mtypes:
+                both = type_words(m) & mtypes
+                if both or is_changeling(m):
+                    why.append(", ".join(sorted(t.title() for t in both)) or "changeling")
+                else:
+                    q *= OFF_TYPE
+                    why.append("not a " + "/".join(sorted(t.title() for t in mtypes)))
             if shared: why.append("same role: " + ", ".join(sorted(shared)))
             why.append(f"{int(m['cmc'])} MV")
-        if rate > 0:
-            s += rate * 8
-            why.append(f"in {round(rate * 100)}% of these decks")
-        if k in penalize: s -= 2       # already in the deck: prefer fresh cards
-        if s < 1: continue
-        out.append((s, k, m, " · ".join(why)))
-    out.sort(key=lambda x: (-x[0], x[1]))     # name breaks ties: same input, same deck
+        if rate > 0: why.append(f"in {round(rate * 100)}% of these decks")
+        if k in penalize: q -= 0.15        # already in the deck: prefer fresh cards
+        if q < SUB_MATCH_MIN: continue
+        out.append((round(q, 4), k, m, " · ".join(why)))
+    out.sort(key=lambda x: (-x[0], -rate_of(x[1]), x[1]))   # name breaks ties: same input, same deck
     return out[:n]
+
+def blended_rates(edh, base):
+    """Play rate per card on this page. A bracket page with few decklists is pulled toward the
+    all-decks page: rate = (n*bracket + SHRINK_DECKS*all) / (n + SHRINK_DECKS), so 56 cEDH lists
+    can't outvote 22,000, while a 3,000-deck page mostly speaks for itself."""
+    cards = edh["cards"]
+    if not base or base is edh:
+        return {k: v[1] for k, v in cards.items()}
+    n, allc = edh.get("decks") or 0, base["cards"]
+    return {k: (n * v[1] + SHRINK_DECKS * (allc.get(k) or (None, 0.0))[1]) / (n + SHRINK_DECKS)
+            for k, v in cards.items()}
 
 def role_text(mm):
     if not mm: return ""
@@ -408,8 +475,10 @@ def power_profile(roles, gc, avg_cmc):
             "ramp": clamp(roles.get("ramp", 0)), "draw": clamp(roles.get("draw", 0)),
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
-def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
+def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None):
+    """`base` = the commander's all-decks page, used to steady small bracket pages."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
+    tribe = commander_types(cmdr)
     pool, by_role = pool_info
     legal = {it[0] for it in pool}      # owned, commander-legal, inside the color identity
     gc_cap = GC_CAP.get(bracket)        # None = no cap
@@ -417,7 +486,12 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
     def gc_room():
         return gc_cap is None or sum(1 for m, _, _ in chosen + lands if m["gc"]) < gc_cap
     cards = edh["cards"]
-    rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]
+    rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]     # as EDHREC shows it (report text, % owned)
+    blend = blended_rates(edh, base)
+    kind_of = lambda k: card_kind(owned.get(k) or name_meta.get(k) or {"type_line": ""})
+    # for choosing cards; lands keep the bracket's own rate (they only compete with lands, and
+    # blending pushed cEDH-specific lands under the 15% land bar)
+    value_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
     rec.sort(key=lambda x: -x[2])
     template = [x for x in rec if x[2] >= 0.10][:99] or rec[:99]
@@ -426,29 +500,43 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
     own_n = sum(1 for x in template if x[0] in owned)
     missing = [x for x in template if x[0] not in owned]
 
-    # 1) popular cards you own, 2) substitutes for popular cards you don't
+    # 1+2) One ranked list: cards you own at their own play rate, and popular cards you don't own at
+    # (their play rate x how close your best stand-in is x STANDIN). A close copy of a 75% card
+    # beats a real 26% card; a loose copy of a 32% card doesn't. Missing cards start at their full rate (an upper bound) and get
+    # their exact value the first time they reach the top, so the closest stand-in is only searched
+    # for cards that could win a slot.
     nonland = 99 - LAND_TARGET
-    used, sub_for = {me}, {}
-    for k, name, rate in rec:
-        if k in used: continue
-        if k in owned:
+    used, sub_for, heap = {me}, {}, []
+    for i, (k, name, _) in enumerate(rec):
+        if k in legal:
+            heapq.heappush(heap, (-value_of(k), i, k, None))
+        elif k not in owned and value_of(k) >= SUB_MIN and name_meta.get(k):
+            heapq.heappush(heap, (-value_of(k), i, k, None))
+    while heap and (len(chosen) < nonland or len(lands) < MAX_LANDS):
+        v, i, k, sk = heapq.heappop(heap)
+        v = -v
+        if k in owned:                                   # a card you own, on its own merit
             m = owned[k]
-            if k not in legal or (m["gc"] and not gc_room()): continue
+            if k in used or (m["gc"] and not gc_room()): continue
             if card_kind(m) == "land":
-                if len(lands) < MAX_LANDS and rate >= 0.15:
+                if len(lands) < MAX_LANDS and v >= 0.15:
                     lands.append((m, "p", None)); used.add(k)
             elif len(chosen) < nonland:
                 chosen.append((m, "p", None)); used.add(k)
-        elif rate >= SUB_MIN:
-            mm = name_meta.get(k)
-            if not mm: continue
-            is_land = card_kind(mm) == "land"
-            if (is_land and len(lands) >= MAX_LANDS) or (not is_land and len(chosen) >= nonland): continue
-            subs = find_subs(mm, rate_of, pool, by_role, used, gc_room(), 1)
-            if subs:
-                sk, sm = subs[0][1], subs[0][2]
-                used.add(sk); sub_for[k] = sk
-                (lands if is_land else chosen).append((sm, "s", mm))
+            continue
+        mm = name_meta[k]                                # a card you're missing
+        is_land = card_kind(mm) == "land"
+        if (is_land and len(lands) >= MAX_LANDS) or (not is_land and len(chosen) >= nonland): continue
+        if sk is None or sk in used or (owned[sk]["gc"] and not gc_room()):
+            subs = find_subs(mm, rate_of, pool, by_role, used, gc_room(), 1, tribe=tribe)
+            if not subs: continue
+            # lands only compete with lands, and making the right colours is the whole job
+            exact = value_of(k) * subs[0][0] * (1 if is_land else STANDIN)
+            if exact >= (0.15 if is_land else 0):
+                heapq.heappush(heap, (-exact, i, k, subs[0][1]))
+            continue
+        used.add(sk); sub_for[k] = sk                    # still the top offer at its exact value
+        (lands if is_land else chosen).append((owned[sk], "s", mm))
 
     # 3) still short: fill by role need (ramp, draw, removal, wipes), then best leftovers
     if len(chosen) < nonland:
@@ -486,7 +574,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
     gaps = []
     for k, name, rate in missing[:GAP_SHOW]:
         mm = name_meta.get(k)
-        subs = find_subs(mm, rate_of, pool, by_role, {me}, gc_cap != 0, 3, used) if mm else []
+        subs = find_subs(mm, rate_of, pool, by_role, {me}, gc_cap != 0, 3, used, tribe) if mm else []
         rows = [[T.add(sm["name"], sm), why] for _, sk, sm, why in subs]
         used_sub = sub_for.get(k)
         if used_sub and used_sub not in [s[1] for s in subs]:
@@ -607,6 +695,7 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
     base = edh_cache.get(slugify(cmdrs[0][1])) if cmdrs else None
     rate_of = (lambda k: (base["cards"].get(k) or (None, 0.0))[1]) if base else (lambda k: 0.0)
     pool, by_role = build_pool(ci, owned, norm(cmdrs[0][1]) if cmdrs else "")
+    tribe = commander_types(meta(cmdrs[0][1])) if cmdrs and meta(cmdrs[0][1]) else set()
     deck_keys = {norm(n) for _, n in allc}
     cards_out, gaps = [], []
     for q, n in main:
@@ -616,7 +705,7 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
     for _, n in sorted(nonbasic, key=lambda x: (-rate_of(norm(x[1])), x[1])):
         if norm(n) in owned: continue
         mm = meta(n)
-        subs = find_subs(mm, rate_of, pool, by_role, deck_keys, True, 3) if mm else []
+        subs = find_subs(mm, rate_of, pool, by_role, deck_keys, True, 3, tribe=tribe) if mm else []
         gaps.append([T.add(mm["name"] if mm else n, mm), round(rate_of(norm(n)) * 100),
                      [[T.add(sm["name"], sm), why] for _, _, sm, why in subs], -1, role_text(mm)])
     combos = None
@@ -1089,6 +1178,7 @@ def main():
             for k, (name, rate, *_) in p["cards"].items():
                 if rate >= 0.10 and k not in owned and name not in BASIC_NAMES: want.add(name)
     name_meta = resolve_names(want, os.path.join(cache_dir, "scryfall_names.json"), a.refresh)
+    prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
 
     # pass 2: build decks, substitutes, combos
     csb_path = os.path.join(cache_dir, "spellbook.json")
@@ -1100,7 +1190,8 @@ def main():
         pool_info = build_pool(set(m["ci"]), owned, norm(m["name"]))
         entry = {"name": m["name"], "ci": sorted(m["ci"]), "img": m.get("img", ""),
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
-                 "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T) for b, p in pg.items()}}
+                 "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"])
+                       for b, p in pg.items()}}
         entry["combos"] = None if a.no_combos else combos_for_commander(m, owned, csb_cache, a.refresh)
         for x in entry["b"].values():
             names = x.pop("_names")
