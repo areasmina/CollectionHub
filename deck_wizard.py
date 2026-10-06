@@ -29,6 +29,8 @@ UA = "DeckWizard/0.5 (personal collection tool)"
 EDH = "https://json.edhrec.com/pages/commanders/"
 CSB = "https://backend.commanderspellbook.com/find-my-combos"
 CSB_CARDS = "https://backend.commanderspellbook.com/cards/"
+CSB_BRACKET = "https://backend.commanderspellbook.com/estimate-bracket"
+CARD_FLAGS = {}         # normalized name -> [game changer, mass land denial, extra turn] from Spellbook
 CSB_DELAY = 1.0         # seconds between Commander Spellbook requests (it rate-limits bursts)
 CSB_MAX_MAIN = 600      # find-my-combos rejects decks with more cards than this
 CSB_DOWN = [False]      # set when Spellbook stops answering; the rest of the run skips combos
@@ -851,8 +853,8 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "gc": len(gc_names), "gcn": gc_names, "cmc": avg_cmc,
         "pw": power_profile(roles, len(gc_names), avg_cmc),
         "rd": readiness(roles, avg_cmc, odd, sources),
-        "mld": [m["name"] for m, _, _ in allc if MLD_RX.search(rules_text(m))],
-        "xt": [m["name"] for m, _, _ in allc if XTURN_RX.search(rules_text(m))],
+        "mld": [m["name"] for m, _, _ in allc if is_mld(m)],
+        "xt": [m["name"] for m, _, _ in allc if is_xturn(m)],
         "tut": roles.get("tutor", 0),
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f) if kind == "s" else f or -1]
@@ -900,6 +902,43 @@ def fetch_combo_cards(cache_path, refresh=False):
     save_json(cache_path, {"_ts": time.time(), "cards": cards})
     print(f"  {len(cards)} cards appear in at least one combo")
     return cards
+
+def fetch_card_flags(owned, cache_path, refresh=False):
+    """Spellbook's own Game Changer / mass land denial / extra turn flags for your cards, from
+    /estimate-bracket (it classifies every card it's sent). Only cards not cached yet are sent, in
+    chunks; everything is re-checked once a month (the Game Changer list changes). Fills CARD_FLAGS
+    and marks Spellbook Game Changers in `owned`."""
+    cache = {} if refresh else load_json(cache_path)
+    flags = cache.get("cards") or {}
+    if time.time() - cache.get("_ts", 0) > 30 * 86400 and not OFFLINE: flags = {}
+    names = {norm(m["name"]): m["name"] for m in owned.values()}
+    todo = sorted(k for k in names if k not in flags)
+    if todo and not OFFLINE and not CSB_DOWN[0]:
+        print(f"Card flags: asking Commander Spellbook about {len(todo)} cards")
+        fresh = not flags
+        for i in range(0, len(todo), 400):
+            batch = todo[i:i + 400]
+            res = http_json(CSB_BRACKET, {"commanders": [], "main": [{"card": names[k]} for k in batch]}, retries=5)
+            time.sleep(CSB_DELAY)
+            if not res:
+                print("  ! Spellbook didn't answer; text matching for the rest this run"); break
+            got = {norm(c["card"]["name"]): [int(bool(c.get(f))) for f in ("gameChanger", "massLandDenial", "extraTurn")]
+                   for c in res.get("cards", []) if isinstance(c.get("card"), dict)}
+            for k in batch: flags[k] = got.get(k)        # None: Spellbook doesn't know the card
+        save_json(cache_path, {"_ts": time.time() if fresh else cache.get("_ts", time.time()), "cards": flags})
+    CARD_FLAGS.clear(); CARD_FLAGS.update({k: v for k, v in flags.items() if v})
+    for k, m in owned.items():
+        if CARD_FLAGS.get(k, [0])[0]: m["gc"] = True
+    print(f"Card flags: {len(CARD_FLAGS)} known ({sum(v[1] for v in CARD_FLAGS.values())} mass land denial,"
+          f" {sum(v[2] for v in CARD_FLAGS.values())} extra turn, {sum(v[0] for v in CARD_FLAGS.values())} Game Changers)")
+
+def is_mld(m):
+    f = CARD_FLAGS.get(norm(m["name"]))
+    return bool(f[1]) if f else bool(MLD_RX.search(rules_text(m)))
+
+def is_xturn(m):
+    f = CARD_FLAGS.get(norm(m["name"]))
+    return bool(f[2]) if f else bool(XTURN_RX.search(rules_text(m)))
 
 def combo_pool(ci, owned, combo_cards):
     """Your legal cards in these colours that are part of some combo. Spellbook takes at most
@@ -1451,6 +1490,8 @@ def main():
         if m and m["layout"] not in ("token", "emblem") and m["name"] not in BASIC_NAMES:
             owned[norm(m["name"])] = m
     ROLE_TAGS.update(fetch_role_tags(os.path.join(cache_dir, "role_tags.json"), a.refresh))
+    if a.no_combos: CSB_DOWN[0] = True          # --no-combos: no Spellbook requests, cached flags only
+    fetch_card_flags(owned, os.path.join(cache_dir, "spellbook_flags.json"), a.refresh)
 
     cands = []
     for m in owned.values():

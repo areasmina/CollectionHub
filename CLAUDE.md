@@ -68,6 +68,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned and one card away, one query per color identity (`ci:<WUBRG>:<hash>`) | `cache/spellbook.json` |
+| Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
 | Commander Spellbook `GET /cards/?ordering=-variant_count` | Which cards are in any combo (pool filter; find-my-combos takes ≤600 cards) | `cache/spellbook_cards.json` (monthly) |
 
 Decisions:
@@ -109,7 +110,10 @@ Key functions:
   fill ≤ `READY_ODD`), stored as `rd` = [[check, value, target, ok]]; **Bracket Fit** = `bracket_fit()`
   (set in `main()` after combos-in-deck): lowest bracket the 99 fits (2 = "B1–2", 4 = "B4+"), from Game
   Changers (>3 → B4), mass land denial (`MLD_RX` → B4), 2+ extra-turn cards (`XTURN_RX` → B4), two-card
-  combos in the deck (→ B3, "B4 if it can win early"). Tutors shown as info only (rules say "few").
+  combos in the deck (→ B3, "B4 if it can win early"). Tutors shown as info only (rules say "few"). MLD / extra turns use
+  Spellbook's flags (`is_mld`, `is_xturn`; `MLD_RX`/`XTURN_RX` only for cards Spellbook doesn't know).
+  Tutors stay on Scryfall's `otag:tutor`: Spellbook's card search is name-only (no bulk flags; full list is
+  300+ pages) and its `tutor` flag is narrow (Diabolic Tutor = false).
 - `card_fit()` – rule-based fit of an owned card to a commander (no invented ratings): `FIT_TRIBE` for a
   type the commander or its top EDHREC theme names; `FIT_MECH` per shared mechanic (≤3) from `MECHANICS`
   (rules-text patterns + EDHREC theme names + card types); small bonuses for useful roles, roles the theme
@@ -165,7 +169,7 @@ combos, power profile bars, imported decks section.
   A role with 0 cards means a wrong tag name.
 - Bracket Fit limits: combos-in-deck only sees the 30 most popular owned combos per colour identity
   (`compact_combos` keep); can't tell early vs late two-card combos; MLD/extra turns are text patterns
-  (Spellbook `/cards/` has exact `massLandDenial`/`extraTurn` flags, not downloaded). The builder does not
+  (now exact flags from Spellbook when cached). The builder does not
   avoid combos at B1–B3 yet: 25 B2 lists contain a two-card combo from EDHREC's own B2 list and are flagged.
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
 - Imported deck commander detection: `Commander` header, `*CMDR*` tag, or a guess from color identity.
