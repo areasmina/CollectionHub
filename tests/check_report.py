@@ -22,6 +22,13 @@ CATCH = "<script>window.__errs=[];window.addEventListener('error',e=>__errs.push
 PROBE = """<script>setTimeout(()=>{const out={panels:0,errs:window.__errs,rows:document.querySelectorAll('details.row').length};
 try{for(const d of DATA)for(const b of BR){if(!d.b[b])continue;try{const h=body(d,b);if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+': text contains "undefined"');out.panels++;}
 catch(e){out.errs.push(d.name+' | '+b+': '+e.message);}}}catch(e){out.errs.push('probe: '+e.message);}
+try{const r=document.querySelector('details.row[data-i]');if(r){r.open=true;r.querySelector('.body').innerHTML=body(DATA[+r.dataset.i],bk());r.dataset.f=1;
+  for(const k of [...r.querySelectorAll('[data-bsel]')].map(c=>c.dataset.bsel)){
+    r.querySelector('[data-bsel="'+k+'"]').click();const on=r.querySelector('.bk.on');   // re-query: a click re-renders the panel
+    if(!on||on.dataset.bsel!==k)out.errs.push('bracket chip '+k+' did not switch the deck');}
+  out.clicks=(out.clicks||0)+r.querySelectorAll('[data-bsel]').length;
+  for(const fn of (window.__clickTests||[])){try{fn(r,out);}catch(e){out.errs.push('click test: '+e.message);}}}}
+catch(e){out.errs.push('clicks: '+e.message);}
 const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);},500);</script>"""
 
 def browser():
@@ -49,7 +56,7 @@ def main():
     m = re.search(r'<pre id="__test">(.*?)</pre>', dom, re.S)
     if not m: sys.exit("The page never finished loading (a script error before the probe?).")
     res = json.loads(m.group(1).replace("&quot;", '"').replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">"))
-    print(f"{res['rows']} commander rows, {res['panels']} panels rendered, {len(res['errs'])} errors")
+    print(f"{res['rows']} commander rows, {res['panels']} panels rendered, {res.get('clicks', 0)} clicks tested, {len(res['errs'])} errors")
     for e in res["errs"][:20]: print("  " + e)
     sys.exit(1 if res["errs"] or not res["panels"] else 0)
 

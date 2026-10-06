@@ -1407,7 +1407,7 @@ summary:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var
 .tags,.bks{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .tag{font-size:.78rem;padding:3px 10px;border-radius:12px;background:var(--bar);color:var(--acc);text-decoration:none}
 a.tag:hover{background:var(--acc);color:var(--bg)}.tag.dim{color:var(--mut)}
-.bk{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut)}.bk.on{border-color:var(--acc);color:var(--ink)}
+.bk{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut);background:transparent;cursor:pointer}.bk:hover{border-color:var(--acc);color:var(--ink);background:transparent}.bk.on{border-color:var(--acc);color:var(--ink);background:rgba(45,212,191,.12)}
 .profile h4{margin:10px 0 6px;font-size:.85rem;color:var(--mut)}
 .bars{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;max-width:420px}
 .seg{height:7px;background:var(--bar);border-radius:3px;overflow:hidden}.sf{height:100%;background:var(--acc)}
@@ -1601,7 +1601,7 @@ function numsHTML(x,b){
 function body(d,b){
   const x=d.b[b], tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
   const tags=d.tags.slice(0,3).map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}${pre}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} · ${Math.round(100*t[2]/tot)}%</a>`).join("")||'<span class="tag dim">no themes found</span>';
-  const bks=BR.filter(k=>d.b[k]).map(k=>`<span class="bk ${k===b?"on":""}">${LBL[k]}: ${d.b[k].pct}% <small>(${n(d.b[k].decks)})</small></span>`).join("");
+  const bks=BR.filter(k=>d.b[k]).map(k=>`<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${d.b[k].pct}% <small>(${n(d.b[k].decks)})</small></button>`).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
   const deckSet=new Set(x.deck.map(r=>r[0]));
@@ -1667,11 +1667,15 @@ $("imp").innerHTML=DECKS.length?`<h2>Your imported decks</h2>`+DECKS.map((k,j)=>
 
 /* ---------- events ---------- */
 document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open||r.dataset.f)return;
-  r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],bk()); r.dataset.f=1;},true);
+  r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r)); r.dataset.f=1;},true);
+const rowB=r=>(r.dataset.b&&DATA[+r.dataset.i].b[r.dataset.b])?r.dataset.b:bk();   // a bracket chosen in this row wins
+function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r));}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.classList.contains("vt")){const bd=t.closest(".body");
     bd.querySelectorAll(".vt").forEach(x=>x.classList.toggle("on",x===t));
     bd.querySelectorAll(".view").forEach(v=>v.hidden=!v.classList.contains("v-"+t.dataset.v));}
+  const bs=t.closest&&t.closest("[data-bsel]");
+  if(bs){const r=bs.closest("details.row"); r.dataset.b=bs.dataset.bsel; rerow(r); return;}
   if(t.dataset&&t.dataset.cmdr){e.preventDefault();$("q").value=t.dataset.cmdr;render();$("list").scrollIntoView();}
   if(t.classList.contains("cp")){navigator.clipboard.writeText(t.closest(".body").querySelector("textarea").value);t.textContent="Copied";}});
 const pv=$("pv");
