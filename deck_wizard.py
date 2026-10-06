@@ -28,6 +28,10 @@ import urllib.error, urllib.parse, urllib.request, webbrowser
 UA = "DeckWizard/0.5 (personal collection tool)"
 EDH = "https://json.edhrec.com/pages/commanders/"
 CSB = "https://backend.commanderspellbook.com/find-my-combos"
+CSB_CARDS = "https://backend.commanderspellbook.com/cards/"
+CSB_DELAY = 1.0         # seconds between Commander Spellbook requests (it rate-limits bursts)
+CSB_MAX_MAIN = 600      # find-my-combos rejects decks with more cards than this
+CSB_DOWN = [False]      # set when Spellbook stops answering; the rest of the run skips combos
 BASICS = {"W": "Plains", "U": "Island", "B": "Swamp", "R": "Mountain", "G": "Forest"}
 BASIC_NAMES = set(BASICS.values()) | {"Wastes", "Snow-Covered Plains", "Snow-Covered Island",
     "Snow-Covered Swamp", "Snow-Covered Mountain", "Snow-Covered Forest"}
@@ -66,7 +70,20 @@ def http_json(url, data=None, retries=3):
         except urllib.error.HTTPError as e:
             # missing page / no results (EDHREC answers 403 for missing pages); callers don't cache it
             if e.code in (403, 404): return None
-            last = e; time.sleep(2 * (attempt + 1))
+            last = e
+            if e.code in (429, 502, 503, 504):   # busy / rate limited: wait as long as asked, then longer
+                ra = e.headers.get("Retry-After") or ""
+                wait = min(300, int(ra)) if ra.isdigit() else min(120, 15 * 2 ** attempt)
+                if attempt < retries - 1:
+                    print(f"  {urllib.parse.urlparse(url).netloc} says slow down (HTTP {e.code}); waiting {wait}s",
+                          file=sys.stderr)
+                    time.sleep(wait)
+            elif 400 <= e.code < 500:            # our request is wrong: retrying won't help
+                detail = e.read()[:200].decode("utf-8", "replace")
+                print(f"  ! request rejected: {url} (HTTP {e.code}: {detail})", file=sys.stderr)
+                return None
+            else:
+                time.sleep(2 * (attempt + 1))
         except Exception as e:
             last = e; time.sleep(2 * (attempt + 1))
     print(f"  ! request failed: {url} ({last})", file=sys.stderr)
@@ -614,13 +631,44 @@ def csb_find(commanders, main):
             "main": [{"card": c} for c in main]}
     merged, url, pages = {}, CSB + "?limit=100", 0
     while url and pages < 15:
-        resp = http_json(url, body)
+        resp = http_json(url, body, retries=5)
         if not resp: return None
         for k, v in (resp.get("results") or {}).items():
             if isinstance(v, list): merged.setdefault(k, []).extend(v)
         url = resp.get("next"); pages += 1
-        time.sleep(0.3)
+        time.sleep(CSB_DELAY)
     return merged if pages else None
+
+def fetch_combo_cards(cache_path, refresh=False):
+    """{normalized name: number of combos} for every card in at least one Spellbook combo.
+    Downloaded once a month (most-used first, stopping at the first card in no combo)."""
+    cache = {} if refresh else load_json(cache_path)
+    if cache.get("cards") and (OFFLINE or time.time() - cache.get("_ts", 0) < 30 * 86400):
+        return cache["cards"]
+    if OFFLINE: return {}
+    print("Combo cards: downloading the list from Commander Spellbook (once a month, ~1-2 min)")
+    cards, url = {}, CSB_CARDS + "?limit=100&ordering=-variant_count"
+    while url:
+        resp = http_json(url, retries=5)
+        if not resp:
+            print("  ! download failed; commanders with big card pools skip combos this run")
+            return {}
+        page = resp.get("results") or []
+        cards.update({norm(c["name"]): c["variantCount"] for c in page if c.get("variantCount")})
+        if not page or not page[-1].get("variantCount"): break
+        url = resp.get("next"); time.sleep(0.3)
+    save_json(cache_path, {"_ts": time.time(), "cards": cards})
+    print(f"  {len(cards)} cards appear in at least one combo")
+    return cards
+
+def combo_pool(ci, owned, combo_cards):
+    """Your legal cards in these colours that are part of some combo. Spellbook takes at most
+    CSB_MAX_MAIN cards per request; if there are more, the ones in the most combos are kept."""
+    pool = [x["name"] for x in owned.values() if set(x["ci"]) <= ci and x["commander_legal"]
+            and (not combo_cards or norm(x["name"]) in combo_cards)]
+    if len(pool) > CSB_MAX_MAIN and combo_cards:   # without the list the caller skips combos
+        pool = sorted(pool, key=lambda n: (-combo_cards.get(norm(n), 0), n))[:CSB_MAX_MAIN]
+    return sorted(pool)
 
 def compact_combos(variants, have, keep):
     out, seen = [], set()
@@ -637,14 +685,22 @@ def compact_combos(variants, have, keep):
     out.sort(key=lambda c: -c["pop"])
     return {"n": len(out), "list": out[:keep]}
 
-def combos_for_commander(m, owned, cache, refresh):
-    ci, me = set(m["ci"]), norm(m["name"])
-    pool = sorted(x["name"] for k, x in owned.items()
-                  if k != me and set(x["ci"]) <= ci and x["commander_legal"])
-    key = slugify(m["name"]) + ":" + hashlib.md5("\n".join(pool).encode()).hexdigest()[:10]
-    if not refresh and key in cache: return cache[key]
-    res = csb_find([m["name"]], pool)
-    if res is None: return None            # don't cache failures
+def combos_for_commander(m, owned, cache, combo_cards):
+    """Combos among your cards in this commander's colours (the commander included). The answer
+    only depends on the colours, so commanders sharing an identity share one cached query."""
+    ci = set(m["ci"])
+    pool = combo_pool(ci, owned, combo_cards)
+    if len(pool) > CSB_MAX_MAIN: return None   # no combo-card list to trim with
+    key = "ci:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
+          + hashlib.md5("\n".join(pool).encode()).hexdigest()[:10]
+    if key in cache: return cache[key]        # (--refresh starts from an empty cache)
+    if OFFLINE or CSB_DOWN[0]: return None
+    res = csb_find([], pool)
+    if res is None:                           # don't cache failures; stop asking for this run
+        CSB_DOWN[0] = True
+        print("  ! Commander Spellbook isn't answering: the remaining commanders skip combos this run."
+              " Rerun later; finished colour identities are cached.")
+        return None
     have = set(owned)
     own = compact_combos(res.get("included", []), have, 30)
     near = compact_combos(res.get("almostIncluded", []), have, 20)
@@ -709,7 +765,7 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
         gaps.append([T.add(mm["name"] if mm else n, mm), round(rate_of(norm(n)) * 100),
                      [[T.add(sm["name"], sm), why] for _, _, sm, why in subs], -1, role_text(mm)])
     combos = None
-    if do_combos:
+    if do_combos and not OFFLINE and not CSB_DOWN[0]:
         res = csb_find([n for _, n in cmdrs], [n for _, n in main])
         if res is not None:
             own = compact_combos(res.get("included", []), deck_keys, 30)
@@ -1183,6 +1239,7 @@ def main():
     # pass 2: build decks, substitutes, combos
     csb_path = os.path.join(cache_dir, "spellbook.json")
     csb_cache = {} if a.refresh else load_json(csb_path)
+    combo_cards = {} if a.no_combos else fetch_combo_cards(os.path.join(cache_dir, "spellbook_cards.json"), a.refresh)
     T, results = CardTable(), []
     done = [m for m in cands if m["name"] in pages]
     for i, m in enumerate(done, 1):
@@ -1192,7 +1249,7 @@ def main():
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"])
                        for b, p in pg.items()}}
-        entry["combos"] = None if a.no_combos else combos_for_commander(m, owned, csb_cache, a.refresh)
+        entry["combos"] = None if a.no_combos else combos_for_commander(m, owned, csb_cache, combo_cards)
         for x in entry["b"].values():
             names = x.pop("_names")
             inside = [c for c in (entry["combos"] or {}).get("own", [])

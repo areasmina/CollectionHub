@@ -65,7 +65,8 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
-| Commander Spellbook `POST /find-my-combos` | Combos owned and one card away | `cache/spellbook.json` |
+| Commander Spellbook `POST /find-my-combos` | Combos owned and one card away, one query per color identity (`ci:<WUBRG>:<hash>`) | `cache/spellbook.json` |
+| Commander Spellbook `GET /cards/?ordering=-variant_count` | Which cards are in any combo (pool filter; find-my-combos takes ≤600 cards) | `cache/spellbook_cards.json` (monthly) |
 
 Decisions:
 - **EDHREC is the primary deck-data source.** Archidekt and Moxfield are on hold (planned later as backups).
@@ -124,7 +125,12 @@ combos, power profile bars, imported decks section.
   only have `[name, rate]`), **not used yet**. It is the best available "commander synergy" signal.
 - Scryfall card meta (`SF_VERSION` 2) also stores `mana_cost`, `edhrec_rank`, `keywords`, not used yet.
 - EDHREC answers missing pages with HTTP 403. Misses are never cached (a 403 can also be a block).
-- Commander Spellbook rate-limits (HTTP 429). Failed/partial combo lookups are not cached.
+- Commander Spellbook rate-limits (HTTP 429) and rejects decks over 600 cards (HTTP 400). `http_json`
+  waits on 429/5xx (Retry-After, else 15/30/60/120 s) and fails fast on other 4xx. `combo_pool()` sends
+  only owned on-color cards that are in some combo (5-color: top 600 by combo count). If Spellbook stops
+  answering, `CSB_DOWN` makes the rest of the run skip combos. Failed/partial lookups are not cached.
+- Spellbook `/cards/` also has `tutor`, `extraTurn`, `massLandDenial`, `gameChanger` flags per card:
+  useful for the planned rule-based Bracket Fit.
 - Scryfall Tagger tag names in `TAG_QUERIES` are best guesses; the run prints card counts per role.
   A role with 0 cards means a wrong tag name.
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
