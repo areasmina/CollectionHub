@@ -46,7 +46,8 @@ Useful flags:
 Deck metrics for comparing builder versions (offline, ~30 s):
 `py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_step2.json`
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
-`baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in)
+`baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
+`baseline_lands.json` = + owned dual lands)
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -99,7 +100,7 @@ Key functions:
     × `STANDIN` (0.6; lands ×1) → kind `s`;
   - B4/B5 only (`COMBO_BRACKETS`): combos you own (≤3 cards, no extra requirements) as a package valued at
     its weakest piece + `COMBO_W` (0.25); at most `COMBO_MAX` 2 packages adding ≤2 cards each → kind `c`.
-  Then role fill (`ROLE_TARGETS`, sorted by score) → basics. Non-land rates are `blended_rates()` (bracket
+  Then role fill (`ROLE_TARGETS`, sorted by score) → `owned_duals()` → basics. Non-land rates are `blended_rates()` (bracket
   page pulled toward the all-decks page by `SHRINK_DECKS`=200 decklists); lands use the raw bracket rate
   and no fit. Only cards from `build_pool` (owned, legal, in color identity). Game Changers capped by
   `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
@@ -134,8 +135,12 @@ combos, power profile bars, imported decks section.
   substitutes −4.5, role fill ~0, synergy slightly up. Commanders whose EDHREC list you mostly own still
   get mostly EDHREC cards (they score high); bracket pages with 1–2 decklists change a lot (25–50 cards),
   since they carry almost no signal. Fit weights are hand-set; tune with `tests/measure.py`.
-- Lands are still EDHREC-only (≤`MAX_LANDS` listed lands, then basics): owned on-color duals that EDHREC
-  doesn't list aren't considered yet.
+- Lands: ≤`MAX_LANDS` EDHREC-listed lands, then `owned_duals()` (2+ colours: owned lands making 2+ of the
+  commander's colours, untapped first, ≤`TAPPED_MAX` always-tapped via `enters_tapped()`, down to
+  `MIN_BASICS` basics; kind `y` "makes UR · untapped"), then basics. `restricted_mana()` skips lands whose
+  colour mana has strings attached (creature-type, energy, filter, storage lands). Land stand-ins only for
+  missing lands making 2+ of the commander's colours (a basic does a utility/mono land's colour job).
+  Result: 3-colour decks ~11 basics, 2-colour ~20, mono ~30. Utility lands EDHREC doesn't list: not yet.
 - EDHREC JSON shape is unofficial and could change. Theme tags are read from `panels.taglinks`.
   If many commanders show "no themes found", check the real JSON.
 - EDHREC cardviews include a `synergy` field (how much more a card is played with this commander than

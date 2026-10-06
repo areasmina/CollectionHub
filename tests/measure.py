@@ -43,7 +43,7 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     nonland = [c for c in deck if dw.card_kind(c) != "land"]
     basics = sum(c for _, c in x["basics"])
     r = {"size": len(deck) + basics,
-         "popular": x["rec"], "picks": x.get("pick", 0), "combo_pieces": x.get("cpc", 0), "subs": x["subs"], "fill": x["fill"], "basics": basics,
+         "popular": x["rec"], "picks": sum(1 for (i, k, _), c in zip(x["deck"], deck) if k == "y" and dw.card_kind(c) != "land"), "combo_pieces": x.get("cpc", 0), "subs": x["subs"], "fill": x["fill"], "basics": basics,
          "nonbasic_lands": len(deck) - len(nonland),
          "owned_lands": sum(1 for it in pool_info[0] if it[3] == "land"),
          "avg_mv": x["cmc"], "gc": x["gc"], "pct": x["pct"],

@@ -37,6 +37,8 @@ BASIC_NAMES = set(BASICS.values()) | {"Wastes", "Snow-Covered Plains", "Snow-Cov
     "Snow-Covered Swamp", "Snow-Covered Mountain", "Snow-Covered Forest"}
 LAND_TARGET = 35
 MAX_LANDS = 12          # non-basic lands taken from EDHREC lists
+MIN_BASICS = 10         # owned dual lands replace basics down to this many (fetches, land tutors)
+TAPPED_MAX = 3          # owned duals that always enter tapped: at most this many in a deck
 SUB_MIN = 0.25          # missing cards played in 25%+ of decks get a substitute in the deck
 GAP_SHOW = 20           # missing cards shown in the report, with alternatives
 ROLE_TARGETS = {"ramp": 10, "draw": 9, "removal": 8, "wipe": 2}
@@ -531,7 +533,7 @@ def card_fit(m, profile, bracket):
     f -= FIT_MV * max(0, m["cmc"] - 4)
     return max(0.0, f), " · ".join(why)
 
-def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), tribe=()):
+def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), tribe=(), ci="WUBRG"):
     """Closest owned stand-ins for missing card `mm`: [(closeness 0-1, key, meta, reason)].
     Closeness = shared roles x same card kind x mana value distance, and x OFF_TYPE when `mm` has a
     type the commander cares about (`tribe`, e.g. Dragon) that the stand-in lacks. `rate_of` is only
@@ -540,8 +542,9 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=(), trib
     mroles = roles_of(mm) - {"land"}
     mtypes = type_words(mm) & set(tribe)
     if kind == "land":
-        need = set(mm.get("produced") or []) & set("WUBRG")
-        cands = [it for it in pool if it[3] == "land"]
+        need = set(mm.get("produced") or []) & set(ci)
+        if len(need) < 2: return []     # utility or mono-colour land: a basic does that job
+        cands = [it for it in pool if it[3] == "land" and not restricted_mana(it[1])]
     elif mroles:
         seen, cands = set(), []
         for r in sorted(mroles):
@@ -598,6 +601,35 @@ def role_text(mm):
     if not mm: return ""
     if card_kind(mm) == "land": return "land"
     return ", ".join(sorted(roles_of(mm)))
+
+def enters_tapped(m):
+    """Always enters tapped (Guildgates, Temples). Shocks, checklands, snarls... are conditional."""
+    return bool(re.search(r"(^|\n|\. )(this land|~|it) enters (the battlefield )?tapped\.", rules_text(m)))
+
+RESTRICTED_MANA = re.compile(r"spend (this|that) mana only|energy|devoid|colorless spells?|activate only|"
+                             r"counter (on|from)|\{(\d|[wubrg]/[wubrg])\}, \{t\}|\{t\}, (pay \{|remove|sacrifice)")
+
+def restricted_mana(m):
+    """Colour mana with strings attached: creature-type or energy lands, filters, storage lands..."""
+    return bool(RESTRICTED_MANA.search(rules_text(m)))
+
+def owned_duals(pool, ci, used, n_lands, n_tapped):
+    """Your lands that make 2+ of the commander's colours, best first (more colours, untapped),
+    up to LAND_TARGET - MIN_BASICS non-basic lands and TAPPED_MAX always-tapped ones."""
+    if len(ci) < 2: return []
+    room = LAND_TARGET - MIN_BASICS - n_lands
+    cands = []
+    for k, m, _, kd in pool:
+        hits = len(set(m.get("produced") or []) & ci)
+        if kd != "land" or k in used or hits < 2 or restricted_mana(m): continue
+        tapped = enters_tapped(m)
+        cands.append((-(min(hits, 3) + (0 if tapped else 2)), k, m, tapped))
+    out = []
+    for _, k, m, tapped in sorted(cands, key=lambda x: x[:2]):
+        if len(out) >= room: break
+        if tapped and n_tapped >= TAPPED_MAX: continue
+        out.append(m); n_tapped += tapped
+    return out
 
 # --------------------------------------------------------------- analysis
 def power_profile(roles, gc, avg_cmc):
@@ -702,7 +734,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         is_land = card_kind(mm) == "land"
         if (is_land and len(lands) >= MAX_LANDS) or (not is_land and len(chosen) >= nonland): continue
         if sk is None or sk in used or (owned[sk]["gc"] and not gc_room()):
-            subs = find_subs(mm, rate_of, pool, by_role, used, gc_room(), 1, tribe=tribe)
+            subs = find_subs(mm, rate_of, pool, by_role, used, gc_room(), 1, tribe=tribe, ci=ci)
             if not subs: continue
             # lands only compete with lands, and making the right colours is the whole job
             exact = value_of(k) * subs[0][0] * (1 if is_land else STANDIN)
@@ -734,6 +766,12 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             if len(chosen) >= nonland: break
             if ok(it): take(it)
 
+    # 4) owned dual lands in the commander's colours replace basics (EDHREC lists few of them)
+    for m in owned_duals(pool, ci, used, len(lands), sum(1 for m, _, _ in lands if enters_tapped(m))):
+        lands.append((m, "y", "makes " + "".join(c for c in "WUBRG" if c in set(m["produced"]) & ci)
+                      + ("" if enters_tapped(m) else " · untapped")))
+        used.add(norm(m["name"]))
+
     n_basics = 99 - len(chosen) - len(lands)
     colors = [c for c in "WUBRG" if c in ci]
     tally = {}
@@ -748,7 +786,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     gaps = []
     for k, name, rate in missing[:GAP_SHOW]:
         mm = name_meta.get(k)
-        subs = find_subs(mm, rate_of, pool, by_role, {me}, gc_cap != 0, 3, used, tribe) if mm else []
+        subs = find_subs(mm, rate_of, pool, by_role, {me}, gc_cap != 0, 3, used, tribe, ci) if mm else []
         rows = [[T.add(sm["name"], sm), why] for _, sk, sm, why in subs]
         used_sub = sub_for.get(k)
         if used_sub and used_sub not in [s[1] for s in subs]:
@@ -1096,7 +1134,7 @@ function grid(cmdrs,items){
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>tile(it.i,{
       cls:{s:"sub",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
       note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="f"?"role fill":it.kind==="m"?"missing":
-        it.kind==="y"?(typeof it.f==="string"?"fits: "+it.f:"your pick"):it.kind==="c"?"combo piece":""})).join("")+`</div></div>`;});
+        it.kind==="y"?(typeof it.f!=="string"?"your pick":CARDS[it.i][2]==="Land"?it.f:"fits: "+it.f):it.kind==="c"?"combo piece":""})).join("")+`</div></div>`;});
   return h;}
 function gapsHTML(gaps,deckSet){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
