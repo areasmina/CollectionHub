@@ -74,7 +74,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | ManaBox CSV | What Guillermo owns (`Name`, `Scryfall ID`, `Quantity`) | – |
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
-| EDHREC theme pages `…/commanders/<slug>/<theme>.json` | Real per-theme deck data for each commander's top `THEME_TOP` 3 themes (`fetch_theme_page`; misses remembered `THEME_MISS_DAYS` 7 in `_theme_miss`) | `cache/edhrec_v4.json` |
+| EDHREC theme pages `…/commanders/<slug>/<theme>.json` | Real per-theme deck data for every theme tag (≤`THEME_FETCH` 8, ≥`THEME_MIN_DECKS` 20 decks); the `THEME_TOP` 3 you own most of (`page_match`) become archetypes, each also with its average deck `average-decks/<slug>/<theme>` (`fetch_theme_page`; misses remembered `THEME_MISS_DAYS` 7 in `_theme_miss`) | `cache/edhrec_v4.json` |
 | EDHREC `json.edhrec.com/pages/average-decks/<slug>[/<bracket>].json` | EDHREC's average 99 per bracket (`parse_avg`: card → copies, `bracket_counts`), fetched for each bracket the commander page has; misses remembered 7 days in `_theme_miss` (`avg:` prefix) | `cache/edhrec_v4.json` (key `avg:<path>`) |
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
@@ -218,7 +218,14 @@ localStorage "dw:src"; `X(d,b)` drives the list, filters and sorts), plus the sa
 EDHREC's average 99 into a page where every card has rate 1.0 (synergy from the commander's bracket page), then
 `analyze(..., show=real play rates)` rebuilds it with your cards (owned cards stay, missing → stand-ins, same
 bracket rules; `show` orders/labels the gaps). Stored as `entry["av"][bracket] = deck_diff(...) + gaps`; JS
-`avgd()`/`applyDiff()`, `rowSel()` gives the saved-choices key ("avg"). Average deck and theme are exclusive.
+`avgd()`/`applyDiff()`, `rowSel()` gives the saved-choices key ("avg"). Average deck and theme used to be exclusive; now they form a tree (below).
+**Archetype tree** (per commander panel): Bracket chips → **Archetype** (Overview + the `THEME_TOP` 3 archetypes ranked
+by your Collection Match of their theme page, "you own N%"; other tags = EDHREC links) → **Deck from: Commander page |
+Average deck**. Four decks per bracket: overview `d.b[b]`, overview average `d.av[b]`, archetype `d.th[t].b[b]`
+(theme page, `focus`), archetype average `d.th[t].av[b]` (theme average deck via `avg_as_page(..., "all")`, `focus`,
++ gaps + `ref`; `d.th[t].own`, `.adecks`). All stored as diffs of `d.b[b]`. JS `rowState()` → {t, a, key}
+(row `data-t`, `data-a` "1"/"0", else page `SRC`), `deckOf()`, `tavgd()`; saved-choices key "", "avg", t, t+":avg".
+Theme and average pages are all-bracket pages, built with each bracket's rules.
 **Deck shape** charts per panel (`shapeHTML`): mana curve (non-lands, 7+) and card types of your deck (bars) vs
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".

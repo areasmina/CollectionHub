@@ -641,7 +641,9 @@ def commander_profile(cmdr, themes):
     return tribe, mechs, roles, kws
 
 FOCUS_W = 0.15         # theme decks: extra score for cards whose text/types match the chosen theme
-THEME_TOP = 3           # themes per commander that get their own decks (EDHREC theme pages)
+THEME_TOP = 3           # archetypes per commander that get their own decks: the ones you own most of
+THEME_FETCH = 8         # EDHREC theme pages read per commander to find those (all its theme tags)
+THEME_MIN_DECKS = 20    # a theme page with fewer decklists says too little to build from
 THEME_MISS_DAYS = 7     # a theme page EDHREC doesn't have is asked for again after this many days
 
 def theme_profile(name):
@@ -671,6 +673,15 @@ def fetch_theme_page(path, cache, refresh=False, avg=False):
 
 DIFF_KEYS = ("decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
              "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl", "sw", "bench")
+
+def page_match(page, owned, me):
+    """Collection Match of an EDHREC page, as analyze() computes it: the play-rate weighted share
+    of its top <=99 cards (at 10%+ of decks) that you own."""
+    rec = sorted(((k, v[1]) for k, v in page["cards"].items() if k != me and v[0] not in BASIC_NAMES),
+                 key=lambda x: -x[1])
+    tmpl = [x for x in rec if x[1] >= 0.10][:99] or rec[:99]
+    tot = sum(r for _, r in tmpl) or 1
+    return round(100 * sum(r for k, r in tmpl if k in owned) / tot, 1)
 
 def deck_diff(base_x, tx):
     """A theme deck stored as changes to the normal deck of the same bracket (keeps the page small):
@@ -1951,15 +1962,22 @@ function applyDiff(x,df,extra){const rem=new Set(df.rem);
   return Object.assign({},x,df,{deck:x.deck.filter(e=>!rem.has(e[0])).concat(df.add)},extra);}
 function themed(d,b,t){const x=d.b[b], th=t&&d.th&&d.th[t], df=th&&th.b[b]; if(!df) return x;
   return applyDiff(x,df,{theme:th.name,tdecks:th.decks});}
+// an archetype's average deck: the overview deck of this bracket with that deck's differences applied
+const hasTAvg=(d,b,t)=>!!(t&&d.th&&d.th[t]&&d.th[t].av&&d.th[t].av[b]);
+const tavgd=(d,b,t)=>applyDiff(d.b[b],d.th[t].av[b],{avg:1,theme:d.th[t].name,tdecks:d.th[t].adecks});
 // EDHREC's average deck of this bracket, rebuilt with your cards (stored as differences too)
 const hasAvg=(d,b)=>!!(d.av&&d.av[b]);
 const avgd=(d,b)=>applyDiff(d.b[b],d.av[b],{avg:1});
 // which deck a row shows: "avg" = average deck, else a theme slug or "" (also the key for saved choices)
-// a row's own choice (data-a "1"/"0", a theme) wins over the page's source
-function rowSel(d,b,r){const a=r&&r.dataset.a;
-  if(a==="1"&&hasAvg(d,b))return "avg";
-  if(r&&r.dataset.t&&d.th&&d.th[r.dataset.t])return r.dataset.t;
-  return a!=="0"&&SRC==="avg"&&hasAvg(d,b)?"avg":"";}
+// the tree: bracket -> archetype (row data-t, "" = overview) -> source (row data-a "1"/"0", else the
+// page's source). Returns {t, a, key}: key = where substitute choices are saved.
+function rowState(d,b,r){
+  const t=r&&r.dataset.t&&d.th&&d.th[r.dataset.t]?r.dataset.t:"";
+  const want=r&&r.dataset.a?r.dataset.a==="1":SRC==="avg";
+  const a=want&&(t?hasTAvg(d,b,t):hasAvg(d,b));
+  return {t,a,key:t?(a?t+":avg":t):(a?"avg":"")};}
+const rowSel=(d,b,r)=>rowState(d,b,r).key;
+function deckOf(d,b,st){return st.t?(st.a?tavgd(d,b,st.t):themed(d,b,st.t)):(st.a?avgd(d,b):d.b[b]);}
 /* ---------- synergy swaps and next in line (cards read by what they do with the rest of the deck) ---------- */
 function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length) return "";
   const nm=i=>`<a href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">${esc(front(i))}</a>`;
@@ -1969,7 +1987,7 @@ function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length
   ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small></li>`).join("")}</ul>`:""}</details>`;}
 /* ---------- deck shape: your deck (bars) against EDHREC's average deck (line) ---------- */
 const TYO=["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Other","Land"];
-function shapeHTML(items,ref,b){
+function shapeHTML(items,ref,b,tname){
   const mv=[0,0,0,0,0,0,0,0], ty={};
   items.forEach(it=>{const c=CARDS[it.i]; if(!c)return; const q=it.n||1; ty[c[2]]=(ty[c[2]]||0)+q;
     if(c[2]!=="Land") mv[Math.min(7,c[4]||0)]+=q;});
@@ -1980,11 +1998,11 @@ function shapeHTML(items,ref,b){
   const tys=TYO.filter(g=>ty[g]||(ref&&ref.ty[g])), tmax=Math.max(1,...tys.map(g=>Math.max(ty[g]||0,ref?ref.ty[g]||0:0)));
   const rows=tys.map(g=>{const v=ty[g]||0, r=ref?ref.ty[g]||0:null, tt=tip(g,v,r);
     return `<span class="tyl" title="${tt}">${g}</span><div class="tyb" title="${tt}"><div class="b" style="width:${100*v/tmax}%"></div>${r==null?"":`<div class="rf" style="left:${100*r/tmax}%"></div>`}</div><span class="tyn" title="${tt}">${v}</span>`;}).join("");
-  const lgd=`<div class="lgd"><span><i class="ly"></i>Your deck</span>${ref?`<span><i class="lr"></i>EDHREC average ${b==="all"?"":LBL[b]+" "}deck</span>`:""}</div>`;
+  const lgd=`<div class="lgd"><span><i class="ly"></i>Your deck</span>${ref?`<span><i class="lr"></i>EDHREC average ${tname?esc(tname)+" ":b==="all"?"":LBL[b]+" "}deck</span>`:""}</div>`;
   const tbl=`<details class="more"><summary>As a table</summary><table class="st"><tr><th></th><th>Your deck</th>${ref?"<th>Average deck</th>":""}</tr>
     ${mv.map((v,k)=>`<tr><td>MV ${k===7?"7+":k}</td><td>${v}</td>${ref?`<td>${ref.mv[k]||0}</td>`:""}</tr>`).join("")}
     ${tys.map(g=>`<tr><td>${g}</td><td>${ty[g]||0}</td>${ref?`<td>${ref.ty[g]||0}</td>`:""}</tr>`).join("")}</table></details>`;
-  return `<div class="vbar"><h3>Deck shape</h3>${ref?"":`<span class="dim">no EDHREC average deck for ${LBL[b]}</span>`}</div>${lgd}
+  return `<div class="vbar"><h3>Deck shape</h3>${ref?"":`<span class="dim">no EDHREC average deck to compare</span>`}</div>${lgd}
   <div class="shape"><div><h4>Mana curve (non-land cards)</h4><div class="mvc">${cols}</div><div class="mvx">${mv.map((_,k)=>`<span>${k===7?"7+":k}</span>`).join("")}</div></div>
   <div><h4>Card types</h4><div class="tyr">${rows}</div></div></div>${tbl}`;}
 // the deck as you chose it: slot = the missing card's index; buy = keep the missing card
@@ -2059,27 +2077,33 @@ function numsHTML(x,b){
   const lbl=bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3";
   const fit=!sel?"":bf.est<=Math.max(sel,2)||sel===5?` <span class="ok">✓ fits ${LBL[b].split(" ")[0]}</span>`:` <span class="bad">above ${LBL[b].split(" ")[0]}</span>`;
   return `<div class="nums">
-  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>${x.avg?`You own ${x.own_n} of the ${x.tmpl_n} non-basic cards in EDHREC's average ${b==="all"?"":LBL[b]+" "}deck (${n(x.decks)} decks).`
+  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>${x.avg?`You own ${x.own_n} of the ${x.tmpl_n} non-basic cards in EDHREC's average ${x.theme?esc(x.theme)+" ":b==="all"?"":LBL[b]+" "}deck (${n(x.decks)} decks).`
     :`You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${x.theme?esc(x.theme)+" decks (all brackets)":LBL[b]+" decks"}.`}</div>
   <div class="num"><span class="t">Build Readiness</span><b>${ok}/${rd.length} checks</b>${fail?`<ul>${fail}</ul>`:"Roles, curve, mana and real cards all look fine."}</div>
   <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
 
 /* ---------- commander rows ---------- */
 function body(d,b,r){
-  const sel=rowSel(d,b,r), asel=sel==="avg", tsel=asel?"":sel;
-  const x=asel?avgd(d,b):themed(d,b,tsel), tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
-  const tags=d.tags.slice(0,3).map(t=>{const has=d.th&&d.th[t[1]];
-    return has?`<button class="tag thm ${t[1]===tsel?"on":""}" data-tsel="${t[1]}" title="${t[1]===tsel?"Back to the overview":"Build this deck around "+esc(t[0])}">${esc(t[0])} · ${Math.round(100*t[2]/tot)}%</button>`
-      :`<a class="tag" href="https://edhrec.com/commanders/${d.slug}${pre}/${t[1]}" target="_blank" rel="noopener" title="No EDHREC theme page cached: opens EDHREC">${esc(t[0])} · ${Math.round(100*t[2]/tot)}% ↗</a>`;}).join("")||'<span class="tag dim">no themes found</span>';
-  const tnote=tsel?`<p class="tnote">Theme: <b>${esc(x.theme)}</b> · ${LBL[b]} rules · built from EDHREC's ${n(x.tdecks)} ${esc(x.theme)} decks and your cards, leaning into cards that ${esc(x.theme.toLowerCase())} decks need.
-    <a href="https://edhrec.com/commanders/${d.slug}/${tsel}" target="_blank" rel="noopener">EDHREC ↗</a> <button class="tag" data-tsel="${tsel}">Back to overview</button></p>`
-    :asel?`<p class="tnote">EDHREC's average ${b==="all"?"":LBL[b]+" "}deck for this commander (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in, ${b==="all"?"no bracket rules":LBL[b]+" rules"}.
-    <a href="https://edhrec.com/average-decks/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC average deck ↗</a></p>`
-    :(d.th&&Object.keys(d.th).length?`<p class="tnote dim">Overview: the most common ${LBL[b]} deck. Click a theme above to build around it.</p>`:"");
-  const anyAvg=d.av&&Object.keys(d.av).length;
-  const srcs=anyAvg?`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played with this commander (EDHREC commander page) and your collection">Commander page</button><button class="srcb ${asel?"on":""}" data-asel="1" ${hasAvg(d,b)?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for ${LBL[b]}"`}>Average deck${hasAvg(d,b)?": "+d.av[b].pct+"%":""}</button></div>`:"";
-  const bks=BR.filter(k=>d.b[k]).map(k=>{const pc=asel&&hasAvg(d,k)?d.av[k].pct:d.b[k].pct, dk=asel&&hasAvg(d,k)?d.av[k].decks:d.b[k].decks;
-    return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${pc}% <small>(${n(dk)})</small></button>`;}).join("");
+  const st=rowState(d,b,r), sel=st.key, asel=st.a, tsel=st.t;
+  const x=deckOf(d,b,st), pre=b==="all"?"":"/"+b;
+  // level 1: archetype (overview + the archetypes you own most of)
+  const ths=Object.entries(d.th||{});
+  const arch=`<div class="srcs"><span class="dim">Archetype:</span><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
+    +ths.map(([k,t])=>`<button class="srcb thm ${k===tsel?"on":""}" data-tsel="${k}" title="You own ${t.own}% of the cards EDHREC's ${n(t.decks)} ${esc(t.name)} decks play">${esc(t.name)} · you own ${t.own}%</button>`).join("")
+    +(ths.length?"":`<span class="dim">no archetype pages</span>`)+`</div>`;
+  const other=d.tags.filter(t=>!(d.th&&d.th[t[1]])).slice(0,5);
+  const more=other.length?`<div class="tags"><span class="dim">Other EDHREC themes:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
+  // level 2: source within the archetype
+  const avOK=tsel?hasTAvg(d,b,tsel):hasAvg(d,b), cmdX=tsel?themed(d,b,tsel):d.b[b], avX=avOK?(tsel?tavgd(d,b,tsel):avgd(d,b)):null;
+  const srcs=`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
+  const what=(tsel?`<b>${esc(x.theme)}</b> `:"")+(asel?"average deck":"commander page");
+  const link=asel?`https://edhrec.com/average-decks/${d.slug}${tsel?"/"+tsel:pre}`:`https://edhrec.com/commanders/${d.slug}${tsel?"/"+tsel:pre}`;
+  const tnote=`<p class="tnote">${asel?`EDHREC's ${tsel?esc(x.theme)+" ":""}average deck (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in`
+      :`Built from EDHREC's ${n(tsel?x.tdecks:x.decks)} ${tsel?esc(x.theme)+" decks":LBL[b]+" decks"} and your cards`}${tsel?`, leaning into cards ${esc(x.theme.toLowerCase())} decks need`:""} · ${b==="all"?"no bracket rules":LBL[b]+" rules"}.
+    <a href="${link}" target="_blank" rel="noopener">EDHREC ${what} ↗</a></p>`;
+  const bks=BR.filter(k=>d.b[k]).map(k=>{const sk=rowState(d,k,r), xk=sk.t===tsel&&sk.a===asel?deckOf(d,k,sk):null;
+    return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}${xk?`: ${xk.pct}% <small>(${n(xk.decks)})</small>`:""}</button>`;}).join("");
+  const tags=d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
   const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
@@ -2087,7 +2111,7 @@ function body(d,b,r){
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
   const slot=r&&r.dataset.slot?+r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
-  <div class="info"><div class="tags">${tags}</div>${srcs}${tnote}<div class="bks">${bks}</div>
+  <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${tnote}${more}
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
   ${synHTML(x)}
@@ -2095,8 +2119,8 @@ function body(d,b,r){
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
   ${slot!=null?chooserHTML(d,b,x,slot,sel):""}${shopHTML(d,b,items,sel)}
-  ${shapeHTML(items,hasAvg(d,b)?d.av[b].ref:null,b)}
-  ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/${asel?"average-decks":"commanders"}/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
+  ${shapeHTML(items,tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
+  ${deckSection("Your deck",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown${x.avg?" (most played first)":""}</span></div>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
   ${combosSection(d,b,x)}`;}
@@ -2161,9 +2185,9 @@ document.addEventListener("click",e=>{const t=e.target;
   if(bs){const r=bs.closest("details.row"); r.dataset.b=bs.dataset.bsel; r.dataset.slot=""; rerow(r); return;}
   const row=t.closest&&t.closest("details.row[data-i]");
   const ts=t.closest&&t.closest("[data-tsel]");
-  if(ts){const r=ts.closest("details.row"); r.dataset.t=r.dataset.t===ts.dataset.tsel?"":ts.dataset.tsel; r.dataset.a=""; r.dataset.slot=""; rerow(r); return;}
+  if(ts){const r=ts.closest("details.row"); r.dataset.t=ts.dataset.tsel; r.dataset.slot=""; rerow(r); return;}
   const as=t.closest&&t.closest("[data-asel]");
-  if(as&&!as.disabled){const r=as.closest("details.row"); r.dataset.a=as.dataset.asel==="1"?"1":"0"; if(r.dataset.a==="1")r.dataset.t=""; r.dataset.slot=""; rerow(r); return;}
+  if(as&&!as.disabled){const r=as.closest("details.row"); r.dataset.a=as.dataset.asel==="1"?"1":"0"; r.dataset.slot=""; rerow(r); return;}
   const sr=t.closest&&t.closest("[data-src]");
   if(sr){SRC=sr.dataset.src; try{localStorage.setItem("dw:src",SRC);}catch(e){} render(); return;}
   if(row){const d=DATA[+row.dataset.i], b=rowB(row), tt=rowSel(d,b,row);
@@ -2390,11 +2414,17 @@ def main():
             p = fetch_page(f"{slug}/{b}", cache, a.refresh)
             if p and p["cards"]: pg[b] = p
         pages[m["name"]] = pg
-        if not a.no_themes:
-            th = {}
-            for name, tslug, _ in base.get("tags", [])[:THEME_TOP]:
+        if not a.no_themes:     # archetypes: every theme tag's page, ranked by how much of it you own
+            found = []
+            for name, tslug, _ in base.get("tags", [])[:THEME_FETCH]:
                 tp = fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh)
-                if tp and tp["cards"]: th[tslug] = (name, tp)
+                if tp and tp["cards"] and (tp.get("decks") or 0) >= THEME_MIN_DECKS:
+                    found.append((page_match(tp, owned, norm(m["name"])), tslug, name, tp))
+            found.sort(key=lambda t: (-t[0], t[1]))
+            th = {}
+            for match, tslug, name, tp in found[:THEME_TOP]:     # + that archetype's EDHREC average deck
+                tap = None if a.no_avg else fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh, avg=True)
+                th[tslug] = (name, tp, tap if tap and tap["cards"] else None, match)
             themes[m["name"]] = th
         if not a.no_avg:        # EDHREC's average deck, for each bracket the commander page has
             av = {}
@@ -2408,11 +2438,11 @@ def main():
 
     # Scryfall data for popular cards you don't own (needed to find substitutes)
     want = set()
-    for pg in list(pages.values()) + [{t: tp for t, (_, tp) in th.items()} for th in themes.values()]:
+    for pg in list(pages.values()) + [{t: v[1] for t, v in th.items()} for th in themes.values()]:
         for p in pg.values():
             for k, (name, rate, *_) in p["cards"].items():
                 if rate >= 0.10 and k not in owned and name not in BASIC_NAMES: want.add(name)
-    for av in avgs.values():
+    for av in list(avgs.values()) + [{t: v[2] for t, v in th.items() if v[2]} for th in themes.values()]:
         for ap_ in av.values():
             want.update(name for k, (name, _) in ap_["cards"].items() if k not in owned and name not in BASIC_NAMES)
     name_meta = resolve_names(want, os.path.join(cache_dir, "scryfall_names.json"), a.refresh)
@@ -2466,13 +2496,23 @@ def main():
         # theme decks: the commander's EDHREC theme page (all brackets) built with each bracket's rules,
         # leaning into cards that match the theme; stored as differences from the normal deck
         entry["th"] = {}
-        for tslug, (tname, tp) in (themes.get(m["name"]) or {}).items():
-            per = {}
+        # each archetype gets two decks per bracket, like the overview: from the theme's commander page
+        # and from the theme's EDHREC average deck (both all-bracket pages, built with each bracket's rules)
+        for tslug, (tname, tp, tap, match) in (themes.get(m["name"]) or {}).items():
+            per, aper = {}, {}
+            if tap:
+                apage, show = avg_as_page(tap, tp, tp, "all")
+                tshape = avg_shape(tap, owned, name_meta)
             for b in entry["b"]:
                 tx = analyze(m, tp, owned, name_meta, pool_info, b, T, tp, own, focus=tname,
                              want_gaps=False, profile=prof)
                 per[b] = combo_info(tx, b)
-            entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "b": per}
+                if tap:
+                    ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname,
+                                 profile=prof, show=show)
+                    aper[b] = combo_info(ax, b); ax["ref"] = tshape
+            entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "own": match, "b": per, "av": aper,
+                                  "adecks": apage["decks"] if tap else 0}
         # average decks: EDHREC's average 99 for each bracket, rebuilt with your cards (cards you own
         # stay, missing ones get stand-ins, same bracket rules); also stored as differences
         entry["av"] = {}
@@ -2485,6 +2525,9 @@ def main():
         for b, x in entry["b"].items():
             for t in entry["th"].values():         # now that the normal deck is final, keep only differences
                 if b in t["b"]: t["b"][b] = deck_diff(x, t["b"][b])
+                if b in t["av"]:
+                    ax = t["av"][b]
+                    t["av"][b] = dict(deck_diff(x, ax), gaps=ax["gaps"], ref=ax["ref"])
             if b in entry["av"]:
                 ax = entry["av"][b]
                 entry["av"][b] = dict(deck_diff(x, ax), gaps=ax["gaps"], ref=ax["ref"])

@@ -31,27 +31,22 @@ try{const r=document.querySelector('details.row[data-i]');if(r){r.open=true;r.qu
 catch(e){out.errs.push('clicks: '+e.message);}
 try{for(const k of DECKS){const h=ibody(k);if(!h||h.includes('undefined'))out.errs.push('imported '+k.title+': "undefined"');out.panels++;}}
 catch(e){out.errs.push('imported decks: '+e.message);}
-// themes: every theme deck renders for every bracket; clicking a theme switches and clicking again returns
+// archetype tree: every archetype x source x bracket renders; archetype and source combine; Overview goes back
 try{for(const d of DATA)for(const t of Object.keys(d.th||{}))for(const b of BR){if(!d.b[b])continue;
-    const fake={dataset:{t,b}};const h=body(d,b,fake);if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+' | '+t+': theme panel has "undefined"');out.panels++;}
-  const d=DATA.find(d=>Object.keys(d.th||{}).length), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
-  if(r){r.open=true;rerow(r);const t=Object.keys(d.th)[0];
-    r.querySelector('[data-tsel="'+t+'"]').click(); if(!r.querySelector('.thm.on'))out.errs.push('theme click did not select it');
-    r.querySelector('.thm[data-tsel="'+t+'"]').click(); if(r.querySelector('.thm.on'))out.errs.push('second theme click did not go back');
-    out.clicks=(out.clicks||0)+2;}}
-catch(e){out.errs.push('themes: '+e.message);}
-// average decks: every one renders; the switch selects it, a theme click leaves it, "Card stats" goes back
-try{for(const d of DATA)for(const b of Object.keys(d.av||{})){const h=body(d,b,{dataset:{a:"1",b}});
+    for(const a of ["0","1"]){const h=body(d,b,{dataset:{t,a,b}});if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+' | '+t+' | avg '+a+': panel has "undefined"');out.panels++;}}
+  for(const d of DATA)for(const b of Object.keys(d.av||{})){const h=body(d,b,{dataset:{a:"1",b}});
     if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+' | average deck: panel has "undefined"');out.panels++;}
-  const d=DATA.find(d=>d.av&&d.av[bk()]), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
-  if(r){r.open=true;r.dataset.b=bk();rerow(r);
-    r.querySelector('[data-asel="1"]').click(); if(!r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('average deck switch did not select it');
-    if(!r.querySelector('.body').textContent.includes('average deck'))out.errs.push('average deck note missing');
-    const t=r.querySelector('.thm'); if(t){t.click(); if(r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('theme click did not leave the average deck'); t.click();}
-    r.querySelector('[data-asel="1"]').click(); r.querySelector('[data-asel="0"]').click();
-    if(r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('card stats switch did not go back');
-    out.clicks=(out.clicks||0)+4;}}
-catch(e){out.errs.push('average decks: '+e.message);}
+  const d=DATA.find(d=>Object.values(d.th||{}).some(t=>t.av&&t.av[bk()])), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b=bk();rerow(r);const t=Object.keys(d.th).find(k=>d.th[k].av&&d.th[k].av[bk()]);
+    r.querySelector('.thm[data-tsel="'+t+'"]').click(); if(!r.querySelector('.thm.on'))out.errs.push('archetype click did not select it');
+    r.querySelector('[data-asel="1"]').click();
+    if(!r.querySelector('.thm.on')||!r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('archetype + average deck did not combine');
+    if(!r.querySelector('.tnote').textContent.includes(d.th[t].name+' average deck'))out.errs.push('archetype average deck note missing');
+    r.querySelector('[data-asel="0"]').click(); if(!r.querySelector('.thm.on')||r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('commander page did not keep the archetype');
+    r.querySelector('[data-tsel=""]').click(); if(r.querySelector('.thm.on'))out.errs.push('Overview did not go back');
+    out.clicks=(out.clicks||0)+5;}
+  else out.errs.push('no archetype with an average deck to test');}
+catch(e){out.errs.push('archetypes: '+e.message);}
 // page-wide source selector: "Average deck" switches the list and the panels, "Commander page" goes back
 try{const tb=document.querySelector('[data-src="avg"]');
   if(!tb)out.errs.push('no Average deck selector at the top');
