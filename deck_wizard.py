@@ -32,6 +32,9 @@ GAP_SHOW = 20           # missing cards shown in the report, with alternatives
 ROLE_TARGETS = {"ramp": 10, "draw": 9, "removal": 8, "wipe": 2}
 VALID_BRACKETS = ["exhibition", "core", "upgraded", "optimized", "cedh"]
 OFFLINE = False         # --offline: never touch the network, use caches only
+GC_CAP = {"exhibition": 0, "core": 0, "upgraded": 3}   # Game Changers per bracket; others: no cap
+EDH_CACHE, EDH_VERSION = "edhrec_v4.json", 4           # v4 pages add synergy, lift, list tags
+SF_VERSION = 2          # bump when compact_card() gains fields; older cache entries are refetched
 
 # ----------------------------------------------------------------- helpers
 def norm(name):
@@ -55,7 +58,8 @@ def http_json(url, data=None, retries=3):
             with urllib.request.urlopen(req, timeout=30) as r:
                 return json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
-            if e.code in (403, 404): return None   # page doesn't exist / no results
+            # missing page / no results (EDHREC answers 403 for missing pages); callers don't cache it
+            if e.code in (403, 404): return None
             last = e; time.sleep(2 * (attempt + 1))
         except Exception as e:
             last = e; time.sleep(2 * (attempt + 1))
@@ -87,19 +91,25 @@ def compact_card(c):
     faces = c.get("card_faces") or []
     oracle = c.get("oracle_text") or " // ".join(f.get("oracle_text", "") for f in faces)
     iu = c.get("image_uris") or (faces[0].get("image_uris") if faces else None) or {}
+    cost = c.get("mana_cost") or " // ".join(f["mana_cost"] for f in faces if f.get("mana_cost"))
     return {
         "name": c.get("name", ""), "type_line": c.get("type_line", ""),
         "ci": c.get("color_identity", []), "cmc": c.get("cmc", 0) or 0, "oracle": oracle,
         "produced": c.get("produced_mana", []) or [], "gc": bool(c.get("game_changer", False)),
         "commander_legal": (c.get("legalities") or {}).get("commander") == "legal",
         "layout": c.get("layout", ""), "img": iu.get("normal") or iu.get("small") or "",
+        # v2 fields: colored pips for basics, overall EDHREC popularity, keyword abilities
+        "mana_cost": cost, "edhrec_rank": c.get("edhrec_rank"), "keywords": c.get("keywords", []) or [],
+        "v": SF_VERSION,
     }
 
 def enrich_scryfall(ids, cache_path, refresh=False):
     cache = {} if refresh else load_json(cache_path)
-    todo = [i for i in ids if i not in cache or "img" not in cache[i]]
+    todo = [i for i in ids if i not in cache or cache[i].get("v") != SF_VERSION]
     if OFFLINE:
-        print(f"Scryfall: {len(ids) - len(todo)} cached, {len(todo)} skipped (offline)")
+        gone = sum(1 for i in todo if i not in cache)
+        print(f"Scryfall: {len(ids) - gone} cached ({len(todo) - gone} in an older format),"
+              f" {gone} without data (offline)")
         return cache
     print(f"Scryfall: {len(ids) - len(todo)} cached, {len(todo)} to fetch")
     for n in range(0, len(todo), 75):
@@ -118,7 +128,8 @@ def enrich_scryfall(ids, cache_path, refresh=False):
 def resolve_names(names, cache_path, refresh=False):
     """Scryfall data for cards you don't own (missing cards, imported decks)."""
     cache = {} if refresh else load_json(cache_path)
-    todo = sorted({n for n in names if norm(n) not in cache and n not in BASIC_NAMES})
+    stale = lambda k: k not in cache or (cache[k] is not None and cache[k].get("v") != SF_VERSION)
+    todo = sorted({n for n in names if stale(norm(n)) and n not in BASIC_NAMES})
     if OFFLINE:
         if todo: print(f"Scryfall: {len(todo)} cards you don't own skipped (offline)")
         return cache
@@ -249,9 +260,12 @@ def find_tags(data):
     return out[:8]
 
 def parse_edhrec(data):
+    """cards: key -> [name, rate, synergy, lift, [EDHREC list tags]]. Old (v3) pages have only
+    [name, rate], so read the extra fields with a length check."""
     jd = (data.get("container") or {}).get("json_dict") or {}
     cards, decks = {}, 0
     for lst in jd.get("cardlists", []):
+        tag = lst.get("tag") or ""
         for cv in lst.get("cardviews", []):
             name = cv.get("name")
             if not name: continue
@@ -259,20 +273,33 @@ def parse_edhrec(data):
             inc = cv.get("inclusion", cv.get("num_decks", 0)) or 0
             decks = max(decks, pot)
             rate = (inc / pot) if pot else 0.0
-            key = norm(name)
-            if key not in cards or rate > cards[key][1]:
-                cards[key] = [name, rate]
+            key, old = norm(name), cards.get(norm(name))
+            if old is None or rate > old[1]:
+                syn, lift = cv.get("synergy"), cv.get("lift")
+                cards[key] = [name, rate, None if syn is None else round(syn, 3),
+                              None if lift is None else round(lift, 3), old[4] if old else []]
+            if tag and tag not in cards[key][4]: cards[key][4].append(tag)
     decks = decks or int(data.get("num_decks_avg") or 0)
-    return {"decks": decks, "cards": cards, "tags": find_tags(data)}
+    return {"v": EDH_VERSION, "decks": decks, "cards": cards, "tags": find_tags(data)}
+
+def load_edhrec_cache(cache_dir, refresh=False):
+    """EDHREC pages by path. The first time, seeds from the v3 cache so old pages stay usable
+    offline; fetch_page upgrades them the next time they're needed online."""
+    if refresh: return {}
+    cache = load_json(os.path.join(cache_dir, EDH_CACHE))
+    if not cache:   # v3 cached misses are dropped: some may have been 403 blocks
+        cache = {k: v for k, v in load_json(os.path.join(cache_dir, "edhrec_v3.json")).items() if v}
+    return cache
 
 def fetch_page(path, cache, refresh=False):
-    if not refresh and path in cache: return cache[path]
-    if OFFLINE: return None             # not cached, and not recorded as missing
-    data =http_json(EDH + path + ".json")
+    old = cache.get(path)
+    if not refresh and old and old.get("v") == EDH_VERSION: return old
+    if OFFLINE: return old              # older data beats none; nothing new is recorded
+    data = http_json(EDH + path + ".json")
     time.sleep(0.8)
-    out = parse_edhrec(data) if data else None
-    cache[path] = out
-    return out
+    if not data: return old             # missing page (EDHREC answers 403) or failure: never cached
+    cache[path] = parse_edhrec(data)
+    return cache[path]
 
 # ------------------------------------------------------------ substitutes
 def build_pool(ci, owned, exclude=""):
@@ -295,7 +322,7 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=()):
         cands = [it for it in pool if it[3] == "land"]
     elif mroles:
         seen, cands = set(), []
-        for r in mroles:
+        for r in sorted(mroles):
             for it in by_role.get(r, []):
                 if it[0] not in seen: seen.add(it[0]); cands.append(it)
     else:   # pure synergy piece: same card type, and played with this commander
@@ -322,7 +349,7 @@ def find_subs(mm, rate_of, pool, by_role, used, allow_gc, n=3, penalize=()):
         if k in penalize: s -= 2       # already in the deck: prefer fresh cards
         if s < 1: continue
         out.append((s, k, m, " · ".join(why)))
-    out.sort(key=lambda x: -x[0])
+    out.sort(key=lambda x: (-x[0], x[1]))     # name breaks ties: same input, same deck
     return out[:n]
 
 def role_text(mm):
@@ -341,7 +368,11 @@ def power_profile(roles, gc, avg_cmc):
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
     pool, by_role = pool_info
-    allow_gc = bracket not in ("exhibition", "core")
+    legal = {it[0] for it in pool}      # owned, commander-legal, inside the color identity
+    gc_cap = GC_CAP.get(bracket)        # None = no cap
+    chosen, lands = [], []
+    def gc_room():
+        return gc_cap is None or sum(1 for m, _, _ in chosen + lands if m["gc"]) < gc_cap
     cards = edh["cards"]
     rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
@@ -354,12 +385,12 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
 
     # 1) popular cards you own, 2) substitutes for popular cards you don't
     nonland = 99 - LAND_TARGET
-    chosen, lands, used, sub_for = [], [], {me}, {}
+    used, sub_for = {me}, {}
     for k, name, rate in rec:
         if k in used: continue
         if k in owned:
             m = owned[k]
-            if m["gc"] and not allow_gc: continue
+            if k not in legal or (m["gc"] and not gc_room()): continue
             if card_kind(m) == "land":
                 if len(lands) < MAX_LANDS and rate >= 0.15:
                     lands.append((m, "p", None)); used.add(k)
@@ -370,7 +401,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
             if not mm: continue
             is_land = card_kind(mm) == "land"
             if (is_land and len(lands) >= MAX_LANDS) or (not is_land and len(chosen) >= nonland): continue
-            subs = find_subs(mm, rate_of, pool, by_role, used, allow_gc, 1)
+            subs = find_subs(mm, rate_of, pool, by_role, used, gc_room(), 1)
             if subs:
                 sk, sm = subs[0][1], subs[0][2]
                 used.add(sk); sub_for[k] = sk
@@ -383,19 +414,20 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
             for r in roles_of(m):
                 if r in counts: counts[r] += 1
         fill = [(k, m, rs) for k, m, rs, kd in pool
-                if k not in used and kd != "land" and (allow_gc or not m["gc"])]
+                if k not in used and kd != "land" and (gc_cap != 0 or not m["gc"])]
         fill.sort(key=lambda it: (-rate_of(it[0]), it[1]["cmc"]))
         def take(it):
             chosen.append((it[1], "f", None)); used.add(it[0])
             for r in it[2]:
                 if r in counts: counts[r] += 1
+        ok = lambda it: it[0] not in used and (not it[1]["gc"] or gc_room())
         for role, target in ROLE_TARGETS.items():
             for it in fill:
                 if len(chosen) >= nonland or counts[role] >= target: break
-                if it[0] not in used and role in it[2]: take(it)
+                if ok(it) and role in it[2]: take(it)
         for it in fill:
             if len(chosen) >= nonland: break
-            if it[0] not in used: take(it)
+            if ok(it): take(it)
 
     n_basics = 99 - len(chosen) - len(lands)
     colors = [c for c in "WUBRG" if c in ci]
@@ -411,7 +443,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
     gaps = []
     for k, name, rate in missing[:GAP_SHOW]:
         mm = name_meta.get(k)
-        subs = find_subs(mm, rate_of, pool, by_role, {me}, allow_gc, 3, used) if mm else []
+        subs = find_subs(mm, rate_of, pool, by_role, {me}, gc_cap != 0, 3, used) if mm else []
         rows = [[T.add(sm["name"], sm), why] for _, sk, sm, why in subs]
         used_sub = sub_for.get(k)
         if used_sub and used_sub not in [s[1] for s in subs]:
@@ -445,13 +477,14 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T):
 
 # -------------------------------------------------------- Commander Spellbook
 def csb_find(commanders, main):
-    """POST a deck to find-my-combos, following pagination. None on failure."""
+    """POST a deck to find-my-combos, following pagination. None if any page fails
+    (partial results must not be cached as complete)."""
     body = {"commanders": [{"card": c} for c in commanders],
             "main": [{"card": c} for c in main]}
     merged, url, pages = {}, CSB + "?limit=100", 0
     while url and pages < 15:
         resp = http_json(url, body)
-        if not resp: break
+        if not resp: return None
         for k, v in (resp.get("results") or {}).items():
             if isinstance(v, list): merged.setdefault(k, []).extend(v)
         url = resp.get("next"); pages += 1
@@ -821,8 +854,8 @@ def main():
     print(f"Commander candidates: {len(cands)} | brackets: {', '.join(brackets)}")
 
     # pass 1: EDHREC pages
-    edh_path = os.path.join(cache_dir, "edhrec_v3.json")
-    cache = {} if a.refresh else load_json(edh_path)
+    edh_path = os.path.join(cache_dir, EDH_CACHE)
+    cache = load_edhrec_cache(cache_dir, a.refresh)
     pages, skipped = {}, 0
     for i, m in enumerate(cands, 1):
         slug = slugify(m["name"])
@@ -842,7 +875,7 @@ def main():
     want = set()
     for pg in pages.values():
         for p in pg.values():
-            for k, (name, rate) in p["cards"].items():
+            for k, (name, rate, *_) in p["cards"].items():
                 if rate >= 0.10 and k not in owned and name not in BASIC_NAMES: want.add(name)
     name_meta = resolve_names(want, os.path.join(cache_dir, "scryfall_names.json"), a.refresh)
 

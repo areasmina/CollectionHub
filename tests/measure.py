@@ -28,7 +28,7 @@ def setup(csv_path):
             owned[dw.norm(m["name"])] = m
     dw.ROLE_TAGS.update(dw.fetch_role_tags("cache/role_tags.json"))
     name_meta = dw.resolve_names(set(), "cache/scryfall_names.json")
-    edh = dw.load_json("cache/edhrec_v3.json")
+    edh = dw.load_edhrec_cache("cache")
     return owned, name_meta, edh
 
 def measure_deck(m, page, bracket, owned, name_meta, pool_info):

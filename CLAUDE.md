@@ -55,7 +55,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | ManaBox CSV | What Guillermo owns (`Name`, `Scryfall ID`, `Quantity`) | – |
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
-| EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity per commander and per bracket, theme tags | `cache/edhrec_v3.json` |
+| EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned and one card away | `cache/spellbook.json` |
 
 Decisions:
@@ -81,8 +81,8 @@ Main flow in `main()`:
 
 Key functions:
 - `analyze()` – builds the 99. Order: popular owned cards (EDHREC rate order) → substitutes for missing
-  cards with rate ≥ `SUB_MIN` (0.25) → role fill (`ROLE_TARGETS`) → basics. At exhibition/core, Game
-  Changers are excluded. Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
+  cards with rate ≥ `SUB_MIN` (0.25) → role fill (`ROLE_TARGETS`) → basics. Only cards from `build_pool`
+  (owned, legal, in color identity). Game Changers capped by `GC_CAP` (B1/B2: 0, B3: 3). Also builds `gaps` (top `GAP_SHOW` missing cards with up to 3 owned alternatives).
 - `find_subs()` – scores owned replacements: shared roles, same card kind, mana value distance, EDHREC rate
   for this commander; lands matched by colors produced; pure synergy cards only replaced by same-kind cards
   this commander's players also run.
@@ -100,7 +100,11 @@ combos, power profile bars, imported decks section.
 - EDHREC JSON shape is unofficial and could change. Theme tags are read from `panels.taglinks`.
   If many commanders show "no themes found", check the real JSON.
 - EDHREC cardviews include a `synergy` field (how much more a card is played with this commander than
-  in general). It is **not used yet** and is the best available "commander synergy" signal.
+  in general). Stored since v4 cache (`cards[key] = [name, rate, synergy, lift, list_tags]`; v3 pages
+  only have `[name, rate]`), **not used yet**. It is the best available "commander synergy" signal.
+- Scryfall card meta (`SF_VERSION` 2) also stores `mana_cost`, `edhrec_rank`, `keywords`, not used yet.
+- EDHREC answers missing pages with HTTP 403. Misses are never cached (a 403 can also be a block).
+- Commander Spellbook rate-limits (HTTP 429). Failed/partial combo lookups are not cached.
 - Scryfall Tagger tag names in `TAG_QUERIES` are best guesses; the run prints card counts per role.
   A role with 0 cards means a wrong tag name.
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
