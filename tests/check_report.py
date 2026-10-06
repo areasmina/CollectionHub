@@ -40,6 +40,18 @@ try{for(const d of DATA)for(const t of Object.keys(d.th||{}))for(const b of BR){
     r.querySelector('.thm[data-tsel="'+t+'"]').click(); if(r.querySelector('.thm.on'))out.errs.push('second theme click did not go back');
     out.clicks=(out.clicks||0)+2;}}
 catch(e){out.errs.push('themes: '+e.message);}
+// average decks: every one renders; the switch selects it, a theme click leaves it, "Card stats" goes back
+try{for(const d of DATA)for(const b of Object.keys(d.av||{})){const h=body(d,b,{dataset:{a:"1",b}});
+    if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+' | average deck: panel has "undefined"');out.panels++;}
+  const d=DATA.find(d=>d.av&&d.av[bk()]), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b=bk();rerow(r);
+    r.querySelector('[data-asel="1"]').click(); if(!r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('average deck switch did not select it');
+    if(!r.querySelector('.body').textContent.includes('average deck'))out.errs.push('average deck note missing');
+    const t=r.querySelector('.thm'); if(t){t.click(); if(r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('theme click did not leave the average deck'); t.click();}
+    r.querySelector('[data-asel="1"]').click(); r.querySelector('[data-asel="0"]').click();
+    if(r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('card stats switch did not go back');
+    out.clicks=(out.clicks||0)+4;}}
+catch(e){out.errs.push('average decks: '+e.message);}
 // substitute chooser: open a slot, pick an alternative, then "buy", then reset
 try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length));
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');

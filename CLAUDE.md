@@ -39,6 +39,7 @@ Useful flags:
 | `--brackets core,upgraded,optimized,cedh` | EDHREC bracket pages to pull (add `exhibition` for B1) |
 | `--no-combos` | Skip Commander Spellbook |
 | `--no-themes` | Skip EDHREC theme pages and theme decks (faster) |
+| `--no-avg` | Skip EDHREC average-deck pages and average decks |
 | `--decks-in DIR` | Folder of decklists (.txt) to score, default `decks_in` |
 | `--refresh` | Ignore all caches (slow: re-downloads everything) |
 | `--no-open` | Don't open the report in the browser |
@@ -73,6 +74,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | Scryfall `/cards/collection` | Card data for owned cards (by ID) and missing cards (by name), images | `cache/scryfall.json`, `cache/scryfall_names.json` |
 | Scryfall search `otag:` | Card roles (ramp, draw, removal, wipe, tutor, counter, recursion, sac) | `cache/role_tags.json` (refreshed monthly) |
 | EDHREC theme pages `…/commanders/<slug>/<theme>.json` | Real per-theme deck data for each commander's top `THEME_TOP` 3 themes (`fetch_theme_page`; misses remembered `THEME_MISS_DAYS` 7 in `_theme_miss`) | `cache/edhrec_v4.json` |
+| EDHREC `json.edhrec.com/pages/average-decks/<slug>[/<bracket>].json` | EDHREC's average 99 per bracket (`parse_avg`: card → copies, `bracket_counts`), fetched for each bracket the commander page has; misses remembered 7 days in `_theme_miss` (`avg:` prefix) | `cache/edhrec_v4.json` (key `avg:<path>`) |
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
 | Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
@@ -193,6 +195,11 @@ keywords from the theme name, via Oracle text) get `FOCUS_W` 0.15 ("theme: disca
 but they're thin (Doom Discard B4: 26 decks) and 4× the requests, so not used. Theme tags are buttons
 (`data-tsel`, row `data-t`; click again → overview); themes without a cached page stay EDHREC links ↗.
 Substitute choices are saved per commander + bracket + theme.
+Average decks ("Deck from: Card stats | Average deck" switch per commander, row `data-a`): `avg_as_page()` turns
+EDHREC's average 99 into a page where every card has rate 1.0 (synergy from the commander's bracket page), then
+`analyze(..., show=real play rates)` rebuilds it with your cards (owned cards stay, missing → stand-ins, same
+bracket rules; `show` orders/labels the gaps). Stored as `entry["av"][bracket] = deck_diff(...) + gaps`; JS
+`avgd()`/`applyDiff()`, `rowSel()` gives the saved-choices key ("avg"). Average deck and theme are exclusive.
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
 Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
 (alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). In the report

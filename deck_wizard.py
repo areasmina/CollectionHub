@@ -27,6 +27,7 @@ import urllib.error, urllib.parse, urllib.request, webbrowser
 
 UA = "DeckWizard/0.5 (personal collection tool)"
 EDH = "https://json.edhrec.com/pages/commanders/"
+EDH_AVG = "https://json.edhrec.com/pages/average-decks/"
 CSB = "https://backend.commanderspellbook.com/find-my-combos"
 CSB_CARDS = "https://backend.commanderspellbook.com/cards/"
 CSB_BRACKET = "https://backend.commanderspellbook.com/estimate-bracket"
@@ -354,6 +355,33 @@ def parse_edhrec(data):
     decks = decks or int(data.get("num_decks_avg") or 0)
     return {"v": EDH_VERSION, "decks": decks, "cards": cards, "tags": find_tags(data)}
 
+def parse_avg(data):
+    """EDHREC's average deck: one decklist (key -> [name, copies]) and the decks per bracket behind it."""
+    deck = data.get("deck") or {}
+    cmdrs = {norm(x) for x in deck.get("commander") or []}
+    cards = {}
+    for group in (deck.get("cards") or {}).values():
+        for row in group or []:
+            if not row or norm(row[0]) in cmdrs: continue
+            cards[norm(row[0])] = [row[0], int(row[1] if len(row) > 1 and row[1] else 1)]
+    counts = {str(k): int(v or 0) for k, v in (data.get("bracket_counts") or {}).items()}
+    return {"v": EDH_VERSION, "avg": 1, "cards": cards, "counts": counts}
+
+def avg_as_page(ap, page, base, bracket):
+    """An average deck as an EDHREC-style page for analyze(): every card in it is "played in every
+    deck" (it is the deck); synergy comes from the commander's page for the same bracket (else all
+    decks). Returns (page, real play rates) - the real rates order and label the gaps."""
+    cards, show = {}, {}
+    for k, (name, _) in ap["cards"].items():
+        if name in BASIC_NAMES: continue
+        syn = next((v[2] for v in (page["cards"].get(k), base["cards"].get(k))
+                    if v and len(v) > 2 and v[2] is not None), None)
+        cards[k] = [name, 1.0, syn, None, ["avg"]]
+        show[k] = (page["cards"].get(k) or (None, 0.0))[1]
+    counts = ap.get("counts") or {}
+    decks = counts.get(str(BRACKET_NUM.get(bracket))) if bracket != "all" else sum(counts.values())
+    return {"decks": decks or page["decks"], "cards": cards, "tags": base.get("tags") or []}, show
+
 def load_edhrec_cache(cache_dir, refresh=False):
     """EDHREC pages by path. The first time, seeds from the v3 cache so old pages stay usable
     offline; fetch_page upgrades them the next time they're needed online."""
@@ -363,15 +391,17 @@ def load_edhrec_cache(cache_dir, refresh=False):
         cache = {k: v for k, v in load_json(os.path.join(cache_dir, "edhrec_v3.json")).items() if v}
     return cache
 
-def fetch_page(path, cache, refresh=False):
-    old = cache.get(path)
+def fetch_page(path, cache, refresh=False, avg=False):
+    """A commander page (`avg` = the average-deck page, cached as "avg:<path>")."""
+    key = "avg:" + path if avg else path
+    old = cache.get(key)
     if not refresh and old and old.get("v") == EDH_VERSION: return old
     if OFFLINE: return old              # older data beats none; nothing new is recorded
-    data = http_json(EDH + path + ".json")
+    data = http_json((EDH_AVG if avg else EDH) + path + ".json")
     time.sleep(0.8)
     if not data: return old             # missing page (EDHREC answers 403) or failure: never cached
-    cache[path] = parse_edhrec(data)
-    return cache[path]
+    cache[key] = parse_avg(data) if avg else parse_edhrec(data)
+    return cache[key]
 
 # ------------------------------------------------------------ substitutes
 STOP = set("a an the of to and or in on at for from with by as is it its this that your you their they "
@@ -615,14 +645,14 @@ def hits_theme(m, tp):
     return bool(type_words(m) & tribe or card_mechanics(m) & mechs or roles_of(m) & roles
                 or any(has_keyword(m, k) for k in kws))
 
-def fetch_theme_page(path, cache, refresh=False):
-    """fetch_page for a theme page; pages EDHREC doesn't have are remembered for THEME_MISS_DAYS
-    (a commander has 3 themes, so re-asking every run would cost minutes)."""
-    miss = cache.setdefault("_theme_miss", {})
-    if not refresh and time.time() - miss.get(path, 0) < THEME_MISS_DAYS * 86400: return None
-    p = fetch_page(path, cache, refresh)
-    if p is None and not OFFLINE: miss[path] = time.time()
-    elif p is not None: miss.pop(path, None)
+def fetch_theme_page(path, cache, refresh=False, avg=False):
+    """fetch_page for a theme or average-deck page; pages EDHREC doesn't have are remembered for
+    THEME_MISS_DAYS (a commander has 3 themes and 5 average decks, so re-asking every run would cost minutes)."""
+    miss, mk = cache.setdefault("_theme_miss", {}), ("avg:" if avg else "") + path
+    if not refresh and time.time() - miss.get(mk, 0) < THEME_MISS_DAYS * 86400: return None
+    p = fetch_page(path, cache, refresh, avg)
+    if p is None and not OFFLINE: miss[mk] = time.time()
+    elif p is not None: miss.pop(mk, None)
     return p
 
 DIFF_KEYS = ("decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
@@ -938,12 +968,13 @@ def power_profile(roles, gc, avg_cmc):
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
-            want_gaps=True, profile=None):
+            want_gaps=True, profile=None, show=None):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
     `combos` = combos you own in these colours (combos_for_commander()["own"]).
     `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
     `want_gaps` = False skips the gaps list (theme decks show the overview's). `profile` = the
-    commander's profile (computed once per commander by the caller; else from the page's themes)."""
+    commander's profile (computed once per commander by the caller; else from the page's themes).
+    `show` = real play rates (average decks): order and label the gaps instead of the page's rates."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
     _SUB_MEMO.clear()
     tribe = commander_types(cmdr)
@@ -972,6 +1003,8 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     own_w = sum(x[2] for x in template if x[0] in owned)
     own_n = sum(1 for x in template if x[0] in owned)
     missing = [x for x in template if x[0] not in owned]
+    if show:
+        missing = sorted(((k, nm, show.get(k, 0.0)) for k, nm, _ in missing), key=lambda x: -x[2])
 
     # 1+2) One ranked list: cards you own at their own play rate, and popular cards you don't own at
     # (their play rate x how close your best stand-in is x STANDIN). A close copy of a 75% card
@@ -1579,6 +1612,8 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .danger{border:1px solid #f87171;background:rgba(248,113,113,.08);border-radius:8px;padding:10px 12px;margin:10px 0}.danger h4{color:#f87171;margin-top:0}
 .tag.thm{cursor:pointer;background:transparent;border:1px solid var(--line)}.tag.thm.on{border-color:var(--acc);background:rgba(45,212,191,.18);color:var(--ink)}
 .tnote{font-size:.85rem;margin:4px 0 8px}.tnote .tag{cursor:pointer}
+.srcs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:.8rem}
+.srcb{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut);background:transparent;cursor:pointer}.srcb:hover{border-color:var(--acc);color:var(--ink);background:transparent}.srcb.on{border-color:var(--acc);color:var(--ink);background:rgba(45,212,191,.12)}.srcb:disabled{opacity:.5;cursor:default}
 .slotw{display:flex;flex-direction:column;gap:4px}.swap{font-size:.72rem;padding:3px 6px}
 .ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
 .chooser{border:1px solid var(--acc);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(45,212,191,.06)}
@@ -1698,9 +1733,16 @@ const chKey=(d,b,t)=>"dw:"+d.slug+":"+b+(t?":"+t:"");
 function getCh(d,b,t){try{return JSON.parse(localStorage.getItem(chKey(d,b,t))||"{}")||{};}catch(e){return {};}}
 function setCh(d,b,o,t){try{Object.keys(o).length?localStorage.setItem(chKey(d,b,t),JSON.stringify(o)):localStorage.removeItem(chKey(d,b,t));}catch(e){}}
 // the deck for a theme: the normal deck of this bracket with the theme deck's differences applied
+function applyDiff(x,df,extra){const rem=new Set(df.rem);
+  return Object.assign({},x,df,{deck:x.deck.filter(e=>!rem.has(e[0])).concat(df.add)},extra);}
 function themed(d,b,t){const x=d.b[b], th=t&&d.th&&d.th[t], df=th&&th.b[b]; if(!df) return x;
-  const rem=new Set(df.rem);
-  return Object.assign({},x,df,{deck:x.deck.filter(e=>!rem.has(e[0])).concat(df.add),theme:th.name,tdecks:th.decks});}
+  return applyDiff(x,df,{theme:th.name,tdecks:th.decks});}
+// EDHREC's average deck of this bracket, rebuilt with your cards (stored as differences too)
+const hasAvg=(d,b)=>!!(d.av&&d.av[b]);
+const avgd=(d,b)=>applyDiff(d.b[b],d.av[b],{avg:1});
+// which deck a row shows: "avg" = average deck, else a theme slug or "" (also the key for saved choices)
+function rowSel(d,b,r){if(r&&r.dataset.a==="1"&&hasAvg(d,b))return "avg";
+  return r&&r.dataset.t&&d.th&&d.th[r.dataset.t]?r.dataset.t:"";}
 // the deck as you chose it: slot = the missing card's index; buy = keep the missing card
 function effDeck(d,b,x,t){const ch=getCh(d,b,t);
   return x.deck.map(([i,k,f])=>{if(k!=="s"||f<0)return {i,kind:k,f};
@@ -1773,37 +1815,43 @@ function numsHTML(x,b){
   const lbl=bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3";
   const fit=!sel?"":bf.est<=Math.max(sel,2)||sel===5?` <span class="ok">✓ fits ${LBL[b].split(" ")[0]}</span>`:` <span class="bad">above ${LBL[b].split(" ")[0]}</span>`;
   return `<div class="nums">
-  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${x.theme?esc(x.theme)+" decks (all brackets)":LBL[b]+" decks"}.</div>
+  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>${x.avg?`You own ${x.own_n} of the ${x.tmpl_n} non-basic cards in EDHREC's average ${b==="all"?"":LBL[b]+" "}deck (${n(x.decks)} decks).`
+    :`You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${x.theme?esc(x.theme)+" decks (all brackets)":LBL[b]+" decks"}.`}</div>
   <div class="num"><span class="t">Build Readiness</span><b>${ok}/${rd.length} checks</b>${fail?`<ul>${fail}</ul>`:"Roles, curve, mana and real cards all look fine."}</div>
   <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
 
 /* ---------- commander rows ---------- */
 function body(d,b,r){
-  const tsel=r&&r.dataset.t&&d.th&&d.th[r.dataset.t]?r.dataset.t:"";
-  const x=themed(d,b,tsel), tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
+  const sel=rowSel(d,b,r), asel=sel==="avg", tsel=asel?"":sel;
+  const x=asel?avgd(d,b):themed(d,b,tsel), tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
   const tags=d.tags.slice(0,3).map(t=>{const has=d.th&&d.th[t[1]];
     return has?`<button class="tag thm ${t[1]===tsel?"on":""}" data-tsel="${t[1]}" title="${t[1]===tsel?"Back to the overview":"Build this deck around "+esc(t[0])}">${esc(t[0])} · ${Math.round(100*t[2]/tot)}%</button>`
       :`<a class="tag" href="https://edhrec.com/commanders/${d.slug}${pre}/${t[1]}" target="_blank" rel="noopener" title="No EDHREC theme page cached: opens EDHREC">${esc(t[0])} · ${Math.round(100*t[2]/tot)}% ↗</a>`;}).join("")||'<span class="tag dim">no themes found</span>';
   const tnote=tsel?`<p class="tnote">Theme: <b>${esc(x.theme)}</b> · ${LBL[b]} rules · built from EDHREC's ${n(x.tdecks)} ${esc(x.theme)} decks and your cards, leaning into cards that ${esc(x.theme.toLowerCase())} decks need.
     <a href="https://edhrec.com/commanders/${d.slug}/${tsel}" target="_blank" rel="noopener">EDHREC ↗</a> <button class="tag" data-tsel="${tsel}">Back to overview</button></p>`
+    :asel?`<p class="tnote">EDHREC's average ${b==="all"?"":LBL[b]+" "}deck for this commander (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in, ${b==="all"?"no bracket rules":LBL[b]+" rules"}.
+    <a href="https://edhrec.com/average-decks/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC average deck ↗</a></p>`
     :(d.th&&Object.keys(d.th).length?`<p class="tnote dim">Overview: the most common ${LBL[b]} deck. Click a theme above to build around it.</p>`:"");
-  const bks=BR.filter(k=>d.b[k]).map(k=>`<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${d.b[k].pct}% <small>(${n(d.b[k].decks)})</small></button>`).join("");
+  const anyAvg=d.av&&Object.keys(d.av).length;
+  const srcs=anyAvg?`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played with this commander (EDHREC commander page) and your collection">Card stats</button><button class="srcb ${asel?"on":""}" data-asel="1" ${hasAvg(d,b)?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for ${LBL[b]}"`}>Average deck${hasAvg(d,b)?": "+d.av[b].pct+"%":""}</button></div>`:"";
+  const bks=BR.filter(k=>d.b[k]).map(k=>{const pc=asel&&hasAvg(d,k)?d.av[k].pct:d.b[k].pct, dk=asel&&hasAvg(d,k)?d.av[k].decks:d.b[k].decks;
+    return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${pc}% <small>(${n(dk)})</small></button>`;}).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
-  const eff=effDeck(d,b,x,tsel), deckSet=new Set(eff.map(it=>it.i));
+  const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
   const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
   const slot=r&&r.dataset.slot?+r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
-  <div class="info"><div class="tags">${tags}</div>${tnote}<div class="bks">${bks}</div>
+  <div class="info"><div class="tags">${tags}</div>${srcs}${tnote}<div class="bks">${bks}</div>
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
-  <p>Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
+  <p>Deck: ${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
-  ${slot!=null?chooserHTML(d,b,x,slot,tsel):""}${shopHTML(d,b,items,tsel)}
-  ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/commanders/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
-  <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} popular cards missing, top ${x.gaps.length} shown</span></div>
+  ${slot!=null?chooserHTML(d,b,x,slot,sel):""}${shopHTML(d,b,items,sel)}
+  ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/${asel?"average-decks":"commanders"}/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
+  <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown${x.avg?" (most played first)":""}</span></div>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
   ${combosSection(d,b,x)}`;}
 
@@ -1866,8 +1914,10 @@ document.addEventListener("click",e=>{const t=e.target;
   if(bs){const r=bs.closest("details.row"); r.dataset.b=bs.dataset.bsel; r.dataset.slot=""; rerow(r); return;}
   const row=t.closest&&t.closest("details.row[data-i]");
   const ts=t.closest&&t.closest("[data-tsel]");
-  if(ts){const r=ts.closest("details.row"); r.dataset.t=r.dataset.t===ts.dataset.tsel?"":ts.dataset.tsel; r.dataset.slot=""; rerow(r); return;}
-  if(row){const d=DATA[+row.dataset.i], b=rowB(row), tt=row.dataset.t||"";
+  if(ts){const r=ts.closest("details.row"); r.dataset.t=r.dataset.t===ts.dataset.tsel?"":ts.dataset.tsel; r.dataset.a=""; r.dataset.slot=""; rerow(r); return;}
+  const as=t.closest&&t.closest("[data-asel]");
+  if(as&&!as.disabled){const r=as.closest("details.row"); r.dataset.a=as.dataset.asel==="1"?"1":""; if(r.dataset.a)r.dataset.t=""; r.dataset.slot=""; rerow(r); return;}
+  if(row){const d=DATA[+row.dataset.i], b=rowB(row), tt=rowSel(d,b,row);
     const sw=t.closest("[data-swap]");
     if(sw){e.preventDefault(); row.dataset.slot=sw.dataset.swap; rerow(row); const c=row.querySelector(".chooser"); if(c&&c.scrollIntoView)c.scrollIntoView({block:"nearest"}); return;}
     const op=t.closest("[data-pick]");
@@ -2024,6 +2074,7 @@ def main():
     ap.add_argument("--no-open", action="store_true")
     ap.add_argument("--no-combos", action="store_true")
     ap.add_argument("--no-themes", action="store_true", help="skip EDHREC theme pages and theme decks")
+    ap.add_argument("--no-avg", action="store_true", help="skip EDHREC average-deck pages and decks")
     ap.add_argument("--decks-in", default="decks_in")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--serve", action="store_true", help="local app with an upload button")
@@ -2038,7 +2089,8 @@ def main():
         child = ["--out", a.out, "--brackets", a.brackets, "--decks-in", a.decks_in]
         child += ["--only", a.only] if a.only else []
         child += ["--limit", str(a.limit)] if a.limit else []
-        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline), ("--no-themes", a.no_themes)) if on]
+        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline), ("--no-themes", a.no_themes),
+                                         ("--no-avg", a.no_avg)) if on]
         return serve(a, csv_path, child)
     global OFFLINE
     OFFLINE = a.offline
@@ -2078,7 +2130,7 @@ def main():
     # pass 1: EDHREC pages
     edh_path = os.path.join(cache_dir, EDH_CACHE)
     cache = load_edhrec_cache(cache_dir, a.refresh)
-    pages, themes, skipped = {}, {}, 0
+    pages, themes, avgs, skipped = {}, {}, {}, 0
     for i, m in enumerate(cands, 1):
         slug = slugify(m["name"])
         base = fetch_page(slug, cache, a.refresh)
@@ -2095,6 +2147,12 @@ def main():
                 tp = fetch_theme_page(f"{slug}/{tslug}", cache, a.refresh)
                 if tp and tp["cards"]: th[tslug] = (name, tp)
             themes[m["name"]] = th
+        if not a.no_avg:        # EDHREC's average deck, for each bracket the commander page has
+            av = {}
+            for b in pg:
+                ap_ = fetch_theme_page(slug if b == "all" else f"{slug}/{b}", cache, a.refresh, avg=True)
+                if ap_ and ap_["cards"]: av[b] = ap_
+            avgs[m["name"]] = av
         if i % 25 == 0:
             save_json(edh_path, cache); print(f"[{i}/{len(cands)}] EDHREC pages loaded")
     save_json(edh_path, cache)
@@ -2105,6 +2163,9 @@ def main():
         for p in pg.values():
             for k, (name, rate, *_) in p["cards"].items():
                 if rate >= 0.10 and k not in owned and name not in BASIC_NAMES: want.add(name)
+    for av in avgs.values():
+        for ap_ in av.values():
+            want.update(name for k, (name, _) in ap_["cards"].items() if k not in owned and name not in BASIC_NAMES)
     name_meta = resolve_names(want, os.path.join(cache_dir, "scryfall_names.json"), a.refresh)
     prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
 
@@ -2142,27 +2203,8 @@ def main():
         else:
             entry["combos"] = None
         home_src.append((len(results), m, pg["all"], set(entry["b"]["all"]["_names"])))
-        # theme decks: the commander's EDHREC theme page (all brackets) built with each bracket's rules,
-        # leaning into cards that match the theme; stored as differences from the normal deck
-        entry["th"] = {}
-        for tslug, (tname, tp) in (themes.get(m["name"]) or {}).items():
-            per = {}
-            for b in entry["b"]:
-                tx = analyze(m, tp, owned, name_meta, pool_info, b, T, tp, own, focus=tname,
-                             want_gaps=False, profile=prof)
-                names_t = tx.pop("_names")
-                inside = [c for c in own if combo_done(c, names_t)]
-                maybe = [c for c in own if combo_done(c, names_t) is None and two_card_infinite(c)]
-                tx["cin"] = [c["id"] for c in inside]
-                tx["c2"] = sum(1 for c in inside if two_card_infinite(c))
-                tx["pw"]["combo"] = max(0, min(10, len(inside) * 3))
-                tx["bf"] = bracket_fit(tx, inside, maybe)
-                tx["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names_t, legal_names, BRACKET_NUM.get(b))]
-                per[b] = tx
-            entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "b": per}
-        for b, x in entry["b"].items():
-            for t in entry["th"].values():         # now that the normal deck is final, keep only differences
-                if b in t["b"]: t["b"][b] = deck_diff(x, t["b"][b])
+        def combo_info(x, b):
+            """Combos in a finished deck: best ones, the ones inside it, combo bar, Bracket Fit."""
             names = x.pop("_names")
             x["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names, legal_names, BRACKET_NUM.get(b))]
             inside = [c for c in own if combo_done(c, names)]
@@ -2171,6 +2213,32 @@ def main():
             x["c2"] = sum(1 for c in inside if two_card_infinite(c))
             x["pw"]["combo"] = max(0, min(10, len(inside) * 3))
             x["bf"] = bracket_fit(x, inside, maybe)
+            return x
+        # theme decks: the commander's EDHREC theme page (all brackets) built with each bracket's rules,
+        # leaning into cards that match the theme; stored as differences from the normal deck
+        entry["th"] = {}
+        for tslug, (tname, tp) in (themes.get(m["name"]) or {}).items():
+            per = {}
+            for b in entry["b"]:
+                tx = analyze(m, tp, owned, name_meta, pool_info, b, T, tp, own, focus=tname,
+                             want_gaps=False, profile=prof)
+                per[b] = combo_info(tx, b)
+            entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "b": per}
+        # average decks: EDHREC's average 99 for each bracket, rebuilt with your cards (cards you own
+        # stay, missing ones get stand-ins, same bracket rules); also stored as differences
+        entry["av"] = {}
+        for b, ap_ in (avgs.get(m["name"]) or {}).items():
+            if b not in entry["b"]: continue
+            apage, show = avg_as_page(ap_, pg[b], pg["all"], b)
+            ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, profile=prof, show=show)
+            entry["av"][b] = combo_info(ax, b)
+        for b, x in entry["b"].items():
+            for t in entry["th"].values():         # now that the normal deck is final, keep only differences
+                if b in t["b"]: t["b"][b] = deck_diff(x, t["b"][b])
+            if b in entry["av"]:
+                ax = entry["av"][b]
+                entry["av"][b] = dict(deck_diff(x, ax), gaps=ax["gaps"])
+            combo_info(x, b)
         results.append(entry)
         if i % 10 == 0: save_json(csb_path, csb_cache)
         al = entry["b"]["all"]
