@@ -27,8 +27,24 @@ try{const r=document.querySelector('details.row[data-i]');if(r){r.open=true;r.qu
     r.querySelector('[data-bsel="'+k+'"]').click();const on=r.querySelector('.bk.on');   // re-query: a click re-renders the panel
     if(!on||on.dataset.bsel!==k)out.errs.push('bracket chip '+k+' did not switch the deck');}
   out.clicks=(out.clicks||0)+r.querySelectorAll('[data-bsel]').length;
-  for(const fn of (window.__clickTests||[])){try{fn(r,out);}catch(e){out.errs.push('click test: '+e.message);}}}}
+  }}
 catch(e){out.errs.push('clicks: '+e.message);}
+// substitute chooser: open a slot, pick an alternative, then "buy", then reset
+try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length));
+  const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b=b;rerow(r);
+    const e=d.b[b].deck.find(e=>e[1]==='s'&&(e[4]||[]).length), alt=e[4][0][0];
+    r.querySelector('[data-swap="'+e[2]+'"]').click();
+    if(!r.querySelector('.chooser'))out.errs.push('chooser did not open');
+    r.querySelector('.opt[data-pick="'+alt+'"]').click();
+    if(!r.querySelector('textarea').value.includes(front(alt)))out.errs.push('picked alternative not in the deck list');
+    r.querySelector('[data-swap="'+e[2]+'"]').click(); r.querySelector('.opt[data-pick="-1"]').click();
+    if(!(r.querySelector('.shop')||{}).textContent.includes(front(e[2])))out.errs.push('bought card not on the shopping list');
+    r.querySelector('.reset-ch').click();
+    if(Object.keys(getCh(d,b)).length)out.errs.push('reset did not clear choices');
+    out.clicks=(out.clicks||0)+5;}
+  else out.errs.push('no substitute with alternatives found to test');}
+catch(e){out.errs.push('chooser: '+e.message);}
 const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);},500);</script>"""
 
 def browser():

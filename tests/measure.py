@@ -41,17 +41,17 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     T = dw.CardTable()
     x = dw.analyze(m, page, owned, name_meta, pool_info, bracket, T, base, combos)
     ci, rate = set(m["ci"]), lambda k: (page["cards"].get(k) or (None, 0.0))[1]
-    deck = [owned[dw.norm(T.rows[i][0])] for i, _, _ in x["deck"]]
+    deck = [owned[dw.norm(T.rows[i][0])] for i, *_ in x["deck"]]
     keys = [dw.norm(c["name"]) for c in deck]
     nonland = [c for c in deck if dw.card_kind(c) != "land"]
     basics = sum(c for _, c in x["basics"])
     r = {"size": len(deck) + basics,
-         "popular": x["rec"], "picks": sum(1 for (i, k, _), c in zip(x["deck"], deck) if k == "y" and dw.card_kind(c) != "land"), "combo_pieces": x.get("cpc", 0), "subs": x["subs"], "fill": x["fill"], "basics": basics,
+         "popular": x["rec"], "picks": sum(1 for (i, k, *_), c in zip(x["deck"], deck) if k == "y" and dw.card_kind(c) != "land"), "combo_pieces": x.get("cpc", 0), "subs": x["subs"], "fill": x["fill"], "basics": basics,
          "nonbasic_lands": len(deck) - len(nonland),
          "owned_lands": sum(1 for it in pool_info[0] if it[3] == "land"),
          "avg_mv": x["cmc"], "gc": x["gc"], "pct": x["pct"],
          "on_list": sum(1 for k in keys if rate(k) > 0),
-         "low_rate": sum(1 for (i, kind, _), k in zip(x["deck"], keys) if kind == "p" and rate(k) < 0.05)}
+         "low_rate": sum(1 for (i, kind, *_), k in zip(x["deck"], keys) if kind == "p" and rate(k) < 0.05)}
     syn = [(page["cards"].get(k) or [0, 0, None])[2:3] for k, c in zip(keys, deck) if dw.card_kind(c) != "land"]
     syn = [v[0] if v and v[0] is not None else 0 for v in syn]
     r["avg_syn"] = round(sum(syn) / max(1, len(syn)), 4)

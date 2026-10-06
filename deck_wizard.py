@@ -1037,6 +1037,23 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     arena += [f"1 {m['name'].split(' // ')[0]}" for m, _, _ in chosen + lands]
     arena += [f"{c} {b}" for b, c in tally.items()]
 
+    # each substitute slot: why the advised card, and up to 3 other owned cards you could use instead
+    # (not already in the deck, within the Game Changer cap and the bracket's combo rules)
+    slot_alts = {}
+    n_gc = sum(1 for m, _, _ in chosen + lands if m["gc"])
+    for m, kind, mm in chosen + lands:
+        if kind != "s": continue
+        sk = norm(m["name"])
+        used.discard(sk)
+        cands = find_subs(mm, rate_of, pool, by_role, used, True, 8, tribe=tribe, ci=ci)
+        why, alts = "", []
+        for _, k2, m2, w in cands:
+            if k2 == sk: why = w; continue
+            if len(alts) >= 3 or (m2["gc"] and gc_cap is not None and n_gc - m["gc"] >= gc_cap) or blocked(k2): continue
+            alts.append([T.add(m2["name"], m2), w])
+        used.add(sk)
+        slot_alts[id(mm)] = (why, alts)
+
     # gaps: top missing cards with up to 3 owned alternatives
     gaps = []
     for k, name, rate in missing[:GAP_SHOW]:
@@ -1077,8 +1094,9 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "xt": [m["name"] for m, _, _ in allc if is_xturn(m)],
         "tut": roles.get("tutor", 0),
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
-        "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f) if kind == "s" else f or -1]
-                 for m, kind, f in allc],
+        # substitutes also carry [why the advised card, [[alternative, why] x up to 3]]
+        "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f), *slot_alts.get(id(f), ("", []))] if kind == "s"
+                 else [T.add(m["name"], m), kind, f or -1] for m, kind, f in allc],
         "basics": [[T.add(b), c] for b, c in tally.items()],
         "gaps": gaps,
         "arena": "\n".join(arena) + "\n",
@@ -1476,6 +1494,13 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .adv{flex:1;min-width:180px;align-self:center;color:var(--mut);font-size:.85rem;margin:0}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .danger{border:1px solid #f87171;background:rgba(248,113,113,.08);border-radius:8px;padding:10px 12px;margin:10px 0}.danger h4{color:#f87171;margin-top:0}
+.slotw{display:flex;flex-direction:column;gap:4px}.swap{font-size:.72rem;padding:3px 6px}
+.ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
+.chooser{border:1px solid var(--acc);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(45,212,191,.06)}
+.opts{display:flex;gap:8px;flex-wrap:wrap}.opt{display:flex;gap:8px;align-items:flex-start;text-align:left;width:250px;padding:6px;color:var(--ink);border-color:var(--line)}
+.opt img.c{width:70px;flex:none}.opt.on{border-color:var(--acc);background:rgba(45,212,191,.15);color:var(--ink)}.opt:disabled{opacity:.45;cursor:not-allowed}
+.opt.mini{width:auto;padding:3px 8px;font-size:.75rem}
+.shop{margin:8px 0;padding:8px 10px;border:1px dashed #f87171;border-radius:8px;font-size:.85rem}.shop button{margin-left:8px;font-size:.75rem;padding:3px 8px}
 details.more{margin-top:10px}details.more>summary{display:block;padding:4px 0;cursor:pointer;color:var(--acc)}
 .cl li{margin-bottom:6px}.cl a{text-decoration:none}.cl a:hover{text-decoration:underline}b.miss{color:#f87171}
 #pv{position:fixed;width:300px;border-radius:14px;pointer-events:none;z-index:50;display:none;box-shadow:0 10px 30px rgba(0,0,0,.6)}
@@ -1569,16 +1594,42 @@ function grid(cmdrs,items){
   let h=`<div class="grp"><h5>Commander</h5><div class="grid">${cmdrs.map(i=>tile(i)).join("")}</div></div>`;
   Object.keys(GL).forEach(g=>{const L=by[g]; if(!L)return; const cnt=L.reduce((s,it)=>s+(it.n||1),0);
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>tile(it.i,{
-      cls:{s:"sub",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
-      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="f"?"role fill":it.kind==="m"?"missing":
-        it.kind==="y"?(typeof it.f!=="string"?"your pick":CARDS[it.i][2]==="Land"?it.f:"fits: "+it.f):it.kind==="c"?"combo piece":""})).join("")+`</div></div>`;});
+      cls:{s:"sub",s2:"sub",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
+      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="s2"?"for "+front(it.f)+" (your choice)":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
+        it.kind==="y"?(typeof it.f!=="string"?"your pick":CARDS[it.i][2]==="Land"?it.f:"fits: "+it.f):it.kind==="c"?"combo piece":""})
+      +(it.slot!=null?`<button class="swap" data-swap="${it.slot}" title="Choose what fills this slot">⇄ options</button>`:"")).map(h=>h.includes('data-swap')?`<div class="slotw">${h}</div>`:h).join("")+`</div></div>`;});
   return h;}
-function gapsHTML(gaps,deckSet){
+function gapsHTML(gaps,deckSet,slots){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
   return gaps.map(([i,r,subs,used,roles])=>{
-    const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{cls:s===used?"sub":"",note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(why)}</small></div>`).join("");
+    const isSlot=slots&&slots.has(i);
+    const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{cls:s===used?"sub":"",note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(why)}</small>${isSlot&&!deckSet.has(s)?`<button class="opt mini" data-pick="${s}" data-slot="${i}">Use this</button>`:""}</div>`).join("")
+      +(isSlot&&!deckSet.has(i)?`<div class="alt"><button class="opt mini" data-pick="-1" data-slot="${i}">Buy ${esc(front(i))} instead</button></div>`:"");
     const adv=subs.length?"":`<p class="adv">No close match in your collection for this ${esc(roles||"synergy")} slot.${r>=25?" It's a core card for this commander, worth picking up.":" The deck fills this slot with other cards you own."}</p>`;
     return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
+/* ---------- your choices for substitute slots (saved in this browser) ---------- */
+const chKey=(d,b)=>"dw:"+d.slug+":"+b;
+function getCh(d,b){try{return JSON.parse(localStorage.getItem(chKey(d,b))||"{}")||{};}catch(e){return {};}}
+function setCh(d,b,o){try{Object.keys(o).length?localStorage.setItem(chKey(d,b),JSON.stringify(o)):localStorage.removeItem(chKey(d,b));}catch(e){}}
+// the deck as you chose it: slot = the missing card's index; buy = keep the missing card
+function effDeck(d,b,x){const ch=getCh(d,b);
+  return x.deck.map(([i,k,f])=>{if(k!=="s"||f<0)return {i,kind:k,f};
+    const c=ch[f]; if(c===undefined)return {i,kind:"s",f,slot:f}; if(c===-1)return {i:f,kind:"buy",f,slot:f}; return {i:c,kind:"s2",f,slot:f};});}
+function chooserHTML(d,b,x,slot){
+  const e=x.deck.find(r=>r[1]==="s"&&r[2]===slot); if(!e) return "";
+  const [adv,,f,why,alts]=e, ch=getCh(d,b)[f], cur=ch===undefined?adv:ch;
+  const taken=new Set(effDeck(d,b,x).filter(it=>it.slot!==f).map(it=>it.i));
+  const opt=(pick,card,label)=>{const dis=pick!==-1&&pick!=="adv"&&taken.has(card);
+    const on=(pick==="adv"&&ch===undefined)||(pick===-1&&ch===-1)||(typeof pick==="number"&&pick>=0&&ch===pick);
+    return `<button class="opt ${on?"on":""}" data-pick="${pick}" data-slot="${f}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><span><b>${esc(front(card))}</b><br><small>${label}</small></span></button>`;};
+  return `<div class="chooser"><div class="vbar"><h4>Slot for ${esc(front(f))}: pick what goes in</h4><button class="opt-close" data-slot="">Close</button></div>
+  <div class="opts">${opt(-1,f,"keep it: add to shopping list")}${opt("adv",adv,"advised · "+esc(why||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(w))).join("")}</div>
+  ${(alts||[]).length?"":`<small class="dim">No other close match in your collection.</small>`}</div>`;}
+function shopHTML(d,b,items){
+  const buy=items.filter(it=>it.kind==="buy"); if(!buy.length&&!Object.keys(getCh(d,b)).length) return "";
+  const list=buy.map(it=>"1 "+front(it.i)).join("\n");
+  return `<div class="shop"><b>Shopping list (${buy.length})</b> ${buy.map(it=>esc(front(it.i))).join(", ")||"<span class='dim'>nothing yet</span>"}
+  ${buy.length?`<button class="cps" data-text="${esc(list)}">Copy shopping list</button>`:""}<button class="reset-ch">Reset my choices</button></div>`;}
 function deckSection(title,cmdrs,items,text,link){
   return `<div class="vbar"><h3>${title}</h3><button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
   <span class="legend"><i class="lg y"></i>your pick <i class="lg c"></i>combo <i class="lg s"></i>substitute <i class="lg f"></i>role fill <i class="lg m"></i>missing</span></div>
@@ -1637,15 +1688,16 @@ function numsHTML(x,b){
   <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
 
 /* ---------- commander rows ---------- */
-function body(d,b){
+function body(d,b,r){
   const x=d.b[b], tot=d.b.all.decks||1, pre=b==="all"?"":"/"+b;
   const tags=d.tags.slice(0,3).map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}${pre}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} · ${Math.round(100*t[2]/tot)}%</a>`).join("")||'<span class="tag dim">no themes found</span>';
   const bks=BR.filter(k=>d.b[k]).map(k=>`<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}: ${d.b[k].pct}% <small>(${n(d.b[k].decks)})</small></button>`).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
-  const deckSet=new Set(x.deck.map(r=>r[0]));
-  const items=x.deck.map(([i,k,f])=>({i,kind:k,f})).concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
-  const text=["Commander","1 "+front(d.cidx),"","Deck",...x.deck.map(([i])=>"1 "+front(i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
+  const eff=effDeck(d,b,x), deckSet=new Set(eff.map(it=>it.i));
+  const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
+  const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
+  const slot=r&&r.dataset.slot?+r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
   <div class="info"><div class="tags">${tags}</div><div class="bks">${bks}</div>
   ${numsHTML(x,b)}
@@ -1653,9 +1705,10 @@ function body(d,b){
   <p>Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
+  ${slot!=null?chooserHTML(d,b,x,slot):""}${shopHTML(d,b,items)}
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="https://edhrec.com/commanders/${d.slug}${pre}" target="_blank" rel="noopener">EDHREC</a>`)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} popular cards missing, top ${x.gaps.length} shown</span></div>
-  ${gapsHTML(x.gaps,deckSet)}
+  ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
   ${combosSection(d,b,x)}`;}
 
 function render(){
@@ -1706,15 +1759,25 @@ $("imp").innerHTML=DECKS.length?`<h2>Your imported decks</h2>`+DECKS.map((k,j)=>
 
 /* ---------- events ---------- */
 document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open||r.dataset.f)return;
-  r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r)); r.dataset.f=1;},true);
+  r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;},true);
 const rowB=r=>(r.dataset.b&&DATA[+r.dataset.i].b[r.dataset.b])?r.dataset.b:bk();   // a bracket chosen in this row wins
-function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r));}
+function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r),r);}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.classList.contains("vt")){const bd=t.closest(".body");
     bd.querySelectorAll(".vt").forEach(x=>x.classList.toggle("on",x===t));
     bd.querySelectorAll(".view").forEach(v=>v.hidden=!v.classList.contains("v-"+t.dataset.v));}
   const bs=t.closest&&t.closest("[data-bsel]");
-  if(bs){const r=bs.closest("details.row"); r.dataset.b=bs.dataset.bsel; rerow(r); return;}
+  if(bs){const r=bs.closest("details.row"); r.dataset.b=bs.dataset.bsel; r.dataset.slot=""; rerow(r); return;}
+  const row=t.closest&&t.closest("details.row[data-i]");
+  if(row){const d=DATA[+row.dataset.i], b=rowB(row);
+    const sw=t.closest("[data-swap]");
+    if(sw){e.preventDefault(); row.dataset.slot=sw.dataset.swap; rerow(row); const c=row.querySelector(".chooser"); if(c&&c.scrollIntoView)c.scrollIntoView({block:"nearest"}); return;}
+    const op=t.closest("[data-pick]");
+    if(op&&!op.disabled){const ch=getCh(d,b), f=op.dataset.slot, p=op.dataset.pick;
+      if(p==="adv") delete ch[f]; else ch[f]=+p; setCh(d,b,ch); row.dataset.slot=""; rerow(row); return;}
+    if(t.closest(".opt-close")){row.dataset.slot=""; rerow(row); return;}
+    if(t.closest(".reset-ch")){setCh(d,b,{}); row.dataset.slot=""; rerow(row); return;}
+    const cps=t.closest(".cps"); if(cps){navigator.clipboard.writeText(cps.dataset.text); cps.textContent="Copied"; return;}}
   if(t.dataset&&t.dataset.cmdr){e.preventDefault();$("q").value=t.dataset.cmdr;render();$("list").scrollIntoView();}
   if(t.classList.contains("cp")){navigator.clipboard.writeText(t.closest(".body").querySelector("textarea").value);t.textContent="Copied";}});
 const pv=$("pv");

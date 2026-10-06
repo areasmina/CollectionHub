@@ -51,7 +51,8 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
-commander × bracket panel and fails on any JavaScript error. Run it after any change to the HTML template.
+commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
+substitute chooser (pick an alternative, buy, reset) and checks the results. Run it after any change to the HTML template.
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -176,6 +177,13 @@ child process with the same options. `collection_changes()` keeps the added/remo
 Report features: collection bar (file, changes, upload button when served), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
 combos, power profile bars, imported decks section.
+Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
+Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
+(alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). In the report
+"⇄ options" opens a chooser (keep the missing card → shopping list / advised / alternatives); the gaps
+section has "Use this" / "Buy instead" for slots too. Choices are saved per commander+bracket in the
+browser (`localStorage` "dw:<slug>:<bracket>", per-viewer convenience) and change the card view, the
+copyable list and the shopping list (`effDeck`, kinds `s2` = your choice, `buy`). "Reset my choices" clears.
 Combos per commander (report): **Danger zone** (red box, `danger_zone()`): every two-card infinite you can
 assemble in its colours (commander + 1 card, or card + a card meeting its condition), earliest first, with
 the official rule and whether the selected bracket allows it. **Best combos** per bracket (`best_combos()`,
