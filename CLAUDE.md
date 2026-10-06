@@ -48,7 +48,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 (`baseline_v5.json` = original v5 builder, `baseline_pre_step2.json` = after the substitution fix,
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
-`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only)
+`baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error. Run it after any change to the HTML template.
@@ -73,6 +73,7 @@ Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>
 | EDHREC `json.edhrec.com/pages/commanders/<slug>[/<bracket>].json` | Popularity, synergy, lift per commander and per bracket, theme tags | `cache/edhrec_v4.json` (seeded from `edhrec_v3.json`; old pages upgraded when next fetched online) |
 | Commander Spellbook `POST /find-my-combos` | Combos owned (all, with Spellbook `bracketTag`, infinite flag, mana needed) and one card away (top 150), one query per color identity (`ci2:<WUBRG>:<hash>`; old `ci:` entries unused) | `cache/spellbook.json` |
 | Commander Spellbook `POST /estimate-bracket` | Exact Game Changer / mass land denial / extra turn flags for owned cards (`fetch_card_flags`, chunks of 400, new cards only, monthly recheck) | `cache/spellbook_flags.json` |
+| Scryfall `/catalog/keyword-abilities`, `keyword-actions`, `ability-words` | Mechanic names (connive, landfall, mobilize…) → `KEYWORD_VOCAB` minus `KW_SKIP` (evergreen/generic) | `cache/keywords.json` (monthly) |
 | Commander Spellbook `GET /templates/` + Scryfall search | Combo conditions ("Persist Creature") → the Scryfall query Spellbook attaches → card names (`fetch_templates`, monthly; 17/20 resolve, e.g. "Haste Enabler" has no query) | `cache/spellbook_templates.json` |
 | Commander Spellbook `GET /cards/?ordering=-variant_count` | Which cards are in any combo (pool filter; find-my-combos takes ≤600 cards) | `cache/spellbook_cards.json` (monthly) |
 
@@ -141,6 +142,11 @@ Key functions:
   asks for (`THEME_ROLES`), Scryfall `edhrec_rank` staples, Game Changers in B4/B5; minus `FIT_MV` per
   MV above 4. `commander_profile()` reads the commander's text (keyword-only lines and its own name
   removed; `CARES_ABOUT` stricter patterns so "Ureni attacks" isn't an attack theme) + top 3 themes.
+  Profile = (tribe, mechanics, theme roles, keyword mechanics). Keyword mechanics: any `KEYWORD_VOCAB`
+  word the commander's text, own keywords or top-3 theme names (theme "Connive"); a card shares it if its
+  Scryfall `keywords` include it or its text mentions it (`has_keyword`, word forms via `kw_rx`).
+  `built_around()` → `x.core`: deck cards per tribe/mechanic/keyword ("Built around: connive 13 …").
+  Synergy engines that aren't combos (connive, landfall…) live here, not in Spellbook.
 - `find_subs()` – closeness 0–1 of owned stand-ins: share of the missing card's roles × card kind
   (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
   `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon

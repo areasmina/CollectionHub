@@ -405,6 +405,46 @@ def prepare_types(cards):
         if "—" in front and "Land" not in front:
             TYPE_VOCAB.update(re.findall(r"[a-z]+", front.split("—", 1)[1].lower()))
 
+# Mechanics by name (connive, landfall, mobilize, proliferate...) from Scryfall's official keyword catalogs.
+# Evergreen/combat keywords and generic actions are left out: they're everywhere or covered by MECHANICS.
+KEYWORD_VOCAB = set()
+KW_SKIP = {
+    "flying", "trample", "haste", "vigilance", "lifelink", "deathtouch", "reach", "first strike", "double strike",
+    "menace", "hexproof", "indestructible", "flash", "defender", "ward", "equip", "enchant", "protection", "shroud",
+    "intimidate", "fear", "partner", "changeling", "landwalk", "hexproof from", "companion",
+    "scry", "heal", "activate", "attach", "cast", "counter", "create", "destroy", "discard", "exchange", "exile",
+    "play", "reveal", "sacrifice", "shuffle", "tap", "untap", "vote", "transform", "planeswalk", "mill", "regenerate",
+    "fight", "double", "triple", "food", "treasure", "learn", "abandon", "set in motion", "open an attraction",
+    "roll to visit your attractions", "empower jace", "draft from a spellbook", "conjure", "seek", "convert", "meld",
+    "heist", "incorporate", "assemble", "face a dilemma"}
+_KW_RX, _KW_MEMO = {}, {}
+
+def fetch_keyword_catalog(cache_path, refresh=False):
+    """Scryfall /catalog/keyword-abilities, keyword-actions, ability-words (monthly) -> KEYWORD_VOCAB."""
+    cache = {} if refresh else load_json(cache_path)
+    words = cache.get("words")
+    if not words or (time.time() - cache.get("_ts", 0) > 30 * 86400 and not OFFLINE):
+        got = []
+        for c in ("keyword-abilities", "keyword-actions", "ability-words"):
+            r = http_json("https://api.scryfall.com/catalog/" + c); time.sleep(0.11)
+            if not r: got = None; break
+            got += r.get("data", [])
+        if got: words = sorted({w.lower() for w in got}); save_json(cache_path, {"_ts": time.time(), "words": words})
+    KEYWORD_VOCAB.clear(); KEYWORD_VOCAB.update(set(words or []) - KW_SKIP)
+
+def kw_rx(k):
+    if k not in _KW_RX:
+        forms = {k, k + "s", k + "es", k + "d", k + "ed", k + "ing"} | ({k[:-1] + "ing"} if k.endswith("e") else set())
+        _KW_RX[k] = re.compile(r"\b(" + "|".join(sorted(map(re.escape, forms), key=len, reverse=True)) + r")\b")
+    return _KW_RX[k]
+
+def has_keyword(m, k):
+    """Card has mechanic k (Scryfall keyword list) or its rules text mentions it ("whenever ... connives")."""
+    key = (norm(m["name"]), k)
+    if key not in _KW_MEMO:
+        _KW_MEMO[key] = k in {x.lower() for x in m.get("keywords") or []} or bool(kw_rx(k).search(rules_text(m)))
+    return _KW_MEMO[key]
+
 def commander_types(cmdr):
     """Types the commander's own rules text names, e.g. {'dragon'} for Ureni of the Unwritten."""
     text = cmdr["oracle"]
@@ -505,27 +545,39 @@ def card_mechanics(m):
 
 def commander_profile(cmdr, themes):
     """What the commander cares about: its rules text plus its top 3 EDHREC themes.
-    Returns (tribe types, mechanics, roles the theme asks for)."""
+    Returns (tribe types, mechanics, roles the theme asks for, named keyword mechanics)."""
     text = rules_text(cmdr, True)
     mechs = {name for name, (rx, _, _) in MECHANICS.items() if re.search(CARES_ABOUT.get(name, rx), text)}
     tribe, roles = set(commander_types(cmdr)), set()
+    kws = {k for k in KEYWORD_VOCAB if kw_rx(k).search(text)} \
+        | ({k.lower() for k in cmdr.get("keywords") or []} & KEYWORD_VOCAB)
     for t in themes[:3]:
         t = t[0].lower()
+        if t in KEYWORD_VOCAB: kws.add(t)                                  # theme "Connive" -> connive
         mechs |= {name for name, (_, th, _) in MECHANICS.items() if t in th}
         if t in THEME_ROLES: roles.add(THEME_ROLES[t])
         for s in (t[:-3] + "f" if t.endswith("ves") else t[:-1] if t.endswith("s") else t, t):
             if s in TYPE_VOCAB and s not in MAIN_TYPES: tribe.add(s)    # "Dragons" -> dragon
-    return tribe, mechs, roles
+    return tribe, mechs, roles, kws
+
+def built_around(profile, cards):
+    """How many of the deck's non-land cards hit each thing the commander cares about:
+    [[label, count]], biggest first (e.g. [["connive", 9], ["discard", 14]])."""
+    tribe, mechs, _, kws = profile
+    out = [[t.title(), sum(1 for m in cards if t in type_words(m) or is_changeling(m))] for t in sorted(tribe)]
+    out += [[k, sum(1 for m in cards if k in card_mechanics(m))] for k in sorted(mechs)]
+    out += [[k, sum(1 for m in cards if has_keyword(m, k))] for k in sorted(kws)]
+    return sorted((x for x in out if x[1]), key=lambda x: -x[1])[:6]
 
 def card_fit(m, profile, bracket):
     """(fit score, short reason) of an owned non-land card for this commander. Rule-based and
     explainable: shared types/mechanics, useful roles, overall popularity, Game Changer, curve."""
-    tribe, mechs, troles = profile
+    tribe, mechs, troles, kws = profile
     f, why = 0.0, []
     hit = type_words(m) & tribe
     if hit or (tribe and is_changeling(m) and card_kind(m) == "creature"):
         f += FIT_TRIBE; why.append("/".join(sorted(t.title() for t in hit)) or "changeling")
-    shared = sorted(card_mechanics(m) & mechs)
+    shared = sorted(card_mechanics(m) & mechs) + sorted(k for k in kws if has_keyword(m, k))
     if shared:
         f += FIT_MECH * min(3, len(shared)); why.append(", ".join(shared[:3]))
     rs = roles_of(m) & USEFUL_ROLES
@@ -938,6 +990,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "gc": len(gc_names), "gcn": gc_names, "cmc": avg_cmc,
         "pw": power_profile(roles, len(gc_names), avg_cmc),
         "rd": readiness(roles, avg_cmc, odd, sources),
+        "core": built_around(profile, [m for m, _, _ in chosen]),
         "mld": [m["name"] for m, _, _ in allc if is_mld(m)],
         "xt": [m["name"] for m, _, _ in allc if is_xturn(m)],
         "tut": roles.get("tutor", 0),
@@ -1491,6 +1544,7 @@ function body(d,b){
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
   <div class="info"><div class="tags">${tags}</div><div class="bks">${bks}</div>
   ${numsHTML(x,b)}
+  ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
   <p>Deck: ${x.rec} popular + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
@@ -1766,6 +1820,7 @@ def main():
     csb_path = os.path.join(cache_dir, "spellbook.json")
     csb_cache = {} if a.refresh else load_json(csb_path)
     combo_cards = {} if a.no_combos else fetch_combo_cards(os.path.join(cache_dir, "spellbook_cards.json"), a.refresh)
+    fetch_keyword_catalog(os.path.join(cache_dir, "keywords.json"), a.refresh)
     tpl_path = os.path.join(cache_dir, "spellbook_templates.json")
     fetch_templates(set(), tpl_path, a.refresh)        # load the cache
     T, CT, results = CardTable(), ComboTable(), []

@@ -29,6 +29,7 @@ def setup(csv_path):
     dw.ROLE_TAGS.update(dw.fetch_role_tags("cache/role_tags.json"))
     dw.fetch_card_flags(owned, "cache/spellbook_flags.json")
     dw.fetch_templates(set(), "cache/spellbook_templates.json")
+    dw.fetch_keyword_catalog("cache/keywords.json")
     name_meta = dw.resolve_names(set(), "cache/scryfall_names.json")
     dw.prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
     edh = dw.load_edhrec_cache("cache")
