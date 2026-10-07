@@ -1935,7 +1935,11 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
 # ------------------------------------------------------------------ report
 HTML = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Deck Wizard v5</title><style>
+<title>Deck Wizard v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;700&family=Courier+Prime:wght@400;700&display=swap">
+<script>try{document.documentElement.dataset.mode=localStorage.getItem("dw:mode")||"neg";}catch(e){document.documentElement.dataset.mode="neg";}</script>
+<style>
 :root{--bg:#111827;--ink:#e5e7eb;--mut:#9ca3af;--line:#374151;--acc:#2dd4bf;--card:#1f2937;--bar:#374151;--fill:#a78bfa;--pick:#fbbf24;--combo:#f472b6}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
 main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
@@ -2050,9 +2054,66 @@ h4{margin:12px 0 6px;font-size:.9rem}ul{margin:0;padding-left:18px}small{color:v
 textarea{width:100%;font:12px/1.4 ui-monospace,Consolas,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
 button{padding:6px 14px;border:1px solid var(--acc);background:transparent;color:var(--acc);border-radius:6px;font:inherit;cursor:pointer}
 button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
-</style></head><body><main>
-<h1>Deck Wizard</h1>
+/* ===================== Zine theme (design/ZINE_UI_SPEC.md, phase 1: tokens, fonts, modes, texture, controls) ===================== */
+:root,:root[data-mode="neg"]{--bg:#141414;--ink:#F0EBDD;--mute:#BDB8AC;--card:#1C1C1B;--bar:#2B2A27;--line:rgba(240,235,221,.32);--grid:rgba(240,235,221,.08);--gridm:rgba(240,235,221,.03)}
+:root[data-mode="pos"]{--bg:#F0EBDD;--ink:#141414;--mute:#4A4740;--card:#E7E1D1;--bar:#D6CFBD;--line:rgba(20,20,20,.32);--grid:rgba(20,20,20,.10);--gridm:rgba(20,20,20,.04)}
+:root[data-mode="sepia"]{--bg:#E4DDD0;--ink:#2B241C;--mute:#5C5247;--card:#DBD3C5;--bar:#CBC2B2;--line:rgba(43,36,28,.32);--grid:rgba(62,52,42,.12);--gridm:rgba(62,52,42,.05)}
+:root{--y:#FFE600;--c:#00AEEF;--m:#EC008C;--onacc:#141414;--mut:var(--mute);--acc:var(--c);--pick:var(--y);--combo:var(--m);--fill:#A8A397;
+  --band:inset 0 -3px 0 var(--y),inset 0 -6px 0 var(--m),inset 0 -9px 0 var(--c);
+  --head:"Archivo","Arial Narrow",sans-serif;--body:"IBM Plex Mono","Courier New",monospace;--serial:"Courier Prime","Courier New",monospace}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--body)}
+main{position:relative;z-index:1}
+/* texture: one fixed overlay (toner specks + graph paper), never on body, so sticky elements keep working */
+#zt{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+#zt svg{position:absolute;inset:0;width:100%;height:100%;opacity:.35}
+:root[data-mode="neg"] #zt svg{filter:invert(1)}
+#zt::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px),linear-gradient(var(--gridm) 1px,transparent 1px),linear-gradient(90deg,var(--gridm) 1px,transparent 1px);background-size:48px 48px,48px 48px,12px 12px,12px 12px}
+/* type */
+h1,h2,h3,h4,h5,.stats strong{font-family:var(--head);font-weight:900;text-transform:uppercase;color:var(--ink);letter-spacing:.01em}
+h1{font-size:2.6rem;font-stretch:62%;line-height:1;text-shadow:2px 0 0 rgba(0,174,239,.85),-2px 1px 0 rgba(236,0,140,.85)}
+h2{font-size:1.5rem;font-stretch:75%}h3,h4,h5{font-stretch:75%;font-weight:800}
+.stats strong{font-size:1.7rem;font-stretch:75%}.sub,#count,small,.dim{color:var(--mute)}
+#count,.sub{font-family:var(--serial)}
+a,.pct,#bv,.tag,details.more>summary,#coll summary{color:var(--ink)}a{text-decoration-thickness:2px;text-underline-offset:3px}
+/* header with the print-mode toggle */
+.zh{display:flex;flex-wrap:wrap;align-items:center;gap:10px 24px;margin-bottom:4px}.zh h1{margin:0}
+.modes{display:flex;border:2px solid var(--ink);margin-left:auto}
+.modes button{border:0;min-height:36px}.modes button+button{border-left:2px solid var(--ink)}
+/* CMYK band dividers between the main sections */
+.cmyk,#imp:not(:empty)::before,#unused:not(:empty)::before{content:"";display:block;height:9px;margin:18px 0;background:linear-gradient(var(--y) 0 3px,var(--m) 3px 6px,var(--c) 6px 9px)}
+/* controls: square, 2px ink border, band on hover, inverted + band when on */
+button,.up,.bk,.srcb,.tag.thm{border:2px solid var(--ink);border-radius:0;color:var(--ink);background:transparent;font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+button:hover,.up:hover,.bk:hover,.srcb:hover,a.tag:hover,.tag.thm:hover{background:transparent;color:var(--ink);box-shadow:var(--band)}
+button.on,.bk.on,.srcb.on,.tag.thm.on,.modes button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);box-shadow:var(--band)}
+.srcb:disabled,button:disabled{opacity:.45;box-shadow:none}
+.opt,.pinx,.pinb,.cps,.reset-ch{font-family:var(--body);text-transform:none;letter-spacing:0}
+.pinx,.pinb{border:0}.opt{border:2px solid var(--line);color:var(--ink)}.opt.on{border-color:var(--ink);background:var(--card);box-shadow:var(--band)}
+.tag{border-radius:0;background:transparent;border:1.5px solid var(--ink);font-family:var(--body)}
+input[type=search],select,.pinq,textarea{border:2px solid var(--ink);border-radius:0;background:var(--bg);color:var(--ink);font-family:var(--body)}
+.slider input{accent-color:var(--m)}
+.slider,#coll,.row,.num,.chooser,.shop,.danger{border:2px solid var(--ink);border-radius:0;background:var(--card)}
+.bub{border:2px solid var(--ink);border-radius:0;background:var(--card);box-shadow:5px 5px 0 var(--ink)}
+.bub .opt.want{border:3px solid var(--y);background:var(--card)}.bub .opt.want b{color:var(--ink);background:var(--y);color:var(--onacc);padding:0 3px}
+.body,.vbar,.gap{border-top-color:var(--line)}
+.bar{border-radius:0}.bar b{background:var(--ink)}
+/* colours that were dark-only: readable on paper too (text on accents is always #141414) */
+.add{color:#2A8443;font-weight:700}.rem,b.miss{color:#D23B26;font-weight:700}.cb{color:var(--ink)}
+.num .ok{color:var(--ink)}.num .bad{color:var(--onacc);background:var(--y);padding:0 4px}
+.thinw{color:var(--ink);border-left:5px solid var(--y);padding-left:8px}
+.danger{border-color:var(--m)}.danger h4{display:inline-block;color:var(--onacc);background:var(--m);padding:2px 6px}
+.shop{border:2px dashed var(--m)}.ct.buy img.c{outline-color:var(--m)}
+.ks,.kf,.kp,.kc{color:var(--ink);font-weight:700}.ks{box-shadow:inset 0 -.45em 0 var(--c)}.kf{box-shadow:inset 0 -.45em 0 var(--fill)}
+.kp{box-shadow:inset 0 -.45em 0 var(--y)}.kc{box-shadow:inset 0 -.45em 0 var(--m)}
+:root[data-mode="neg"] .ks,:root[data-mode="neg"] .kf,:root[data-mode="neg"] .kp,:root[data-mode="neg"] .kc{box-shadow:none;text-decoration:underline 3px;text-underline-offset:3px}
+:root[data-mode="neg"] .ks{text-decoration-color:var(--c)}:root[data-mode="neg"] .kf{text-decoration-color:var(--fill)}
+:root[data-mode="neg"] .kp{text-decoration-color:var(--y)}:root[data-mode="neg"] .kc{text-decoration-color:var(--m)}
+</style></head><body>
+<div id="zt" aria-hidden="true"><svg><filter id="zdust"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"/><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"/></feComponentTransfer></filter><rect width="100%" height="100%" filter="url(#zdust)"/></svg></div>
+<main>
+<header class="zh"><h1>Deck Wizard</h1>
+<div class="modes" role="group" aria-label="Print mode"><button type="button" data-mode="pos">Positive</button><button type="button" data-mode="neg">Negative</button><button type="button" data-mode="sepia">Sepia</button></div></header>
 <p class="sub">Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own.</p>
+<div class="cmyk" aria-hidden="true"></div>
 <ul class="stats" id="stats"></ul>
 <div id="coll"></div>
 <div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span>
@@ -2068,6 +2129,7 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 </div>
 <div id="imp"></div>
 <div id="unused"></div>
+<div class="cmyk" aria-hidden="true"></div>
 <div id="count"></div>
 <div id="list"></div>
 </main><img id="pv" alt=""><script>
@@ -2081,6 +2143,11 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const n=v=>Number(v).toLocaleString();
 const front=i=>CARDS[i][0].split(" // ")[0];
 DATA.forEach((d,i)=>d.i=i);
+/* ---------- print mode: Positive / Negative / Sepia ---------- */
+function setMode(m){document.documentElement.dataset.mode=m; try{localStorage.setItem("dw:mode",m);}catch(e){}
+  document.querySelectorAll(".modes [data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===m?"true":"false"));}
+setMode(document.documentElement.dataset.mode||"neg");
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest(".modes [data-mode]"); if(b)setMode(b.dataset.mode);});
 $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>${n(ST.unique)}</strong>unique</li><li><strong>${ST.cands}</strong>commanders</li><li><strong>${DATA.length}</strong>analyzed</li>`;
 
 /* ---------- collection file + upload (upload works when opened through Deck Wizard App) ---------- */

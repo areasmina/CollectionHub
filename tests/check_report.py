@@ -59,6 +59,12 @@ try{const tb=document.querySelector('[data-src="avg"]');
     document.querySelector('[data-src=""]').click(); if($('count').textContent.includes('average deck'))out.errs.push('top selector did not go back');
     out.clicks=(out.clicks||0)+2;}}
 catch(e){out.errs.push('top selector: '+e.message);}
+// print modes: each header button switches the page's mode and marks itself pressed
+try{for(const m of ["pos","sepia","neg"]){const b=document.querySelector('.modes [data-mode="'+m+'"]');
+    if(!b){out.errs.push('no print-mode button '+m);continue;} b.click();
+    if(document.documentElement.dataset.mode!==m||b.getAttribute('aria-pressed')!=='true')out.errs.push('print mode '+m+' did not switch');}
+  out.clicks=(out.clicks||0)+3;}
+catch(e){out.errs.push('modes: '+e.message);}
 // substitute slot: its hover bubble (missing card greyed, using yours) offers an alternative, then "buy", then reset
 try{const hasAlt=(d,b)=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length);   // any bracket: few decks have slots
   const b=[bk()].concat(BR).find(b=>DATA.some(d=>hasAlt(d,b))), d=b&&DATA.find(d=>hasAlt(d,b));
