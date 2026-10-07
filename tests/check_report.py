@@ -59,17 +59,17 @@ try{const tb=document.querySelector('[data-src="avg"]');
     document.querySelector('[data-src=""]').click(); if($('count').textContent.includes('average deck'))out.errs.push('top selector did not go back');
     out.clicks=(out.clicks||0)+2;}}
 catch(e){out.errs.push('top selector: '+e.message);}
-// substitute chooser: open a slot, pick an alternative, then "buy", then reset
+// substitute slot: its hover bubble (missing card greyed, using yours) offers an alternative, then "buy", then reset
 try{const hasAlt=(d,b)=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length);   // any bracket: few decks have slots
   const b=[bk()].concat(BR).find(b=>DATA.some(d=>hasAlt(d,b))), d=b&&DATA.find(d=>hasAlt(d,b));
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
   if(r){r.open=true;r.dataset.b=b;rerow(r);
     const e=d.b[b].deck.find(e=>e[1]==='s'&&(e[4]||[]).length), alt=e[4][0][0];
-    r.querySelector('[data-swap="'+e[2]+'"]').click();
-    if(!r.querySelector('.chooser'))out.errs.push('chooser did not open');
-    r.querySelector('.opt[data-pick="'+alt+'"]').click();
+    const bq=sel=>r.querySelector('.bub .opt[data-slot="'+e[2]+'"]'+sel);
+    if(!bq(''))out.errs.push('substitute slot has no hover bubble');
+    bq('[data-pick="'+alt+'"]').click();
     if(!r.querySelector('textarea').value.includes(front(alt)))out.errs.push('picked alternative not in the deck list');
-    r.querySelector('[data-swap="'+e[2]+'"]').click(); r.querySelector('.opt[data-pick="-1"]').click();
+    bq('[data-pick="-1"]').click();
     if(!(r.querySelector('.shop')||{}).textContent.includes(front(e[2])))out.errs.push('bought card not on the shopping list');
     r.querySelector('.reset-ch').click();
     if(Object.keys(getCh(d,b)).length)out.errs.push('reset did not clear choices');
@@ -81,13 +81,13 @@ try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='y'&&(e[3]||
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
   if(r){r.open=true;r.dataset.b=b;r.dataset.t="";r.dataset.a="0";rerow(r);
     const e=d.b[b].deck.find(e=>e[1]==='y'&&(e[3]||[]).length&&e[4]>=0), alt=e[3][0][0];
-    r.querySelector('[data-swap="y'+e[0]+'"]').click();
-    if(!r.querySelector('.chooser'))out.errs.push('pick chooser did not open');
-    r.querySelector('.opt[data-pick="'+alt+'"]').click();
+    const bq=sel=>r.querySelector('.bub .opt[data-slot="y'+e[0]+'"]'+sel);
+    if(!bq(''))out.errs.push('your pick has no hover bubble');
+    bq('[data-pick="'+alt+'"]').click();
     const ta=r.querySelector('textarea').value;
     if(!ta.includes(front(alt)))out.errs.push('swapped-in card not in the deck list');
     if(ta.split('\\n').includes('1 '+front(e[0])))out.errs.push('swapped-out pick still in the deck list');
-    r.querySelector('[data-swap="y'+e[0]+'"]').click(); r.querySelector('.opt[data-pick="-1"]').click();
+    bq('[data-pick="-1"]').click();
     if(!(r.querySelector('.shop')||{}).textContent.includes(front(e[4])))out.errs.push('EDHREC card not on the shopping list');
     r.querySelector('.reset-ch').click();
     if(!r.querySelector('textarea').value.includes(front(e[0])))out.errs.push('reset did not bring the pick back');

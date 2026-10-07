@@ -304,6 +304,13 @@ deck whose source has fewer decks (bracket page, theme page, average deck) shows
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
+**Deck grid UI (Oct 2026):** the deck shows "as it should be": a substitute slot shows the *missing* card greyed with
+"using <your card>" (`tileFor`); hovering any card opens a bubble on it (`.cw` > `.bub`, CSS :hover/:focus-within;
+`bubbleHTML` = `chooserHTML` options for substitute / your-pick slots + in the app "📌 Always include / 🚫 Never use"
+pins). No buttons under cards, no chooser panel at the top; "Other cards you're missing" is a folded `<details>`.
+The big preview sits beside the hovered card (not over its bubble); bubbles near the right edge open leftwards (`.r`).
+Two-faced cards: CardTable row field 5 = 1 (`TWO_FACED` layouts, image path `front/`); tile shows ⟲, hovering it shows
+`BACK(i)` (Scryfall `/back/` image) in the tile and the preview.
 Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
 (alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). In the report
 "⇄ options" opens a chooser (keep the missing card → shopping list / advised / alternatives); the gaps
