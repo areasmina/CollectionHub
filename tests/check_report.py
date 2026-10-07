@@ -150,6 +150,19 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if(r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('unpinned: deck did not go back to the report deck');
     out.clicks=(out.clicks||0)+3;}}
   catch(e){out.errs.push('pins: '+e.message);}
+  // P5 layer: ticker with real numbers, ransom title, #1-#3 tags, open panel's deck cards slide in when on screen
+  try{if(!document.querySelector('#tick span')||!document.querySelector('#tick').textContent.includes('commanders'))out.errs.push('ticker is empty');
+    if(document.querySelectorAll('#ttl .rl').length<10)out.errs.push('ransom title missing');
+    const nr=document.querySelectorAll('details.row').length, nt=document.querySelectorAll('details.row .rank').length;
+    if(nt!==Math.min(3,nr))out.errs.push('expected '+Math.min(3,nr)+' rank tags, found '+nt);
+    const r=document.querySelector('details.row[data-i]'); [...document.querySelectorAll('details.row[open]')].forEach(x=>x.open=false);
+    r.open=true; await wait(()=>r.querySelector('.body .grid .ct'));
+    r.querySelector('.body .grid .ct').scrollIntoView({block:'center'});
+    await wait(()=>r.querySelector('.ct.p5-shown'));
+    if(!r.querySelector('.pname .rl'))out.errs.push('open panel has no ransom name');
+    if(!r.querySelector('.ct.p5-shown'))out.errs.push('deck cards never slid in (IntersectionObserver)');
+    out.clicks=(out.clicks||0)+1;}
+  catch(e){out.errs.push('p5: '+e.message);}
   const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);})();},500);</script>"""
 
 def stub_server(html):

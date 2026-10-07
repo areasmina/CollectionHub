@@ -2084,7 +2084,7 @@ a,.pct,#bv,.tag,details.more>summary,#coll summary{color:var(--ink)}a{text-decor
 /* controls: square, 2px ink border, band on hover, inverted + band when on */
 button,.up,.bk,.srcb,.tag.thm{border:2px solid var(--ink);border-radius:0;color:var(--ink);background:transparent;font-family:var(--head);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
 button:hover,.up:hover,.bk:hover,.srcb:hover,a.tag:hover,.tag.thm:hover{background:transparent;color:var(--ink);box-shadow:var(--band)}
-button.on,.bk.on,.srcb.on,.tag.thm.on,.modes button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);box-shadow:var(--band)}
+button.on,.bk.on,.srcb.on,.tag.thm.on,.modes button[aria-pressed="true"]{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B}
 .srcb:disabled,button:disabled{opacity:.45;box-shadow:none}
 .opt,.pinx,.pinb,.cps,.reset-ch{font-family:var(--body);text-transform:none;letter-spacing:0}
 .pinx,.pinb{border:0}.opt{border:2px solid var(--line);color:var(--ink)}.opt.on{border-color:var(--ink);background:var(--card);box-shadow:var(--band)}
@@ -2117,11 +2117,13 @@ main{max-width:1400px}
 .mb-W{--mc:#F4EDCF;--mt:#141414}.mb-U{--mc:#2470BE;--mt:#FFFFFF}.mb-B{--mc:#2B2530;--mt:#F0EBDD}.mb-R{--mc:#D23B26;--mt:#FFFFFF}.mb-G{--mc:#2A8443;--mt:#FFFFFF}.mb-C{--mc:#A8A397;--mt:#141414}
 .pip{width:22px;height:22px;border-radius:0;border:1.5px solid var(--ink);background:var(--mc);color:var(--mt);font:900 13px/1 var(--head);display:grid;place-items:center;font-style:normal}
 /* battery: 10 cells, lit = round(pct/10); green 80+, yellow 60-79, red under 60 */
-.bat{display:inline-grid;grid-auto-flow:column;grid-auto-columns:6px;gap:2px;height:14px;padding:2px;border:2px solid currentColor;position:relative;margin-right:5px}
-.bat::after{content:"";position:absolute;right:-6px;top:50%;width:4px;height:8px;margin-top:-4px;background:currentColor}
-.bat i{display:block;outline:1px dashed currentColor;outline-offset:-2px;opacity:.35}.bat i.on{background:var(--bc);outline:0;opacity:1}
+.bat{display:inline-flex;align-items:flex-end;gap:3px;width:110px;height:20px;padding:0 3px}
+.bat i{display:block;flex:1 1 0;transform:skewX(-20deg);border:1.5px solid currentColor;background:repeating-linear-gradient(-45deg,currentColor 0 1px,transparent 1px 4px);opacity:.3}
+.bat i.on{background:var(--bc);border-color:#0B0B0B;box-shadow:2px 0 0 #0B0B0B;opacity:1}
+.bat.b10 i:nth-child(1){height:40%}.bat.b10 i:nth-child(2){height:47%}.bat.b10 i:nth-child(3){height:53%}.bat.b10 i:nth-child(4){height:60%}.bat.b10 i:nth-child(5){height:67%}
+.bat.b10 i:nth-child(6){height:73%}.bat.b10 i:nth-child(7){height:80%}.bat.b10 i:nth-child(8){height:87%}.bat.b10 i:nth-child(9){height:93%}.bat.b10 i:nth-child(10){height:100%}
 .bat.hi{--bc:#2A8443}.bat.mid{--bc:var(--y)}.bat.lo{--bc:#D23B26}
-.bat.b5{grid-auto-columns:5px;gap:1px;height:9px;padding:1px;border-width:1.5px}.bat.b5::after{width:3px;height:5px;margin-top:-2.5px;right:-5px}
+.bat.b5{width:40px;height:13px;gap:2px}.bat.b5 i:nth-child(1){height:40%}.bat.b5 i:nth-child(2){height:55%}.bat.b5 i:nth-child(3){height:70%}.bat.b5 i:nth-child(4){height:85%}.bat.b5 i:nth-child(5){height:100%}
 /* two columns: sticky filters + the cards (static on small screens) */
 .disc{display:flex;gap:32px;align-items:flex-start}
 .filt{flex:0 0 260px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--shadow)}
@@ -2132,15 +2134,15 @@ main{max-width:1400px}
 .cc[aria-pressed="true"]{background:var(--mc);color:var(--mt);box-shadow:3px 3px 0 var(--ink);transform:translate(-1px,-1px)}
 .mins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .mins button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:52px;padding:4px;font:700 13px/1 var(--body)}
-.mins button[aria-pressed="true"]{background:var(--ink);color:var(--bg);box-shadow:var(--band)}
+.mins button[aria-pressed="true"]{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B}
 .more{display:flex;flex-direction:column;gap:12px}.more label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;text-transform:uppercase;color:var(--mute)}
 .more select{min-height:40px;text-transform:none}
 .lst{flex:1;min-width:0}#count{text-transform:uppercase;font-size:.75rem;margin:0 0 12px}
 /* commander cards; an opened card spans the whole row so its panel keeps the full width */
-#list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:28px 22px;grid-auto-flow:dense;align-items:start}
+#list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:40px 22px;padding-top:22px;grid-auto-flow:dense;align-items:start}
 .row{overflow:visible;margin:0;border-radius:14px;background:var(--bg);box-shadow:6px 6px 0 var(--shadow)}
 .row[open]{grid-column:1/-1;border-radius:0}
-.cmd{position:relative;display:flex;flex-direction:column;gap:6px;padding:14px 14px 10px;aspect-ratio:488/680;overflow:hidden}
+.cmd{position:relative;display:flex;flex-direction:column;gap:6px;padding:14px 14px 10px;aspect-ratio:488/680}
 .cmh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .cmd .nm{font:800 1.15rem/1.05 var(--head);font-stretch:75%;text-transform:uppercase;overflow-wrap:anywhere}
 .cmd .pips{flex:none}.ctype{font-size:.7rem;margin-top:-2px;color:var(--mute)}
@@ -2158,13 +2160,67 @@ main{max-width:1400px}
 .row[open] .art,.row[open] .cap,.row[open] .facts{display:none}.row[open] .foot{margin:0 0 0 auto;gap:18px;align-items:center}
 .row[open] .cmh{gap:12px}
 @media(max-width:900px){.disc{flex-direction:column;align-items:stretch}.filt{position:static;max-height:none;overflow:visible;flex-basis:auto}}
+/* ===================== Zine x P5, phase 2b: red, slants, ransom letters, motion (from design/zine/P5Discover.dc.html) ===================== */
+:root{--r:#E5191C}:root[data-mode="sepia"]{--r:#A6402B}
+/* ===== Persona-5 energy: red slabs, ransom letters, slashes, snap motion ===== */
+@keyframes p5in{from{opacity:0;transform:translateX(-70px) skewX(-18deg)}60%{opacity:1;transform:translateX(6px) skewX(3deg)}}
+@keyframes p5drop{from{opacity:0;transform:translateY(-46px) rotate(-14deg) scale(1.35)}}
+@keyframes p5tick{to{transform:translateX(-50%)}}
+@keyframes p5spin{to{transform:rotate(360deg)}}
+@keyframes p5slash{from{clip-path:polygon(0 12%,0 0,0 88%,0 100%)}}
+.p5-in{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
+.p5-card{isolation:isolate;transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s}
+.p5-card:hover{transform:rotate(-2deg) translateY(-8px) scale(1.03);box-shadow:12px 12px 0 var(--r) !important}
+.p5-slab{align-self:flex-start;display:inline-block;padding:8px 26px 2px 14px;color:var(--bg);background:var(--ink);transform:skewX(-10deg) rotate(-2deg);box-shadow:10px 8px 0 var(--r)}
+.p5-slab>span{display:inline-block;transform:skewX(10deg)}
+.p5-slash{position:absolute;inset:0 -70px 0 -90px;background-color:var(--r);background-image:radial-gradient(circle,rgba(0,0,0,.28) 0 2px,transparent 2.4px);background-size:8px 8px;clip-path:polygon(4% 14%,100% 0,93% 86%,0 100%);transform:rotate(-3deg);animation:p5slash .45s cubic-bezier(.2,.9,.3,1) both}
+.p5-ticker{margin:0 -40px;transform:rotate(-1deg);border-block:3px solid #0B0B0B;color:#FFFFFF;font-family:"Archivo",sans-serif;font-weight:900;font-stretch:75%;font-size:18px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.p5-track{display:flex;width:max-content;animation:p5tick 32s linear infinite}
+.p5-track span{padding:6px 2em 4px 0}
+.p5-head{clip-path:polygon(0 0,100% 0,95% 100%,0 100%);border-left:8px solid var(--r)}
+.p5-burst{clip-path:polygon(50% 0,61% 30%,93% 15%,73% 43%,100% 55%,69% 63%,80% 96%,52% 74%,27% 98%,33% 66%,0 62%,27% 44%,7% 14%,39% 29%);animation:p5spin 40s linear infinite}
+.p5-h1{font-size:96px}.p5-h1c{font-size:78px}
+@media (max-width:760px){.p5-h1{font-size:54px}.p5-h1c{font-size:46px}.p5-slash{inset:0 -20px 0 -30px}}
+/* buttons skew on hover (the mockup's [data-band] rule, on the report's own controls) */
+.modes button,.bk,.srcb,.mins button,.cc,.vt,.cp,.cps,.reset-ch,.up{transition:transform .14s cubic-bezier(.3,1.7,.5,1),box-shadow .08s steps(2)}
+.modes button:hover,.bk:hover,.srcb:not(:disabled):hover,.mins button:hover,.cc:hover,.vt:hover,.cp:hover,.cps:hover,.reset-ch:hover,.up:hover{transform:skewX(-8deg) translateY(-2px)}
+/* the chosen substitute in a card's bubble: red too */
+.bub .opt.on{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B}.bub .opt.on small{color:#FFFFFF}
+/* header brand + ransom-note titles over a red halftone slash */
+.brand{font:900 2.2rem/1 var(--head);font-stretch:62%;text-transform:uppercase;text-shadow:2px 0 0 rgba(0,174,239,.85),-2px 1px 0 rgba(236,0,140,.85)}
+.ttl{position:relative;align-self:flex-start;display:inline-block;padding:18px 30px 22px 10px;margin:8px 0 6px 6px}
+.ttl h1,.ttl h2{position:relative;margin:0;display:flex;flex-direction:column;gap:8px;line-height:1;text-shadow:none;letter-spacing:0}
+.ttl h1>span,.ttl h2>span{display:flex;flex-wrap:wrap;align-items:flex-end}
+.pname h2.p5-h1c{font-size:clamp(34px,5.4vw,64px)}
+.rl{display:inline-block;margin:0 .03em;padding:.04em .09em 0;line-height:.95;text-transform:uppercase;font-size:var(--sz);transform:rotate(var(--rot));box-shadow:4px 4px 0 rgba(0,0,0,.45);animation:p5drop .5s cubic-bezier(.2,1.5,.4,1) both;animation-delay:var(--d)}
+.rl0{background:var(--ink);color:var(--bg);font-family:var(--head);font-weight:900;font-stretch:62%}
+.rl1{background:var(--r);color:#FFFFFF;font-family:var(--head);font-weight:900;font-stretch:100%}
+.rl2{background:#F0EBDD;color:#0B0B0B;font-family:var(--serial);font-weight:700}
+.rl3{background:transparent;color:var(--ink);font-family:var(--head);font-weight:900;font-stretch:75%;font-style:italic;outline:3px solid var(--ink);outline-offset:-3px}
+.rl4{background:#0B0B0B;color:#F0EBDD;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-style:italic}
+.rl5{background:var(--y);color:#0B0B0B;font-family:var(--head);font-weight:800;font-stretch:125%}
+.rsp{display:inline-block;width:.32em}
+/* ticker: a red slanted strip of real numbers */
+.tickw{position:relative;overflow:hidden;padding:12px 0;margin:4px 0}.tickw .p5-ticker{background:var(--r)}
+/* section titles */
+h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);font-stretch:62%;text-transform:uppercase}
+/* Discover cards: tilt + red shadow on hover (closed cards only), entry stagger, #1-#3 tags */
+.row.p5-card:not([open]):hover{transform:rotate(-2deg) translateY(-8px) scale(1.03)}
+.row[open].p5-card{transform:none}.row[open].p5-card:hover{box-shadow:6px 6px 0 var(--shadow) !important}
+.rank{position:absolute;z-index:3;left:-12px;top:-34px;padding:0 14px;font:900 34px/1.15 var(--head);font-stretch:75%;color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;box-shadow:4px 4px 0 #0B0B0B;transform:skewX(-12deg) rotate(-7deg)}
+.rank.r2{font-size:30px}.rank.r3{font-size:26px}.row[open] .rank{display:none}
+/* deck cards slide in when they reach the screen (IntersectionObserver; Firefox-safe, no view() timelines) */
+.p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
 <div id="zt" aria-hidden="true"><svg><filter id="zdust"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"/><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"/></feComponentTransfer></filter><rect width="100%" height="100%" filter="url(#zdust)"/></svg></div>
 <main>
-<header class="zh"><h1>Deck Wizard</h1>
+<header class="zh"><div class="brand">Deck Wizard</div>
 <div class="modes" role="group" aria-label="Print mode"><button type="button" data-mode="pos">Positive</button><button type="button" data-mode="neg">Negative</button><button type="button" data-mode="sepia">Sepia</button></div></header>
-<p class="sub">Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own.</p>
 <div class="cmyk" aria-hidden="true"></div>
+<div class="tickw" aria-hidden="true"><div class="p5-ticker"><div class="p5-track" id="tick"></div></div></div>
+<div class="ttl"><div class="p5-slash" aria-hidden="true"></div><h1 class="p5-h1" id="ttl" aria-label="What can I build?"></h1></div>
+<p class="sub">&gt; Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own_</p>
 <ul class="stats" id="stats"></ul>
 <div id="coll"></div>
 <div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span>
@@ -2192,6 +2248,11 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const n=v=>Number(v).toLocaleString();
 const front=i=>CARDS[i][0].split(" // ")[0];
 DATA.forEach((d,i)=>d.i=i);
+/* ---------- P5 layer: ransom-note letters (deterministic, same on every load) and the ticker ---------- */
+const ransom=(txt,base)=>txt.split("").map((ch,i)=>ch===" "?'<span class="rsp"></span>'
+  :`<span class="rl rl${(ch.charCodeAt(0)*7+i*11+base)%6}" style="--rot:${((((i*37+base)%13)-6)*1.1).toFixed(1)}deg;--sz:${(0.84+((i*29+base)%5)*0.06).toFixed(2)}em;--d:${i*45+base*12}ms">${esc(ch)}</span>`).join("");
+const tickHTML=items=>{const t=`★ ${items.map(esc).join(" ★ ")} `; return `<span>${t}</span><span>${t}</span>`;};
+$("ttl").innerHTML=`<span aria-hidden="true">${ransom("What can",1)}</span><span aria-hidden="true">${ransom("I build?",4)}</span>`;
 /* ---------- print mode: Positive / Negative / Sepia ---------- */
 function setMode(m){document.documentElement.dataset.mode=m; try{localStorage.setItem("dw:mode",m);}catch(e){}
   document.querySelectorAll(".modes [data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===m?"true":"false"));}
@@ -2206,8 +2267,9 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
   let h=`<span>Collection: <b>${esc(C.csv||"?")}</b> <small>(${esc(C.at||"")})</small></span>`;
   if(D) h+=`<span>${[D.added_n?`<b class="add">+${D.added_n} new cards</b>`:"", D.removed_n?`<b class="rem">−${D.removed_n} removed</b>`:"",
     D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")||"No changes since the previous collection"}</span>`;
-  h+=served?`<label class="up">Upload new collection CSV<input type="file" id="upf" accept=".csv,text/csv" hidden></label><span id="ups"></span>`
-    :`<small class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>, or open <b>Deck Wizard App.bat</b> for an upload button.</small>`;
+  // uploading lives on the Collection page only (phase 3b adds its drop box, which calls dwUpload); the header shows rebuild progress
+  h+=served?`<span id="ups"></span><small class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>.</small>`
+    :`<small class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>.</small>`;
   if(D&&(D.added_n||D.removed_n||D.new_cmdrs_n)) h+=`<details><summary>What changed since the previous collection</summary>
     ${D.new_cmdrs_n?`<p>New commanders: ${names(D.new_cmdrs,D.new_cmdrs_n)}</p>`:""}
     ${D.added_n?`<p class="add">Added: ${names(D.added,D.added_n)}</p>`:""}
@@ -2220,8 +2282,9 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
     else if(s.ok===true&&s.started>ST.built){ups.textContent="Done, reloading…"; location.reload();}
     else if(s.ok===false) ups.textContent="Rebuild failed: "+(s.line||"see the Deck Wizard window");
   }).catch(()=>{ups.textContent="Lost connection to Deck Wizard App (is its window still open?)";});
-  $("upf").addEventListener("change",async e=>{
-    const f=e.target.files[0]; if(!f) return;
+  // the upload itself (POST /upload with the X-Deck-Wizard header); the Collection page's drop box will call it
+  window.dwUpload=async f=>{
+    if(!f) return;
     ups.textContent="Uploading "+f.name+"…";
     try{
       const r=await fetch("/upload",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"text/csv"},body:f});
@@ -2229,8 +2292,7 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
       if(!r.ok){ups.textContent=j.error||"Upload failed"; return;}
       poll();
     }catch(err){ups.textContent="Upload failed: is the Deck Wizard App window still open?";}
-    e.target.value="";
-  });
+  };
   poll();   // a rebuild may already be running (e.g. started from another tab)
 })();
 const br=$("br"); br.max=BR.length-1;
@@ -2429,7 +2491,7 @@ function shopHTML(d,b,items,t){
   ${buy.length?`<small class="dim">(each opens ${esc(STORE.name)})</small>`:""}
   ${buy.length?`<button class="cps" data-text="${esc(list)}">Copy shopping list</button>`:""}<button class="reset-ch">Reset my choices</button></div>`;}
 function deckSection(title,cmdrs,items,text,link,bub){
-  return `<div class="vbar"><h3>${title}</h3><button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
+  return `<div class="vbar">${title?`<h3>${title}</h3>`:""}<button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
   <span class="legend"><i class="lg y"></i>your pick / 📌 pinned <i class="lg c"></i>combo <i class="lg f"></i>role fill <i class="lg m"></i>missing (using your card) · hover a card for options</span></div>
   <div class="view v-cards">${grid(cmdrs,items,bub)}</div>
   <div class="view v-list" hidden><textarea readonly rows="16">${esc(text)}</textarea></div>`;}
@@ -2523,19 +2585,28 @@ function body(d,b,r){
   const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
   const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
-  return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
+  const rdy=x.rd||[], okN=rdy.filter(c=>c[3]).length, bfx=x.bf||{est:2}, seln={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b];
+  const fitx=!seln||bfx.est<=Math.max(seln,2)||seln===5, nbuy=eff.filter(it=>it.kind==="buy").length;
+  const ptick=tickHTML([`Match ${x.pct}%`,`Ready ${okN}/${rdy.length}`,`Bracket ${bfx.est<=2?"B1–2":bfx.est>=4?"B4+":"B3"}`+(seln?` · ${fitx?"fits":"above"} ${LBL[b].split(" ")[0]}`:""),
+    `${d.combos?d.combos.n_own:0} combos owned`,`${(x.sw||[]).length} synergy swaps`,`${nbuy} to buy`]);
+  return `<div class="ttl pname"><div class="p5-slash" aria-hidden="true"></div><h2 class="p5-h1c" aria-label="${esc(d.name)}"><span aria-hidden="true">${ransom(d.name.split(" // ")[0],d.i%6)}</span></h2></div>
+  <div class="tickw" aria-hidden="true"><div class="p5-ticker"><div class="p5-track">${ptick}</div></div></div>
+  <div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
   <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${pinHTML(d,x)}${tnote}${more}
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
   ${synHTML(x)}
   <p>Deck: ${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks${x.pin?` + ${x.pin} pinned`:""}</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
-  <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
-  <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
+  <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p></div></div>
   ${shopHTML(d,b,items,sel)}
-  ${shapeHTML(items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
-  ${deckSection("Your deck",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`,it=>bubbleHTML(d,b,x,it,sel))}
+  <h3 class="p5-slab"><span>The 99</span></h3>
+  ${deckSection("",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`,it=>bubbleHTML(d,b,x,it,sel))}
+  <h3 class="p5-slab"><span>Gaps &amp; stand-ins</span></h3>
   <details class="more"><summary>Other ${x.avg?"average-deck":"popular"} cards you're missing: ${x.n_miss} (top ${x.gaps.length} with your alternatives)</summary>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}</details>
+  <h3 class="p5-slab"><span>Deck stats &amp; combos</span></h3>
+  ${shapeHTML(items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
+  <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div>
   ${combosSection(d,b,x)}`;}
 
 function render(){
@@ -2549,6 +2620,11 @@ function render(){
   const so=$("so").value;
   const rdy=x=>(x.rd||[]).filter(c=>c[3]).length;
   rows.sort(so==="ready"?(a,z)=>rdy(X(z,b))-rdy(X(a,b))||X(z,b).pct-X(a,b).pct:so==="decks"?(a,z)=>X(z,b).decks-X(a,b).decks:so==="combos"?(a,z)=>nc(z)-nc(a)||X(z,b).pct-X(a,b).pct:(a,z)=>X(z,b).pct-X(a,b).pct);
+  const C=ST.coll||{}, D=C.diff, top=rows[0], tx=top&&X(top,b);
+  $("tick").innerHTML=tickHTML(["What can you build with what you own?",`${n(DATA.length)} commanders`,`${n(ST.cards)} cards`]
+    .concat(ST.unused?[`${n(ST.unused.n_unused)} unused cards`]:[])
+    .concat(D&&(D.added_n||D.removed_n||D.new_cmdrs_n)?[[D.added_n?`+${D.added_n} new cards`:"",D.removed_n?`−${D.removed_n} removed`:"",D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")]:[])
+    .concat(top?[`${top.name.split(" // ")[0]} tops ${LBL[b]} at ${tx.pct}%`]:[]));
   $("count").textContent=`${rows.length} commanders with ${SRC==="avg"?"an EDHREC average deck for "+LBL[b]:LBL[b]+" data"}`;
   const sel={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b], RN=["","I","II","III","IV","V"];
   $("list").innerHTML=rows.map((d,k)=>{const x=X(d,b), rd=x.rd||[], ok=rd.filter(c=>c[3]).length, est=(x.bf||{est:2}).est;
@@ -2556,7 +2632,7 @@ function render(){
     // the caption comes from the deck's own numbers, nothing invented
     const cap=rd.length&&ok===rd.length?"(READY TO SLEEVE!)":above?"(TOO SPICY FOR THIS BRACKET!)":combos>=50?`(${combos} COMBOS IN YOUR BINDER!)`
       :x.pct>=75?"(MOSTLY IN YOUR BINDER!)":x.subs?"(NEEDS A FEW STAND-INS)":"";
-    return `<details class="row${above?" above":""}" data-i="${d.i}"><summary class="cmd">
+    return `<details class="row p5-card${k<24?" p5-in":""}${above?" above":""}" data-i="${d.i}"${k<24?` style="animation-delay:${k*70}ms"`:""}><summary class="cmd">${k<3?`<span class="rank r${k+1}" aria-hidden="true">#${k+1}</span>`:""}
     <span class="cmh"><span class="nm">${esc(d.name)}</span><span class="pips" aria-label="Colour identity ${d.ci.join("")||"colourless"}">${pips(d.ci)}</span></span>
     <span class="ctype">${d.tags.slice(0,3).map(t=>esc(t[0])).join(" · ")||"no EDHREC themes yet"}</span>
     ${d.img?`<img class="art" src="${esc(d.img.replace("/normal/","/art_crop/"))}" alt="" loading="lazy">`:`<span class="art"></span>`}
@@ -2595,10 +2671,18 @@ $("imp").innerHTML=DECKS.length?`<h2>Your imported decks</h2>`+DECKS.map((k,j)=>
 })();
 
 /* ---------- events ---------- */
-document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open||r.dataset.f)return;
-  r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;},true);
+// cards are visible by default; with an observer (and motion allowed) they wait (p5-wait) and slide in (p5-shown) as they
+// reach the screen, then are unobserved. Only the panel opened or re-rendered last is observed.
+const P5IO=("IntersectionObserver" in window)&&!matchMedia("(prefers-reduced-motion: reduce)").matches
+  ?new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return; const c=e.target;
+      c.classList.remove("p5-wait"); c.classList.add("p5-shown"); P5IO.unobserve(c);}),{rootMargin:"0px 0px -8% 0px"}):null;
+function p5watch(r){if(!P5IO)return; P5IO.disconnect();
+  r.querySelectorAll(".body .grid .ct").forEach(c=>{c.classList.add("p5-wait"); P5IO.observe(c);});}
+document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open)return;
+  if(!r.dataset.f){r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;}
+  p5watch(r);},true);
 const rowB=r=>(r.dataset.b&&DATA[+r.dataset.i].b[r.dataset.b])?r.dataset.b:bk();   // a bracket chosen in this row wins
-function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r),r);}
+function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r),r); if(r.open)p5watch(r);}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.classList.contains("vt")){const bd=t.closest(".body");
     bd.querySelectorAll(".vt").forEach(x=>x.classList.toggle("on",x===t));

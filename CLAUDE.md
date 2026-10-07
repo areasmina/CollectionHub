@@ -305,6 +305,12 @@ deck whose source has fewer decks (bracket page, theme page, average deck) shows
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
+**Zine × P5 UI** (design/ZINE_UI_SPEC.md; Phases 1, 2, 2b done): print modes (`dw:mode`), Discover cards with P5
+slanted-bar batteries (`bat()`, heights via nth-child), red `--r` active state, ransom-note titles (`ransom()`; page
+title + the open panel's name only), tickers (`#tick`, panel ticker in `body()`), `p5-slab` section titles, `p5-card`
+hover + `p5-in` stagger (first 24) + #1–#3 tags, deck cards slide in via one shared IntersectionObserver
+(`p5watch`, open panel only, `p5-wait`/`p5-shown`; Firefox-safe, no `animation-timeline`). No upload button in the
+header: `window.dwUpload(file)` keeps the upload + `/status` polling for the Collection page (Phase 3b).
 **Buy links:** `STORE_URL` / `--store-url` → `STATS.store` {url, name}; JS `BUY(i)` / `buyA()`: 🛒 links in the shopping
 list, under the "buy" option in bubbles and under each card in "Other cards you're missing" (front face name, URL-encoded).
 **Deck grid UI (Oct 2026):** the deck shows "as it should be": a substitute slot shows the *missing* card greyed with
