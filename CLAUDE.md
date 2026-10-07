@@ -76,7 +76,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
 `baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
-damage to each opponent = drain)
+damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -193,6 +193,14 @@ Key functions:
   `blocked()`. Stored as `x.sw` [[in, out, why]] and `x.bench` (next `BENCH_SHOW` 8 owned cards, with why); report:
   "Synergy: N swaps · next in line" (`synHTML`). Effect vs `baseline_avg`: ~11 swaps per All-decks list,
   removal/wipes/ramp/counters kept, draw +4.5, combos in deck +0.05, run 33 → 46 s.
+- **Win conditions and go-wide** (engine fix 1, Oct 2026; test case Trostani: Craterhoof/Moonshaker had fit 0):
+  role `win` from text (`WIN_RX_CARD`: overruns/team pumps incl. "gain trample and get +X/+X", "number of creatures
+  you control", repeatable drain/burn to each opponent, alt wins, extra combats); Build Readiness check `READY_WIN` 3.
+  ENGINES "go wide": creatures and creature-token makers feed team pumps / count-your-creatures payoffs. Swaps:
+  `SWAP_KEEP` (+win) protects a job card only while its role is ≤ target + `SWAP_SLACK` 2 (Trostani had 16 ramp for
+  a target of 10, all untouchable); a candidate that finds no room no longer ends the swap loop; swapped-in cards
+  stay and swapped-out cards don't return (no churn). Effect vs `baseline_gems`: own picks +4.0, removal −1.7
+  (12.5 left, target 8), ramp −1.5 (16.2), wipes −0.4, combos in deck +0.06, readiness +0.66 (one more check).
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you

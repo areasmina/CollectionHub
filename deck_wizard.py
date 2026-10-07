@@ -217,7 +217,7 @@ def resolve_names(names, cache_path, refresh=False):
     return cache
 
 # ---------------------------------------------------------------- roles
-ROLE_NAMES = ["ramp", "draw", "removal", "wipe", "tutor", "counter", "recursion", "sac"]
+ROLE_NAMES = ["ramp", "draw", "removal", "wipe", "tutor", "counter", "recursion", "sac", "win"]
 # Scryfall Tagger function tags; several spellings tried, results merged
 TAG_QUERIES = {
     "ramp": ["ramp"], "draw": ["draw", "card-draw"], "removal": ["removal"],
@@ -269,7 +269,18 @@ def regex_roles(c):
     if re.search(r"counter target (spell|activated|triggered|noncreature|creature)", o): r.add("counter")
     if re.search(r"return [^.]*cards? from (your|a) graveyard", o): r.add("recursion")
     if re.search(r"sacrifice (a|another) (creature|permanent|artifact)[^.]*:", o): r.add("sac")
+    if WIN_RX_CARD.search(o): r.add("win")
     return r
+
+# A win condition, read from rules text (no tag for it): overruns and team-wide pumps ("creatures you control gain
+# trample and get +X/+X"), payoffs counting your creatures, repeatable drain/burn to each opponent, extra combats,
+# "you win the game" / opponents lose. Two-card combos are counted separately (Spellbook).
+WIN_RX_CARD = re.compile(
+    r"creatures you control (gain [^.]{0,40}? and )?get \+(x|\d+)/\+(x|\d+) until end of turn|"
+    r"where x is the number of creatures you control|"
+    r"\byou win the game\b|(each opponent|target player|that player) loses the game|"
+    r"whenever [^.]{0,80}(each opponent loses \w+ life|deals? \w+ damage to each opponent)|"
+    r"additional combat phase|double strike and trample")
 
 def roles_of(m):
     k = norm(m["name"])
@@ -279,7 +290,7 @@ def roles_of(m):
     else:
         rx, r = None, set()
         for role in ROLE_NAMES:
-            if role in ROLE_TAGS:
+            if role in ROLE_TAGS and role != "win":
                 if k in ROLE_TAGS[role]: r.add(role)
             else:
                 rx = rx if rx is not None else regex_roles(m)
@@ -811,6 +822,10 @@ ENGINES = [
      r"creates? [^.]{0,60}creature tokens?|when [^.]{0,15}~ dies|\bpersist\b|\bundying\b|return ~ from your graveyard",
      (), r"sacrifice (a|an|another|one or more|any number of|x) (creature|nontoken creature|permanent)s?[^.:]{0,20}:|"
          r", sacrifice (a|an|another) creature"),
+    ("go wide",
+     r"creates? [^.]{0,60}creature tokens?|creates? [^.]{0,30}\b(x|two|three|four|five|that many)\b[^.]{0,30}tokens?|\bpopulate\b",
+     ("creature",), r"creatures you control (gain [^.]{0,40}? and )?get \+|for each creature you control|number of creatures you control|"
+         r"other creatures you control get \+|creatures you control have|\bconvoke\b|whenever one or more creatures you control attack"),
     ("tokens",
      r"creates? [^.]{0,60}\btokens?\b|\bpopulate\b|\bamass\b|\bincubate\b",
      (), r"tokens? you control|whenever (a|one or more|another) [^.]{0,40}\btokens?\b[^.]{0,20}enters?|\bpopulate\b|"
@@ -854,8 +869,9 @@ SYN_CAP = 12            # linked cards per engine that count (a 40th discard out
 SYN_DECK_W = 0.05       # score per unit of deck synergy (sum over engines of sqrt(linked cards))
 SWAP_MAX = 15           # synergy swaps per deck at most
 SWAP_MARGIN = 0.04      # a swap must gain at least this much (keeps the deck from churning)
-SWAP_KEEP = {"removal", "wipe", "counter", "ramp", "tutor"}   # a card doing one of these jobs only
+SWAP_KEEP = {"removal", "wipe", "counter", "ramp", "tutor", "win"}   # a card doing one of these jobs only
                         # leaves for a card doing the same job (synergy must not eat the interaction)
+SWAP_SLACK = 2          # ...but only while that role is at most this many above its ROLE_TARGETS (a surplus can go)
 BENCH_SHOW = 8          # "next in line" cards listed per deck
 SWAP_POOL = 40          # candidates re-checked per swap (best by score + synergy at the start)
 _ENG_MEMO = {}
@@ -1020,6 +1036,7 @@ def role_text(mm):
 # Build Readiness: plain checks on the generated 99 (no invented score). Bracket Fit: the lowest
 # bracket the 99 fits under the official Commander Brackets rules we can check from card data.
 READY_MV = 3.5          # average mana value of non-land cards at most this
+READY_WIN = 3           # win conditions (role "win", WIN_RX_CARD) at least this many; combos listed separately
 READY_ODD = 16          # stand-ins + role fill: at most this many of the 64 non-land slots
 MLD_RX = re.compile(r"destroy all [^.]*\blands\b|exile all [^.]*\blands\b|sacrifices? (all|each) [^.]*\blands?\b"
                     r"|lands don't untap|lands your opponents control don't untap")
@@ -1035,6 +1052,7 @@ def readiness(roles, avg_cmc, odd, sources):
         c, v = min(sources.items(), key=lambda kv: (kv[1], kv[0]))
         out.append(["src", f"{c} {v}", need, v >= need])
     out.append(["odd", odd, READY_ODD, odd <= READY_ODD])
+    out.append(["win", roles.get("win", 0), READY_WIN, roles.get("win", 0) >= READY_WIN])
     return out
 
 # Official Commander Brackets rules on combos (Wizards, Feb 2025; unchanged by the Feb 2026 update):
@@ -1379,37 +1397,47 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         return score(norm(m["name"])) + syn.score(m, inside)
     cands = sorted(((k, m) for k, m, _, kd in pool if kd != "land" and k not in used),
                    key=lambda it: -total(it[1], False))[:SWAP_POOL]
-    for _ in range(SWAP_MAX):
-        best, bv = None, -1
-        for k, m in cands:
-            if k in used or (m["gc"] and not gc_room()) or blocked(k): continue
-            v = total(m, False)
-            if v > bv: best, bv = (k, m), v
-        if not best: break
-        k, m = best
-        rs = roles_of(m)
-        out, ov = None, None
+    def weakest_for(m):
+        """The weakest card candidate m may replace: (index in chosen, its total) or (None, None).
+        A card doing a SWAP_KEEP job is kept while that role is short or near its target (+SWAP_SLACK);
+        a surplus (e.g. 16 ramp for a target of 10) can make room for anything."""
+        rs, out, ov = roles_of(m), None, None
         for j, (dm, kind, _) in enumerate(chosen):
             if kind not in "pyf" or (dm["gc"] and not m["gc"]): continue
             dk = norm(dm["name"])
+            if dk in swapped_in: continue                                        # no churn: swaps stay
             if any(combo_done(c, used) for c in by_card.get(dk, [])): continue    # completes a combo here
             drs = roles_of(dm)
-            if drs & SWAP_KEEP and not drs & SWAP_KEEP & rs: continue
+            kept = {r for r in drs & SWAP_KEEP if r not in ROLE_TARGETS or rcount[r] <= ROLE_TARGETS[r] + SWAP_SLACK}
+            if kept and not kept & rs: continue
             if any(rcount[r] <= ROLE_TARGETS[r] and r not in rs for r in drs if r in rcount): continue
             v = total(dm, True)
             if ov is None or v < ov: out, ov = j, v
-        if out is None or bv < ov + SWAP_MARGIN: break
-        dm = chosen[out][0]
-        dk = norm(dm["name"])
-        used.discard(dk); syn.add(dm, -1)
-        if bnum is not None: state["xt"] -= is_xturn(dm)
-        if blocked(k):                                   # without dm the rules still hold for k?
-            used.add(dk); syn.add(dm); state["xt"] += is_xturn(dm) if bnum is not None else 0
-            cands = [c for c in cands if c[0] != k]; continue
-        why = syn.why(m)
-        chosen[out] = (m, "y", why); used.add(k); note(k); syn.add(m)
-        for r in rcount: rcount[r] += (r in rs) - (r in roles_of(dm))
-        swaps.append([T.add(m["name"], m), T.add(dm["name"], dm), T.s(why)])
+        return out, ov
+    skip, swapped_in = set(), set()     # skip: no room or breaks the rules; also cards swapped out (no return)
+    for _ in range(SWAP_MAX):
+        # best candidates first; one that finds no room doesn't stop the others from trying
+        order = sorted(((total(m, False), k, m) for k, m in cands if k not in used and k not in skip
+                        and not (m["gc"] and not gc_room()) and not blocked(k)), key=lambda t: (-t[0], t[1]))
+        swapped = False
+        for bv, k, m in order:
+            out, ov = weakest_for(m)
+            if out is None or bv < ov + SWAP_MARGIN: continue
+            dm = chosen[out][0]
+            dk = norm(dm["name"])
+            used.discard(dk); syn.add(dm, -1)
+            if bnum is not None: state["xt"] -= is_xturn(dm)
+            if blocked(k):                               # without dm the rules still hold for k?
+                used.add(dk); syn.add(dm); state["xt"] += is_xturn(dm) if bnum is not None else 0
+                skip.add(k); continue
+            rs, why = roles_of(m), syn.why(m)
+            chosen[out] = (m, "y", why); used.add(k); note(k); syn.add(m)
+            for r in rcount: rcount[r] += (r in rs) - (r in roles_of(dm))
+            swaps.append([T.add(m["name"], m), T.add(dm["name"], dm), T.s(why)])
+            swapped_in.add(k); skip.add(dk)
+            swapped = True
+            break
+        if not swapped: break
     # next in line: the owned cards that came closest, with why (so a near miss is visible, not silent)
     bench = sorted(((total(m, False), k, m) for k, m in cands if k not in used and not blocked(k)
                     and (not m["gc"] or gc_room())), key=lambda t: (-t[0], t[1]))[:BENCH_SHOW]
@@ -2257,7 +2285,7 @@ function combosSection(d,b,x){
   <details class="more"><summary>All combos in your collection (${C.n_own}) and one card away (${C.n_near})</summary>${comboHTML(C,x.cin,"In your collection","One card away",true)}</details>`;}
 
 /* ---------- the three numbers ---------- */
-const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill"};
+const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill",win:"Win conditions (finishers, drain, alt wins)"};
 function numsHTML(x,b){
   const rd=x.rd||[], ok=rd.filter(c=>c[3]).length;
   const fail=rd.filter(c=>!c[3]).map(([k,v,t])=>`<li>${RDL[k]}: ${esc(v)} <small>(${k==="mv"||k==="odd"?"max":"want"} ${t})</small></li>`).join("");
