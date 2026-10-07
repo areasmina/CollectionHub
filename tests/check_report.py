@@ -117,7 +117,7 @@ try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='y'&&(e[3]||
 catch(e){out.errs.push('pick chooser: '+e.message);}
 // EDHREC weight / spending: weight 1 builds through /deck (stub), the new card is added and shown;
 // $$$ shows the app's error; weight 3 + $$ goes back to the report's own deck
-const wait=c=>new Promise(res=>{let n=0;const f=()=>c()||++n>100?res():setTimeout(f,50);f();});
+const wait=(c,max=100)=>new Promise(res=>{let n=0;const f=()=>c()||++n>max?res():setTimeout(f,50);f();});
 (async()=>{try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
   if(!r)out.errs.push('no row for the level test');
   else{r.open=true;r.dataset.b="all";r.dataset.t="";r.dataset.a="0";rerow(r);const n0=CARDS.length;
@@ -155,12 +155,15 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if(document.querySelectorAll('#ttl .rl').length<10)out.errs.push('ransom title missing');
     const nr=document.querySelectorAll('details.row').length, nt=document.querySelectorAll('details.row .rank').length;
     if(nt!==Math.min(3,nr))out.errs.push('expected '+Math.min(3,nr)+' rank tags, found '+nt);
-    const r=document.querySelector('details.row[data-i]'); [...document.querySelectorAll('details.row[open]')].forEach(x=>x.open=false);
-    r.open=true; await wait(()=>r.querySelector('.body .grid .ct'));
+    // a commander that's closed now (re-opening one in the same task fires no toggle event)
+    const r=document.querySelector('details.row[data-i]:not([open])')||document.querySelector('details.row[data-i]');
+    if(r.open){r.open=false; await new Promise(res=>setTimeout(res,50));}
+    r.open=true; await wait(()=>r.querySelector('.body .grid .ct.p5-wait, .body .grid .ct.p5-shown'),40);   // the panel is being watched
     r.querySelector('.body .grid .ct').scrollIntoView({block:'center'});
-    await wait(()=>r.querySelector('.ct.p5-shown'));
+    await wait(()=>r.querySelector('.ct.p5-shown'),40);
     if(!r.querySelector('.pname .rl'))out.errs.push('open panel has no ransom name');
-    if(!r.querySelector('.ct.p5-shown'))out.errs.push('deck cards never slid in (IntersectionObserver)');
+    if(!r.querySelector('.ct.p5-shown'))out.errs.push('deck cards never slid in (IntersectionObserver): open '+r.open+', cards '+r.querySelectorAll('.body .grid .ct').length
+      +', waiting '+r.querySelectorAll('.ct.p5-wait').length+', watched '+P5ON.length+', observer '+!!P5IO);
     out.clicks=(out.clicks||0)+1;}
   catch(e){out.errs.push('p5: '+e.message);}
   const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);})();},500);</script>"""

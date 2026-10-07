@@ -2676,8 +2676,17 @@ $("imp").innerHTML=DECKS.length?`<h2>Your imported decks</h2>`+DECKS.map((k,j)=>
 const P5IO=("IntersectionObserver" in window)&&!matchMedia("(prefers-reduced-motion: reduce)").matches
   ?new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return; const c=e.target;
       c.classList.remove("p5-wait"); c.classList.add("p5-shown"); P5IO.unobserve(c);}),{rootMargin:"0px 0px -8% 0px"}):null;
-function p5watch(r){if(!P5IO)return; P5IO.disconnect();
-  r.querySelectorAll(".body .grid .ct").forEach(c=>{c.classList.add("p5-wait"); P5IO.observe(c);});}
+let P5ON=[];   // cards of the panel being watched; switching panels shows any that hadn't slid in yet
+function p5show(c){if(!c.classList.contains("p5-wait"))return; c.classList.remove("p5-wait"); c.classList.add("p5-shown"); P5IO.unobserve(c);}
+// backup for engines whose observer misses a card (seen in headless Chromium after switching panels): a waiting card
+// that is on screen is shown on the next scroll, at most once per frame, so a card can never stay invisible
+let P5RAF=0;
+addEventListener("scroll",()=>{if(!P5ON.length||P5RAF)return; P5RAF=requestAnimationFrame(()=>{P5RAF=0;
+  P5ON=P5ON.filter(c=>{if(!c.classList.contains("p5-wait"))return false; const b=c.getBoundingClientRect();
+    if(b.top<innerHeight*0.92&&b.bottom>0){p5show(c);return false;} return true;});});},{passive:true});
+function p5watch(r){if(!P5IO)return;
+  P5ON.forEach(c=>{P5IO.unobserve(c); c.classList.remove("p5-wait");}); P5ON=[];
+  r.querySelectorAll(".body .grid .ct").forEach(c=>{c.classList.add("p5-wait"); P5IO.observe(c); P5ON.push(c);});}
 document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open)return;
   if(!r.dataset.f){r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;}
   p5watch(r);},true);
