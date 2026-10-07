@@ -601,6 +601,13 @@ FIT_THEME_ROLE = 0.03   # the role is the theme itself (e.g. ramp for a Big Mana
 FIT_STAPLE = ((1000, 0.03), (3000, 0.015))   # Scryfall's overall EDHREC rank
 FIT_GC = 0.05           # Game Changers, only in brackets without a cap
 FIT_MV = 0.02           # minus this per mana value above 4
+# EDHREC weight (app slider 1-4): multiplies the EDHREC part of a non-land card's score (play rate + synergy);
+# fit, theme focus and card-to-card synergy keep their weight. 1 = your collection decides, 4 = closest to
+# EDHREC's list. The static report is level 3 (x1.0).
+EDH_WEIGHT = {1: 0.4, 2: 0.7, 3: 1.0, 4: 1.4}
+# Spending level (app slider $/$$/$$$): EDHREC's budget / normal / expensive version of every page
+# (commander, bracket, theme, average deck: "<path>/budget", "<path>/expensive"). The report is $$.
+SPEND_SUFFIX = {1: "budget", 2: "", 3: "expensive"}
 OFF_LIST = 0.05         # cards below this play rate count as "your pick" rather than "popular"
 COMBO_W = {"upgraded": 0.12, "optimized": 0.25, "cedh": 0.25}   # bonus for a combo you own, per bracket
 COMBO_BRACKETS = set(COMBO_W)
@@ -664,12 +671,12 @@ def hits_theme(m, tp):
     return bool(type_words(m) & tribe or card_mechanics(m) & mechs or roles_of(m) & roles
                 or any(has_keyword(m, k) for k in kws))
 
-def fetch_theme_page(path, cache, refresh=False, avg=False):
+def fetch_theme_page(path, cache, refresh=False, avg=False, max_days=None):
     """fetch_page for a theme or average-deck page; pages EDHREC doesn't have are remembered for
     THEME_MISS_DAYS (a commander has 3 themes and 5 average decks, so re-asking every run would cost minutes)."""
     miss, mk = cache.setdefault("_theme_miss", {}), ("avg:" if avg else "") + path
     if not refresh and time.time() - miss.get(mk, 0) < THEME_MISS_DAYS * 86400: return None
-    p = fetch_page(path, cache, refresh, avg)
+    p = fetch_page(path, cache, refresh, avg, max_days)
     if p is None and not OFFLINE: miss[mk] = time.time()
     elif p is not None: miss.pop(mk, None)
     return p
@@ -1069,10 +1076,11 @@ def owned_duals(pool, ci, used, n_lands, n_tapped):
         out.append(m); n_tapped += tapped
     return out
 
-def card_values(edh, base, owned, name_meta):
+def card_values(edh, base, owned, name_meta, ew=1.0):
     """(rate_of, play_of, value_of) for one EDHREC page: the play rate as EDHREC shows it, the rate
     used for choosing (non-lands blended with the all-decks page; lands keep the page's own rate, they
-    only compete with lands), and play rate + SYN_W x EDHREC synergy (lands: rate only)."""
+    only compete with lands), and play rate + SYN_W x EDHREC synergy (lands: rate only), x `ew`
+    (EDH_WEIGHT) for non-lands."""
     cards = edh["cards"]
     rate_of = lambda k: (cards.get(k) or (None, 0.0))[1]
     rate_of.key = id(cards)
@@ -1084,7 +1092,7 @@ def card_values(edh, base, owned, name_meta):
             if v and len(v) > 2 and v[2] is not None: return v[2]
         return 0.0
     play_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
-    value_of = lambda k: play_of(k) if kind_of(k) == "land" else play_of(k) + SYN_W * syn_of(k)
+    value_of = lambda k: play_of(k) if kind_of(k) == "land" else ew * (play_of(k) + SYN_W * syn_of(k))
     return rate_of, play_of, value_of
 
 # ------------------------------------------------------------ unused cards
@@ -1129,13 +1137,14 @@ def power_profile(roles, gc, avg_cmc):
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
-            want_gaps=True, profile=None, show=None):
+            want_gaps=True, profile=None, show=None, ew=1.0):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
     `combos` = combos you own in these colours (combos_for_commander()["own"]).
     `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
     `want_gaps` = False skips the gaps list (theme decks show the overview's). `profile` = the
     commander's profile (computed once per commander by the caller; else from the page's themes).
-    `show` = real play rates (average decks): order and label the gaps instead of the page's rates."""
+    `show` = real play rates (average decks): order and label the gaps instead of the page's rates.
+    `ew` = EDHREC weight (EDH_WEIGHT[level]): how much EDHREC's numbers count against fit and synergy."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
     _SUB_MEMO.clear()
     tribe = commander_types(cmdr)
@@ -1148,7 +1157,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     def gc_room():
         return gc_cap is None or sum(1 for m, _, _ in chosen + lands if m["gc"]) < gc_cap
     cards = edh["cards"]
-    rate_of, play_of, value_of = card_values(edh, base, owned, name_meta)
+    rate_of, play_of, value_of = card_values(edh, base, owned, name_meta, ew)
     fits = {}
     def score(k):           # an owned card: EDHREC value + how well it fits this commander
         if k not in fits:
@@ -1666,6 +1675,18 @@ def best_combos(own, names, legal_names, bnum, n=10):
                             t[1].get("tmv", 0), -t[1].get("pop", 0)))
     return [(c, st) for st, c in out[:n]]
 
+def finish_deck(x, b, own, legal_names, CT):
+    """Combos in a finished deck: best ones, the ones inside it, combo bar, Bracket Fit."""
+    names = x.pop("_names")
+    x["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names, legal_names, BRACKET_NUM.get(b))]
+    inside = [c for c in own if combo_done(c, names)]
+    maybe = [c for c in own if combo_done(c, names) is None and two_card_infinite(c)]
+    x["cin"] = [c["id"] for c in inside]
+    x["c2"] = sum(1 for c in inside if two_card_infinite(c))
+    x["pw"]["combo"] = max(0, min(10, len(inside) * 3))
+    x["bf"] = bracket_fit(x, inside, maybe)
+    return x
+
 def danger_zone(own, legal_names):
     """Two-card infinite combos you can assemble for this commander (commander + one card counts, and so
     does one card + a card meeting its condition). Earliest first."""
@@ -1981,6 +2002,29 @@ function rowState(d,b,r){
   return {t,a,key:t?(a?t+":avg":t):(a?"avg":"")};}
 const rowSel=(d,b,r)=>rowState(d,b,r).key;
 function deckOf(d,b,st){return st.t?(st.a?tavgd(d,b,st.t):themed(d,b,st.t)):(st.a?avgd(d,b):d.b[b]);}
+/* ---------- EDHREC weight (1-4) and spending ($/$$/$$$): other levels are built by the app on request ---------- */
+const SERVED=location.protocol.startsWith("http"), LIVE={};
+const WTIP={1:"Your collection decides: EDHREC popularity counts 40%, fit and synergy with your cards lead",2:"Collection first: EDHREC popularity counts 70%",
+  3:"Balanced (the report's decks): EDHREC popularity counts 100%",4:"Closest to EDHREC's list: popularity counts 140%"};
+const STIP={1:"$ Budget: built from EDHREC's cheapest 10% of decks",2:"$$ Normal: all EDHREC decks",3:"$$$ Expensive: built from EDHREC's priciest 10% of decks (fast mana, tutors, pricier combo pieces); bracket rules still decide which combos are allowed"};
+const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:+(r&&r.dataset.s||2)});
+const liveKey=(d,b,st,L)=>[d.slug,b,st.t,st.a?1:0,L.w,L.s].join("|");
+function addRows(arr,rows,from){rows.forEach((x,j)=>{if(from+j===arr.length)arr.push(x);});}
+function fetchLive(d,b,st,L){const k=liveKey(d,b,st,L); LIVE[k]={busy:1};
+  const nc=CARDS.length, ns=STRS.length, nk=COMBOS.length;
+  const qs=new URLSearchParams({c:d.name,b,t:st.t,a:st.a?"1":"0",w:L.w,s:L.s,v:ST.built,nc,ns,nk});
+  const done=()=>{const row=document.querySelector(`details.row[data-i="${d.i}"]`); if(row&&row.dataset.f)rerow(row);};
+  fetch("/deck?"+qs,{headers:{"X-Deck-Wizard":"1"}}).then(async res=>{
+    const j=await res.json().catch(()=>({error:"The app sent a reply the page can't read."}));
+    if(!res.ok){LIVE[k]={err:j.error||("HTTP "+res.status)}; return done();}
+    addRows(CARDS,j.cards,nc); addRows(STRS,j.strs,ns); addRows(COMBOS,j.combos,nk);
+    LIVE[k]={x:j.x}; done();
+  }).catch(e=>{LIVE[k]={err:"The Deck Wizard app isn't answering. Is its window still open?"}; done();});}
+function lvlHTML(L){
+  const off=SERVED?"":` disabled title="Open Deck Wizard App.bat to build decks at other levels"`;
+  const bt=(a,v,on,tip,lab)=>`<button class="srcb ${on?"on":""}" data-${a}="${v}"${off||` title="${esc(tip)}"`}>${lab}</button>`;
+  return `<div class="srcs"><span class="dim">EDHREC weight:</span>${[1,2,3,4].map(v=>bt("wsel",v,L.w===v,WTIP[v],v)).join("")}
+    <span class="dim" style="margin-left:10px">Spending:</span>${[1,2,3].map(v=>bt("ssel",v,L.s===v,STIP[v],"$".repeat(v))).join("")}</div>`;}
 /* ---------- synergy swaps and next in line (cards read by what they do with the rest of the deck) ---------- */
 function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length) return "";
   const nm=i=>`<a href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">${esc(front(i))}</a>`;
@@ -2088,8 +2132,12 @@ function numsHTML(x,b){
 /* ---------- commander rows ---------- */
 const THIN=50;   /* fewer EDHREC decks than this behind a deck or archetype: warn */
 function body(d,b,r){
-  const st=rowState(d,b,r), sel=st.key, asel=st.a, tsel=st.t;
-  const x=deckOf(d,b,st), pre=b==="all"?"":"/"+b;
+  const st=rowState(d,b,r), asel=st.a, tsel=st.t, L=lvlOf(r), lv=L.w!==3||L.s!==2;
+  // another EDHREC weight / spending level: the app builds it (saved choices are kept per level)
+  const sel=st.key+(lv?`:w${L.w}s${L.s}`:""), suf=L.s===1?"/budget":L.s===3?"/expensive":"";
+  const lx=lv?LIVE[liveKey(d,b,st,L)]:null;
+  if(lv&&SERVED&&!lx) fetchLive(d,b,st,L);
+  const x=lx&&lx.x?lx.x:deckOf(d,b,st), pre=b==="all"?"":"/"+b;
   // level 1: archetype (overview + the archetypes you own most of)
   const ths=Object.entries(d.th||{}), tot=d.b.all.decks||1, tcount=Object.fromEntries(d.tags.map(t=>[t[1],t[2]]));
   const arch=`<div class="srcs"><span class="dim">Archetype:</span><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
@@ -2102,13 +2150,16 @@ function body(d,b,r){
   const srcs=`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
   const srcN=asel||!tsel?x.decks:x.tdecks;
   const what=(tsel?`<b>${esc(x.theme)}</b> `:"")+(asel?"average deck":"commander page");
-  const link=asel?`https://edhrec.com/average-decks/${d.slug}${tsel?"/"+tsel:pre}`:`https://edhrec.com/commanders/${d.slug}${tsel?"/"+tsel:pre}`;
+  const link=asel?`https://edhrec.com/average-decks/${d.slug}${tsel?"/"+tsel:pre}${suf}`:`https://edhrec.com/commanders/${d.slug}${tsel?"/"+tsel:pre}${suf}`;
   const tnote=`<p class="tnote">${asel?`EDHREC's ${tsel?esc(x.theme)+" ":""}average deck (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in`
-      :`Built from EDHREC's ${n(tsel?x.tdecks:x.decks)} ${tsel?esc(x.theme)+" decks":LBL[b]+" decks"} and your cards`}${tsel?`, leaning into cards ${esc(x.theme.toLowerCase())} decks need`:""} · ${b==="all"?"no bracket rules":LBL[b]+" rules"}.
+      :`Built from EDHREC's ${n(tsel?x.tdecks:x.decks)} ${tsel?esc(x.theme)+" decks":LBL[b]+" decks"} and your cards`}${tsel?`, leaning into cards ${esc(x.theme.toLowerCase())} decks need`:""} · ${b==="all"?"no bracket rules":LBL[b]+" rules"}${lv?` · EDHREC weight ${L.w} · ${"$".repeat(L.s)}${L.s===1?" (budget decks)":L.s===3?" (expensive decks)":""}`:""}.
     <a href="${link}" target="_blank" rel="noopener">EDHREC ${what} ↗</a></p>`
     +(srcN<THIN?`<p class="thinw">⚠ Thin data: this deck comes from only ${n(srcN)} EDHREC decks (under ${THIN}). Treat it as a rough guide, not a proven list.</p>`:"");
   const bks=BR.filter(k=>d.b[k]).map(k=>{const sk=rowState(d,k,r), xk=sk.t===tsel&&sk.a===asel?deckOf(d,k,sk):null;
     return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}${xk?`: ${xk.pct}% <small>(${n(xk.decks)})</small>`:""}</button>`;}).join("");
+  if(lv&&!(lx&&lx.x)) return `<div class="top"><div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}
+    <p class="${lx&&lx.err?"thinw":"tnote"}">${lx&&lx.err?"⚠ "+esc(lx.err)+" Pick a level to try again."
+      :`Building the deck at EDHREC weight ${L.w} · ${"$".repeat(L.s)}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
   const tags=d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
@@ -2117,7 +2168,7 @@ function body(d,b,r){
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
   const slot=r&&r.dataset.slot?+r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
-  <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${tnote}${more}
+  <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${tnote}${more}
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
   ${synHTML(x)}
@@ -2125,7 +2176,7 @@ function body(d,b,r){
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
   ${slot!=null?chooserHTML(d,b,x,slot,sel):""}${shopHTML(d,b,items,sel)}
-  ${shapeHTML(items,tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
+  ${shapeHTML(items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
   ${deckSection("Your deck",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown${x.avg?" (most played first)":""}</span></div>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
@@ -2192,6 +2243,12 @@ document.addEventListener("click",e=>{const t=e.target;
   const row=t.closest&&t.closest("details.row[data-i]");
   const ts=t.closest&&t.closest("[data-tsel]");
   if(ts){const r=ts.closest("details.row"); r.dataset.t=ts.dataset.tsel; r.dataset.slot=""; rerow(r); return;}
+  const lsel=t.closest&&t.closest("[data-wsel],[data-ssel]");
+  if(lsel&&!lsel.disabled){const r=lsel.closest("details.row");
+    if(lsel.dataset.wsel) r.dataset.w=lsel.dataset.wsel; else r.dataset.s=lsel.dataset.ssel;
+    const d=DATA[+r.dataset.i], b=rowB(r), k=liveKey(d,b,rowState(d,b,r),lvlOf(r));
+    if(LIVE[k]&&LIVE[k].err) delete LIVE[k];        // a failed build is tried again
+    r.dataset.slot=""; rerow(r); return;}
   const as=t.closest&&t.closest("[data-asel]");
   if(as&&!as.disabled){const r=as.closest("details.row"); r.dataset.a=as.dataset.asel==="1"?"1":"0"; r.dataset.slot=""; rerow(r); return;}
   const sr=t.closest&&t.closest("[data-src]");
@@ -2271,10 +2328,140 @@ class Rebuild:
         return {"running": self.running(), "ok": self.ok, "started": self.started,
                 "line": self.lines[-1] if self.lines else ""}
 
+TABLES_FILE = "report_tables.json"   # the report's card/string/combo tables and collection file, for LiveDecks
+
+class LiveDecks:
+    """App mode: builds one deck on request at another EDHREC weight or spending level, with the same
+    builder and bracket rules as the report. Loads the collection and caches on first use (a few seconds)
+    and again after a rebuild. Its card, string and combo tables continue the report's, so the page only
+    appends the new rows and keeps using its own indices."""
+    def __init__(self, a):
+        self.a, self.lock, self.ctx = a, threading.Lock(), None
+
+    def _load(self, tab_path):
+        a = self.a
+        tab = load_json(tab_path)
+        if not tab.get("csv") or not os.path.exists(tab["csv"]):
+            raise LookupError("The report predates this feature: rebuild it once (Update Deck Wizard.bat).")
+        global OFFLINE
+        OFFLINE = a.offline
+        if a.no_combos: CSB_DOWN[0] = True
+        cache_dir = os.path.join(a.out, "cache")
+        _, owned = load_owned(tab["csv"], cache_dir)
+        names_path = os.path.join(cache_dir, "scryfall_names.json")
+        name_meta = resolve_names(set(), names_path)
+        prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
+        fetch_keyword_catalog(os.path.join(cache_dir, "keywords.json"))
+        tpl = os.path.join(cache_dir, "spellbook_templates.json")
+        fetch_templates(set(), tpl)
+        T, CT = CardTable(), ComboTable()
+        T.rows, T.strs, CT.rows = tab["cards"], tab["strs"], tab["combos"]
+        for i, r in enumerate(T.rows): T.idx.setdefault(norm(r[0]), i)
+        T.sidx = {t: i for i, t in enumerate(T.strs)}
+        CT.idx = {r["id"]: i for i, r in enumerate(CT.rows)}
+        self.ctx = {"mt": os.path.getmtime(tab_path), "built": tab["built"], "owned": owned, "T": T, "CT": CT,
+                    "cands": {norm(m["name"]): m for m in commander_candidates(owned)},
+                    "cache": load_edhrec_cache(cache_dir), "edh_path": os.path.join(cache_dir, EDH_CACHE),
+                    "csb": load_json(os.path.join(cache_dir, "spellbook.json")),
+                    "csb_path": os.path.join(cache_dir, "spellbook.json"), "tpl": tpl, "names_path": names_path,
+                    "name_meta": name_meta,
+                    "combo_cards": {} if a.no_combos else fetch_combo_cards(os.path.join(cache_dir, "spellbook_cards.json")),
+                    "per": {}}
+
+    def deck(self, q):
+        """q = query: c commander, b bracket, t theme slug, a "1" average deck, w weight 1-4, s spending 1-3,
+        v the page's build time, nc/ns/nk how many cards/strings/combos the page has.
+        Returns (HTTP code, reply)."""
+        with self.lock:
+            tab_path = os.path.join(self.a.out, TABLES_FILE)
+            if not os.path.exists(tab_path): return 404, {"error": "No report yet."}
+            try:
+                if not self.ctx or self.ctx["mt"] != os.path.getmtime(tab_path): self._load(tab_path)
+                c = self.ctx
+                have = [int(q.get(k) or 0) for k in ("nc", "ns", "nk")]
+                if abs(float(q.get("v") or 0) - c["built"]) > 0.01 or have[0] > len(c["T"].rows) \
+                        or have[1] > len(c["T"].strs) or have[2] > len(c["CT"].rows):
+                    return 409, {"error": "The report was rebuilt: reload the page."}
+                x = self._build(q.get("c", ""), q.get("b", "all"), q.get("t", ""), q.get("a") == "1",
+                                int(q.get("w") or 3), int(q.get("s") or 2))
+            except LookupError as e:
+                return 404, {"error": str(e)}
+            except ValueError as e:
+                return 400, {"error": str(e) or "Bad request."}
+            T, CT = c["T"], c["CT"]
+            return 200, {"x": x, "cards": T.rows[have[0]:], "strs": T.strs[have[1]:], "combos": CT.rows[have[2]:]}
+
+    def _build(self, name, b, t, avg, w, s):
+        c, a = self.ctx, self.a
+        owned, cache = c["owned"], c["cache"]
+        m = c["cands"].get(norm(name))
+        if not m: raise LookupError(f"{name} isn't one of your commanders.")
+        if w not in EDH_WEIGHT or s not in SPEND_SUFFIX or (b != "all" and b not in VALID_BRACKETS):
+            raise ValueError("Bad weight, spending level or bracket.")
+        slug, suf = slugify(m["name"]), SPEND_SUFFIX[s]
+        level = {1: "budget ", 2: "", 3: "expensive "}[s]
+        main_pg = fetch_page(slug, cache, max_days=EDH_MAX_DAYS)
+        if not main_pg or not main_pg["cards"]: raise LookupError("EDHREC has no page for this commander.")
+        tags = main_pg.get("tags") or []
+        tname = next((nm for nm, ts, _ in tags if ts == t), None) if t else None
+        if t and not tname: raise LookupError("EDHREC doesn't list that archetype for this commander.")
+        miss = cache.setdefault("_theme_miss", {})
+        seen, miss0 = {}, dict(miss)            # to save the 90 MB cache only when something new came in
+        def page(part, is_avg=False):
+            """The page at this spending level; $$ pages are fetched exactly as the full run does."""
+            path = "/".join(x for x in (slug, part, suf) if x)
+            key = ("avg:" if is_avg else "") + path
+            seen[key] = cache.get(key)
+            if s == 2 and not is_avg and (not part or part in VALID_BRACKETS):
+                p = fetch_page(path, cache, max_days=None if part else EDH_MAX_DAYS)
+            else:
+                p = fetch_theme_page(path, cache, avg=is_avg, max_days=None if s == 2 else EDH_MAX_DAYS)
+            return p if p and p["cards"] else None
+        base = page("")
+        if not base: raise LookupError(f"EDHREC has no {level}page for this commander.")
+        pg = base if b == "all" else page(b)
+        if not pg: raise LookupError(f"EDHREC has no {level}page for this bracket.")
+        tp = page(t) if t else None
+        if t and not tp: raise LookupError(f"EDHREC has no {level}{tname} page for this commander.")
+        ap = page(t or ("" if b == "all" else b), True) if avg else None
+        if avg and not ap: raise LookupError(f"EDHREC has no {level}average deck for this.")
+        if any(cache.get(k) is not v for k, v in seen.items()) or miss != miss0: save_json(c["edh_path"], cache)
+        want = {v[0] for p in (base, pg, tp) if p for k, v in p["cards"].items() if v[1] >= 0.10 and k not in owned}
+        want |= {nm for k, (nm, _) in (ap or {"cards": {}})["cards"].items() if k not in owned}
+        name_meta = c["name_meta"]
+        if any(norm(n) not in name_meta for n in want - BASIC_NAMES):       # Scryfall only for new names
+            name_meta = c["name_meta"] = resolve_names(want - BASIC_NAMES, c["names_path"])
+            prepare_types([x for x in name_meta.values() if x])
+        if slug not in c["per"]:            # per commander: pool, owned combos, legal names, profile
+            pool_info = build_pool(set(m["ci"]), owned, norm(m["name"]))
+            combos = None if a.no_combos else combos_for_commander(m, owned, c["csb"], c["combo_cards"])
+            if combos:
+                fetch_templates({r for x in combos["own"] + combos["near"] for r in x.get("req") or []}
+                                - set(TEMPLATES), c["tpl"])
+                combos = annotate_combos(combos, owned, set(m["ci"]))
+                save_json(c["csb_path"], c["csb"])
+            legal = {k for k, _, _, _ in pool_info[0]} | {norm(m["name"])}
+            c["per"][slug] = (pool_info, (combos or {}).get("own", []), legal, commander_profile(m, tags))
+        pool_info, own, legal, prof = c["per"][slug]
+        ew, T = EDH_WEIGHT[w], c["T"]
+        if avg:
+            apage, show = avg_as_page(ap, tp, tp, "all") if t else avg_as_page(ap, pg, base, b)
+            x = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname, profile=prof,
+                        show=show, ew=ew)
+            x["ref"], x["avg"] = avg_shape(ap, owned, name_meta), 1
+        else:
+            src, bs = (tp, tp) if t else (pg, base)
+            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew)
+        if t: x["theme"], x["tdecks"] = tname, x["decks"]
+        finish_deck(x, b, own, legal, c["CT"])
+        x.pop("arena", None)
+        return x
+
 def serve(a, csv_path, child_args):
-    """Local-only web app: serves report.html and accepts collection uploads."""
+    """Local-only web app: serves report.html, accepts collection uploads and builds decks at other
+    EDHREC weights / spending levels on request (LiveDecks)."""
     out_html = os.path.join(a.out, "report.html")
-    rb = Rebuild(child_args)
+    rb, live = Rebuild(child_args), LiveDecks(a)
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *args): pass
@@ -2298,6 +2485,17 @@ def serve(a, csv_path, child_args):
                     self.reply(200, WAIT_PAGE, "text/html; charset=utf-8")
             elif path == "/status":
                 self.reply(200, rb.status())
+            elif path == "/deck":
+                # same custom-header rule as uploads: other websites can't make this PC build decks
+                if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
+                if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
+                q = {k: v[0] for k, v in urllib.parse.parse_qs(self.path.partition("?")[2]).items()}
+                try:
+                    code, out = live.deck(q)
+                except Exception as e:      # keep the app up; show the reason in the page and the window
+                    import traceback; traceback.print_exc()
+                    code, out = 500, {"error": f"Building failed: {e}"}
+                self.reply(code, json.dumps(out))
             else:
                 self.reply(404, {"error": "not found"})
 
@@ -2342,6 +2540,29 @@ def serve(a, csv_path, child_args):
     srv.server_close()
 
 # -------------------------------------------------------------------- main
+def load_owned(csv_path, cache_dir, refresh=False):
+    """Collection -> (printings, owned cards by normalized name), with role tags and card flags loaded."""
+    coll = load_collection(csv_path)
+    print(f"Collection file: {csv_path}")
+    print(f"Collection: {len(coll)} printings, {sum(q for _, q in coll.values())} cards")
+    meta = enrich_scryfall(list(coll), os.path.join(cache_dir, "scryfall.json"), refresh)
+    owned = {}
+    for sid in coll:
+        m = meta.get(sid)
+        if m and m["layout"] not in ("token", "emblem") and m["name"] not in BASIC_NAMES:
+            owned[norm(m["name"])] = m
+    ROLE_TAGS.update(fetch_role_tags(os.path.join(cache_dir, "role_tags.json"), refresh))
+    fetch_card_flags(owned, os.path.join(cache_dir, "spellbook_flags.json"), refresh)
+    return coll, owned
+
+def commander_candidates(owned):
+    """Owned legendary creatures and cards that say they can be your commander, by name."""
+    def ok(m):
+        front = m["type_line"].split(" // ")[0]
+        return m["commander_legal"] and "Legendary" in front and \
+            ("Creature" in front or "can be your commander" in m["oracle"].lower())
+    return sorted((m for m in owned.values() if ok(m)), key=lambda m: m["name"])
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--csv", default="", help="ManaBox export; default: newest CSV in the collection folder")
@@ -2376,26 +2597,9 @@ def main():
     brackets = [b for b in VALID_BRACKETS if b in {x.strip().lower() for x in a.brackets.split(",")}]
 
     cache_dir = os.path.join(a.out, "cache")
-    coll = load_collection(csv_path)
-    print(f"Collection file: {csv_path}")
-    print(f"Collection: {len(coll)} printings, {sum(q for _, q in coll.values())} cards")
-    meta = enrich_scryfall(list(coll), os.path.join(cache_dir, "scryfall.json"), a.refresh)
-    owned = {}
-    for sid in coll:
-        m = meta.get(sid)
-        if m and m["layout"] not in ("token", "emblem") and m["name"] not in BASIC_NAMES:
-            owned[norm(m["name"])] = m
-    ROLE_TAGS.update(fetch_role_tags(os.path.join(cache_dir, "role_tags.json"), a.refresh))
     if a.no_combos: CSB_DOWN[0] = True          # --no-combos: no Spellbook requests, cached flags only
-    fetch_card_flags(owned, os.path.join(cache_dir, "spellbook_flags.json"), a.refresh)
-
-    cands = []
-    for m in owned.values():
-        front = m["type_line"].split(" // ")[0]
-        if m["commander_legal"] and "Legendary" in front and \
-           ("Creature" in front or "can be your commander" in m["oracle"].lower()):
-            cands.append(m)
-    cands.sort(key=lambda m: m["name"])
+    coll, owned = load_owned(csv_path, cache_dir, a.refresh)
+    cands = commander_candidates(owned)
     diff = collection_changes(csv_path, owned, [m["name"] for m in cands], cache_dir)
     if diff:
         print(f"Since the previous collection: +{len(diff['added'])} cards, -{len(diff['removed'])} cards, "
@@ -2484,17 +2688,7 @@ def main():
         else:
             entry["combos"] = None
         home_src.append((len(results), m, pg["all"], set(entry["b"]["all"]["_names"])))
-        def combo_info(x, b):
-            """Combos in a finished deck: best ones, the ones inside it, combo bar, Bracket Fit."""
-            names = x.pop("_names")
-            x["cl"] = [[CT.add(c), st] for c, st in best_combos(own, names, legal_names, BRACKET_NUM.get(b))]
-            inside = [c for c in own if combo_done(c, names)]
-            maybe = [c for c in own if combo_done(c, names) is None and two_card_infinite(c)]
-            x["cin"] = [c["id"] for c in inside]
-            x["c2"] = sum(1 for c in inside if two_card_infinite(c))
-            x["pw"]["combo"] = max(0, min(10, len(inside) * 3))
-            x["bf"] = bracket_fit(x, inside, maybe)
-            return x
+        combo_info = lambda x, b: finish_deck(x, b, own, legal_names, CT)
         # theme decks: the commander's EDHREC theme page (all brackets) built with each bracket's rules,
         # leaning into cards that match the theme; stored as differences from the normal deck
         entry["th"] = {}
@@ -2583,6 +2777,8 @@ def main():
     with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
         f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows, T.strs))
     os.replace(out_html + ".tmp", out_html)
+    save_json(os.path.join(a.out, TABLES_FILE), {"built": stats["built"], "csv": os.path.abspath(csv_path),
+                                                  "cards": T.rows, "strs": T.strs, "combos": CT.rows})
     no_tags = sum(1 for r in results if not r["tags"])
     print(f"\nDone. {len(results)} analyzed, {skipped} had no EDHREC page, {no_tags} without theme tags."
           f"\nReport: {os.path.getsize(out_html) / 1e6:.1f} MB -> {out_html}")

@@ -4,6 +4,7 @@ cache/
 # Generated output
 decks/
 report.html
+report_tables.json
 *.tmp
 
 # Uploaded / dropped-in collection exports (personal data, change often)

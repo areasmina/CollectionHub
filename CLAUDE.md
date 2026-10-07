@@ -55,7 +55,8 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
-substitute chooser (pick an alternative, buy, reset) and checks the results. Run it after any change to the HTML template.
+substitute chooser (pick an alternative, buy, reset) and checks the results. The page is served by a local stub server, so it also
+tests the EDHREC weight / spending buttons (`/deck` stub adds a "Test Card Live"; $$$ returns an error). Run it after any change to the HTML template.
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -200,6 +201,18 @@ report.html, `GET /status` reports rebuild progress, `POST /upload` (needs heade
 cross-site posts) checks the CSV header, saves it to `collection/`, and reruns the normal pipeline as a
 child process with the same options. `collection_changes()` keeps the added/removed diff in
 `cache/last_collection.json`. `save_json` and the report write are atomic (temp file + `os.replace`).
+**EDHREC weight 1–4 and spending $/$$/$$$** (per commander panel, app only; the static report is weight 3, $$ and
+shows the buttons disabled): `GET /deck` (same header rule) → `LiveDecks.deck()` builds one deck with the full run's
+builder and rules (`analyze(..., ew=EDH_WEIGHT[w])`, `finish_deck()`). Weight multiplies the EDHREC part of a non-land
+card's score (play rate + synergy: 0.4 / 0.7 / 1.0 / 1.4); fit, theme focus and synergy swaps keep theirs.
+Spending = EDHREC's `<path>/budget` / `<path>/expensive` pages (cheapest / priciest 10% of decks; exist for commander,
+bracket, theme and average-deck pages; fetched on first use, then cached, refreshed after `EDH_MAX_DAYS`).
+Bracket rules still decide combos. Index continuity: the full run writes `report_tables.json` (build time, CSV path,
+CardTable rows/strings, ComboTable rows); `LiveDecks` seeds its tables from it and replies with only the rows the page
+lacks (`nc/ns/nk`), JS `addRows()`; `v` = `ST.built` (mismatch → 409 "reload"). Context loads on first request
+(~2 s), then ~0.1 s per deck; caches are saved only when something new was fetched. JS: `LIVE`, `fetchLive()`,
+`lvlHTML()`, row `data-w`/`data-s`; saved substitute choices get `:w<w>s<s>` for non-default levels.
+Weight 3 + $$ through `/deck` reproduces the report's deck exactly (checked on Sephiroth B4).
 
 Report features: collection bar (file, changes, upload button when served), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,

@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
 Runs report.html in a headless browser (Edge or Chrome, already on Windows; no Node needed) and
-renders every commander x bracket panel, catching JavaScript errors.
+renders every commander x bracket panel, catching JavaScript errors. The page is served from a small
+local server, as in the app, whose /deck stub answers the EDHREC weight / spending buttons with a known
+deck plus one new card (s=3 answers "not found"), so the live-deck path is tested without EDHREC.
 
 Usage:  py tests/check_report.py [report.html]
 Exit code 0 = no errors.
 """
-import json, os, re, shutil, subprocess, sys, tempfile
+import http.server, json, os, re, shutil, subprocess, sys, tempfile, threading, urllib.parse
 
 BROWSERS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
@@ -73,7 +75,53 @@ try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||
     out.clicks=(out.clicks||0)+5;}
   else out.errs.push('no substitute with alternatives found to test');}
 catch(e){out.errs.push('chooser: '+e.message);}
-const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);},500);</script>"""
+// EDHREC weight / spending: weight 1 builds through /deck (stub), the new card is added and shown;
+// $$$ shows the app's error; weight 3 + $$ goes back to the report's own deck
+const wait=c=>new Promise(res=>{let n=0;const f=()=>c()||++n>100?res():setTimeout(f,50);f();});
+(async()=>{try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(!r)out.errs.push('no row for the level test');
+  else{r.open=true;r.dataset.b="all";r.dataset.t="";r.dataset.a="0";rerow(r);const n0=CARDS.length;
+    r.querySelector('[data-wsel="1"]').click();
+    await wait(()=>!r.querySelector('.body').textContent.includes('Building the deck'));
+    if(CARDS.length!==n0+1)out.errs.push('live deck: new card row not added ('+(CARDS.length-n0)+')');
+    const ta=r.querySelector('textarea');
+    if(!ta||!ta.value.includes('Test Card Live'))out.errs.push('live deck: new card not in the deck list');
+    if(!r.querySelector('.tnote')||!r.querySelector('.tnote').textContent.includes('EDHREC weight 1'))out.errs.push('live deck: level not in the note');
+    r.querySelector('[data-ssel="3"]').click();
+    await wait(()=>!r.querySelector('.body').textContent.includes('Building the deck'));
+    if(!r.querySelector('.thinw')||!r.querySelector('.thinw').textContent.includes('Stub: no expensive page'))out.errs.push('live deck: error not shown');
+    r.querySelector('[data-wsel="3"]').click();r.querySelector('[data-ssel="2"]').click();
+    if(r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('weight 3 + $$ did not go back to the report deck');
+    out.clicks=(out.clicks||0)+4;}}
+  catch(e){out.errs.push('levels: '+e.message);}
+  const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);})();},500);</script>"""
+
+def stub_server(html):
+    """Serves the test page like the app does, with a stub /deck (see the module docstring)."""
+    i = html.index("const DATA=") + len("const DATA=")
+    data, _ = json.JSONDecoder().raw_decode(html[i:])
+    class H(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a): pass
+        def send(self, code, body, ctype="application/json"):
+            b = body.encode("utf-8")
+            self.send_response(code); self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(b))); self.end_headers(); self.wfile.write(b)
+        def do_GET(self):
+            path, _, qs = self.path.partition("?")
+            q = {k: v[0] for k, v in urllib.parse.parse_qs(qs).items()}
+            if path == "/": return self.send(200, html, "text/html; charset=utf-8")
+            if path == "/status": return self.send(200, json.dumps({"running": False, "ok": None}))
+            if path != "/deck": return self.send(404, "{}")
+            if self.headers.get("X-Deck-Wizard") != "1": return self.send(403, json.dumps({"error": "no header"}))
+            if q.get("s") == "3": return self.send(404, json.dumps({"error": "Stub: no expensive page."}))
+            d = next(d for d in data if d["name"] == q["c"])
+            x = dict(d["b"][q.get("b", "all")])
+            x["deck"] = x["deck"] + [[int(q["nc"]), "y", int(q["ns"])]]
+            self.send(200, json.dumps({"x": x, "cards": [["Test Card Live", "", "Creature", 0, 2]],
+                                       "strs": ["stub reason"], "combos": []}))
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv
 
 def browser():
     for b in BROWSERS:
@@ -88,14 +136,13 @@ def main():
     html = open(src, encoding="utf-8").read()
     html = html.replace("<head>", "<head>" + CATCH, 1) if "<head>" in html else CATCH + html
     html = html[:html.rfind("</body>")] + PROBE + html[html.rfind("</body>"):] if "</body>" in html else html + PROBE
-    tmp = tempfile.mkdtemp(prefix="dw_check_")
+    tmp, srv = tempfile.mkdtemp(prefix="dw_check_"), stub_server(html)
     try:
-        page = os.path.join(tmp, "report_check.html")
-        with open(page, "w", encoding="utf-8") as f: f.write(html)
         cmd = [exe, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={os.path.join(tmp, 'profile')}",
-               "--virtual-time-budget=15000", "--dump-dom", "file:///" + page.replace("\\", "/")]
+               "--virtual-time-budget=15000", "--dump-dom", f"http://127.0.0.1:{srv.server_address[1]}/"]
         dom = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=180).stdout
     finally:
+        srv.shutdown()
         shutil.rmtree(tmp, ignore_errors=True)
     m = re.search(r'<pre id="__test">(.*?)</pre>', dom, re.S)
     if not m: sys.exit("The page never finished loading (a script error before the probe?).")
