@@ -35,9 +35,12 @@ commander row gets "Open in Builder"; Auto Build is a button in Build using the 
   user's strategy wins; EDHREC is evidence, not a requirement. A low-EDHREC owned card can score high when it
   fits (today: commander-engine bonus + hidden gems). Success test: a less popular strategy gives a
   meaningfully different deck and surfaces owned cards the EDHREC-style build misses.
-- **Price is a constraint, not a score:** price must never be added to a card's score; cards you own are never
-  excluded by price. Planned: a budget filter on *missing-card suggestions* (Scryfall USD → CAD, editable rate).
-  Open question: today's app $/$$/$$$ uses EDHREC's budget/expensive pages, which also shifts owned picks.
+- **Price (user decision, Oct 2026, replaces "price is never a score"):** spending level is a power dial. $ / $$ / $$$
+  use EDHREC's budget / normal / expensive pages, and at $$$ owned cards that *fit* get a bounded boost by price
+  (`PRICE_W` {1: 0, 2: 0.03, 3: 0.2} × `price_scale()`: log curve, $1 0.15 … $99+ 1.0; Scryfall `usd` of your printing,
+  `SF_VERSION` 3). Price never helps a card with no fit / EDHREC listing / useful role and never overrides bracket
+  rules; owned cards are never excluded by price. Still planned: a CAD budget filter on *missing-card suggestions*.
+  Trostani weight 3: $$ deck $378 of your cards → $$$ $454, Craterhoof in.
 - Other planned: "What if I buy this?" (which commanders gain the most from a card).
 
 ## How to run (Windows)
@@ -214,7 +217,7 @@ Key functions:
   protected as ramp only; `weakest_for` memoized per role set per round (metrics run 2m15 → 1m15).
   Effect vs `baseline_engine2` (weight 3): substitutes −1.8, popular +5.5, picks −3.7 (still above
   `baseline_gems`), draw −3.6 (loot links no longer stack), combos in deck +0.2 (B4/B5), no rule violations
-  (`baseline_engine3.json`). Trostani weight 1: Craterhoof, Adeline, Elspeth in; weight 3: Craterhoof at B4+.
+  (`baseline_engine3.json`; `baseline_engine4.json` = + $$ price nudge). Trostani weight 1: Craterhoof, Adeline, Elspeth in; weight 3: Craterhoof at B4+.
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you

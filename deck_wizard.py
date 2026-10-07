@@ -51,7 +51,7 @@ VALID_BRACKETS = ["exhibition", "core", "upgraded", "optimized", "cedh"]
 OFFLINE = False         # --offline: never touch the network, use caches only
 GC_CAP = {"exhibition": 0, "core": 0, "upgraded": 3}   # Game Changers per bracket; others: no cap
 EDH_CACHE, EDH_VERSION = "edhrec_v4.json", 4           # v4 pages add synergy, lift, list tags
-SF_VERSION = 2          # bump when compact_card() gains fields; older cache entries are refetched
+SF_VERSION = 3          # bump when compact_card() gains fields; older cache entries are refetched
 
 # ----------------------------------------------------------------- helpers
 def norm(name):
@@ -155,7 +155,7 @@ def load_collection(path):
     return cards
 
 def compact_card(c):
-    faces = c.get("card_faces") or []
+    faces, pr = c.get("card_faces") or [], c.get("prices") or {}
     oracle = c.get("oracle_text") or " // ".join(f.get("oracle_text", "") for f in faces)
     iu = c.get("image_uris") or (faces[0].get("image_uris") if faces else None) or {}
     cost = c.get("mana_cost") or " // ".join(f["mana_cost"] for f in faces if f.get("mana_cost"))
@@ -167,6 +167,8 @@ def compact_card(c):
         "layout": c.get("layout", ""), "img": iu.get("normal") or iu.get("small") or "",
         # v2 fields: colored pips for basics, overall EDHREC popularity, keyword abilities
         "mana_cost": cost, "edhrec_rank": c.get("edhrec_rank"), "keywords": c.get("keywords", []) or [],
+        # v3: this printing's price in USD (normal, else foil, else etched), for the $$$ spending level
+        "usd": next((float(v) for v in (pr.get("usd"), pr.get("usd_foil"), pr.get("usd_etched")) if v), None),
         "v": SF_VERSION,
     }
 
@@ -1145,7 +1147,13 @@ def owned_duals(pool, ci, used, n_lands, n_tapped):
         out.append(m); n_tapped += tapped
     return out
 
+PRICE_W = {1: 0.0, 2: 0.03, 3: 0.2}   # $ / $$ / $$$: boost for an owned card that fits, x price_scale()
 UNLISTED = 0.5          # an owned card EDHREC doesn't list: valued at this x the page's lowest listed rate
+
+def price_scale(m):
+    """0-1 from the printing's USD price on a log curve: $1 0.15, $10 0.52, $30 0.75, $99+ 1.0 (None: 0)."""
+    usd = m.get("usd")
+    return min(1.0, math.log10(1 + usd) / 2) if usd else 0.0
 
 def card_values(edh, base, owned, name_meta, ew=1.0):
     """(rate_of, play_of, value_of) for one EDHREC page: the play rate as EDHREC shows it, the rate
@@ -1213,7 +1221,7 @@ def power_profile(roles, gc, avg_cmc):
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
-            want_gaps=True, profile=None, show=None, ew=1.0, pins=None):
+            want_gaps=True, profile=None, show=None, ew=1.0, pins=None, spend=2):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
     `combos` = combos you own in these colours (combos_for_commander()["own"]).
     `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
@@ -1221,6 +1229,8 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     commander's profile (computed once per commander by the caller; else from the page's themes).
     `show` = real play rates (average decks): order and label the gaps instead of the page's rates.
     `ew` = EDHREC weight (EDH_WEIGHT[level]): how much EDHREC's numbers count against fit and synergy.
+    `spend` = spending level 1-3 ($/$$/$$$): PRICE_W[spend] x price_scale for owned cards that fit (reason, EDHREC
+    listing or a useful role); price never helps a card that does nothing here and never beats a bracket rule.
     `pins` = (keys always included, keys never used) for this commander (pins.json): excluded cards leave the
     pool (no pick, substitute, option or combo uses them); included ones go in first, kind "k", unless a bracket
     rule forbids them (then listed in x["pinx"] with the reason) and synergy swaps never take them out."""
@@ -1252,6 +1262,9 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
                 fits[k] = (fits[k][0] + FOCUS_W, ("theme: " + focus.lower() + (" · " + fits[k][1] if fits[k][1] else "")))
             if k in gems:
                 fits[k] = (fits[k][0], "hidden gem: " + " + ".join(gems[k][1]) + " · " + fits[k][1])
+            pb = PRICE_W.get(spend, 0) * price_scale(m)
+            if pb and card_kind(m) != "land" and (fits[k][1] or rate_of(k) > 0 or roles_of(m) & (USEFUL_ROLES | {"win"})):
+                fits[k] = (fits[k][0] + pb, fits[k][1] + (f" · ${m['usd']:.0f}" if spend == 3 else ""))
         return (max(value_of(k), gems[k][0]) if k in gems else value_of(k)) + fits[k][0]
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
     rec.sort(key=lambda x: -x[2])
@@ -2162,7 +2175,7 @@ function deckOf(d,b,st){return st.t?(st.a?tavgd(d,b,st.t):themed(d,b,st.t)):(st.
 const SERVED=location.protocol.startsWith("http"), LIVE={};
 const WTIP={1:"Your collection decides: EDHREC popularity counts 15%; card strength, fit and synergy with your cards lead",2:"Collection first: EDHREC popularity counts 50%",
   3:"Balanced (the report's decks): EDHREC popularity counts 100%",4:"Closest to EDHREC's list: popularity counts 140%"};
-const STIP={1:"$ Budget: built from EDHREC's cheapest 10% of decks",2:"$$ Normal: all EDHREC decks",3:"$$$ Expensive: built from EDHREC's priciest 10% of decks (fast mana, tutors, pricier combo pieces); bracket rules still decide which combos are allowed"};
+const STIP={1:"$ Budget: built from EDHREC's cheapest 10% of decks; your cards' prices don't matter",2:"$$ Normal: all EDHREC decks (your pricier cards get a tiny nudge)",3:"$$$ Expensive: EDHREC's priciest 10% of decks, and your most valuable cards that fit get a boost (up to +0.20 at $99+); bracket rules still decide which combos are allowed"};
 const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:+(r&&r.dataset.s||2)});
 const liveKey=(d,b,st,L)=>[d.slug,b,st.t,st.a?1:0,L.w,L.s,pinKey(pinsOf(d))].join("|");
 function addRows(arr,rows,from){rows.forEach((x,j)=>{if(from+j===arr.length)arr.push(x);});}
@@ -2693,11 +2706,12 @@ class LiveDecks:
         if avg:
             apage, show = avg_as_page(ap, tp, tp, "all") if t else avg_as_page(ap, pg, base, b)
             x = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname, profile=prof,
-                        show=show, ew=ew, pins=pn)
+                        show=show, ew=ew, pins=pn, spend=s)
             x["ref"], x["avg"] = avg_shape(ap, owned, name_meta), 1
         else:
             src, bs = (tp, tp) if t else (pg, base)
-            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew, pins=pn)
+            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew, pins=pn,
+                        spend=s)
         if t: x["theme"], x["tdecks"] = tname, x["decks"]
         finish_deck(x, b, own, legal, c["CT"])
         x.pop("arena", None)
