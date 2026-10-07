@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deck Wizard · The Locust God (Zine × P5)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&amp;family=Courier+Prime:wght@400;700&amp;family=Caveat:wght@500;700&amp;display=swap">
+<style>
+body{margin:0;background:#0B0B0B}
+a{color:inherit}
+button,input,select{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--y,#FFE600);outline-offset:2px}
+summary::-webkit-details-marker{display:none}
+[data-band]{transition:box-shadow .08s steps(2)}
+[data-band]:hover{box-shadow:inset 0 -3px 0 var(--y),inset 0 -6px 0 var(--m),inset 0 -9px 0 var(--c) !important}
+
+/* ===== Persona-5 energy: red slabs, ransom letters, slashes, snap motion ===== */
+@keyframes p5in{from{opacity:0;transform:translateX(-70px) skewX(-18deg)}60%{opacity:1;transform:translateX(6px) skewX(3deg)}}
+@keyframes p5drop{from{opacity:0;transform:translateY(-46px) rotate(-14deg) scale(1.35)}}
+@keyframes p5tick{to{transform:translateX(-50%)}}
+@keyframes p5spin{to{transform:rotate(360deg)}}
+@keyframes p5slash{from{clip-path:polygon(0 12%,0 0,0 88%,0 100%)}}
+.p5-in{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
+@supports (animation-timeline: view()){.p5-view{animation:p5in linear both;animation-timeline:view();animation-range:entry 0% entry 45%}}
+[data-band]{transition:transform .14s cubic-bezier(.3,1.7,.5,1),box-shadow .08s steps(2)}
+[data-band]:hover{transform:skewX(-8deg) translateY(-2px)}
+.p5-card{isolation:isolate;transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .18s}
+.p5-card:hover{transform:rotate(-2deg) translateY(-8px) scale(1.03);box-shadow:12px 12px 0 var(--r) !important}
+.p5-slab{align-self:flex-start;display:inline-block;padding:8px 26px 2px 14px;color:var(--bg);background:var(--ink);transform:skewX(-10deg) rotate(-2deg);box-shadow:10px 8px 0 var(--r)}
+.p5-slab>span{display:inline-block;transform:skewX(10deg)}
+.p5-slash{position:absolute;inset:0 -70px 0 -90px;background-color:var(--r);background-image:radial-gradient(circle,rgba(0,0,0,.28) 0 2px,transparent 2.4px);background-size:8px 8px;clip-path:polygon(4% 14%,100% 0,93% 86%,0 100%);transform:rotate(-3deg);animation:p5slash .45s cubic-bezier(.2,.9,.3,1) both}
+.p5-ticker{margin:0 -40px;transform:rotate(-1deg);border-block:3px solid #0B0B0B;color:#FFFFFF;font-family:"Archivo",sans-serif;font-weight:900;font-stretch:75%;font-size:18px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.p5-track{display:flex;width:max-content;animation:p5tick 32s linear infinite}
+.p5-track span{padding:6px 2em 4px 0}
+.p5-head{clip-path:polygon(0 0,100% 0,95% 100%,0 100%);border-left:8px solid var(--r)}
+.p5-burst{clip-path:polygon(50% 0,61% 30%,93% 15%,73% 43%,100% 55%,69% 63%,80% 96%,52% 74%,27% 98%,33% 66%,0 62%,27% 44%,7% 14%,39% 29%);animation:p5spin 40s linear infinite}
+.p5-h1{font-size:96px}.p5-h1c{font-size:78px}
+@media (max-width:760px){.p5-h1{font-size:54px}.p5-h1c{font-size:46px}.p5-slash{inset:0 -20px 0 -30px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+/* on a phone the slim bar keeps only the name, battery and builder button */
+@media (max-width: 760px){[data-wide]{display:none !important}}
+</style>
+</helmet>
+<div style="--y: {{T.y}}; --c: {{T.c}}; --m: {{T.m}}; --r: {{T.r}}; --ink: {{T.ink}}; --bg: {{T.bg}}; position: relative; min-height: 4300px; color: {{T.ink}}; background: {{T.bg}}; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 14px; line-height: 1.55">
+
+  <svg aria-hidden="true" width="0" height="0" style="position: absolute">
+    <filter id="zc-dark"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"></feTurbulence><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"></feFuncA></feComponentTransfer></filter>
+    <filter id="zc-light"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="8"></feTurbulence><feColorMatrix values="0 0 0 0 0.95  0 0 0 0 0.93  0 0 0 0 0.88  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.55"></feFuncA></feComponentTransfer></filter>
+    <filter id="zc-sepia"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"></feTurbulence><feColorMatrix values="0 0 0 0 0.22  0 0 0 0 0.19  0 0 0 0 0.15  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.75"></feFuncA></feComponentTransfer></filter>
+    <filter id="zc-fiber"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.35" numOctaves="3" seed="21"></feTurbulence><feColorMatrix values="0 0 0 0 0.40  0 0 0 0 0.35  0 0 0 0 0.29  0 0 0 0.9 -0.25"></feColorMatrix></filter>
+  </svg>
+  <!-- paper: dust, scan lines, grid, margin rule, creases, pencil working, stamp -->
+  <div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; pointer-events: none">
+    <svg preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.4"><rect width="100%" height="100%" filter="{{T.dust}}"></rect></svg>
+    <div style="position: absolute; inset: 0; background: repeating-linear-gradient(0deg, {{T.scan}} 0 1px, transparent 1px 4px)"></div>
+    <svg preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: {{T.blendD}}; opacity: {{T.fiber}}"><rect width="100%" height="100%" filter="url(#zc-fiber)"></rect></svg>
+    <div style="position: absolute; inset: 0; background-image: linear-gradient({{T.grid}} 1px, transparent 1px), linear-gradient(90deg, {{T.grid}} 1px, transparent 1px), linear-gradient({{T.gridMinor}} 1px, transparent 1px), linear-gradient(90deg, {{T.gridMinor}} 1px, transparent 1px); background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px"></div>
+    <div style="position: absolute; top: 0; bottom: 0; left: 18px; width: 5px; border-left: 2px solid {{T.rule}}; border-right: 1px solid {{T.ruleSoft}}"></div>
+    <div style="position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; background: linear-gradient(90deg, rgba(50,42,34,0.09), rgba(255,240,210,0.22), rgba(50,42,34,0.06))"></div>
+    <div style="position: absolute; left: 0; right: 0; top: 33%; height: 4px; background: linear-gradient(180deg, rgba(50,42,34,0.09), rgba(255,240,210,0.22), rgba(50,42,34,0.06))"></div>
+    <div style="position: absolute; left: 0; right: 0; top: 66%; height: 4px; background: linear-gradient(180deg, rgba(50,42,34,0.08), rgba(255,240,210,0.2), rgba(50,42,34,0.05))"></div>
+    <div style="position: absolute; inset: 0; font-family: 'Caveat', cursive; font-weight: 500; color: {{T.pencil}}">
+      <span style="position: absolute; left: 4%; top: 820px; font-size: 30px; transform: rotate(5deg); white-space: nowrap">73 / 99 = 0.737…</span>
+      <span style="position: absolute; left: 66%; top: 1180px; font-size: 32px; transform: rotate(-4deg); white-space: nowrap">discard 25 + tokens 11 = engine</span>
+      <span style="position: absolute; left: 8%; top: 2050px; font-size: 32px; transform: rotate(-3deg); white-space: nowrap">P(Curiosity + Niv by T7) ≈ ?</span>
+      <span style="position: absolute; left: 60%; top: 2850px; font-size: 30px; transform: rotate(3deg); white-space: nowrap">wipes: 1 → want 2 !!</span>
+      <span style="position: absolute; left: 10%; top: 3900px; font-size: 34px; transform: rotate(-2deg); white-space: nowrap">∑ curve = 9+18+19+10+4+4 = 64</span>
+    </div>
+    <svg viewBox="0 0 300 300" fill="none" stroke="{{T.pencilSolid}}" stroke-width="1.2" style="position: absolute; right: 2%; top: 2300px; width: 300px; height: 300px; opacity: 0.16"><circle cx="150" cy="150" r="90"></circle><path d="M60 150 H240 M150 60 V240 M86 86 L214 214 M40 232 L150 58 L260 232 Z"></path><path d="M30 150 A120 120 0 0 1 90 46" stroke-dasharray="4 4"></path><circle cx="150" cy="150" r="3" fill="{{T.pencilSolid}}"></circle><text x="156" y="144" font-family="Caveat" font-size="20" fill="{{T.pencilSolid}}" stroke="none">O</text><text x="200" y="260" font-family="Caveat" font-size="20" fill="{{T.pencilSolid}}" stroke="none">r = 90</text></svg>
+    <div style="position: absolute; right: 7%; top: 120px; width: 150px; height: 150px; border-radius: 50%; border: 5px double {{T.stamp}}; color: {{T.stamp}}; display: grid; place-items: center; text-align: center; transform: rotate(12deg); font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 15px; line-height: 1.1; text-transform: uppercase; mix-blend-mode: {{T.blendD}}">Deck Wizard<br>Library<br>No. 0335</div>
+    <div style="position: absolute; right: -8%; top: 40px; width: 62%; height: 560px; transform: rotate(-9deg); background-image: radial-gradient(circle, {{T.r}} 0 3px, transparent 3.4px); background-size: 12px 12px; opacity: 0.22; -webkit-mask-image: linear-gradient(100deg, transparent, #000 60%); mask-image: linear-gradient(100deg, transparent, #000 60%)"></div>
+    <div style="position: absolute; inset: 0; box-shadow: {{T.edge}}"></div>
+  </div>
+
+  <header style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px 32px">
+    <a href="P5Discover.dc.html" style="text-decoration: none; font-family: 'Archivo', 'Arial Narrow', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 34px; line-height: 1; text-transform: uppercase; color: {{T.ink}}; text-shadow: 2px 0 0 rgba(0,174,239,0.85), -2px 1px 0 rgba(236,0,140,0.85)">Deck Wizard</a>
+    <nav aria-label="Modes" style="display: flex; border: 2px solid {{T.ink}}">
+      <a href="P5Discover.dc.html" aria-current="page" data-band style="padding: 10px 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; color: {{T.bg}}; background: {{T.ink}}; box-shadow: inset 0 -3px 0 {{T.y}}, inset 0 -6px 0 {{T.m}}, inset 0 -9px 0 {{T.c}}">Discover</a>
+      <a href="P5Collection.dc.html" data-band style="padding: 10px 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; color: {{T.ink}}; border-left: 2px solid {{T.ink}}">Collection</a>
+    </nav>
+    <div style="flex: 1 1 0"></div>
+    <span style="font-size: 12px; text-transform: uppercase; color: {{T.mute}}">manabox 2026-10-06 140204.csv · 2,423 cards</span>
+    <div role="group" aria-label="Print mode" style="display: flex; border: 2px solid {{T.ink}}">
+      <sc-for list="{{modes}}" as="md" hint-placeholder-count="3">
+        <button type="button" onClick="{{md.pick}}" aria-pressed="{{md.on}}" data-band style="{{md.style}}">{{md.label}}</button>
+      </sc-for>
+    </div>
+  </header>
+  <div aria-hidden="true" style="position: relative; display: flex; flex-direction: column">
+    <span style="height: 3px; background: {{T.c}}; margin-right: 18%"></span>
+    <span style="height: 3px; background: {{T.m}}; margin-left: 6%; margin-right: 4%"></span>
+    <span style="height: 3px; background: {{T.y}}; margin-left: 2%; margin-right: 11%"></span>
+    <span style="height: 2px; background: {{T.ink}}"></span>
+  </div>
+  <div aria-hidden="true" style="position: relative; overflow: hidden; padding: 12px 0">
+    <div class="p5-ticker" style="background: {{T.r}}"><div class="p5-track"><span>★ The Locust God ★ 78.5% in your binder ★ 6/7 ready ★ fits B4 ★ 97 combos you own ★ 11 synergy swaps ★ 1 card to buy </span><span>★ The Locust God ★ 78.5% in your binder ★ 6/7 ready ★ fits B4 ★ 97 combos you own ★ 11 synergy swaps ★ 1 card to buy </span></div></div>
+  </div>
+
+  <!-- ===== HERO: the commander, big, the way the page opens ===== -->
+  <section style="position: relative; max-width: 1400px; margin: 0 auto; padding: 24px 32px 0; display: flex; flex-direction: column; gap: 28px">
+    <a href="P5Discover.dc.html" style="align-self: flex-start; min-height: 32px; display: inline-flex; align-items: center; font-size: 13px; text-transform: uppercase; text-decoration: none; color: {{T.mute}}">&lt;- back to all commanders</a>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start">
+      <div style="position: relative; flex: none; width: 280px; display: flex; flex-direction: column; gap: 10px">
+        <div aria-hidden="true" class="p5-in" style="position: absolute; left: -70px; right: -70px; top: 24%; height: 130px; background: {{T.r}}; clip-path: polygon(0 30%, 100% 0, 100% 70%, 0 100%); transform: rotate(-14deg)"></div>
+        <div aria-label="The Locust God card image" style="position: relative; aspect-ratio: 488 / 680; border-radius: 14px; overflow: hidden; border: 2px solid {{T.ink}}; background: #8A8A8A; box-shadow: 8px 8px 0 {{T.shadow}}; transform: rotate(-1.5deg); filter: {{T.img}}">
+          <div style="position: absolute; inset: 0; background: linear-gradient(180deg, #CFCFCF 0%, #5A5A5A 45%, #2A2A2A 100%)"></div>
+          <div style="position: absolute; inset: 0; background-image: radial-gradient(circle, #0B0B0B 0 1.5px, transparent 1.8px); background-size: 5px 5px; mix-blend-mode: multiply; opacity: 0.8"></div>
+          <span style="position: absolute; left: 12px; top: 12px; right: 12px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; color: #0B0B0B; background: #F0EBDD; padding: 2px 6px">The Locust God · Scryfall scan</span>
+        </div>
+        <div role="group" aria-label="Card image style" style="display: flex; border: 2px solid {{T.ink}}">
+          <button type="button" aria-pressed="false" data-band style="flex: 1; min-height: 36px; cursor: pointer; border: 0; font-size: 11px; text-transform: uppercase; color: {{T.ink}}; background: transparent">Full colour</button>
+          <button type="button" aria-pressed="true" data-band style="flex: 1; min-height: 36px; cursor: pointer; border: 0; border-left: 2px solid {{T.ink}}; font-size: 11px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Photocopy</button>
+        </div>
+      </div>
+
+      <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: flex-start">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div style="position: relative; align-self: flex-start; padding: 18px 30px 22px 10px">
+      <div aria-hidden="true" class="p5-slash"></div>
+      <h1 class="p5-h1c" aria-label="The Locust God" style="position: relative; margin: 0; display: flex; flex-direction: column; gap: 8px; line-height: 1">
+      <span aria-hidden="true" style="display: flex; flex-wrap: wrap; align-items: flex-end"><sc-for list="{{ransomA}}" as="l" hint-placeholder-count="8"><span style="{{l.style}}">{{l.ch}}</span></sc-for></span>
+      <span aria-hidden="true" style="display: flex; flex-wrap: wrap; align-items: flex-end"><sc-for list="{{ransomB}}" as="l" hint-placeholder-count="8"><span style="{{l.style}}">{{l.ch}}</span></sc-for></span>
+      </h1>
+    </div>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px">
+              <span style="display: grid; place-items: center; width: 28px; height: 28px; font-family: 'Archivo', sans-serif; font-weight: 900; color: #FFFFFF; background: #2470BE; border: 2px solid {{T.ink}}">U</span>
+              <span style="display: grid; place-items: center; width: 28px; height: 28px; font-family: 'Archivo', sans-serif; font-weight: 900; color: #FFFFFF; background: #D23B26; border: 2px solid {{T.ink}}">R</span>
+              <span style="font-size: 12px; text-transform: uppercase; color: {{T.mute}}">· wheels · tokens · card draw · 532 b4 decks · 97 combos owned</span>
+            </div>
+            <!-- built around: what the 99 shares with the commander -->
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px">
+              <span style="font-size: 11px; font-weight: 700; text-transform: uppercase">Built around</span>
+              <sc-for list="{{around}}" as="b" hint-placeholder-count="4"><span style="{{b.style}}">{{b.k}} {{b.v}}</span></sc-for>
+            </div>
+            <p style="margin: 0; font-size: 12px">57 popular + <span style="color: #141414; background: {{T.y}}; padding: 0 3px">18 your picks</span> + <span style="color: #141414; background: {{T.m}}; padding: 0 3px">2 combo pieces</span> + <span style="color: #141414; background: {{T.c}}; padding: 0 3px">3 stand-ins</span> · avg MV 2.91 · Game Changers: Cyclonic Rift, Mystical Tutor, Narset</p>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <button type="button" data-band style="min-height: 46px; padding: 0 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; text-transform: uppercase; cursor: pointer; color: {{T.ink}}; background: transparent; border: 2px solid {{T.ink}}">Copy list</button>
+            <a href="https://edhrec.com/commanders/the-locust-god" data-band style="display: inline-flex; align-items: center; min-height: 46px; padding: 0 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; text-transform: uppercase; text-decoration: none; color: {{T.ink}}; border: 2px solid {{T.ink}}">EDHREC -&gt;</a>
+          </div>
+        </div>
+
+        <!-- one settings sheet -->
+        <div style="display: flex; flex-direction: column; border: 2px solid {{T.ink}}; background: {{T.bg}}">
+          <div style="display: flex; flex-wrap: wrap; align-items: stretch; border-bottom: 2px solid {{T.ink}}">
+            <span style="display: flex; align-items: center; width: 120px; padding: 0 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 17px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Bracket</span>
+            <div role="group" aria-label="Bracket" style="display: flex; flex-wrap: wrap">
+              <sc-for list="{{brackets}}" as="bk" hint-placeholder-count="5">
+                <button type="button" onClick="{{bk.pick}}" aria-pressed="{{bk.on}}" title="{{bk.tip}}" data-band style="{{bk.style}}"><b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 19px">{{bk.label}}</b><span style="font-size: 11px">{{bk.pct}}% · {{bk.n}}</span></button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: stretch; border-bottom: 2px solid {{T.ink}}">
+            <span style="display: flex; align-items: center; width: 120px; padding: 0 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 17px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Archetype</span>
+            <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; flex: 1">
+              <div role="group" aria-label="Archetype" style="display: flex; flex-wrap: wrap; gap: 8px">
+                <sc-for list="{{archs}}" as="a" hint-placeholder-count="5">
+                  <button type="button" onClick="{{a.pick}}" aria-pressed="{{a.on}}" data-band style="{{a.style}}"><b style="font-family: 'Archivo', sans-serif; font-weight: 800; text-transform: uppercase; font-size: 13px">{{a.name}}</b><span style="font-size: 11px">{{a.meta}}</span></button>
+                </sc-for>
+              </div>
+              <span style="font-size: 12px; color: {{T.mute}}">more on EDHREC: <a href="#">spellslinger</a> · <a href="#">burn</a> · <a href="#">flying</a> · <a href="#">insects</a> -&gt;</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: stretch">
+            <span style="display: flex; align-items: center; width: 120px; padding: 0 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 17px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Deck from</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 12px; align-items: center; flex: 1">
+              <div style="display: flex; border: 2px solid {{T.ink}}">
+                <button type="button" aria-pressed="true" data-band style="min-height: 38px; padding: 0 12px; cursor: pointer; border: 0; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Commander page · 78.5%</button>
+                <button type="button" aria-pressed="false" data-band style="min-height: 38px; padding: 0 12px; cursor: pointer; border: 0; border-left: 2px solid {{T.ink}}; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; text-transform: uppercase; color: {{T.ink}}; background: transparent">Average deck · 79%</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px"><span style="font-size: 11px; text-transform: uppercase; color: {{T.mute}}">edhrec weight</span>
+                <sc-for list="{{weights}}" as="w" hint-placeholder-count="4"><button type="button" onClick="{{w.pick}}" aria-pressed="{{w.on}}" title="{{w.tip}}" data-band style="{{w.style}}">{{w.label}}</button></sc-for>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px"><span style="font-size: 11px; text-transform: uppercase; color: {{T.mute}}">spending</span>
+                <sc-for list="{{spends}}" as="w" hint-placeholder-count="3"><button type="button" onClick="{{w.pick}}" aria-pressed="{{w.on}}" title="{{w.tip}}" data-band style="{{w.style}}">{{w.label}}</button></sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: {{T.mute}}">&gt; built from EDHREC's 532 B4 Optimized decks and your cards · B4 rules_</p>
+      </div>
+    </div>
+
+    <!-- the three numbers, big -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 20px">
+      <div class="p5-card" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 14px; background: {{T.bg}}; border: 2px solid {{T.ink}}; box-shadow: 6px 6px 0 {{T.shadow}}">
+        <span aria-hidden="true" class="p5-burst" style="position: absolute; z-index: -1; right: -46px; top: -46px; width: 190px; height: 190px; background: {{T.r}}; opacity: 0.9"></span>
+        <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase">Collection Match</span>
+        <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 88px; line-height: 0.85">78.5%</b>
+        <div role="img" aria-label="Battery: 78.5% of the deck owned" style="display: flex; align-items: center">
+          <div style="display: flex; align-items: flex-end; gap: 3px; width: 150px; height: 31px; padding: 0 3px">
+            <sc-for list="{{matchCells}}" as="c" hint-placeholder-count="10"><span style="{{c}}"></span></sc-for>
+          </div>
+          
+        </div>
+        <span style="font-size: 13px">You own 73 of the top 99 cards in 532 B4 decks.</span>
+      </div>
+      <div class="p5-card" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 14px; color: {{T.flipFg}}; background: {{T.flipBg}}; border: 2px solid {{T.ink}}; box-shadow: 6px 6px 0 {{T.shadow}}">
+        <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase">Build Readiness</span>
+        <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 88px; line-height: 0.85">6/7</b>
+        <span style="font-size: 13px">Roles, curve and colour sources check out.</span>
+        <span style="align-self: flex-start; padding: 1px 5px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; color: #141414; background: {{T.y}}; border: 1.5px solid #141414">(NEEDS 1 MORE BOARD WIPE!)</span>
+      </div>
+      <div class="p5-card" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 14px; background: {{T.bg}}; border: 2px solid {{T.ink}}; box-shadow: 6px 6px 0 {{T.shadow}}">
+        <span style="font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase">Bracket Fit</span>
+        <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 88px; line-height: 0.85">B3</b>
+        <ul style="margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.45">
+          <li>3 Game Changers (B1–2 allow none)</li>
+          <li>Curiosity + Niv-Mizzet, Parun: 7 mana, late</li>
+          <li>Niv-Mizzet, the Firemind + Curiosity: 7 mana, late</li>
+          <li>Locust God + Sage of the Falls: 11 mana, late</li>
+          <li>1 tutor (B1–2 expect few)</li>
+        </ul>
+        <span style="align-self: flex-start; padding: 1px 5px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; color: #FFFFFF; background: {{T.r}}; border: 2px solid #0B0B0B; transform: skewX(-10deg) rotate(-3deg); font-size: 14px">(FITS B4!)</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- everything below shares one box, so the slim bar stays pinned until the very end -->
+  <div style="position: relative; margin-top: 32px">
+
+    <!-- ===== SLIM BAR: starts here, then pins to the top of the screen as you scroll ===== -->
+    <div style="position: sticky; top: 0; z-index: 20; background: {{T.bg}}; border-top: 4px solid {{T.r}}; box-shadow: 0 6px 0 {{T.shadowSoft}}">
+      <div style="max-width: 1400px; margin: 0 auto; padding: 10px 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="padding: 3px 14px 1px; font-family: 'Archivo', sans-serif; font-weight: 900; font-style: italic; font-size: 12px; letter-spacing: 0.08em; color: #FFFFFF; background: {{T.r}}; clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%)">ON DECK</span>
+          <div aria-hidden="true" style="width: 34px; aspect-ratio: 488 / 680; border-radius: 4px; border: 2px solid {{T.ink}}; background: linear-gradient(180deg, #CFCFCF 0%, #5A5A5A 45%, #2A2A2A 100%); filter: {{T.img}}"></div>
+          <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 30px; line-height: 1; text-transform: uppercase">The Locust God</b>
+          <span style="display: flex; gap: 3px"><span style="display: grid; place-items: center; width: 20px; height: 20px; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 12px; color: #FFFFFF; background: #2470BE; border: 1.5px solid {{T.ink}}">U</span><span style="display: grid; place-items: center; width: 20px; height: 20px; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 12px; color: #FFFFFF; background: #D23B26; border: 1.5px solid {{T.ink}}">R</span></span>
+        </div>
+        <div role="img" aria-label="Battery: 78.5% owned" style="display: flex; align-items: center; gap: 6px">
+          <span style="display: flex; align-items: center"><span style="display: flex; align-items: flex-end; gap: 3px; width: 100px; height: 20px; padding: 0 3px"><sc-for list="{{matchCells}}" as="c" hint-placeholder-count="10"><span style="{{c}}"></span></sc-for></span></span>
+          <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 20px">78.5%</b>
+        </div>
+        <span data-wide style="font-size: 12px; text-transform: uppercase"><b>6/7</b> ready · <b>B3</b> <span style="padding: 0 4px; color: #141414; background: {{T.c}}; font-weight: 700">fits B4</span></span>
+        <div style="flex: 1 1 0"></div>
+        <div data-wide role="group" aria-label="Bracket" style="display: flex; border: 2px solid {{T.ink}}">
+          <sc-for list="{{miniBrackets}}" as="bk" hint-placeholder-count="5">
+            <button type="button" onClick="{{bk.pick}}" aria-pressed="{{bk.on}}" title="{{bk.tip}}" data-band style="{{bk.style}}">{{bk.label}}</button>
+          </sc-for>
+        </div>
+        <label data-wide style="display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; color: {{T.mute}}">archetype
+          <select onChange="{{onArch}}" style="min-height: 36px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{T.ink}}; background: {{T.bg}}; border: 2px solid {{T.ink}}; border-radius: 0">
+            <sc-for list="{{archs}}" as="a" hint-placeholder-count="5"><option value="{{a.key}}" selected="{{a.sel}}">{{a.name}}</option></sc-for>
+          </select>
+        </label>
+        <span data-wide style="padding: 4px 8px; font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 12px; color: #141414; background: #F0EBDD; transform: rotate(-1deg)">TO BUY · 1</span>
+      </div>
+      <div aria-hidden="true" style="display: flex; flex-direction: column">
+        <span style="height: 2px; background: {{T.c}}; margin-right: 30%"></span>
+        <span style="height: 2px; background: {{T.m}}; margin-left: 10%"></span>
+        <span style="height: 2px; background: {{T.y}}; margin-left: 3%; margin-right: 12%"></span>
+      </div>
+    </div>
+
+    <!-- ===== CONTENT: the deck first, then gaps, then every stat ===== -->
+    <main style="max-width: 1400px; margin: 0 auto; padding: 32px 32px 80px; display: flex; flex-direction: column; gap: 36px">
+
+      <section class="p5-in" aria-labelledby="deck-h" style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+        <div style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+          <h2 id="deck-h" class="p5-slab" style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 56px; line-height: 0.9; text-transform: uppercase"><span>The 99</span></h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center">
+            <sc-for list="{{mix}}" as="m" hint-placeholder-count="6"><span style="{{m.style}}">{{m.label}} {{m.n}}</span></sc-for>
+          </div>
+          <sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 24px; text-transform: uppercase; border-bottom: 2px solid {{T.ink}}">{{g.name}} <span style="font-family: 'IBM Plex Mono', monospace; font-size: 14px">({{g.n}})</span></h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 18px 14px">
+                <sc-for list="{{g.cards}}" as="c" hint-placeholder-count="8">
+                  <div class="p5-view" style="display: flex; flex-direction: column; gap: 6px">
+                    <div class="p5-card" role="button" tabindex="0" aria-label="Why {{c.name}}? Click to pin" aria-pressed="{{c.pinned}}" onClick="{{c.select}}" onMouseEnter="{{c.hover}}" onFocus="{{c.hover}}" style="{{c.card}}">
+                      <span style="position: absolute; left: 6px; top: 6px; right: 6px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; line-height: 1.15; color: #0B0B0B">{{c.name}}</span>
+                      <span style="{{c.badge}}">{{c.count}}</span>
+                    </div>
+                    <span style="{{c.tape}}">{{c.note}}</span>
+                    <sc-if value="{{c.swap}}" hint-placeholder-val="{{ false }}">
+                      <button type="button" data-band style="min-height: 32px; cursor: pointer; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; text-transform: uppercase; color: {{T.ink}}; background: transparent; border: 2px solid {{T.ink}}">3 options</button>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+          <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: {{T.mute}}">click any card for "why this card" · + 52 more cards · cards / list / copy list views stay as today</p>
+        </div>
+
+        <aside style="flex: 1 1 300px; max-width: 360px; display: flex; flex-direction: column; gap: 22px">
+          <!-- why this card: the real parts of the score, no made-up rating -->
+          <div aria-live="polite" style="display: flex; flex-direction: column; gap: 10px; padding: 0 16px 16px; color: {{T.ink}}; background: {{T.bg}}; border: 2px solid {{T.ink}}; box-shadow: 7px 7px 0 {{T.r}}">
+            <h3 style="align-self: flex-start; margin: -14px 0 0 -8px; padding: 3px 12px 1px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 20px; text-transform: uppercase; color: #FFFFFF; background: {{T.r}}; border: 2px solid #0B0B0B; transform: skewX(-10deg) rotate(-2deg)">Why this card?</h3>
+            <div style="display: flex; gap: 12px; align-items: flex-start">
+              <div aria-hidden="true" style="{{why.thumb}}"></div>
+              <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 22px; line-height: 1; text-transform: uppercase">{{why.name}}</b>
+                <span style="{{why.tagStyle}}">{{why.kind}}</span>
+                <span style="font-size: 12px">{{why.line}}</span>
+                <span style="{{why.modeStyle}}">{{why.mode}}</span>
+              </div>
+            </div>
+            <dl style="margin: 0; display: flex; flex-direction: column">
+              <sc-for list="{{why.parts}}" as="w" hint-placeholder-count="4">
+                <div style="display: flex; flex-direction: column; gap: 1px; padding: 6px 0; border-top: 1.5px dashed {{T.ink}}"><dt style="font-weight: 700; font-size: 10px; text-transform: uppercase; color: {{T.mute}}">{{w.k}}</dt><dd style="margin: 0; font-size: 13px">{{w.v}}</dd></div>
+              </sc-for>
+            </dl>
+            <div style="display: flex; gap: 8px">
+              <button type="button" data-band style="flex: 1; min-height: 38px; cursor: pointer; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; text-transform: uppercase; color: #141414; background: {{T.y}}; border: 2px solid {{T.ink}}">📌 Always include</button>
+              <button type="button" data-band style="flex: 1; min-height: 38px; cursor: pointer; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 12px; text-transform: uppercase; color: #141414; background: {{T.m}}; border: 2px solid {{T.ink}}">🚫 Never use</button>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 18px 18px 26px; font-family: 'Courier Prime', monospace; font-size: 14px; color: #141414; background: #F0EBDD; transform: rotate(1deg); box-shadow: 6px 6px 0 {{T.shadow}}; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), 95% 100%, 90% calc(100% - 8px), 85% 100%, 80% calc(100% - 8px), 75% 100%, 70% calc(100% - 8px), 65% 100%, 60% calc(100% - 8px), 55% 100%, 50% calc(100% - 8px), 45% 100%, 40% calc(100% - 8px), 35% 100%, 30% calc(100% - 8px), 25% 100%, 20% calc(100% - 8px), 15% 100%, 10% calc(100% - 8px), 5% 100%, 0 calc(100% - 8px))">
+            <b style="text-align: center; font-size: 16px; letter-spacing: 0.1em">*** TO BUY ***</b>
+            <span style="border-top: 2px dashed #141414"></span>
+            <span style="display: flex; justify-content: space-between"><span>1 RHYSTIC STUDY</span><span>KEPT</span></span>
+            <span style="border-top: 2px dashed #141414"></span>
+            <span style="display: flex; justify-content: space-between"><b>TOTAL CARDS</b><b>1</b></span>
+            <div style="display: flex; gap: 8px; margin-top: 6px">
+              <button type="button" data-band style="flex: 1; min-height: 38px; cursor: pointer; font-family: 'Courier Prime', monospace; font-weight: 700; text-transform: uppercase; color: #F0EBDD; background: #141414; border: 0">Copy</button>
+              <button type="button" data-band style="flex: 1; min-height: 38px; cursor: pointer; font-family: 'Courier Prime', monospace; text-transform: uppercase; color: #141414; background: transparent; border: 2px solid #141414">Reset</button>
+            </div>
+          </div>
+          <!-- synergy swaps: cyan. in = cyan tape, out = struck through in magenta -->
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px; border: 2px solid {{T.ink}}; border-top: 6px solid {{T.c}}; background: {{T.bg}}; box-shadow: 5px 5px 0 {{T.c}}">
+            <h3 style="align-self: flex-start; margin: -4px 0 0 -6px; padding: 2px 8px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 20px; text-transform: uppercase; color: #141414; background: {{T.c}}; transform: rotate(-1.5deg)">⇄ Synergy swaps (11)</h3>
+            <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px">
+              <span><b style="padding: 0 4px; color: #141414; background: {{T.c}}">+ Charming Scoundrel</b></span>
+              <span style="font-size: 12px">out: <s style="text-decoration-color: {{T.m}}; text-decoration-thickness: 2px">Mind Stone</s></span>
+              <span style="font-size: 11px; color: {{T.mute}}">DISCARD OUTLET ×9 · WHEELS</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px; font-size: 13px">
+              <span><b style="padding: 0 4px; color: #141414; background: {{T.c}}">+ Baral, Chief of Compliance</b></span>
+              <span style="font-size: 12px">out: <s style="text-decoration-color: {{T.m}}; text-decoration-thickness: 2px">Arcane Signet</s></span>
+              <span style="font-size: 11px; color: {{T.mute}}">SPELLS ×17 · LOOTS</span>
+            </div>
+            <a href="#" style="align-self: flex-start; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid {{T.c}}">all swaps + 8 next in line -&gt;</a>
+          </div>
+          <!-- pins: yellow = always, magenta = never -->
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 14px 14px; border: 2px solid {{T.ink}}; border-top: 6px solid {{T.y}}; background: {{T.bg}}; box-shadow: 5px 5px 0 {{T.y}}">
+            <h3 style="align-self: flex-start; margin: -4px 0 0 -6px; padding: 2px 8px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 20px; text-transform: uppercase; color: #141414; background: {{T.y}}; transform: rotate(1deg)">Pins</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px">
+              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; font-size: 12px; font-weight: 700; color: #141414; background: {{T.y}}">ALWAYS · Curiosity<button type="button" aria-label="Remove pin" style="width: 22px; height: 22px; border: 0; background: transparent; color: inherit; cursor: pointer">×</button></span>
+              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; font-size: 12px; font-weight: 700; color: #141414; background: {{T.m}}"><s>NEVER</s> · Wheel of Fortune<button type="button" aria-label="Remove pin" style="width: 22px; height: 22px; border: 0; background: transparent; color: inherit; cursor: pointer">×</button></span>
+            </div>
+            <div style="display: flex; gap: 6px">
+              <label for="pinq" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Card to pin</label>
+              <input id="pinq" placeholder="card name_" style="flex: 1; min-width: 0; min-height: 38px; padding: 0 6px; font-family: 'IBM Plex Mono', monospace; color: {{T.ink}}; background: transparent; border: 0; border-bottom: 2px dashed {{T.ink}}; border-radius: 0">
+              <button type="button" data-band style="min-height: 38px; padding: 0 10px; cursor: pointer; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; text-transform: uppercase; color: #141414; background: {{T.y}}; border: 2px solid {{T.ink}}">Always</button>
+              <button type="button" data-band style="min-height: 38px; padding: 0 10px; cursor: pointer; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; text-transform: uppercase; color: #141414; background: {{T.m}}; border: 2px solid {{T.ink}}">Never</button>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <div aria-hidden="true" style="display: flex; flex-direction: column">
+        <span style="height: 3px; background: {{T.c}}; margin-left: 12%"></span>
+        <span style="height: 3px; background: {{T.m}}; margin-right: 22%"></span>
+        <span style="height: 3px; background: {{T.y}}; margin-left: 4%; margin-right: 8%"></span>
+        <span style="height: 2px; background: {{T.ink}}"></span>
+      </div>
+
+      <section aria-labelledby="gaps-h" style="display: flex; flex-direction: column; gap: 20px">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px">
+          <h2 id="gaps-h" class="p5-slab" style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 56px; line-height: 0.9; text-transform: uppercase"><span>Gaps &amp; stand-ins</span></h2>
+          <p style="margin: 0; font-size: 12px; color: {{T.mute}}">&gt; 26 popular cards missing, top 20 shown_</p>
+        </div>
+        <sc-for list="{{gaps}}" as="g" hint-placeholder-count="3">
+          <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch; padding-bottom: 22px; border-bottom: 2px dashed {{T.ink}}">
+            <div style="position: relative; width: 150px; aspect-ratio: 488 / 680; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; border-radius: 12px; border: 2px dashed {{T.ink}}; overflow: hidden">
+              <svg aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100" style="position: absolute; inset: 0; width: 100%; height: 100%"><path d="M0 0 L100 100 M100 0 L0 100" stroke="{{T.m}}" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg>
+              <span style="position: relative; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 17px; line-height: 1.1">{{g.name}}</span>
+              <span style="position: relative; align-self: flex-start; padding: 1px 4px; font-family: 'Archivo', sans-serif; font-weight: 700; font-size: 10px; color: {{T.bg}}; background: {{T.ink}}">(NOT IN YOUR BINDER!)</span>
+              <span style="position: relative; font-size: 11px; text-transform: uppercase">{{g.rate}}% of decks · {{g.role}}</span>
+            </div>
+            <div aria-hidden="true" style="display: flex; align-items: center; font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 40px">-&gt;</div>
+            <div role="radiogroup" aria-label="{{g.label}}" style="flex: 1 1 520px; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px">
+              <sc-for list="{{g.opts}}" as="o" hint-placeholder-count="4">
+                <button type="button" role="radio" aria-checked="{{o.on}}" onClick="{{o.pick}}" data-band style="{{o.style}}">
+                  <span style="font-weight: 700; font-size: 11px; text-transform: uppercase">{{o.kind}}</span>
+                  <b style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 17px; line-height: 1.15">{{o.name}}</b>
+                  <span style="font-size: 12px">{{o.why}}</span>
+                  <sc-if value="{{o.chosen}}" hint-placeholder-val="{{ false }}">
+                    <span style="margin-top: auto; align-self: flex-start; padding: 1px 5px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 11px; color: #FFFFFF; background: {{T.r}}; border: 2px solid #0B0B0B; transform: skewX(-10deg) rotate(-4deg); animation: p5drop .35s cubic-bezier(.2,1.6,.4,1) both">(CHOSEN!)</span>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </section>
+
+      <div aria-hidden="true" style="display: flex; flex-direction: column">
+        <span style="height: 3px; background: {{T.m}}; margin-right: 30%"></span>
+        <span style="height: 3px; background: {{T.y}}; margin-left: 8%"></span>
+        <span style="height: 3px; background: {{T.c}}; margin-left: 2%; margin-right: 14%"></span>
+        <span style="height: 2px; background: {{T.ink}}"></span>
+      </div>
+
+      <section aria-labelledby="stats-h" style="display: flex; flex-direction: column; gap: 22px">
+        <h2 id="stats-h" class="p5-slab" style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 56px; line-height: 0.9; text-transform: uppercase"><span>Deck stats &amp; combos</span></h2>
+        <p style="margin: 0; font-size: 12px; color: {{T.mute}}">&gt; a pile of post-its: pull a tab to bring that note to the top_</p>
+
+        <!-- ===== THE PILE ===== -->
+        <div style="position: relative; max-width: 1120px">
+          <div role="tablist" aria-label="Deck stats" style="position: relative; z-index: 3; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding-left: 28px">
+            <sc-for list="{{notes}}" as="n" hint-placeholder-count="4">
+              <button type="button" role="tab" aria-selected="{{n.on}}" onClick="{{n.pick}}" style="{{n.tab}}">{{n.label}}</button>
+            </sc-for>
+          </div>
+          <div style="position: relative">
+            <div aria-hidden="true" style="{{back2}}"></div>
+            <div aria-hidden="true" style="{{back1}}"></div>
+            <div role="tabpanel" aria-label="{{noteLabel}}" style="{{noteStyle}}">
+              <span aria-hidden="true" style="position: absolute; top: -14px; left: 46%; width: 120px; height: 28px; background: rgba(255,255,255,0.45); border: 1px solid rgba(0,0,0,0.08); transform: rotate(-3deg)"></span>
+
+              <!-- MANA CURVE, in detail: two bars per mana value, yours vs the average deck -->
+              <sc-if value="{{isCurve}}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 18px">
+                  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px">
+                    <h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 48px; line-height: 0.9; text-transform: uppercase">Mana curve</h3>
+                    <span style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase">
+                      <span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; color: #FFFFFF; background: #141414"><span style="width: 16px; height: 16px; background: #FFFFFF"></span>your deck</span>
+                      <span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; background: #FFFFFF; border: 2px solid #141414"><span style="{{HATCH}}; width: 16px; height: 16px"></span>edhrec average deck (B4)</span>
+                    </span>
+                  </div>
+                  <p style="margin: 0; padding: 10px 14px; font-size: 15px; line-height: 1.45; background: rgba(255,255,255,0.55); border-left: 6px solid #141414"><b>{{curveSay}}</b> {{curveSay2}}</p>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px">
+                    <sc-for list="{{curveFacts}}" as="f" hint-placeholder-count="4">
+                      <div style="display: flex; flex-direction: column; padding: 8px 10px; border: 2px solid #141414"><span style="font-size: 11px; text-transform: uppercase">{{f.k}}</span><b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 26px; line-height: 1.05">{{f.v}}</b></div>
+                    </sc-for>
+                  </div>
+                  <div role="img" aria-label="{{curveAria}}" style="display: flex; align-items: flex-end; gap: 14px; height: 300px; padding-top: 30px; border-bottom: 3px solid #141414">
+                    <sc-for list="{{curveBig}}" as="v" hint-placeholder-count="8">
+                      <div title="{{v.tip}}" style="flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 4px">
+                        <div style="{{v.youCol}}"><b style="{{v.youNum}}">{{v.n}}</b><div style="{{v.you}}"></div></div>
+                        <div style="{{v.avgCol}}"><span style="{{v.avgNum}}">{{v.r}}</span><div style="{{v.avg}}"></div></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display: flex; gap: 14px">
+                    <sc-for list="{{curveBig}}" as="v" hint-placeholder-count="8">
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px">
+                        <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-size: 18px">{{v.mv}} MANA</b>
+                        <span style="{{v.verdictStyle}}">{{v.verdict}}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <p style="margin: 0; font-size: 12px">Each pair: left = your deck, right = the average of 532 B4 decks. In the app, click a pair to list your cards at that cost.</p>
+                </div>
+              </sc-if>
+
+              <!-- CARD TYPES, in detail: two bars per type -->
+              <sc-if value="{{isTypes}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 16px">
+                  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px">
+                    <h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 48px; line-height: 0.9; text-transform: uppercase">Card types</h3>
+                    <span style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase">
+                      <span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; color: #FFFFFF; background: #141414"><span style="width: 16px; height: 16px; background: #FFFFFF"></span>your deck</span>
+                      <span style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; background: #FFFFFF; border: 2px solid #141414"><span style="{{HATCH}}; width: 16px; height: 16px"></span>edhrec average deck (B4)</span>
+                    </span>
+                  </div>
+                  <p style="margin: 0; padding: 10px 14px; font-size: 15px; line-height: 1.45; background: rgba(255,255,255,0.55); border-left: 6px solid #141414"><b>{{typeSay}}</b> {{typeSay2}}</p>
+                  <sc-for list="{{typeRows}}" as="t" hint-placeholder-count="7">
+                    <div title="{{t.tip}}" style="display: grid; grid-template-columns: 150px 1fr 120px; gap: 6px 14px; align-items: center; padding: 8px 0; border-bottom: 1.5px dashed #141414">
+                      <span style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 20px; text-transform: uppercase">{{t.name}}</span>
+                      <div style="display: flex; flex-direction: column; gap: 4px">
+                        <div style="display: flex; align-items: center; gap: 8px"><div style="{{t.you}}"></div><b style="font-size: 15px">{{t.n}}</b></div>
+                        <div style="display: flex; align-items: center; gap: 8px"><div style="{{t.avg}}"></div><span style="font-size: 13px">{{t.r}} avg</span></div>
+                      </div>
+                      <span style="{{t.verdictStyle}}">{{t.verdict}}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <!-- POWER PROFILE, in detail -->
+              <sc-if value="{{isPower}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 14px">
+                  <h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 48px; line-height: 0.9; text-transform: uppercase">Power profile</h3>
+                  <sc-for list="{{powerRows}}" as="p" hint-placeholder-count="7">
+                    <div style="display: grid; grid-template-columns: 170px 1fr 40px; gap: 4px 14px; align-items: center; padding-bottom: 10px; border-bottom: 1.5px dashed #141414">
+                      <span style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 16px; text-transform: uppercase">{{p.k}}</span>
+                      <div style="display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px"><sc-for list="{{p.cells}}" as="c" hint-placeholder-count="10"><span style="{{c}}"></span></sc-for></div>
+                      <b style="text-align: right; font-family: 'Archivo', sans-serif; font-size: 22px">{{p.v}}</b>
+                      <span style="grid-column: 2 / 4; font-size: 12px">{{p.what}}</span>
+                    </div>
+                  </sc-for>
+                  <p style="margin: 0; font-size: 12px">A rough summary of what the 99 is made of, not a power rating. Bracket Fit in the header is the rule-based check.</p>
+                </div>
+              </sc-if>
+
+              <!-- COMBOS, in detail -->
+              <sc-if value="{{isCombos}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 16px">
+                  <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 10px">
+                    <h3 style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 48px; line-height: 0.9; text-transform: uppercase">Combos</h3>
+                    <span style="font-size: 12px; text-transform: uppercase">97 in your collection · 6 in this deck</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 2px solid #141414; background: rgba(255,255,255,0.35)">
+                    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase">Best combo · allowed in B4</span>
+                    <b style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 20px">Curiosity + Niv-Mizzet, Parun</b>
+                    <span style="font-size: 12px">Infinite draw triggers · infinite card draw · near-infinite damage · two-card infinite</span>
+                    <div style="display: flex; gap: 6px"><span style="padding: 1px 6px; font-weight: 700; font-size: 11px; color: #F0EBDD; background: #141414">IN THIS DECK</span><span style="padding: 1px 6px; font-weight: 700; font-size: 11px; border: 1.5px solid #141414">WINS</span></div>
+                  </div>
+                  <div style="display: flex; flex-direction: column">
+                    <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding-bottom: 6px; border-bottom: 3px solid #141414">
+                      <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 24px; text-transform: uppercase">Danger zone (12)</b>
+                      <span style="font-size: 11px">two-card infinites you can assemble · none in B1–B2, late-game only in B3, anything in B4–B5</span>
+                    </div>
+                    <sc-for list="{{danger}}" as="c" hint-placeholder-count="6">
+                      <div style="display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 9px 0; border-bottom: 1.5px dashed #141414">
+                        <b style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 15px">{{c.cards}}</b>
+                        <span style="font-size: 11px; text-transform: uppercase">{{c.rule}}</span>
+                      </div>
+                    </sc-for>
+                    <a href="#" style="padding-top: 10px; font-size: 12px; text-transform: uppercase; color: #141414">+ 6 more · all 97 combos -&gt;</a>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":4500}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'neg', bracket: 'optimized', arch: 'all', w: 3, sp: 2, picks: { 0: 1, 1: 1, 2: 1 }, stat: 'curve', sel: 'Charming Scoundrel', lock: null };
+  }
+  renderVals() {
+    const s = this.state;
+    const PAPER = '#F0EBDD', BLACK = '#0B0B0B', INK = '#141414';
+    const MODES = {
+      pos: { bg: PAPER, ink: INK, mute: '#4A4740', dust: 'url(#zc-dark)', dustInv: 'url(#zc-light)', scan: 'rgba(0,0,0,0.035)', blendInv: 'screen', shadow: INK, shadowSoft: 'rgba(20,20,20,0.15)', hl: 'rgba(255,230,0,0.7)',
+        y: '#FFE600', c: '#00AEEF', m: '#EC008C', flipBg: BLACK, flipFg: PAPER, img: 'grayscale(1) contrast(1.4)',
+        grid: 'rgba(20,20,20,0.10)', gridMinor: 'rgba(20,20,20,0.04)', rule: 'rgba(236,0,140,0.38)', ruleSoft: 'rgba(236,0,140,0.22)', pencil: 'rgba(20,20,20,0.2)', pencilSolid: '#141414',
+        stamp: 'rgba(0,140,200,0.45)', blendD: 'multiply', fiber: '0.15', edge: 'inset 0 0 160px rgba(20,20,20,0.18)' },
+      neg: { bg: BLACK, ink: PAPER, mute: '#BDB8AC', dust: 'url(#zc-light)', dustInv: 'url(#zc-dark)', scan: 'rgba(255,255,255,0.025)', blendInv: 'multiply', shadow: '#2A2A2A', shadowSoft: 'rgba(0,0,0,0.6)', hl: 'rgba(0,174,239,0.35)',
+        y: '#FFE600', c: '#00AEEF', m: '#EC008C', flipBg: PAPER, flipFg: INK, img: 'grayscale(1) contrast(1.4)',
+        grid: 'rgba(240,235,221,0.08)', gridMinor: 'rgba(240,235,221,0.03)', rule: 'rgba(236,0,140,0.5)', ruleSoft: 'rgba(236,0,140,0.3)', pencil: 'rgba(240,235,221,0.17)', pencilSolid: '#F0EBDD',
+        stamp: 'rgba(255,230,0,0.4)', blendD: 'screen', fiber: '0.12', edge: 'inset 0 0 160px rgba(0,0,0,0.6)' },
+      sepia: { bg: '#E4DDD0', ink: '#2B241C', mute: '#5C5247', dust: 'url(#zc-sepia)', dustInv: 'url(#zc-light)', scan: 'rgba(70,58,45,0.03)', blendInv: 'screen', shadow: '#332B23', shadowSoft: 'rgba(51,43,35,0.15)', hl: 'rgba(211,194,146,0.5)',
+        y: '#D3C292', c: '#A9BCBC', m: '#CFA594', flipBg: '#332B23', flipFg: '#EAE3D6', img: 'sepia(0.4) saturate(0.7) contrast(1.15)',
+        grid: 'rgba(62,52,42,0.12)', gridMinor: 'rgba(62,52,42,0.05)', rule: 'rgba(166,64,43,0.32)', ruleSoft: 'rgba(166,64,43,0.22)', pencil: 'rgba(42,26,11,0.2)', pencilSolid: '#2A1A0B',
+        stamp: 'rgba(166,64,43,0.36)', blendD: 'multiply', fiber: '0.3', edge: 'inset 0 0 160px rgba(50,42,34,0.28), inset 0 0 30px rgba(35,29,22,0.24)' }
+    };
+    const T = MODES[s.mode];
+    T.r = s.mode === 'sepia' ? '#A6402B' : '#E5191C';
+    const Y = T.y, C = T.c, M = T.m;
+    const BAND = 'box-shadow: inset 0 -3px 0 ' + Y + ', inset 0 -6px 0 ' + M + ', inset 0 -9px 0 ' + C;
+    const seg = on => 'cursor: pointer; border: 0; ' + (on ? 'color: #FFFFFF; background: ' + T.r + '; box-shadow: inset 0 -4px 0 #0B0B0B' : 'color: ' + T.ink + '; background: transparent');
+    const modes = [['pos', 'Positive'], ['neg', 'Negative'], ['sepia', 'Sepia']].map(([k, l], i) => ({ label: l, on: s.mode === k ? 'true' : 'false', pick: () => this.setState({ mode: k }),
+      style: 'min-height: 40px; padding: 0 12px; font-family: "Archivo", sans-serif; font-weight: 800; font-size: 12px; text-transform: uppercase; ' + seg(s.mode === k) + (i ? '; border-left: 2px solid ' + T.ink : '') }));
+    const GREEN = '#2A8443', RED = '#D23B26';
+    const battery = (pct, n) => { const lit = Math.round(pct / (100 / n)), col = pct >= 80 ? GREEN : pct >= 60 ? Y : RED;
+      return Array.from({ length: n }, (_, i) => 'display: block; flex: 1 1 0; height: ' + Math.round(40 + 60 * i / (n - 1)) + '%; transform: skewX(-20deg); ' + (i < lit ? 'background: ' + col + '; border: 1.5px solid #0B0B0B; box-shadow: 2px 0 0 #0B0B0B' : 'border: 1.5px solid currentColor; background: repeating-linear-gradient(-45deg, currentColor 0 1px, transparent 1px 4px); opacity: 0.3')); };
+    const BR = [['all','ALL',88.8,'6,838','All decks'],['core','II',91.4,'392','B2 Core'],['upgraded','III',89.5,'647','B3 Upgraded'],['optimized','IV',78.5,'532','B4 Optimized'],['cedh','V',58.2,'47','B5 cEDH · thin data']];
+    const brackets = BR.map(([k, l, p, n, tip]) => {
+      const on = s.bracket === k;
+      return { label: l, pct: p, n, tip, on: on ? 'true' : 'false', pick: () => this.setState({ bracket: k }),
+        style: seg(on) + '; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 76px; min-height: 60px; padding: 0 10px; border-right: 2px solid ' + T.ink + (k === 'cedh' ? '; border-bottom: 2px dashed ' + T.ink : '') };
+    });
+    const miniBrackets = BR.map(([k, l, p, n, tip], i) => {
+      const on = s.bracket === k;
+      return { label: l, tip: tip + ' · ' + p + '%', on: on ? 'true' : 'false', pick: () => this.setState({ bracket: k }),
+        style: seg(on) + '; min-width: 38px; min-height: 34px; padding: 0 8px; font-family: "Archivo", sans-serif; font-weight: 900; font-size: 13px' + (i ? '; border-left: 2px solid ' + T.ink : '') };
+    });
+    const archs = [['all','Overview',''],['wheels','Wheels','13% of decks · own 87.7%'],['tokens','Tokens','7% · 87.8%'],['draw','Card Draw','3% · 88%'],['combo','Combo','3% · 82.5%']].map(([k, n, m]) => {
+      const on = s.arch === k;
+      return { key: k, name: n, meta: m, sel: on, on: on ? 'true' : 'false', pick: () => this.setState({ arch: k }),
+        style: seg(on) + '; display: inline-flex; align-items: baseline; gap: 8px; min-height: 38px; padding: 0 12px; border: 2px solid ' + T.ink };
+    });
+    const sq = on => seg(on) + '; min-width: 36px; min-height: 36px; padding: 0 8px; font-weight: 700; border: 2px solid ' + T.ink;
+    const WT = { 1: 'Your collection decides: popularity counts 40%', 2: 'Collection first: 70%', 3: 'Balanced (the report): 100%', 4: 'Closest to EDHREC: 140%' };
+    const weights = [1, 2, 3, 4].map(v => ({ label: String(v), tip: WT[v], on: s.w === v ? 'true' : 'false', pick: () => this.setState({ w: v }), style: sq(s.w === v) }));
+    const spends = [1, 2, 3].map(v => ({ label: '$'.repeat(v), tip: ['Budget decks', 'All decks', 'Expensive decks'][v - 1], on: s.sp === v ? 'true' : 'false', pick: () => this.setState({ sp: v }), style: sq(s.sp === v) }));
+    const around = [['discard', 25], ['tokens', 11], ['draw', 5], ['flying', 5]].map(([k, v], i) => ({ k: k.toUpperCase(), v,
+      style: 'padding: 4px 10px; font-family: "Archivo", sans-serif; font-weight: 900; font-stretch: 75%; font-size: 20px; ' + (i === 0 ? 'color: ' + INK + '; background: ' + Y : 'border: 2px solid ' + T.ink) }));
+    const power = [['Speed', 7], ['Interaction', 10], ['Ramp', 10], ['Draw', 10], ['Tutor', 3], ['Combo', 10], ['Game Changers', 9]].map(([k, v]) => ({ k, v,
+      cells: Array.from({ length: 10 }, (_, i) => 'height: 14px; ' + (i < v ? 'background-image: radial-gradient(circle, ' + T.ink + ' 0 1.6px, transparent 1.9px); background-size: 4px 4px; outline: 1.5px solid ' + T.ink : 'outline: 1px dashed ' + T.mute)) }));
+    const K = { pop: ['Popular', null], pick: ['Your pick', Y], combo: ['Combo piece', M], sub: ['Stand-in', C], fill: ['Role fill', '#A8A397'], land: ['Lands', null] };
+    const mix = [['pop',57],['pick',18],['combo',2],['sub',3],['fill',0],['land',35]].map(([k, n]) => ({ label: K[k][0].toUpperCase(), n,
+      style: 'padding: 3px 8px; font-weight: 700; font-size: 12px; ' + (K[k][1] ? 'color: ' + INK + '; background: ' + K[k][1] : 'color: ' + T.ink + '; border: 1.5px solid ' + T.ink) }));
+    const HUE = { U: ['#9DB8D6', '#4A6C94'], R: ['#E0A08A', '#9A4A35'], UR: ['#C2A6C8', '#5E4A7A'], C: ['#C8C4BC', '#6E6A64'], L: ['#C9C2A8', '#6E6650'] };
+    const card = (name, ci, k, note, count) => {
+      const hl = K[k][1];
+      return { name, note, count: count || '', swap: k === 'sub' || k === 'pick', pinned: s.lock === name ? 'true' : 'false',
+        hover: () => { if (!s.lock && s.sel !== name) this.setState({ sel: name }); },
+        select: () => this.setState(s.lock === name ? { lock: null } : { lock: name, sel: name }),
+        card: 'position: relative; aspect-ratio: 488 / 680; border-radius: 9px; overflow: hidden; border: 2px solid ' + T.ink + '; background: linear-gradient(180deg, ' + HUE[ci][0] + ' 0%, ' + HUE[ci][1] + ' 100%); box-shadow: 5px 5px 0 ' + (hl || T.shadow) + (s.lock === name ? '; outline: 4px solid ' + T.r + '; outline-offset: 3px' : ''),
+        badge: count ? 'position: absolute; right: 6px; top: 6px; padding: 1px 6px; font-weight: 700; font-size: 13px; color: ' + PAPER + '; background: ' + BLACK : 'display: none',
+        tape: 'align-self: flex-start; padding: 1px 5px; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 10px; line-height: 1.3; ' + (hl ? 'color: ' + INK + '; background: ' + hl : 'color: ' + T.ink + '; border: 1.5px solid ' + T.ink) };
+    };
+    const groups = [
+      { name: 'Creatures', n: 16, cards: [
+        card('Sage of the Falls', 'U', 'combo', '(COMBO PIECE!)'), card('Purphoros, God of the Forge', 'R', 'pop', '(POPULAR)'), card('Whirlpool Warrior', 'U', 'pop', '(POPULAR)'),
+        card('Jace\'s Archivist', 'U', 'pop', '(POPULAR)'), card('Psychosis Crawler', 'C', 'pop', '(POPULAR)'), card('Niv-Mizzet, Parun', 'UR', 'pop', '(POPULAR)'),
+        card('Charming Scoundrel', 'R', 'pick', '(YOUR PICK! DISCARD)'), card('Baral, Chief of Compliance', 'U', 'pick', '(YOUR PICK!)') ] },
+      { name: 'Lands', n: 35, cards: [
+        card('Riverglide Pathway', 'U', 'sub', '(FOR TRAINING CENTER)'), card('Izzet Boilerworks', 'L', 'pick', '(MAKES UR · UNTAPPED)'), card('Command Tower', 'L', 'pop', '(POPULAR)'),
+        card('Island', 'U', 'land', '(BASIC)', '×10'), card('Mountain', 'R', 'land', '(BASIC)', '×9') ] }
+    ];
+    const gapData = [
+      ['Rhystic Study', 71, 'draw', [['Ophidian Eye', 'Advised', 'same role: draw · 3 MV · in 8% of these decks'], ['Fevered Visions', 'Or', 'same role: draw · 3 MV · in 8%'], ['Dictate of Kruphix', 'Or', 'same role: draw · 3 MV']]],
+      ['Training Center', 65, 'land', [['Riverglide Pathway', 'In your deck', 'swapped into your deck'], ['Swiftwater Cliffs', 'Or', 'makes UR · in 12% of these decks'], ['Izzet Guildgate', 'Or', 'makes UR · in 6%']]],
+      ['Consecrated Sphinx', 0, 'draw', [['Arjun, the Shifting Flame', 'Advised', 'draw engine · wheels'], ['Windreader Sphinx', 'Or', 'flying · draw'], ['Niv-Mizzet, Visionary', 'Or', 'draw engine']]]
+    ];
+    const gaps = gapData.map(([name, rate, role, opts], gi) => {
+      const sel = s.picks[gi];
+      const all = [[name, 'Buy it', 'keep the original · goes on the receipt']].concat(opts);
+      return { name, rate: rate || '—', role, label: 'Choose a card for the ' + name + ' slot',
+        opts: all.map(([on, kind, why], oi) => {
+          const chosen = sel === oi;
+          return { name: on, kind, why, chosen, on: chosen ? 'true' : 'false', pick: () => this.setState({ picks: Object.assign({}, s.picks, { [gi]: oi }) }),
+            style: 'display: flex; flex-direction: column; gap: 4px; text-align: left; min-height: 120px; padding: 12px 14px; cursor: pointer; border-radius: 10px; ' + (chosen
+              ? 'color: #FFFFFF; background: ' + T.r + '; border: 2px solid ' + T.ink + '; box-shadow: 6px 6px 0 ' + T.ink + '; transform: skewX(-4deg) rotate(-1.5deg)'
+              : 'color: ' + T.ink + '; background: transparent; border: 2px solid ' + T.ink) };
+        }) };
+    });
+    const danger = [
+      ['Fortune Teller\'s Talent + Sensei\'s Divining Top', 'early · 2 mana · OK in B4'],
+      ['Stella Lee + Act of Treason / Bloody Betrayal / Bond of Passion', 'early · 3 mana · OK in B4'],
+      ['Glint-Horn Buccaneer + Curiosity', 'early · 4 mana · OK in B4'],
+      ['Magmakin Artillerist + Curiosity', 'early · 4 mana · wins · OK in B4'],
+      ['Splinter Twin + Teardrop Kami', 'early · 5 mana · OK in B4'],
+      ['Kitsa, Otterball Elite + Dramatic Reversal', 'early · 6 mana · OK in B4']
+    ].map(([cards, rule]) => ({ cards, rule }));
+    const DOTS = 'background-image: radial-gradient(circle, ' + T.ink + ' 0 1.6px, transparent 1.9px); background-size: 5px 5px; border: 2px solid ' + T.ink + '; box-sizing: border-box';
+    const curve = [[0,0],[9,9],[18,17],[19,20],[10,8],[4,4],[4,4],[0,0]].map(([y, r], k) => ({ mv: k === 7 ? '7+' : String(k), n: y,
+      bar: 'width: 70%; ' + DOTS + '; height: ' + (100 * y / 20) + '%',
+      ref: 'position: absolute; left: 4%; right: 4%; height: 3px; background: ' + M + '; bottom: ' + (100 * r / 20) + '%' }));
+    const types = [['Creature',16,14],['Instant',17,17],['Sorcery',8,12],['Artifact',15,13],['Enchantment',6,7],['Planeswalker',2,2],['Land',35,34]].map(([n, y, r]) => ({ name: n, n: y,
+      bar: 'height: 100%; ' + DOTS + '; width: ' + (100 * y / 36) + '%',
+      ref: 'position: absolute; top: -4px; bottom: -4px; width: 3px; background: ' + M + '; left: ' + (100 * r / 36) + '%' }));
+    // ransom-note letters: each one cut from a different page
+    const ransom = (txt, base) => txt.split('').map((ch, i) => {
+      if (ch === ' ') return { ch: ' ', style: 'display: inline-block; width: 0.32em' };
+      const P = '#F0EBDD', K = '#0B0B0B';
+      const L = [
+        [T.ink, T.bg, '"Archivo", sans-serif', 900, '62%', 'normal'],
+        [T.r, '#FFFFFF', '"Archivo", sans-serif', 900, '100%', 'normal'],
+        [P, K, '"Courier Prime", monospace', 700, '100%', 'normal'],
+        ['transparent', T.ink, '"Archivo", sans-serif', 900, '75%', 'italic'],
+        [K, P, 'Georgia, "Times New Roman", serif', 700, '100%', 'italic'],
+        [T.y, K, '"Archivo", sans-serif', 800, '125%', 'normal']
+      ][(ch.charCodeAt(0) * 7 + i * 11 + base) % 6];
+      const rot = (((i * 37 + base) % 13) - 6) * 1.1, sz = 0.84 + ((i * 29 + base) % 5) * 0.06;
+      return { ch, style: 'display: inline-block; margin: 0 0.03em; padding: 0.04em 0.09em 0; line-height: 0.95; text-transform: uppercase; font-family: ' + L[2] + '; font-weight: ' + L[3] + '; font-stretch: ' + L[4] + '; font-style: ' + L[5] + '; font-size: ' + sz.toFixed(2) + 'em; color: ' + L[1] + '; background: ' + L[0] + '; ' + (L[0] === 'transparent' ? 'outline: 3px solid ' + T.ink + '; outline-offset: -3px; ' : '') + 'transform: rotate(' + rot.toFixed(1) + 'deg); box-shadow: 4px 4px 0 rgba(0,0,0,0.45); animation: p5drop 0.5s cubic-bezier(.2,1.5,.4,1) both; animation-delay: ' + (i * 45 + base * 12) + 'ms' };
+    });
+    // ===== why this card: the parts of its score =====
+    const KIND = { pop: 'Popular', pick: 'Your pick', combo: 'Combo piece', sub: 'Stand-in', land: 'Basic land' };
+    const WHY = {
+      'Charming Scoundrel': ['pick', 'R', 'From your collection: not on the EDHREC list for this commander', [['EDHREC', 'In 3% of B4 decks (too rare to make the list)'], ['Shares with the commander', 'discard / wheels: "discard a card, then draw"'], ['Links in this deck', '25 discard cards · 9 discard outlets'], ['Role', 'Draw (rummage) · treasure for ramp']]],
+      'Sage of the Falls': ['combo', 'U', 'Piece of a combo you own', [['Combo', 'The Locust God + Sage of the Falls: 11 mana, late game · allowed in B3+'], ['EDHREC', 'In 18% of B4 decks · synergy +15%'], ['Shares with the commander', 'loot on draw'], ['Role', 'Draw (loot)']]],
+      'Niv-Mizzet, Parun': ['pop', 'UR', 'Popular with this commander', [['EDHREC', 'In 47% of B4 decks · synergy +31%'], ['Shares with the commander', 'draw triggers'], ['Combo', 'with Curiosity: wins · 7 mana, late'], ['Role', 'Win condition · damage']]],
+      'Riverglide Pathway': ['sub', 'U', 'Stand-in for Training Center (not owned)', [['Why this one', 'makes U and R · enters untapped'], ['Closeness', 'same job: dual land in your colours'], ['Training Center', 'in 65% of B4 decks · goes on the buy list if you keep it'], ['Role', 'Land']]]
+    };
+    const shown = s.lock || s.sel;
+    const w = WHY[shown] || ['pop', 'C', 'Popular with this commander', [['EDHREC', 'Popular in B4 decks for The Locust God'], ['Shares with the commander', 'spells / draw'], ['Links in this deck', 'several cards'], ['Role', 'Support']]];
+    const why = { name: shown, mode: s.lock ? '📍 PINNED · click the card again to let go' : 'HOVER A CARD · CLICK TO PIN IT HERE',
+      modeStyle: 'align-self: flex-start; margin-top: 2px; padding: 1px 6px; font-weight: 700; font-size: 10px; ' + (s.lock ? 'color: #FFFFFF; background: ' + T.r : 'border: 1.5px dashed ' + T.ink), kind: KIND[w[0]].toUpperCase(), line: w[2], parts: w[3].map(([k, v]) => ({ k, v })),
+      tagStyle: 'align-self: flex-start; padding: 1px 6px; font-family: "Archivo", sans-serif; font-weight: 800; font-size: 10px; ' + (K[w[0]] && K[w[0]][1] ? 'color: ' + INK + '; background: ' + K[w[0]][1] : 'border: 1.5px solid ' + T.ink),
+      thumb: 'width: 74px; aspect-ratio: 488 / 680; flex: none; border-radius: 6px; border: 2px solid ' + T.ink + '; background: linear-gradient(180deg, ' + HUE[w[1]][0] + ', ' + HUE[w[1]][1] + '); transform: rotate(-3deg); box-shadow: 4px 4px 0 ' + T.r };
+    // ===== post-it pile =====
+    const NI = '#141414';
+    const NOTE = { curve: ['Mana curve', Y], types: ['Card types', C], power: ['Power profile', M], combos: ['Combos', '#F0EBDD'] };
+    const order = ['curve', 'types', 'power', 'combos'];
+    const cur = s.stat, curBg = NOTE[cur][1];
+    const rot = { curve: -2, types: 1.5, power: -1, combos: 2 };
+    const notes = order.map(k => {
+      const on = k === cur;
+      return { label: NOTE[k][0].toUpperCase(), on: on ? 'true' : 'false', pick: () => this.setState({ stat: k }),
+        tab: 'position: relative; cursor: pointer; padding: ' + (on ? '14px 22px 18px' : '9px 18px 10px') + '; margin-bottom: ' + (on ? '-8px' : '0') + '; font-family: "Archivo", sans-serif; font-weight: 900; font-stretch: 75%; font-size: ' + (on ? '20px' : '16px') + '; color: ' + NI + '; background: ' + NOTE[k][1] + '; border: 2px solid ' + NI + '; border-bottom: ' + (on ? '0' : '2px solid ' + NI) + '; border-radius: 6px 6px 0 0; transform: rotate(' + (on ? 0 : rot[k]) + 'deg); box-shadow: ' + (on ? 'none' : '3px -2px 0 ' + T.shadowSoft) + '; opacity: ' + (on ? 1 : 0.92) };
+    });
+    const others = order.filter(k => k !== cur);
+    const sheet = (k, r, dx, dy) => 'position: absolute; inset: 0; background: ' + NOTE[k][1] + '; border: 2px solid ' + NI + '; transform: translate(' + dx + 'px, ' + dy + 'px) rotate(' + r + 'deg); box-shadow: 6px 6px 0 ' + T.shadowSoft;
+    const back2 = sheet(others[1], 2.2, 14, 12), back1 = sheet(others[0], -1.6, -8, 8);
+    const noteStyle = 'position: relative; z-index: 2; min-height: 560px; padding: 34px 36px 30px; color: ' + NI + '; background: ' + curBg + '; border: 2px solid ' + NI + '; box-shadow: 8px 8px 0 ' + T.shadow + '; background-image: linear-gradient(transparent 31px, rgba(0,0,0,0.07) 32px); background-size: 100% 32px';
+    const NDOTS = 'background-image: radial-gradient(circle, ' + NI + ' 0 1.6px, transparent 1.9px); background-size: 5px 5px; border: 2px solid ' + NI + '; box-sizing: border-box; background-color: rgba(255,255,255,0.35)';
+    const diffOf = d => d === 0 ? '±0' : (d > 0 ? '+' + d : '−' + (-d));
+    const diffSt = (d, big) => 'font-weight: 700; font-size: 12px; padding: 0 5px; text-align: right; justify-self: end; ' + (Math.abs(d) >= (big || 2) ? 'color: #F0EBDD; background: ' + NI : '');
+    const CV = [[0,0],[9,9],[18,17],[19,20],[10,8],[4,4],[4,4],[0,0]];
+    const HATCH = 'background-color: #FFFFFF; background-image: repeating-linear-gradient(45deg, #141414 0 2px, transparent 2px 7px); border: 2px solid #141414; box-sizing: border-box';
+    const SOLID = 'background: #141414; border: 2px solid #141414; box-sizing: border-box';
+    // plain words for a difference: "same", "2 more", "4 fewer"
+    const word = d => d === 0 ? 'SAME' : (d > 0 ? d + ' MORE' : (-d) + ' FEWER');
+    const wordSt = d => 'padding: 2px 8px; font-family: "Archivo", sans-serif; font-weight: 900; font-size: 13px; white-space: nowrap; justify-self: start; ' +
+      (d === 0 ? 'border: 2px solid #141414' : Math.abs(d) >= 2 ? 'color: #FFFFFF; background: ' + T.r + '; border: 2px solid #141414; transform: skewX(-8deg)' : 'color: #FFFFFF; background: #141414');
+    const CMAX = 22;
+    const curveBig = CV.map(([y, r], k) => {
+      const mv = k === 7 ? '7+' : String(k), col = 'flex: 1; max-width: 46px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px';
+      return { mv, n: y, r, verdict: word(y - r), verdictStyle: wordSt(y - r),
+        tip: mv + ' mana: you have ' + y + ', the average deck has ' + r,
+        youCol: col, avgCol: col,
+        youNum: 'font-family: "Archivo", sans-serif; font-weight: 900; font-size: 22px; line-height: 1',
+        avgNum: 'font-size: 14px; line-height: 1',
+        you: 'width: 100%; height: ' + (100 * y / CMAX) + '%; ' + SOLID,
+        avg: 'width: 100%; height: ' + (100 * r / CMAX) + '%; ' + HATCH };
+    });
+    // summary sentence from the numbers, biggest differences first
+    const cd = CV.map(([y, r], k) => [k === 7 ? '7+' : String(k), y - r]).filter(x => x[1]).sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]));
+    const curveSay = cd.every(x => Math.abs(x[1]) <= 2) ? 'Your curve is almost the same as the average deck.' : 'Your curve is different from the average deck.';
+    const curveSay2 = cd.length ? 'Differences: ' + cd.map(([m, d]) => word(d).toLowerCase() + ' at ' + m + ' mana').join(', ') + '. Everything else matches.' : 'It matches at every cost.';
+    const curveAria = 'Mana curve. ' + CV.map(([y, r], k) => (k === 7 ? '7+' : k) + ' mana: yours ' + y + ', average ' + r).join('; ');
+    const curveFacts = [['Non-land cards', '64'], ['Average mana value', '2.91'], ['Cheap (0–2 mana)', '27 · avg 26'], ['Big (5+ mana)', '8 · avg 8']].map(([k, v]) => ({ k, v }));
+    const TY = [['Creature',16,14],['Instant',17,17],['Sorcery',8,12],['Artifact',15,13],['Enchantment',6,7],['Planeswalker',2,2],['Land',35,34]];
+    const typeRows = TY.map(([name, n, r]) => ({ name, n, r, verdict: word(n - r), verdictStyle: wordSt(n - r),
+      tip: name + ': you have ' + n + ', the average deck has ' + r,
+      you: 'height: 18px; width: ' + (100 * n / 36) + '%; ' + SOLID,
+      avg: 'height: 18px; width: ' + (100 * r / 36) + '%; ' + HATCH }));
+    const plural = { Creature: 'creatures', Instant: 'instants', Sorcery: 'sorceries', Artifact: 'artifacts', Enchantment: 'enchantments', Planeswalker: 'planeswalkers', Land: 'lands' };
+    const td = TY.map(([n, y, r]) => [n, y - r]).filter(x => Math.abs(x[1]) >= 2).sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]));
+    const typeSay = td.length ? 'Biggest differences: ' + td.map(([n, d]) => word(d).toLowerCase() + ' ' + plural[n]).join(', ') + '.' : 'Your card types match the average deck.';
+    const typeSay2 = 'The rest is within 1 card of the average.';
+    const PW = { Speed: 'cheap spells and fast mana: how early the deck acts', Interaction: 'removal, counters and wipes', Ramp: 'mana rocks, land ramp and cost reducers',
+      Draw: 'card draw and card selection', Tutor: 'cards that search the library (Scryfall otag:tutor)', Combo: 'pieces of combos you own that are in this 99', 'Game Changers': 'cards on the official Game Changers list' };
+    const powerRows = [['Speed', 7], ['Interaction', 10], ['Ramp', 10], ['Draw', 10], ['Tutor', 3], ['Combo', 10], ['Game Changers', 9]].map(([k, v]) => ({ k, v, what: PW[k],
+      cells: Array.from({ length: 10 }, (_, i) => 'height: 20px; border: 2px solid ' + NI + '; ' + (i < v ? 'background-image: radial-gradient(circle, ' + NI + ' 0 1.6px, transparent 1.9px); background-size: 4px 4px; background-color: rgba(255,255,255,0.35)' : 'border-style: dashed; opacity: 0.5')) }));
+    return { ransomA: ransom('The Locust', 2), ransomB: ransom('God', 7), T, modes, matchCells: battery(78.5, 10), brackets, miniBrackets, archs, weights, spends, around, power, mix, groups, gaps, danger, curve, types,
+      notes, back1, back2, noteStyle, noteLabel: NOTE[cur][0], isCurve: cur === 'curve', isTypes: cur === 'types', isPower: cur === 'power', isCombos: cur === 'combos',
+      why, curveBig, curveFacts, typeRows, powerRows, HATCH, curveSay, curveSay2, curveAria, typeSay, typeSay2,
+      onArch: e => this.setState({ arch: e.target.value }) };
+  }
+}
+</script>
+</body>
+</html>
