@@ -72,6 +72,8 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     r["off_color"] = sum(1 for c in deck if not set(c["ci"]) <= ci)
     r["illegal"] = sum(1 for c in deck if not c["commander_legal"])
     r["gc_over_cap"] = int(bracket in GC_CAP and x["gc"] > GC_CAP[bracket])
+    # the 99 itself (card|kind) + basics, so a display-only change can be proven not to touch any deck
+    r["cards"] = sorted(f"{k}|{kind}" for k, (i, kind, *_) in zip(keys, x["deck"])) + sorted(f"{T.rows[i][0]} x{c}" for i, c in x["basics"])
     return r
 
 def run(csv_path):
@@ -130,6 +132,14 @@ def main():
         with open(a.compare, encoding="utf-8") as f: base = json.load(f)["summary"]
     print("\nDeck metrics (averages; checks = number of decks failing)")
     table(summ, base)
+    if a.compare:
+        with open(a.compare, encoding="utf-8") as f: bd = json.load(f).get("decks", {})
+        have = [k for k in res if k in bd and "cards" in bd[k]]
+        if have:
+            diff = [k for k in have if bd[k]["cards"] != res[k]["cards"]]
+            print(f"\nDeck card lists: {len(have)} decks compared, {len(diff)} differ" + "".join(f"\n  {k}" for k in diff[:20]))
+        else:
+            print("\nDeck card lists: this baseline has none (saved before card lists were recorded), so averages only")
     if a.save:
         with open(a.save, "w", encoding="utf-8") as f:
             json.dump({"summary": summ, "decks": res}, f, indent=1, sort_keys=True)

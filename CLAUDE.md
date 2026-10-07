@@ -80,7 +80,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
 `baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
-damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule)
+damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -365,11 +365,22 @@ Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why ad
 section has "Use this" / "Buy instead" for slots too. Choices are saved per commander+bracket in the
 browser (`localStorage` "dw:<slug>:<bracket>", per-viewer convenience) and change the card view, the
 copyable list and the shopping list (`effDeck`, kinds `s2` = your choice, `buy`). "Reset my choices" clears.
-"Your pick" slots: non-land `y` entries can be `[card, "y", why, [[alternative, why] ×≤PICK_ALTS 3], card to buy, why]`
-(end of `analyze()`): owned cards doing a similar job (`find_subs` on the pick) first, then the deck's best other
-owned cards, ranked by `total()` (score + deck synergy) + `PICK_CLOSE` × closeness, within GC cap / `blocked()`;
-"buy" = most played missing EDHREC card sharing a role (no roles: same type + engine). JS slot key `"y"+card`,
-chosen kinds `y2` / `buy`. `deck_diff` compares whole entries (options differ per deck). Saved choices: `rowSel()`
+**Labels and swaps (Oct 2026, one system, zine palette only):** tapes `TAPE` [colour, label, meaning]: p POPULAR
+(outline) · y GOOD FIT (yellow, reason line) · k ALWAYS IN (red) · c COMBO (magenta, the combo in the title) · f FILLER
+· ROLE (grey; "99 cards" for leftovers) · s STAND-IN (cyan, "for <EDHREC card>") · y2/s2 YOUR SWAP (paper) · buy TO BUY
+(dashed); every tape's title = its meaning; legend `legendHTML()` above the grid (8 tapes + "hover any card to swap it").
+The big tile is always the card in the deck; greyed means only "was": `.was` thumbnail of the card a slot replaced
+(EDHREC's card for a stand-in, the original after a swap). Old outline classes (.ct.pick/.fill/.miss/.sub/.combo/.buy,
+.lg legend, --pick/--combo/--fill) are gone; grey = `--g`. **Every card can be swapped** (not commander, basics,
+ALWAYS IN = only "Remove pin"): deck entries `[card, kind, why/role/combo or -1, options]` for p, y, f, c (lands too),
+options = index into the shared, de-duplicated `T.opts` (`OPTS` in the page, `T.o()`): `[[[alternative, why] ×≤PICK_ALTS 3],
+card to buy, why]` (end of `analyze()`): owned cards doing a similar job (`find_subs`) first, then the deck's best
+other owned cards, ranked by `total()` + `PICK_CLOSE` × closeness, within GC cap / `blocked()`; "buy" = most played
+missing EDHREC card sharing a role (no roles: same type + engine; lands: makes the same colours). `optc` (per
+commander + bracket in `main()`) reuses the overview deck's options in its theme / average decks (run time, size).
+Display only: `tests/measure.py --compare tests/baseline_ui.json` (card lists, saved before this change) = 0 of 1,298
+decks differ. COMBO menus warn "breaks combo: A + B". `/deck` replies with new `opts` rows (`no`); weight 3 + $$
+reproduces deck and options. JS slot key `"y"+card`, chosen kinds `y2` / `buy`. `deck_diff` compares whole entries (options differ per deck). Saved choices: `rowSel()`
 is the one key for reading (body) and writing (clicks), incl. the weight/$ level; `MEM` keeps them for the visit
 when localStorage is blocked (bug: picks didn't apply at non-default levels). Report ~46 MB.
 Combos per commander (report): **Danger zone** (red box, `danger_zone()`): every two-card infinite you can

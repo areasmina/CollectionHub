@@ -316,7 +316,13 @@ TWO_FACED = {"transform", "modal_dfc", "reversible_card", "double_faced_token"} 
 class CardTable:
     """One shared card list for the report; decks reference cards by index."""
     PREFIX = "https://cards.scryfall.io/normal/"
-    def __init__(self): self.rows, self.idx, self.strs, self.sidx = [], {}, [], {}
+    def __init__(self): self.rows, self.idx, self.strs, self.sidx, self.opts, self.oidx = [], {}, [], {}, [], {}
+    def o(self, opt):
+        """Index of a card's swap options in the shared option table (OPTS in the page): the same card gets the
+        same options in most decks of a commander (brackets, themes, average decks), so they're stored once."""
+        k = json.dumps(opt, separators=(",", ":"))
+        if k not in self.oidx: self.oidx[k] = len(self.opts); self.opts.append(json.loads(k))
+        return self.oidx[k]
     def s(self, text):
         """Index of a reason text in the shared string table (-1 for none): the same reasons repeat
         thousands of times across commanders, brackets and themes."""
@@ -1225,7 +1231,7 @@ def power_profile(roles, gc, avg_cmc):
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
-            want_gaps=True, profile=None, show=None, ew=1.0, pins=None, spend=2):
+            want_gaps=True, profile=None, show=None, ew=1.0, pins=None, spend=2, optc=None):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
     `combos` = combos you own in these colours (combos_for_commander()["own"]).
     `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
@@ -1237,7 +1243,9 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     listing or a useful role); price never helps a card that does nothing here and never beats a bracket rule.
     `pins` = (keys always included, keys never used) for this commander (pins.json): excluded cards leave the
     pool (no pick, substitute, option or combo uses them); included ones go in first, kind "k", unless a bracket
-    rule forbids them (then listed in x["pinx"] with the reason) and synergy swaps never take them out."""
+    rule forbids them (then listed in x["pinx"] with the reason) and synergy swaps never take them out.
+    `optc` = a dict shared by the decks of one commander + bracket: each card's swap options are built once (by the
+    overview deck, built first) and reused by its theme / average decks (display only; the 99 never depends on it)."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
     _SUB_MEMO.clear()
     tribe = commander_types(cmdr)
@@ -1407,18 +1415,18 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         fill = [(k, m, rs) for k, m, rs, kd in pool
                 if k not in used and kd != "land" and (gc_cap != 0 or not m["gc"])]
         fill.sort(key=lambda it: (-score(it[0]), it[1]["cmc"], it[0]))
-        def take(it):
-            chosen.append((it[1], "f", None)); used.add(it[0]); note(it[0])
+        def take(it, role=None):
+            chosen.append((it[1], "f", role)); used.add(it[0]); note(it[0])
             for r in it[2]:
                 if r in counts: counts[r] += 1
         ok = lambda it: it[0] not in used and (not it[1]["gc"] or gc_room()) and not blocked(it[0])
         for role, target in ROLE_TARGETS.items():
             for it in fill:
                 if len(chosen) >= nonland or counts[role] >= target: break
-                if ok(it) and role in it[2]: take(it)
+                if ok(it) and role in it[2]: take(it, role)
         for it in fill:
             if len(chosen) >= nonland: break
-            if ok(it): take(it)
+            if ok(it): take(it, "99 cards")        # no role short: the best leftover, to reach 99
 
     # 3b) synergy swaps: an owned card that feeds (or is fed by) many cards already in the deck replaces
     # the weakest pick, popular card or role fill, by score + deck synergy. Role counts that are at or
@@ -1496,36 +1504,49 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     arena += [f"1 {m['name'].split(' // ')[0]}" for m, _, _ in chosen + lands]
     arena += [f"{c} {b}" for b, c in tally.items()]
 
-    # each "your pick": up to PICK_ALTS owned cards to swap in (a similar job by roles, type and Oracle text,
-    # or the next best owned cards), ranked by the builder's value + links with this deck, and the most
-    # played EDHREC card for the same job that you'd have to buy
+    # every card you could swap (popular, good fit, filler, combo piece; lands too): up to PICK_ALTS owned cards to swap
+    # in (a similar job by roles, type and Oracle text, or the next best owned cards), ranked by the builder's value +
+    # links with this deck, within the Game Changer cap and the bracket rules (blocked), and the most played EDHREC card
+    # for the same job that you'd have to buy. Display only: the 99 above is final. Pinned cards and basics get none.
     pick_opts = {}
     near = [k for _, k, m in sorted(((total(m, False), k, m) for k, m, _, kd in pool if kd != "land" and k not in used),
                                     key=lambda t: (-t[0], t[1]))[:PICK_ALTS * 2]]
-    for m, kind, _ in chosen:
-        if kind != "y": continue
+    for m, kind, _ in chosen + lands:
+        if kind not in "pyfc": continue
+        k0 = norm(m["name"])
+        if optc is not None and k0 in optc:
+            if optc[k0]: pick_opts[id(m)] = optc[k0]
+            continue
+        island = card_kind(m) == "land"
         roles, (pv, cs) = roles_of(m), card_engines(m)
-        close = {k: q for q, k, _, _ in find_subs(m, rate_of, pool, by_role, used, True, 10, tribe=tribe, ci=ci)}
+        close = {k: (q, w) for q, k, _, w in find_subs(m, rate_of, pool, by_role, used, True, 10, tribe=tribe, ci=ci)}
         opts = []
-        val = lambda k: (-(total(owned[k], False) + PICK_CLOSE * close.get(k, 0)), k)
-        for k in sorted(close, key=val) + sorted(set(near) - set(close), key=val):   # a similar job first
+        val = lambda k: (-((score(k) if island else total(owned[k], False)) + PICK_CLOSE * close.get(k, (0, ""))[0]), k)
+        for k in sorted(close, key=val) + ([] if island else sorted(set(near) - set(close), key=val)):   # a similar job first
             m2 = owned[k]
+            if (card_kind(m2) == "land") != island: continue
             if (m2["gc"] and not m["gc"] and not gc_room()) or blocked(k): continue
-            why = syn.why(m2) or fits.get(k, (0, ""))[1] or role_text(m2)
-            opts.append([T.add(m2["name"], m2), T.s(why + (" · similar job" if k in close else ""))])
+            why = close[k][1] if island else (syn.why(m2) or fits.get(k, (0, ""))[1] or role_text(m2))
+            opts.append([T.add(m2["name"], m2), T.s(why + (" · similar job" if k in close and not island else ""))])
             if len(opts) >= PICK_ALTS: break
         buy, bwhy = -1, -1
+        mine = set(m.get("produced") or []) & ci
         for k, name, rate in missing:
             mm = name_meta.get(k)
             if not mm or k in sub_for or card_kind(mm) != card_kind(m) or (mm.get("gc") and not m["gc"] and not gc_room()):
                 continue
-            p2, c2 = card_engines(mm)       # the same job: a shared role, or (no roles) same card type + engine
-            same = (roles_of(mm) & roles) if roles else \
-                (type_group(mm["type_line"]) == type_group(m["type_line"]) and (p2 | c2) & (pv | cs))
+            if island:                      # a land: makes at least the colours yours makes here
+                same = mine and mine <= set(mm.get("produced") or [])
+            else:
+                p2, c2 = card_engines(mm)   # the same job: a shared role, or (no roles) same card type + engine
+                same = (roles_of(mm) & roles) if roles else \
+                    (type_group(mm["type_line"]) == type_group(m["type_line"]) and (p2 | c2) & (pv | cs))
             if same:
                 buy, bwhy = T.add(mm["name"], mm), T.s(f"EDHREC: in {round(rate * 100)}% of these decks · {role_text(mm)}")
                 break
-        if opts or buy >= 0: pick_opts[id(m)] = (opts, buy, bwhy)
+        o = (opts, buy, bwhy) if opts or buy >= 0 else None
+        if optc is not None: optc[k0] = o
+        if o: pick_opts[id(m)] = o
 
     # each substitute slot: why the advised card, and up to 3 other owned cards you could use instead
     # (not already in the deck, within the Game Changer cap and the bracket's combo rules)
@@ -1568,6 +1589,12 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     sources = {c: sum(cnt for b, cnt in tally.items() if b == BASICS[c])
                   + sum(1 for m, _, _ in lands if c in (m.get("produced") or [])) for c in colors}
     odd = sum(1 for c in chosen if c[1] in "sf")
+    fin = {me} | {norm(m["name"]) for m, _, _ in allc}
+    cname = {}
+    for m, kind, _ in allc:
+        if kind != "c": continue
+        c = next((c for c in by_card.get(norm(m["name"]), []) if combo_done(c, fin)), None)
+        if c: cname[id(m)] = " + ".join(c["cards"] + (c.get("req") or []))
     return {
         "decks": edh["decks"], "pct": round(100 * own_w / tot_w, 1),
         "own_n": own_n, "tmpl_n": len(template), "n_miss": len(missing),
@@ -1588,9 +1615,11 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "bench": bench,         # next in line from your collection: [card, why]
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         # substitutes also carry [why the advised card, [[alternative, why] x up to 3]]
-        # "your pick" entries with options: [card, "y", why, [[alternative, why] x up to 3], card to buy, why]
+        # other entries: [card, kind, why (good fit) / role (filler) / the combo (combo piece) or -1, options]
+        # options (p, y, f, c; none for pinned) = index into T.opts: [[[alternative, why] x up to 3], card to buy, why]
         "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f), *slot_alts.get(id(f), (-1, []))] if kind == "s"
-                 else [T.add(m["name"], m), kind, T.s(f) if isinstance(f, str) else -1, *pick_opts.get(id(m), ())]
+                 else [T.add(m["name"], m), kind, T.s(cname[id(m)]) if id(m) in cname else T.s(f) if isinstance(f, str) else -1,
+                       *([T.o(list(pick_opts[id(m)]))] if id(m) in pick_opts else [])]
                  for m, kind, f in allc],
         "basics": [[T.add(b), c] for b, c in tally.items()],
         "gaps": gaps,
@@ -1941,7 +1970,7 @@ HTML = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;700&family=Courier+Prime:wght@400;700&display=swap">
 <script>try{document.documentElement.dataset.mode=localStorage.getItem("dw:mode")||"neg";}catch(e){document.documentElement.dataset.mode="neg";}</script>
 <style>
-:root{--bg:#111827;--ink:#e5e7eb;--mut:#9ca3af;--line:#374151;--acc:#2dd4bf;--card:#1f2937;--bar:#374151;--fill:#a78bfa;--pick:#fbbf24;--combo:#f472b6}
+:root{--bg:#111827;--ink:#e5e7eb;--mut:#9ca3af;--line:#374151;--acc:#2dd4bf;--card:#1f2937;--bar:#374151}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
 main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
 h1{font:700 2.2rem/1.1 Georgia,serif;margin:0 0 2px;color:#fff}
@@ -1979,20 +2008,12 @@ a.tag:hover{background:var(--acc);color:var(--bg)}.tag.dim{color:var(--mut)}
 .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.num{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--mut)}
 .num b{display:block;font-size:1.25rem;color:var(--ink)}.num .t{font-weight:600;color:var(--ink);font-size:.8rem}.num ul{padding-left:16px;margin:4px 0 0}.num .bad{color:#fbbf24}.num .ok{color:#34d399}
 @media(max-width:700px){.nums{grid-template-columns:1fr}}
-.ks{color:var(--acc)}.kf{color:var(--fill)}.kp{color:var(--pick)}.kc{color:var(--combo)}
 .vbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
 .vbar h3{margin:0 8px 0 0;font-size:1rem}
-.legend{font-size:.75rem;color:var(--mut);display:flex;gap:6px;align-items:center;margin-left:auto}
-.lg{display:inline-block;width:12px;height:12px;border-radius:3px;border:2px solid}.lg.s{border-color:var(--acc)}.lg.f{border-color:var(--fill)}.lg.y{border-color:var(--pick)}.lg.c{border-color:var(--combo)}.lg.m{background:#555;border-color:#555}
 .grp h5{margin:14px 0 6px;font-size:.85rem;color:var(--mut);font-weight:600}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .ct{position:relative;display:block;line-height:0;border-radius:6px}
 img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--bar);object-fit:cover}
-.ct.sub img.c{outline:3px solid var(--acc);outline-offset:-2px}
-.ct.fill img.c{outline:3px solid var(--fill);outline-offset:-2px}
-.ct.pick img.c{outline:3px solid var(--pick);outline-offset:-2px}
-.ct.combo img.c{outline:3px solid var(--combo);outline-offset:-2px}
-.ct.miss img.c{filter:grayscale(1) brightness(.5)}
 .badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.8);color:#fff;font:700 .75rem/1 system-ui;padding:4px 6px;border-radius:4px}
 .note{position:absolute;left:4px;right:4px;bottom:6px;background:rgba(0,0,0,.82);color:#fff;font:600 .65rem/1.25 system-ui;padding:3px 5px;border-radius:4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gap{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line);flex-wrap:wrap}
@@ -2011,7 +2032,7 @@ table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{paddi
 .pins{font-size:.85rem;margin:6px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pins .tag{display:inline-flex;gap:4px;align-items:center}
 .pinx,.pinb{border:0;background:none;color:var(--mut);cursor:pointer;padding:0 3px;font-size:.75rem}.pinx:hover,.pinb:hover{color:var(--ink)}
 .pinq{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px;width:14em}
-.ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
+
 .shopl{font-size:.75rem;white-space:nowrap}.bub .shopl{display:block;margin:-2px 0 6px 4px}
 .cw{position:relative}
 .bub{display:none;position:absolute;top:100%;left:0;margin-top:-8px;z-index:30;width:max-content;max-width:min(560px,94vw);padding:8px;background:var(--card);border:1px solid var(--acc);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);line-height:1.3}
@@ -2021,7 +2042,7 @@ table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{paddi
 .bub .opt{flex-direction:column;align-items:stretch;gap:3px;width:104px;margin:0;padding:4px;font-size:.7rem;text-align:left}
 .bub .opt img.c{width:100%}.bub .opt b{font-size:.72rem;line-height:1.2}
 .bub .opt small{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
-.bub .opt.want{border:2px solid var(--pick);background:rgba(251,191,36,.14)}.bub .opt.want b{color:var(--pick)}
+.bub .opt.want{border:2px dashed var(--ink);background:transparent}
 .bub .acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.bub .acts button{font-size:.72rem;padding:3px 7px}.bub small{font-size:.7rem;color:var(--mut)}
 .flip{position:absolute;top:6px;left:6px;z-index:2;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.78);color:#fff;font:700 16px/26px system-ui;text-align:center;cursor:pointer}
 .chooser{border:1px solid var(--acc);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(45,212,191,.06)}
@@ -2042,7 +2063,7 @@ button:hover,button.on{background:var(--acc);color:var(--bg)}a{color:var(--acc)}
 :root,:root[data-mode="neg"]{--bg:#141414;--ink:#F0EBDD;--mute:#BDB8AC;--card:#1C1C1B;--bar:#2B2A27;--line:rgba(240,235,221,.32);--grid:rgba(240,235,221,.08);--gridm:rgba(240,235,221,.03)}
 :root[data-mode="pos"]{--bg:#F0EBDD;--ink:#141414;--mute:#4A4740;--card:#E7E1D1;--bar:#D6CFBD;--line:rgba(20,20,20,.32);--grid:rgba(20,20,20,.10);--gridm:rgba(20,20,20,.04)}
 :root[data-mode="sepia"]{--bg:#E4DDD0;--ink:#2B241C;--mute:#5C5247;--card:#DBD3C5;--bar:#CBC2B2;--line:rgba(43,36,28,.32);--grid:rgba(62,52,42,.12);--gridm:rgba(62,52,42,.05)}
-:root{--y:#FFE600;--c:#00AEEF;--m:#EC008C;--onacc:#141414;--mut:var(--mute);--acc:var(--c);--pick:var(--y);--combo:var(--m);--fill:#A8A397;
+:root{--y:#FFE600;--c:#00AEEF;--m:#EC008C;--onacc:#141414;--mut:var(--mute);--acc:var(--c);--g:#A8A397;
   --band:inset 0 -3px 0 var(--y),inset 0 -6px 0 var(--m),inset 0 -9px 0 var(--c);
   --head:"Archivo","Arial Narrow",sans-serif;--body:"IBM Plex Mono","Courier New",monospace;--serial:"Courier Prime","Courier New",monospace}
 body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--body)}
@@ -2077,7 +2098,7 @@ input[type=search],select,.pinq,textarea{border:2px solid var(--ink);border-radi
 .slider input{accent-color:var(--m)}
 .slider,#coll,.row,.num,.chooser,.shop,.danger{border:2px solid var(--ink);border-radius:0;background:var(--card)}
 .bub{border:2px solid var(--ink);border-radius:0;background:var(--card);box-shadow:5px 5px 0 var(--ink)}
-.bub .opt.want{border:3px solid var(--y);background:var(--card)}.bub .opt.want b{color:var(--ink);background:var(--y);color:var(--onacc);padding:0 3px}
+.bub .opt.want{border:2px dashed var(--ink);background:var(--card)}.bub .opt.want b::before{content:"🛒 "}
 .body,.vbar,.gap{border-top-color:var(--line)}
 .bar{border-radius:0}.bar b{background:var(--ink)}
 /* colours that were dark-only: readable on paper too (text on accents is always #141414) */
@@ -2085,11 +2106,11 @@ input[type=search],select,.pinq,textarea{border:2px solid var(--ink);border-radi
 .num .ok{color:var(--ink)}.num .bad{color:var(--onacc);background:var(--y);padding:0 4px}
 .thinw{color:var(--ink);border-left:5px solid var(--y);padding-left:8px}
 .danger{border-color:var(--m)}.danger h4{display:inline-block;color:var(--onacc);background:var(--m);padding:2px 6px}
-.shop{border:2px dashed var(--m)}.ct.buy img.c{outline-color:var(--m)}
-.ks,.kf,.kp,.kc{color:var(--ink);font-weight:700}.ks{box-shadow:inset 0 -.45em 0 var(--c)}.kf{box-shadow:inset 0 -.45em 0 var(--fill)}
+.shop{border:2px dashed var(--m)}
+.ks,.kf,.kp,.kc{color:var(--ink);font-weight:700}.ks{box-shadow:inset 0 -.45em 0 var(--c)}.kf{box-shadow:inset 0 -.45em 0 var(--g)}
 .kp{box-shadow:inset 0 -.45em 0 var(--y)}.kc{box-shadow:inset 0 -.45em 0 var(--m)}
 :root[data-mode="neg"] .ks,:root[data-mode="neg"] .kf,:root[data-mode="neg"] .kp,:root[data-mode="neg"] .kc{box-shadow:none;text-decoration:underline 3px;text-underline-offset:3px}
-:root[data-mode="neg"] .ks{text-decoration-color:var(--c)}:root[data-mode="neg"] .kf{text-decoration-color:var(--fill)}
+:root[data-mode="neg"] .ks{text-decoration-color:var(--c)}:root[data-mode="neg"] .kf{text-decoration-color:var(--g)}
 :root[data-mode="neg"] .kp{text-decoration-color:var(--y)}:root[data-mode="neg"] .kc{text-decoration-color:var(--m)}
 /* ===================== Zine phase 2: Discover (commander cards, colour chips, battery, sticky filters) ===================== */
 :root,:root[data-mode="neg"]{--shadow:#2A2A2A}:root[data-mode="pos"]{--shadow:#141414}:root[data-mode="sepia"]{--shadow:#332B23}
@@ -2193,12 +2214,20 @@ main{max-width:1400px}
 .dmain .grid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:18px 14px}
 .cw{display:flex;flex-direction:column;gap:5px}
 .cw .ct img.c{outline:0!important;border:2px solid var(--ink);box-shadow:5px 5px 0 var(--shadow)}
-.cw.k-y .ct img.c,.cw.k-y2 .ct img.c,.cw.k-k .ct img.c{box-shadow:5px 5px 0 var(--y)}.cw.k-c .ct img.c{box-shadow:5px 5px 0 var(--m)}
-.cw.k-s .ct img.c,.cw.k-s2 .ct img.c{box-shadow:5px 5px 0 var(--c)}.cw.k-f .ct img.c{box-shadow:5px 5px 0 #A8A397}.cw.k-buy .ct img.c{box-shadow:5px 5px 0 var(--m)}
+.cw.k-y .ct img.c{box-shadow:5px 5px 0 var(--y)}.cw.k-k .ct img.c{box-shadow:5px 5px 0 var(--r)}.cw.k-c .ct img.c{box-shadow:5px 5px 0 var(--m)}
+.cw.k-s .ct img.c{box-shadow:5px 5px 0 var(--c)}.cw.k-f .ct img.c{box-shadow:5px 5px 0 var(--g)}.cw.k-y2 .ct img.c,.cw.k-s2 .ct img.c{box-shadow:5px 5px 0 #F0EBDD}
+.cw.k-buy .ct img.c{outline:3px dashed var(--ink);outline-offset:2px}
 .cw.wpin .ct img.c{outline:4px solid var(--r)!important;outline-offset:2px}
 .tape{align-self:flex-start;max-width:100%;padding:1px 5px;font:700 .62rem/1.3 var(--head);text-transform:uppercase;border:1.5px solid var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tape.y{background:var(--y);color:#141414;border-color:var(--y)}.tape.m{background:var(--m);color:#141414;border-color:var(--m)}.tape.c{background:var(--c);color:#141414;border-color:var(--c)}
-.tape.g{background:#A8A397;color:#141414;border-color:#A8A397}.tape.mo{border:1.5px dashed var(--m)}
+.tape.g{background:var(--g);color:#141414;border-color:var(--g)}.tape.r{background:var(--r);color:#FFFFFF;border-color:var(--r)}
+.tape.w{background:#F0EBDD;color:#141414;border-color:#141414}.tape.d{border-style:dashed}
+.ct{position:relative}.was{position:absolute;right:-7px;bottom:-7px;z-index:2;width:42%;display:block;transform:rotate(5deg)}
+.was img{display:block;width:100%;aspect-ratio:488/680;object-fit:cover;border:2px solid var(--ink);border-radius:5px;filter:grayscale(1) brightness(.6)}
+.was i{position:absolute;left:-4px;top:-8px;padding:0 4px;font:900 .6rem/1.3 var(--head);font-style:normal;text-transform:uppercase;color:#141414;background:#F0EBDD;border:1.5px solid #141414}
+.tlg{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:4px 0 10px;font-size:.7rem;color:var(--mute)}.tlg .tape{cursor:help}
+.cwarn{margin:0 0 6px;padding:2px 6px;font-size:.72rem;font-weight:700;color:#141414;background:var(--m)}
+.ct.nown img.c{outline:2px dashed var(--ink);outline-offset:2px}
 .tapew{font-size:.62rem;line-height:1.25;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .whyhint{font-size:.7rem;text-transform:uppercase;margin:12px 0 0}
 .pnl{display:flex;flex-direction:column;gap:10px;padding:0 14px 14px;border:2px solid var(--ink);background:var(--bg);font-size:.8rem}
@@ -2417,7 +2446,7 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 <div id="unused"></div>
 </div>
 </main><img id="pv" alt=""><script>
-const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__, STRS=__STRS__;
+const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__, STRS=__STRS__, OPTS=__OPTS__;
 const W=i=>typeof i==="number"?(i>=0?STRS[i]:""):(i||"");   // a reason from the shared string table
 const LBL={all:"All decks",exhibition:"B1 Exhibition",core:"B2 Core",upgraded:"B3 Upgraded",optimized:"B4 Optimized",cedh:"B5 cEDH"};
 const PIP={W:"#e8e2c8",U:"#7fb3e0",B:"#6b5f73",R:"#e07a5f",G:"#7bb274"};
@@ -2547,30 +2576,34 @@ function IMG(i){const s=CARDS[i][1];
   return !s?"https://api.scryfall.com/cards/named?format=image&version=normal&exact="+encodeURIComponent(front(i))
     :s.startsWith("http")?s:"https://cards.scryfall.io/normal/"+s;}
 const BACK=i=>CARDS[i][5]?IMG(i).replace("/front/","/back/"):"";   // two-faced cards: Scryfall's back image
-function tile(i,o={}){if(i==null||i<0||!CARDS[i])return"";const c=CARDS[i];
+function tile(i,o={}){if(i==null||i<0||!CARDS[i])return"";const c=CARDS[i], w=o.was!=null&&o.was>=0&&CARDS[o.was]?o.was:null;
   return `<a class="ct ${o.cls||""}" href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener"${o.why?` role="button" aria-pressed="false" aria-label="Why ${esc(front(i))}? Click to pin"`:""}>`+
    `<img class="c" src="${IMG(i)}" alt="${esc(c[0])}" title="${esc(c[0])}" loading="lazy">`+
    (c[5]?`<span class="flip" data-back="${esc(BACK(i))}" title="Hover to see the back">⟲</span>`:"")+
+   (w!=null?`<span class="was" title="was: ${esc(front(w))}"><img src="${IMG(w)}" alt="was: ${esc(front(w))}" loading="lazy"><i>was</i></span>`:"")+
    (o.badge?`<span class="badge">${esc(o.badge)}</span>`:"")+(o.note?`<span class="note">${esc(o.note)}</span>`:"")+`</a>`;}
-const KCLS={s:"miss",s2:"miss",y2:"pick",k:"pick",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"};
-function tileFor(it,taped){
-  if((it.kind==="s"||it.kind==="s2")&&it.f>=0)     // the slot as EDHREC has it: the missing card, greyed, using yours
-    return tile(it.f,{cls:"miss",why:taped,note:taped?"":"using "+front(it.i)+(it.kind==="s2"?" (your choice)":"")});
-  if(taped) return tile(it.i,{cls:KCLS[it.kind]||(it.kind==="s"?"sub":""),badge:(it.n||1)>1?"×"+it.n:"",why:true});
-  return tile(it.i,{cls:KCLS[it.kind]||(it.kind==="s"?"sub":""),badge:(it.n||1)>1?"×"+it.n:"",
-    note:it.kind==="y2"?"instead of "+front(it.f)+" (your choice)":it.kind==="k"?"📌 pinned by you":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
-      it.kind==="y"?(!W(it.f)?"your pick":CARDS[it.i][2]==="Land"?W(it.f):"fits: "+W(it.f)):it.kind==="c"?"combo piece":""});}
-// tape label per card kind (the 99 in a commander panel): popular = outline, your pick / pinned = yellow,
-// combo = magenta, stand-in = cyan, role fill = grey, to buy = magenta outline; the full reason stays in the title
-const TAPE={p:["","POPULAR"],y:["y","YOUR PICK!"],y2:["y","YOUR CHOICE!"],k:["y","PINNED!"],c:["m","COMBO PIECE!"],s:["c","STAND-IN"],s2:["c","YOUR CHOICE!"],
-  f:["g","ROLE FILL"],buy:["mo","TO BUY!"],m:["mo","MISSING"],"":["","BASIC"]};
-function tapeFor(it){const [cls,lab]=TAPE[it.kind]||["",""];
-  const why=(it.kind==="s"||it.kind==="s2")&&it.f>=0?"using "+front(it.i):it.kind==="y2"?"instead of "+front(it.f):it.kind==="y"?W(it.f):"";
-  return `<span class="tape ${cls}" title="${esc(lab+(why?" · "+why:""))}">(${lab}${why&&it.kind!=="y"?" "+esc(why.toUpperCase()):""})</span>`
-    +(it.kind==="y"&&why?`<span class="tapew">${esc(why)}</span>`:"");}
+function tileFor(it,taped){const badge=(it.n||1)>1?"×"+it.n:"";
+  if(taped) return tile(it.i,{badge,why:true,was:it.was});
+  // imported decks and lists without tapes: a short note; a card you don't own gets a dashed outline (never grey)
+  return tile(it.i,{cls:it.kind==="m"||it.kind==="buy"?"nown":"",badge,was:it.was,
+    note:it.kind==="m"?"missing":it.kind==="buy"?"to buy":""});}
+// one label system for the 99 (zine palette): [tape colour, label, what it means]. Every tape has the meaning as its title.
+const TAPE={p:["","POPULAR","most decks for this commander play it"],y:["y","GOOD FIT","you own it, few decks play it, but it fits this commander"],
+  k:["r","ALWAYS IN","you pinned it"],c:["m","COMBO","part of a combo in this deck"],f:["g","FILLER","added to reach the minimum for a role"],
+  s:["c","STAND-IN","you don't own EDHREC's card, so yours does its job"],y2:["w","YOUR SWAP","a card you chose in the hover menu"],
+  s2:["w","YOUR SWAP","a card you chose in the hover menu"],buy:["d","TO BUY","you chose to buy EDHREC's card"],
+  m:["d","MISSING","not in your collection"],"":["","BASIC","a basic land"]};
+const LEG=["p","y","k","c","f","s","y2","buy"];
+const tapeSpan=(k,extra,title)=>{const [cls,lab,mean]=TAPE[k]||["","",""];
+  return `<span class="tape ${cls}" title="${esc(lab+" · "+mean+(title?" · "+title:""))}">${lab}${extra?" · "+esc(extra.toUpperCase()):""}</span>`;};
+function tapeFor(it){const k=it.kind, wn=it.was!=null&&it.was>=0?front(it.was):"";
+  const role=k==="f"&&W(it.f), combo=k==="c"&&W(it.f);
+  const line=k==="y"?W(it.f):k==="s"?"for "+front(it.f):(k==="y2"||k==="s2"||k==="buy")&&wn?"was: "+wn:"";
+  return tapeSpan(k,role||"",combo?"with "+combo:k==="s"?"for "+front(it.f):line)+(line?`<span class="tapew">${esc(line)}</span>`:"");}
+const legendHTML=()=>`<div class="tlg" aria-label="What the labels mean">${LEG.map(k=>tapeSpan(k)).join("")}<span>· hover any card to swap it</span></div>`;
 const kindOf=it=>it.kind||(it.n?"":"p");
 function grid(cmdrs,items,bub){
-  const by={}; items.forEach(it=>{const s=(it.kind==="s"||it.kind==="s2")&&it.f>=0?it.f:it.i, g=CARDS[s][2]||"Other";(by[g]=by[g]||[]).push(it);});
+  const by={}; items.forEach(it=>{const g=CARDS[it.i][2]||"Other";(by[g]=by[g]||[]).push(it);});
   let h=`<div class="grp"><h5>Commander</h5><div class="grid">${cmdrs.map(i=>tile(i)).join("")}</div></div>`;
   Object.keys(GL).forEach(g=>{const L=by[g]; if(!L)return; const cnt=L.reduce((s,it)=>s+(it.n||1),0);
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>{
@@ -2582,10 +2615,10 @@ function gapsHTML(gaps,deckSet,slots){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
   return gaps.map(([i,r,subs,used,roles])=>{roles=W(roles);
     const isSlot=slots&&slots.has(i);
-    const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{cls:s===used?"sub":"",note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(W(why))}</small>${isSlot&&!deckSet.has(s)?`<button class="opt mini" data-pick="${s}" data-slot="${i}">Use this</button>`:""}</div>`).join("")
+    const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(W(why))}</small>${isSlot&&!deckSet.has(s)?`<button class="opt mini" data-pick="${s}" data-slot="${i}">Use this</button>`:""}</div>`).join("")
       +(isSlot&&!deckSet.has(i)?`<div class="alt"><button class="opt mini" data-pick="-1" data-slot="${i}">Buy ${esc(front(i))} instead</button></div>`:"");
     const adv=subs.length?"":`<p class="adv">No close match in your collection for this ${esc(roles||"synergy")} slot.${r>=25?" It's a core card for this commander, worth picking up.":" The deck fills this slot with other cards you own."}</p>`;
-    return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}${buyA(i,"🛒 "+esc(STORE.name))}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
+    return `<div class="gap"><div class="alt">${tile(i,{cls:"nown",note:r?r+"% of decks":"missing"})}${buyA(i,"🛒 "+esc(STORE.name))}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
 /* ---------- your choices for substitute slots (saved in this browser) ---------- */
 const chKey=(d,b,t)=>"dw:"+d.slug+":"+b+(t?":"+t:"");
 // choices live in localStorage; MEM keeps them for this visit when the browser blocks storage
@@ -2627,13 +2660,13 @@ const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:+(r&&r.dataset.s||2)});
 const liveKey=(d,b,st,L)=>[d.slug,b,st.t,st.a?1:0,L.w,L.s,pinKey(pinsOf(d))].join("|");
 function addRows(arr,rows,from){rows.forEach((x,j)=>{if(from+j===arr.length)arr.push(x);});}
 function fetchLive(d,b,st,L){const k=liveKey(d,b,st,L); LIVE[k]={busy:1};
-  const nc=CARDS.length, ns=STRS.length, nk=COMBOS.length;
-  const qs=new URLSearchParams({c:d.name,b,t:st.t,a:st.a?"1":"0",w:L.w,s:L.s,v:ST.built,nc,ns,nk});
+  const nc=CARDS.length, ns=STRS.length, nk=COMBOS.length, no=OPTS.length;
+  const qs=new URLSearchParams({c:d.name,b,t:st.t,a:st.a?"1":"0",w:L.w,s:L.s,v:ST.built,nc,ns,nk,no});
   const done=()=>{const row=document.querySelector(`details.row[data-i="${d.i}"]`); if(row&&row.dataset.f)rerow(row);};
   const go=n=>fetch("/deck?"+qs,{headers:{"X-Deck-Wizard":"1"}}).then(async res=>{
     const j=await res.json().catch(()=>({error:"The app sent a reply the page can't read."}));
     if(!res.ok){LIVE[k]={err:j.error||("HTTP "+res.status)}; return done();}
-    addRows(CARDS,j.cards,nc); addRows(STRS,j.strs,ns); addRows(COMBOS,j.combos,nk);
+    addRows(CARDS,j.cards,nc); addRows(STRS,j.strs,ns); addRows(COMBOS,j.combos,nk); addRows(OPTS,j.opts||[],no);
     LIVE[k]={x:j.x}; done();
   },e=>{if(n) return setTimeout(()=>go(n-1),700);     // a dropped connection gets one more try
     LIVE[k]={err:`The Deck Wizard app isn't answering (${e.message}). Is its window still open?`}; done();});
@@ -2733,27 +2766,32 @@ document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest
 document.addEventListener("keydown",e=>{const t=e.target.closest&&e.target.closest(".ptab[data-stat]"); if(!t||(e.key!=="ArrowRight"&&e.key!=="ArrowLeft"))return;
   const L=[...t.parentNode.children], j=(L.indexOf(t)+(e.key==="ArrowRight"?1:L.length-1))%L.length; L[j].focus(); setStat(t.closest(".pile"),L[j].dataset.stat);});
 // the deck as you chose it. Substitute slots: slot = the missing card's index, buy = keep the missing card.
-// "Your pick" slots (entries with options): slot = "y"+card, s2-like "y2" = an owned card you swapped in, buy = EDHREC's card
+// Swappable cards (popular, good fit, filler, combo; entries with options): slot = "y"+card, "y2" = an owned card you
+// swapped in, buy = EDHREC's card for that job. "was" = the card the slot had before (EDHREC's card for a stand-in).
 function effDeck(d,b,x,t){const ch=getCh(d,b,t);
   return x.deck.map(e=>{const [i,k,f]=e;
-    if(k==="y"&&e.length>3){const sk="y"+i, c=ch[sk];
-      if(c===undefined)return {i,kind:"y",f,slot:sk}; if(c===-1)return {i:e[4],kind:"buy",f:i,slot:sk}; return {i:c,kind:"y2",f:i,slot:sk};}
+    if(k!=="s"&&k!=="k"&&e.length>3){const sk="y"+i, c=ch[sk];
+      if(c===undefined)return {i,kind:k,f,slot:sk}; if(c===-1)return {i:OPTS[e[3]][1],kind:"buy",f:i,slot:sk,was:i,ok:k}; return {i:c,kind:"y2",f:i,slot:sk,was:i,ok:k};}
     if(k!=="s"||f<0)return {i,kind:k,f};
-    const c=ch[f]; if(c===undefined)return {i,kind:"s",f,slot:f}; if(c===-1)return {i:f,kind:"buy",f,slot:f}; return {i:c,kind:"s2",f,slot:f};});}
+    const c=ch[f]; if(c===undefined)return {i,kind:"s",f,slot:f,was:f};
+    if(c===-1)return {i:f,kind:"buy",f,slot:f,was:i,ok:"s"}; return {i:c,kind:"s2",f,slot:f,was:f,ok:"s"};});}
 function chooserHTML(d,b,x,slot,t){
   const yp=String(slot).startsWith("y");
-  const e=x.deck.find(r=>yp?r[1]==="y"&&"y"+r[0]===slot&&r.length>3:r[1]==="s"&&String(r[2])===String(slot)); if(!e) return "";
+  const e=x.deck.find(r=>yp?r[1]!=="s"&&r[1]!=="k"&&"y"+r[0]===slot&&r.length>3:r[1]==="s"&&String(r[2])===String(slot)); if(!e) return "";
   const key=yp?slot:e[2], ch=getCh(d,b,t)[key];
   const taken=new Set(effDeck(d,b,x,t).filter(it=>String(it.slot)!==String(key)).map(it=>it.i));
   const opt=(pick,card,label,cls)=>{const dis=pick!==-1&&pick!=="adv"&&taken.has(card);
     const on=(pick==="adv"&&ch===undefined)||(pick===-1&&ch===-1)||(typeof pick==="number"&&pick>=0&&ch===pick);
     return `<button class="opt ${cls||""} ${on?"on":""}" data-pick="${pick}" data-slot="${key}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><b>${esc(front(card))}</b><small>${label}</small></button>`;};
   const shop=c=>buyA(c,"🛒 Find "+esc(front(c))+" on "+esc(STORE.name));
-  if(yp){const [mine,,why,alts,buy,bwhy]=e;
-    return `<h6>Your pick · keep it or swap it</h6><div class="orow">${opt("adv",mine,"keep · "+esc(W(why)||"your pick"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy)),"want"):""}</div>${buy>=0?shop(buy):""}`;}
+  // one menu for every card: keep this card, up to 3 owned alternatives (with why), the best card for the job you don't own
+  if(yp){const [mine,k0,why,oi]=e, [alts,buy,bwhy]=OPTS[oi], lab=TAPE[k0][1];
+    const keep=k0==="y"?W(why)||"good fit":k0==="f"?"filler"+(W(why)?" · "+W(why):""):k0==="c"?"combo piece":"popular";
+    return `<h6>${lab} · keep it or swap it</h6>${k0==="c"&&W(why)?`<p class="cwarn">⚠ breaks combo: ${esc(W(why))}</p>`:""}<div class="orow">${opt("adv",mine,"keep this card · "+esc(keep))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy)),"want"):""}</div>${buy>=0?shop(buy):""}
+    ${(alts||[]).length?"":`<small>No other owned card does this job.</small>`}`;}
   const [adv,,f,why,alts]=e;
-  // the card the deck is meant to have comes first, highlighted: click it to buy it; then your stand-ins
-  return `<h6>${esc(front(f))} belongs here · buy it or use one of yours</h6><div class="orow">${opt(-1,f,"meant for this deck · click to buy","want")}${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}</div>${shop(f)}
+  // a stand-in: keep your card, another of yours, or buy EDHREC's card for the slot
+  return `<h6>STAND-IN for ${esc(front(f))} · keep it or swap it</h6><div class="orow">${opt("adv",adv,"keep this card · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${opt(-1,f,"buy · the card EDHREC decks play here","want")}</div>${shop(f)}
   ${(alts||[]).length?"":`<small>No other close match in your collection.</small>`}`;}
 // what hovering a card in the deck shows: its options (substitute slot / your pick) and, in the app, pins
 function bubbleHTML(d,b,x,it,t){
@@ -2774,8 +2812,8 @@ function shopHTML(d,b,items,t){
   <span class="rbtn">${buy.length?`<button class="cps" data-text="${esc(list)}">Copy</button>`:""}${chosen?`<button class="reset-ch">Reset my choices</button>`:""}</span></div>`;}
 function deckSection(title,cmdrs,items,text,link,bub){
   return `<div class="vbar">${title?`<h3>${title}</h3>`:""}<button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
-  <span class="legend"><i class="lg y"></i>your pick / 📌 pinned <i class="lg c"></i>combo <i class="lg f"></i>role fill <i class="lg m"></i>missing (using your card) · hover a card for options</span></div>
-  <div class="view v-cards">${grid(cmdrs,items,bub)}</div>
+</div>
+  <div class="view v-cards">${bub?legendHTML():""}${grid(cmdrs,items,bub)}</div>
   <div class="view v-list" hidden><textarea readonly rows="16">${esc(text)}</textarea></div>`;}
 
 /* ---------- combos ---------- */
@@ -2822,7 +2860,7 @@ function combosNote(d,b,x){
   ${dz.length>6?`<div class="ndz">${dz.slice(6).map(row).join("")}</div>`:""}${bestHTML(d,b,x)}${comboHTML(C,x.cin,"In your collection","One card away",true)}</details>`;}
 
 /* ---------- the three numbers ---------- */
-const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill",win:"Win conditions (finishers, drain, alt wins)"};
+const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + fillers",win:"Win conditions (finishers, drain, alt wins)"};
 // the first failing readiness check, said plainly (it only repeats the check's own numbers)
 const READYCAP={ramp:"RAMP",draw:"CARD DRAW",removal:"REMOVAL",wipe:"BOARD WIPE",win:"WIN CONDITION"};
 function readyCap([k,v,t]){
@@ -2902,7 +2940,7 @@ function body(d,b,r){
   const rd=x.rd||[], ok=rd.filter(c=>c[3]).length, bf=x.bf||{est:2}, seln={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b];
   const fits=!seln||bf.est<=Math.max(seln,2)||seln===5, toBuy=eff.filter(it=>it.kind==="buy").length;
   const around=(x.core||[]).length?`<div class="around"><span class="lab">Built around</span>${x.core.map(([k,v],i)=>`<span class="ar${i?"":" top"}" title="cards in the 99 that share it with the commander">${esc(k)} ${v}</span>`).join("")}</div>`:"";
-  const mix=`<p class="mixl">${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks${x.pin?` + ${x.pin} pinned`:""}</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} stand-ins</span> + <span class="kf">${x.fill} role fill</span> · avg MV ${x.cmc} · ${x.gc} Game Changer${x.gc===1?"":"s"}${x.gc?` (${x.gcn.map(esc).join(", ")})`:""} · combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}</p>`;
+  const mix=`<p class="mixl">${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} good fit${x.pick===1?"":"s"}</span>${x.pin?` + ${x.pin} always in`:""}${x.cpc?` + <span class="kc">${x.cpc} combo</span>`:""} + <span class="ks">${x.subs} stand-in${x.subs===1?"":"s"}</span> + <span class="kf">${x.fill} filler${x.fill===1?"":"s"}</span> · avg MV ${x.cmc} · ${x.gc} Game Changer${x.gc===1?"":"s"}${x.gc?` (${x.gcn.map(esc).join(", ")})`:""} · combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}</p>`;
   const ptick=tickHTML([`Match ${x.pct}%`,`Ready ${ok}/${rd.length}`,`Bracket ${bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3"}`+(seln?` · ${fits?"fits":"above"} ${SH[b]}`:""),
     `${d.combos?d.combos.n_own:0} combos owned`,`${(x.sw||[]).length} synergy swaps`,`${toBuy} to buy`]);
   const slim=`<div class="slim"><span class="ondeck">ON DECK</span>${d.img?`<img class="mimg" src="${esc(d.img)}" alt="" loading="lazy">`:""}<b class="sname">${esc(d.name.split(" // ")[0])}</b>${pipsH}
@@ -2945,12 +2983,12 @@ function whyHTML(di,wi){
   const [tcls,tlab]=TAPE[k]||["",""], pinned=W_.pin===wi, parts=[];
   // why it's here, from the deck entry itself
   const e=x.deck.find(r=>r[0]===it.i||(r[1]==="s"&&r[2]===it.f));
-  if(it.kind==="s"||it.kind==="s2") parts.push(["Stands in for",`${front(it.f)}${it.kind==="s"&&e&&W(e[3])?" · "+W(e[3]):""}${it.kind==="s2"?" (your choice)":""}`]);
-  else if(it.kind==="y") parts.push(["Why it's here",W(it.f)||"your pick: it fits this commander"]);
-  else if(it.kind==="y2") parts.push(["Why it's here",`your choice, instead of ${front(it.f)}`]);
-  else if(it.kind==="k") parts.push(["Why it's here","pinned by you (always include)"]);
-  else if(it.kind==="c") parts.push(["Why it's here","a piece of a combo you own"]);
-  else if(it.kind==="f") parts.push(["Why it's here","role fill: the deck needed this job done"]);
+  if(it.kind==="s"||it.kind==="s2") parts.push(["Stands in for",`${front(it.f)}${it.kind==="s"&&e&&W(e[3])?" · "+W(e[3]):""}${it.kind==="s2"?" (your swap)":""}`]);
+  else if(it.kind==="y") parts.push(["Why it's here","good fit: "+(W(it.f)||"it fits this commander")]);
+  else if(it.kind==="y2") parts.push(["Why it's here",`your swap, instead of ${front(it.f)}`]);
+  else if(it.kind==="k") parts.push(["Why it's here","always in: you pinned it"]);
+  else if(it.kind==="c") parts.push(["Why it's here","combo: part of "+(W(it.f)||"a combo in this deck")]);
+  else if(it.kind==="f") parts.push(["Why it's here","filler: added to reach the minimum for "+(W(it.f)||"a role")]);
   else if(it.kind==="buy") parts.push(["Why it's here",`you chose to buy it for this slot`]);
   else if(it.n) parts.push(["Why it's here","basic land"]);
   else parts.push(["Why it's here","popular: EDHREC decks for this commander play it"]);
@@ -2970,7 +3008,7 @@ function whyHTML(di,wi){
   else parts.push(["EDHREC","open the app (Deck Wizard App.bat) for play rate, synergy and deck links"]);
   const nm=esc(c[0]), own=k!=="buy"&&k!=="m"&&!it.n;
   return `<h3 class="wtl">Why this card?</h3><div class="whead"><img class="c wthumb" src="${IMG(card)}" alt="" loading="lazy"><div class="wtxt">
-    <b class="wname">${esc(front(card))}</b><span class="tape ${tcls}">(${tlab})</span>
+    <b class="wname">${esc(front(card))}</b>${tapeSpan(k)}
     <span class="wline">${esc(c[2])} · MV ${c[4]||0}${c[3]?" · Game Changer":""}</span>
     <span class="wmode${pinned?" on":""}">${pinned?"📍 PINNED · Esc or click again to let go":"PREVIEW · click the card to pin"}</span></div></div>
     <dl class="wparts">${parts.map(([kk,v])=>`<div><dt>${esc(kk)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
@@ -3168,8 +3206,9 @@ render();
 def js_data(obj):
     return json.dumps(obj, separators=(",", ":")).replace("</", "<\\/")
 
-def render_report(results, stats, brackets, decks, cards, combos=(), strs=()):
+def render_report(results, stats, brackets, decks, cards, combos=(), strs=(), opts=()):
     return (HTML.replace("__DATA__", js_data(results))
+                .replace("__OPTS__", js_data(list(opts)))
                 .replace("__STRS__", js_data(list(strs)))
                 .replace("__COMBOS__", js_data(list(combos)))
                 .replace("__BR__", json.dumps(["all"] + brackets))
@@ -3259,6 +3298,8 @@ class LiveDecks:
         T.rows, T.strs, CT.rows = tab["cards"], tab["strs"], tab["combos"]
         for i, r in enumerate(T.rows): T.idx.setdefault(norm(r[0]), i)
         T.sidx = {t: i for i, t in enumerate(T.strs)}
+        T.opts = tab.get("opts", [])
+        T.oidx = {json.dumps(o, separators=(",", ":")): i for i, o in enumerate(T.opts)}
         CT.idx = {r["id"]: i for i, r in enumerate(CT.rows)}
         self.ctx = {"mt": os.path.getmtime(tab_path), "built": tab["built"], "owned": owned, "T": T, "CT": CT,
                     "cands": {norm(m["name"]): m for m in commander_candidates(owned)},
@@ -3279,7 +3320,7 @@ class LiveDecks:
             try:
                 if not self.ctx or self.ctx["mt"] != os.path.getmtime(tab_path): self._load(tab_path)
                 c = self.ctx
-                have = [int(q.get(k) or 0) for k in ("nc", "ns", "nk")]
+                have = [int(q.get(k) or 0) for k in ("nc", "ns", "nk", "no")]
                 if abs(float(q.get("v") or 0) - c["built"]) > 0.01 or have[0] > len(c["T"].rows) \
                         or have[1] > len(c["T"].strs) or have[2] > len(c["CT"].rows):
                     return 409, {"error": "The report was rebuilt: reload the page."}
@@ -3290,7 +3331,8 @@ class LiveDecks:
             except ValueError as e:
                 return 400, {"error": str(e) or "Bad request."}
             T, CT = c["T"], c["CT"]
-            return 200, {"x": x, "cards": T.rows[have[0]:], "strs": T.strs[have[1]:], "combos": CT.rows[have[2]:]}
+            return 200, {"x": x, "cards": T.rows[have[0]:], "strs": T.strs[have[1]:], "combos": CT.rows[have[2]:],
+                         "opts": T.opts[have[3]:]}
 
     def pins(self, body=None):
         """GET (body None): all pins. POST: {"c": commander, "in": [names], "out": [names]} replaces that
@@ -3691,11 +3733,12 @@ def main():
             combos = annotate_combos(combos, owned, set(m["ci"]))
         prof = commander_profile(m, pg["all"].get("tags") or [])
         pn = pins_for(pins, m["name"])
+        optc = {b: {} for b in pg}           # swap options per bracket: built by the overview deck, reused below
         entry = {"name": m["name"], "ci": sorted(m["ci"]), "img": m.get("img", ""),
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
                  "pins": pins_clean(pins.get(m["name"])),
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
-                                  (combos or {}).get("own"), profile=prof, pins=pn)
+                                  (combos or {}).get("own"), profile=prof, pins=pn, optc=optc[b])
                        for b, p in pg.items()}}
         ranked = rank_combos(combos, entry["b"]["all"]["_names"])
         own = (combos or {}).get("own", [])
@@ -3721,11 +3764,11 @@ def main():
                 tshape = avg_shape(tap, owned, name_meta)
             for b in entry["b"]:
                 tx = analyze(m, tp, owned, name_meta, pool_info, b, T, tp, own, focus=tname,
-                             want_gaps=False, profile=prof, pins=pn)
+                             want_gaps=False, profile=prof, pins=pn, optc=optc[b])
                 per[b] = combo_info(tx, b)
                 if tap:
                     ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname,
-                                 profile=prof, show=show, pins=pn)
+                                 profile=prof, show=show, pins=pn, optc=optc[b])
                     aper[b] = combo_info(ax, b); ax["ref"] = tshape
             entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "own": match, "b": per, "av": aper,
                                   "adecks": apage["decks"] if tap else 0}
@@ -3735,7 +3778,8 @@ def main():
         for b, ap_ in (avgs.get(m["name"]) or {}).items():
             if b not in entry["b"]: continue
             apage, show = avg_as_page(ap_, pg[b], pg["all"], b)
-            ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, profile=prof, show=show, pins=pn)
+            ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, profile=prof, show=show, pins=pn,
+                         optc=optc[b])
             entry["av"][b] = combo_info(ax, b)
             ax["ref"] = avg_shape(ap_, owned, name_meta)
         for b, x in entry["b"].items():
@@ -3796,10 +3840,10 @@ def main():
                                for k2, v in ((k, l[:40]), (k + "_n", len(l)))} if diff else None}}
     out_html = os.path.join(a.out, "report.html")
     with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
-        f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows, T.strs))
+        f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows, T.strs, T.opts))
     os.replace(out_html + ".tmp", out_html)
     save_json(os.path.join(a.out, TABLES_FILE), {"built": stats["built"], "csv": os.path.abspath(csv_path),
-                                                  "cards": T.rows, "strs": T.strs, "combos": CT.rows})
+                                                  "cards": T.rows, "strs": T.strs, "combos": CT.rows, "opts": T.opts})
     no_tags = sum(1 for r in results if not r["tags"])
     print(f"\nDone. {len(results)} analyzed, {skipped} had no EDHREC page, {no_tags} without theme tags."
           f"\nReport: {os.path.getsize(out_html) / 1e6:.1f} MB -> {out_html}")

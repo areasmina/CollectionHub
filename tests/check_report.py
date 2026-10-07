@@ -134,10 +134,10 @@ try{const hasAlt=(d,b)=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).lengt
   else out.errs.push('no substitute with alternatives found to test');}
 catch(e){out.errs.push('chooser: '+e.message);}
 // "your pick" options: swap in an owned alternative, then the EDHREC card to buy, then reset
-try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='y'&&(e[3]||[]).length&&e[4]>=0));
+try{const O=e=>e.length>3?OPTS[e[3]]:[[],-1], b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='y'&&O(e)[0].length&&O(e)[1]>=0));
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
   if(r){r.open=true;r.dataset.b=b;r.dataset.t="";r.dataset.a="0";rerow(r);
-    const e=d.b[b].deck.find(e=>e[1]==='y'&&(e[3]||[]).length&&e[4]>=0), alt=e[3][0][0];
+    const e=d.b[b].deck.find(e=>e[1]==='y'&&O(e)[0].length&&O(e)[1]>=0), alt=O(e)[0][0][0];
     const bq=sel=>r.querySelector('.bub .opt[data-slot="y'+e[0]+'"]'+sel);
     if(!bq(''))out.errs.push('your pick has no hover bubble');
     bq('[data-pick="'+alt+'"]').click();
@@ -145,7 +145,7 @@ try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='y'&&(e[3]||
     if(!ta.includes(front(alt)))out.errs.push('swapped-in card not in the deck list');
     if(ta.split('\\n').includes('1 '+front(e[0])))out.errs.push('swapped-out pick still in the deck list');
     bq('[data-pick="-1"]').click();
-    if(!(r.querySelector('.shop')||{}).textContent.includes(front(e[4])))out.errs.push('EDHREC card not on the shopping list');
+    if(!(r.querySelector('.shop')||{}).textContent.includes(front(O(e)[1])))out.errs.push('EDHREC card not on the shopping list');
     r.querySelector('.reset-ch').click();
     if(!r.querySelector('textarea').value.includes(front(e[0])))out.errs.push('reset did not bring the pick back');
     out.clicks=(out.clicks||0)+5;}
@@ -203,6 +203,31 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       +', waiting '+r.querySelectorAll('.ct.p5-wait').length+', watched '+P5ON.length+', observer '+!!P5IO);
     out.clicks=(out.clicks||0)+1;}
   catch(e){out.errs.push('p5: '+e.message);}
+  // one hover menu for every card: swap a POPULAR, a FILLER and a COMBO card (any commander / bracket that has one);
+  // the swapped card shows YOUR SWAP with a greyed "was" thumbnail, a combo card warns first, reset brings it back
+  try{out.notes=out.notes||[];
+    for(const k of ['p','f','c']){let hit=null;
+      for(const d of DATA){for(const b of Object.keys(d.b)){const e=d.b[b].deck.find(e=>e[1]===k&&e.length>3&&OPTS[e[3]][0].length); if(e){hit={d,b,e};break;}} if(hit)break;}
+      if(!hit){out.notes.push('no '+{p:'POPULAR',f:'FILLER',c:'COMBO'}[k]+' card with options in this report: menu not tested'); continue;}
+      const {d,b,e}=hit, alt=OPTS[e[3]][0][0][0], r=document.querySelector('details.row[data-i="'+d.i+'"]');
+      r.open=true; r.dataset.b=b; r.dataset.t=""; r.dataset.a="0"; rerow(r);
+      const cw=[...r.querySelectorAll('.d99 .cw.k-'+k)].find(c=>c.querySelector('.bub .opt[data-slot="y'+e[0]+'"]'));
+      if(!cw){out.errs.push(k+' card has no hover menu'); continue;}
+      if(k==='c'&&!cw.querySelector('.bub .cwarn'))out.errs.push('combo card menu has no "breaks combo" warning');
+      cw.querySelector('.bub .opt[data-pick="'+alt+'"]').click();
+      const sw=[...r.querySelectorAll('.d99 .cw.k-y2')].find(c=>c.querySelector('img.c').alt===CARDS[alt][0]);
+      if(!sw)out.errs.push(k+' swap: the chosen card is not shown as YOUR SWAP');
+      else if(!sw.querySelector('.was img')||!sw.querySelector('.was').title.includes(front(e[0])))out.errs.push(k+' swap: no greyed "was" thumbnail of the card it replaced');
+      if(!r.querySelector('textarea').value.includes(front(alt)))out.errs.push(k+' swap: the swapped-in card is not in the deck list');
+      r.querySelector('.reset-ch').click();
+      if(!r.querySelector('textarea').value.split('\\n').includes('1 '+front(e[0])))out.errs.push(k+' swap: reset did not bring the card back');
+      out.clicks=(out.clicks||0)+2;}
+    // one label system: the legend shows the 8 tapes in order, every tape explains itself, nothing in the 99 is greyed
+    const r=document.querySelector('details.row[data-i][open]'), lg=[...r.querySelectorAll('.tlg .tape')].map(t=>t.textContent);
+    if(lg.join('|')!=='POPULAR|GOOD FIT|ALWAYS IN|COMBO|FILLER|STAND-IN|YOUR SWAP|TO BUY')out.errs.push('legend tapes: '+lg.join('|'));
+    if([...r.querySelectorAll('.d99 .tape')].some(t=>!t.title))out.errs.push('a tape has no meaning in its title');
+    if(r.querySelector('.d99 .ct.nown, .d99 .ct.miss'))out.errs.push('a card in the 99 is greyed or outlined as missing');}
+  catch(e){out.errs.push('swap menus: '+e.message);}
   // Deck stats pile: each tab brings its note to the front (aria-selected, one visible note) and is remembered in dw:stat
   try{const r=document.querySelector('details.row[data-i][open]')||document.querySelector('details.row[data-i]'); if(!r.open){r.open=true; await new Promise(z=>setTimeout(z,50));}
     const pile=r.querySelector('.pile'); if(!pile)out.errs.push('no deck stats pile');
@@ -310,6 +335,7 @@ def main():
     res = json.loads(m.group(1).replace("&quot;", '"').replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">"))
     print(f"{res['rows']} commander rows, {res['panels']} panels rendered, {res.get('clicks', 0)} clicks tested, {len(res['errs'])} errors")
     for e in res["errs"][:20]: print("  " + e)
+    for e in res.get("notes") or []: print("  note: " + e)
     sys.exit(1 if res["errs"] or not res["panels"] else 0)
 
 if __name__ == "__main__":
