@@ -611,7 +611,7 @@ FIT_TRIBE = 0.12        # has a type the commander (or its main theme) names, e.
 FIT_MECH = 0.05         # per shared mechanic (tokens, sacrifice, +1/+1 counters...), up to 3
 FIT_ROLE = (0, 0.03, 0.05)   # ramp/draw/removal/... : one role, two or more
 FIT_THEME_ROLE = 0.03   # the role is the theme itself (e.g. ramp for a Big Mana commander)
-FIT_STAPLE = ((1000, 0.03), (3000, 0.015))   # Scryfall's overall EDHREC rank
+STRENGTH_W = 0.4        # card strength across all Commander decks (Scryfall's EDHREC rank), see strength()
 FIT_GC = 0.05           # Game Changers, only in brackets without a cap
 FIT_MV = 0.02           # minus this per mana value above 4
 # EDHREC weight (app slider 1-4): multiplies the EDHREC part of a non-land card's score (play rate + synergy);
@@ -775,6 +775,13 @@ def built_around(profile, cards):
     out += [[k, sum(1 for m in cards if has_keyword(m, k))] for k in sorted(kws)]
     return sorted((x for x in out if x[1]), key=lambda x: -x[1])[:6]
 
+def strength(m):
+    """0-1: how widely the card is played across all Commander decks (Scryfall's EDHREC rank, 1 = Sol Ring):
+    1 - log10(rank)/4, so rank 1 -> 1.0, 100 -> 0.5, 1,000 -> 0.25, 10,000+ -> 0. Commander-independent: it lets
+    a bomb your commander's EDHREC page under-plays (Craterhoof 299, Elspeth 809) compete with weak filler."""
+    rank = m.get("edhrec_rank")
+    return max(0.0, 1 - math.log10(rank) / 4) if rank else 0.0
+
 def card_fit(m, profile, bracket):
     """(fit score, short reason) of an owned non-land card for this commander. Rule-based and
     explainable: shared types/mechanics, useful roles, overall popularity, Game Changer, curve."""
@@ -789,11 +796,9 @@ def card_fit(m, profile, bracket):
     rs = roles_of(m) & USEFUL_ROLES
     f += FIT_ROLE[min(2, len(rs))]
     if rs & troles: f += FIT_THEME_ROLE
-    rank = m.get("edhrec_rank")
-    if rank:
-        f += next((v for lim, v in FIT_STAPLE if rank <= lim), 0)
+    f += STRENGTH_W * strength(m)
     if m["gc"] and bracket in ("optimized", "cedh"): f += FIT_GC     # B4/B5: no Game Changer cap
-    f -= FIT_MV * max(0, m["cmc"] - 4)
+    if "win" not in roles_of(m): f -= FIT_MV * max(0, m["cmc"] - 4)  # finishers are allowed to cost a lot
     return max(0.0, f), " · ".join(why)
 
 # ------------------------------------------------------- card-to-card synergy

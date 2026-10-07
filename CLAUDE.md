@@ -201,6 +201,10 @@ Key functions:
   a target of 10, all untouchable); a candidate that finds no room no longer ends the swap loop; swapped-in cards
   stay and swapped-out cards don't return (no churn). Effect vs `baseline_gems`: own picks +4.0, removal −1.7
   (12.5 left, target 8), ramp −1.5 (16.2), wipes −0.4, combos in deck +0.06, readiness +0.66 (one more check).
+- **Card strength** (engine fix 2a): `strength()` = 1 − log10(Scryfall `edhrec_rank`)/4 (Sol Ring 1.0, rank 100 → 0.5,
+  1,000 → 0.25, 10,000+ → 0) × `STRENGTH_W` 0.4 in `card_fit()` (replaces the old ±0.03 staple bonus); `win` cards
+  skip the `FIT_MV` penalty. Effect vs `baseline_engine1`: substitutes −4.0, popular +4, combos in deck +0.3–0.6
+  (B3+), GC +0.2, ramp +1.3 (staple rocks), no rule violations (`baseline_engine2.json`).
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you
