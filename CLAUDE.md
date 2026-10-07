@@ -365,6 +365,11 @@ Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why ad
 section has "Use this" / "Buy instead" for slots too. Choices are saved per commander+bracket in the
 browser (`localStorage` "dw:<slug>:<bracket>", per-viewer convenience) and change the card view, the
 copyable list and the shopping list (`effDeck`, kinds `s2` = your choice, `buy`). "Reset my choices" clears.
+**Autocomplete (every search box, `[data-ac]`):** one component (`AC` sources, `acOpen`/`acPick`/`acClose`, `#acl` listbox,
+role=combobox): up to 8 matches anywhere in the name, case and accents ignored (`fold`), starts-with first, matched letters
+`<mark>` (`acMark`); arrows / Enter / click or tap / Esc / click outside. `#q` = commanders (art, pips, % owned; picking
+opens the panel via `openCmdr`, the live list filter stays); `.pinq` = `STATS.own` [card, WUBRG bits, type line] filtered
+to the commander's colour identity (the only cards a pin can add; ~48 KB on the full report). No server calls.
 **Labels and swaps (Oct 2026, one system, zine palette only):** tapes `TAPE` [colour, label, meaning]: p POPULAR
 (outline) · y GOOD FIT (yellow, reason line) · k ALWAYS IN (red) · c COMBO (magenta, the combo in the title) · f FILLER
 · ROLE (grey; "99 cards" for leftovers) · s STAND-IN (cyan, "for <EDHREC card>") · y2/s2 YOUR SWAP (paper) · buy TO BUY

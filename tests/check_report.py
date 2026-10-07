@@ -228,6 +228,35 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if([...r.querySelectorAll('.d99 .tape')].some(t=>!t.title))out.errs.push('a tape has no meaning in its title');
     if(r.querySelector('.d99 .ct.nown, .d99 .ct.miss'))out.errs.push('a card in the 99 is greyed or outlined as missing');}
   catch(e){out.errs.push('swap menus: '+e.message);}
+  // autocomplete: type in each search box, pick a suggestion with the keyboard (ArrowDown, Enter); Esc closes
+  try{const acl=$('acl'), key=(el,k)=>el.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));
+    const typ=(el,v)=>{el.focus(); el.value=v; el.dispatchEvent(new Event('input',{bubbles:true}));};
+    if(fold('Grishnákh')!=='grishnakh'||!acMark('Grishnákh','nak').includes('<mark>nák</mark>'))out.errs.push('autocomplete does not ignore accents');
+    const q=$('q'), d0=DATA[0], part=fold(d0.name).slice(1,4);
+    typ(q,part);
+    if(acl.hidden||!acl.querySelector('li[role="option"]'))out.errs.push('commander search shows no suggestions for "'+part+'"');
+    else{if(q.getAttribute('aria-expanded')!=='true'||!acl.querySelector('mark'))out.errs.push('commander suggestions: no aria-expanded or no marked letters');
+      if(acl.children.length>8)out.errs.push('more than 8 suggestions');
+      const want=ACH[0].name; key(q,'ArrowDown');
+      if(acl.children[0].getAttribute('aria-selected')!=='true'||q.getAttribute('aria-activedescendant')!=='acl-0')out.errs.push('ArrowDown did not select the first suggestion');
+      key(q,'Enter'); await new Promise(z=>setTimeout(z,50));
+      if(!acl.hidden)out.errs.push('Enter did not close the suggestions');
+      if(![...document.querySelectorAll('#list details.row[open]')].some(r=>DATA[+r.dataset.i].name===want))out.errs.push('picking a commander did not open its panel');
+      typ(q,part); key(q,'Escape'); if(!acl.hidden)out.errs.push('Esc did not close the suggestions');}
+    q.value=''; render();
+    // the pin box (app only): suggestions are only cards you own in this commander's colours; picking fills the box
+    const r=document.querySelector('#list details.row[data-i]'); r.open=true; rerow(r); const pq=r.querySelector('.pinq');
+    if(!pq)out.errs.push('no pin box in the app');
+    else{const d=DATA[+r.dataset.i], cm=d.ci.reduce((m,c)=>m|(1<<'WUBRG'.indexOf(c)),0), mine=(ST.own||[]).filter(o=>(o[1]&~cm)===0);
+      if(!mine.length)out.errs.push('no owned cards to suggest for pins');
+      else{const nm=CARDS[mine[0][0]][0]; typ(pq,fold(nm).slice(0,4));
+        const names=new Set(mine.map(o=>CARDS[o[0]][0]));
+        if(acl.hidden)out.errs.push('pin box shows no suggestions');
+        else{if(ACH.some(it=>!names.has(it.name)))out.errs.push('pin box suggests a card outside the commander colours');
+          key(pq,'ArrowDown'); key(pq,'Enter'); if(pq.value!==ACH[0].name&&!names.has(pq.value))out.errs.push('picking a pin suggestion did not fill the box');
+          if(!acl.hidden)out.errs.push('pin suggestions stayed open after picking');}}}
+    out.clicks=(out.clicks||0)+6;}
+  catch(e){out.errs.push('autocomplete: '+e.message);}
   // Deck stats pile: each tab brings its note to the front (aria-selected, one visible note) and is remembered in dw:stat
   try{const r=document.querySelector('details.row[data-i][open]')||document.querySelector('details.row[data-i]'); if(!r.open){r.open=true; await new Promise(z=>setTimeout(z,50));}
     const pile=r.querySelector('.pile'); if(!pile)out.errs.push('no deck stats pile');

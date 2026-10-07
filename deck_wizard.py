@@ -2411,6 +2411,15 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .pnote details.more>summary{display:inline;align-self:flex-start;font-size:12px;text-transform:uppercase;color:#141414;border-bottom:2px solid #141414}
 .pnote .tag{color:#141414;border-color:#141414}.pnote b.miss{color:#B3161A}
 @media(max-width:760px){.trow{grid-template-columns:1fr}.prow{grid-template-columns:1fr 34px}.prow .pcells{grid-column:1/3}.pw{grid-column:1/3}.ncurve{gap:4px;height:220px}.nmv{gap:4px}.nmv b{font-size:12px}.pnote{padding:28px 16px 20px}}
+/* ---------- autocomplete dropdown (every search box) ---------- */
+.acl{position:fixed;z-index:80;margin:0;padding:0;list-style:none;max-width:min(520px,94vw);max-height:min(440px,60vh);overflow-y:auto;
+  background:var(--bg);color:var(--ink);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--r)}
+.acl li{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 10px 4px 6px;cursor:pointer;border-bottom:1.5px dashed var(--line)}
+.acl li:last-child{border-bottom:0}.acl img{flex:none;width:34px;aspect-ratio:488/680;object-fit:cover;border:1.5px solid var(--ink);border-radius:3px}
+.acl img.art{width:46px;aspect-ratio:4/3}.acl .an{display:flex;flex-direction:column;gap:2px;min-width:0}
+.acl b{font:800 15px/1.15 var(--head);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.acl small{font-size:11px;color:var(--mute);display:flex;gap:6px;align-items:center}
+.acl small .pip{width:14px;height:14px;font-size:9px}.acl mark{background:var(--y);color:#141414;padding:0 1px}
+.acl li[aria-selected="true"]{background:var(--r);color:#FFFFFF}.acl li[aria-selected="true"] small{color:#FFFFFF}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -2431,7 +2440,7 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 <div class="cmyk" aria-hidden="true"></div>
 <div class="disc">
 <aside class="filt" aria-label="Filters">
-<h3 class="fh">Search</h3><div class="fb"><label class="sr" for="q">Commander name</label><input id="q" type="search" placeholder="type a name_"></div>
+<h3 class="fh">Search</h3><div class="fb"><label class="sr" for="q">Commander name</label><input id="q" type="search" placeholder="type a name_" autocomplete="off" data-ac="cmdr" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acl"></div>
 <h3 class="fh">Colours</h3><div class="fb cchips" role="group" aria-label="Colours"></div>
 <h3 class="fh">You own at least</h3><div class="fb mins" role="group" aria-label="Minimum owned"></div>
 <h3 class="fh">More</h3><div class="fb more"><label>archetype<select id="th" aria-label="Archetype"><option value="">Any archetype</option></select></label><label>edhrec decks<select id="dk" aria-label="Min decks"><option value="0">Any deck count</option><option value="20">20+ decks</option><option value="100">100+ decks</option><option value="500">500+ decks</option><option value="1000">1000+ decks</option><option value="5000">5000+ decks</option></select></label><label>combos<select id="cf" aria-label="Combos"><option value="">Any combos</option><option value="own">Owns 1+ combo</option><option value="skel">Combo in deck</option></select></label><label>sort by<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select></label></div>
@@ -2445,7 +2454,7 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 <div id="imp"></div>
 <div id="unused"></div>
 </div>
-</main><img id="pv" alt=""><script>
+</main><img id="pv" alt=""><ul id="acl" class="acl" role="listbox" aria-label="Suggestions" hidden></ul><script>
 const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__, STRS=__STRS__, OPTS=__OPTS__;
 const W=i=>typeof i==="number"?(i>=0?STRS[i]:""):(i||"");   // a reason from the shared string table
 const LBL={all:"All decks",exhibition:"B1 Exhibition",core:"B2 Core",upgraded:"B3 Upgraded",optimized:"B4 Optimized",cedh:"B5 cEDH"};
@@ -2682,7 +2691,7 @@ function pinHTML(d,x){const p=pinsOf(d);
   const chip=(n,side)=>`<span class="pchip ${side}">${side==="in"?"ALWAYS":"<s>NEVER</s>"} · ${esc(n)}${SERVED?`<button class="pinx" data-unpin="${esc(n)}" data-side="${side}" title="Remove this pin" aria-label="Remove pin">✕</button>`:""}</span>`;
   const miss=(x.pinx||[]).map(([i,w])=>`<li>📌 ${esc(front(i))} isn't in this deck: ${esc(W(w))}</li>`).join("");
   return `<div class="pnl py pins"><h3 class="ptl">Pins</h3><div class="pchips">${p.in.map(n=>chip(n,"in")).join("")}${p.out.map(n=>chip(n,"out")).join("")}${p.in.length||p.out.length?"":`<span class="dim">none yet</span>`}</div>
-    ${SERVED?`<div class="padd"><input class="pinq" placeholder="card name_" aria-label="Card name to pin"><button class="pa" data-pinadd="in" title="Put this card in every deck of this commander (bracket rules permitting)">Always</button><button class="pn" data-pinadd="out" title="Never use this card for this commander">Never</button></div>`
+    ${SERVED?`<div class="padd"><input class="pinq" placeholder="card name_" aria-label="Card name to pin" autocomplete="off" data-ac="pin" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acl"><button class="pa" data-pinadd="in" title="Put this card in every deck of this commander (bracket rules permitting)">Always</button><button class="pn" data-pinadd="out" title="Never use this card for this commander">Never</button></div>`
       :`<small class="dim">add pins in Deck Wizard App.bat</small>`}<span class="thinw pinerr"></span>${miss?`<ul class="thinw">${miss}</ul>`:""}</div>`;}
 function postPins(d,next,row){const err=row.querySelector(".pinerr"); if(err)err.textContent="Saving…";
   fetch("/pins",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"application/json"},body:JSON.stringify({c:d.name,in:next.in,out:next.out})})
@@ -3199,6 +3208,50 @@ if(matchMedia("(hover:hover)").matches){
     pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";}}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".flip"))e.preventDefault();},true);
 ["br","q","th","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
+/* ---------- autocomplete for every search box ([data-ac]): up to 8 matches anywhere in the name, ignoring case and
+   accents, names starting with the text first, matched letters marked; arrows move, Enter / click / tap picks, Esc or a
+   click outside closes. role=combobox + listbox. Sources: AC[kind](input) -> {items(q), pick(item)}; no server calls. ---------- */
+const fold=t=>String(t).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function acMark(name,q){const P=[...name], F=P.map(fold), st=[]; let pos=0; F.forEach(f=>{st.push(pos); pos+=f.length;});
+  const i=F.join("").indexOf(q), e=i+q.length; if(i<0||!q) return esc(name);
+  let h="", on=false; P.forEach((c,k)=>{const a=st[k], z=a+F[k].length, inn=F[k].length?z>i&&a<e:on;
+    if(inn&&!on){h+="<mark>";on=true;} if(!inn&&on){h+="</mark>";on=false;} h+=esc(c);}); return h+(on?"</mark>":"");}
+// rank names: [item, where the text starts]; starts-with first, then earlier matches, then A-Z; at most 8
+const acRank=(list,q,name)=>list.map(x=>[x,fold(name(x)).indexOf(q)]).filter(z=>z[1]>=0)
+  .sort((a,z)=>(a[1]>0)-(z[1]>0)||a[1]-z[1]||name(a[0]).localeCompare(name(z[0]))).slice(0,8).map(z=>z[0]);
+const AC={
+  // commanders: picking one opens its panel (the live list filtering stays as it was)
+  cmdr:()=>({items:q=>acRank(DATA,q,d=>d.name).map(d=>{const x=X(d,bk());
+      return {name:d.name,img:d.img?d.img.replace("/normal/","/art_crop/"):"",art:1,detail:`<span class="pips">${pips(d.ci)}</span>${x?x.pct+"% owned":"no "+LBL[bk()]+" data"}`,d};}),
+    pick:it=>openCmdr(it.d.name)}),
+  // pins: only cards you own in this commander's colour identity (the only ones a pin can add); picking fills the box
+  pin:inp=>{const r=inp.closest("details.row[data-i]"), d=r&&DATA[+r.dataset.i], cm=d?d.ci.reduce((m,c)=>m|(1<<"WUBRG".indexOf(c)),0):31;
+    const L=(ST.own||[]).filter(o=>(o[1]&~cm)===0);
+    return {items:q=>acRank(L,q,o=>CARDS[o[0]][0]).map(o=>({name:CARDS[o[0]][0],img:IMG(o[0]),detail:esc(W(o[2]))})),
+      pick:it=>{inp.value=it.name; inp.focus();}};}};
+const ACL=$("acl"); let ACI=null, ACS=null, ACH=[], ACA=-1;
+function acClose(){if(!ACI)return; ACL.hidden=true; ACL.innerHTML=""; ACI.setAttribute("aria-expanded","false"); ACI.removeAttribute("aria-activedescendant"); ACI=null; ACA=-1;}
+function acPlace(){if(!ACI)return; const b=ACI.getBoundingClientRect();
+  ACL.style.left=Math.max(8,Math.min(b.left,innerWidth-ACL.offsetWidth-8))+"px"; ACL.style.minWidth=Math.max(b.width,260)+"px";
+  const below=innerHeight-b.bottom; ACL.style.top=(below<200&&b.top>below?Math.max(8,b.top-ACL.offsetHeight-4):b.bottom+4)+"px";}
+function acSet(j){ACA=j; [...ACL.children].forEach((li,k)=>li.setAttribute("aria-selected",k===j?"true":"false"));
+  if(j>=0){ACI.setAttribute("aria-activedescendant","acl-"+j); ACL.children[j].scrollIntoView({block:"nearest"});} else ACI.removeAttribute("aria-activedescendant");}
+function acOpen(inp){const q=fold(inp.value.trim()); if(!q){acClose();return;}
+  if(ACI!==inp){acClose(); ACI=inp; ACS=AC[inp.dataset.ac](inp);}
+  ACH=ACS.items(q); if(!ACH.length){ACL.hidden=true; ACL.innerHTML=""; inp.setAttribute("aria-expanded","false"); ACA=-1; return;}
+  ACL.innerHTML=ACH.map((it,j)=>`<li id="acl-${j}" role="option" aria-selected="false" data-j="${j}">${it.img?`<img class="${it.art?"art":""}" src="${esc(it.img)}" alt="" loading="lazy">`:""}<span class="an"><b>${acMark(it.name,q)}</b><small>${it.detail}</small></span></li>`).join("");
+  ACL.hidden=false; inp.setAttribute("aria-expanded","true"); acSet(-1); acPlace();}
+function acPick(j){const it=ACH[j], s=ACS; if(!it)return; acClose(); s.pick(it);}
+document.addEventListener("input",e=>{if(e.target.dataset&&e.target.dataset.ac) acOpen(e.target);});
+document.addEventListener("keydown",e=>{const t=e.target; if(!t.dataset||!t.dataset.ac||t!==ACI||ACL.hidden)return;
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault(); const n=ACH.length; acSet(e.key==="ArrowDown"?(ACA+1)%n:(ACA<=0?n-1:ACA-1));}
+  else if(e.key==="Enter"&&ACA>=0){e.preventDefault(); e.stopImmediatePropagation(); acPick(ACA);}
+  else if(e.key==="Escape"){e.preventDefault(); acClose();}},true);
+ACL.addEventListener("mousedown",e=>e.preventDefault());      // keep the focus in the box while clicking a row
+ACL.addEventListener("click",e=>{const li=e.target.closest("li[data-j]"); if(li) acPick(+li.dataset.j);});
+document.addEventListener("click",e=>{if(ACI&&e.target!==ACI&&!ACL.contains(e.target)) acClose();});
+document.addEventListener("focusout",e=>{if(e.target===ACI) setTimeout(()=>{if(ACI&&document.activeElement!==ACI) acClose();},150);});
+addEventListener("resize",acPlace); addEventListener("scroll",acPlace,true);
 showView(location.hash==="#collection"?"collection":location.hash==="#discover"?"discover":(()=>{try{return localStorage.getItem("dw:view");}catch(e){return "";}})());
 render();
 </script></body></html>"""
@@ -3838,6 +3891,9 @@ def main():
                       "at": time.strftime("saved %Y-%m-%d %H:%M", time.localtime(os.path.getmtime(csv_path))),
                       "diff": {k2: v for k, l in (diff or {}).items()
                                for k2, v in ((k, l[:40]), (k + "_n", len(l)))} if diff else None}}
+    # for the pin box's suggestions: every card you own that a pin could add (commander-legal, no basics)
+    stats["own"] = [[T.add(m["name"], m), sum(1 << j for j, c in enumerate("WUBRG") if c in m["ci"]), T.s(m["type_line"])]
+                    for _, m in sorted(owned.items()) if m["commander_legal"] and m["name"] not in BASIC_NAMES]
     out_html = os.path.join(a.out, "report.html")
     with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
         f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows, T.strs, T.opts))
