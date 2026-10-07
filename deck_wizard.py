@@ -1915,6 +1915,117 @@ def parse_decklist(path, text=None):
         (cmdrs if section == "cmd" or is_cmd else main).append((qty, name))
     return cmdrs, main
 
+ANALYSIS_ADD = 8        # deck analysis: owned cards suggested (after the ones filling a failed check)
+ANALYSIS_BUY = 8        # ...EDHREC cards worth buying
+ANALYSIS_CUT = 6        # ...cuts to consider
+
+def deck_analysis(cm, cmdrs, main, meta, owned, name_meta, base, ap, pool, inside, T):
+    """A saved deck, graded with the same rules and measures the builder uses (nothing invented):
+    bracket (bracket_fit: Game Changers, mass land denial, extra turns, two-card infinites in the deck), Build Readiness
+    checks (roles vs ROLE_TARGETS, average mana value, weakest colour's sources, win conditions), the deck's shape vs
+    EDHREC's average deck of this commander (`ap`), what it's built around (commander profile) and its engines
+    (DeckSynergy links), owned cards to add (first those filling a failed check, then the best by the builder's score),
+    EDHREC cards worth buying, and cuts to consider (the lowest-scoring cards no check, combo or hidden gem depends on)."""
+    deck = [(q, meta(n), n) for q, n in main]
+    keys = {norm(n) for _, n in cmdrs + main}
+    ci = set(cm["ci"]) if cm else set().union(*(set((m or {}).get("ci", [])) for _, m, _ in deck)) if deck else set()
+    nl = [(q, m) for q, m, _ in deck if m and card_kind(m) != "land"]
+    nonland = [m for _, m in nl]
+    roles = {r: 0 for r in ROLE_NAMES}
+    for q, m in nl:
+        for r in roles_of(m):
+            if r in roles: roles[r] += q
+    n_nl = sum(q for q, _ in nl)
+    avg_cmc = round(sum(q * (m.get("cmc") or 0) for q, m in nl) / max(n_nl, 1), 2)
+    sources, n_lands = {c: 0 for c in "WUBRG" if c in ci}, 0
+    for q, m, n in deck:
+        nm = n.split(" // ")[0]
+        if nm in BASIC_NAMES:
+            n_lands += q
+            c = next((c for c, b in BASICS.items() if nm.endswith(b)), None)
+            if c in sources: sources[c] += q
+        elif m and card_kind(m) == "land":
+            n_lands += q
+            for c in set(m.get("produced") or []) & set(sources): sources[c] += q
+    rd = [r for r in readiness(roles, avg_cmc, 0, sources) if r[0] != "odd"]
+    allm = [m for _, m, _ in deck if m] + ([cm] if cm else [])
+    for c in inside:                                       # two-card infinites need the mana total (combo_need)
+        c["tmv"] = int(sum((meta(x) or {}).get("cmc", 0) for x in c["cards"]) + (c.get("mv") or 0))
+    gcn = sorted({m["name"] for m in allm if m.get("gc")})
+    bf = bracket_fit({"gc": len(gcn), "mld": sorted({m["name"] for m in allm if is_mld(m)}),
+                      "xt": sorted({m["name"] for m in allm if is_xturn(m)})}, inside)
+    mv, ty = [0] * 8, {}
+    for q, m, n in deck:
+        g = "Land" if n.split(" // ")[0] in BASIC_NAMES else type_group(m["type_line"]) if m else None
+        if not g: continue
+        ty[g] = ty.get(g, 0) + q
+        if g != "Land": mv[min(int(m.get("cmc") or 0), 7)] += q
+    out = {"bf": bf, "gcn": gcn, "tut": roles.get("tutor", 0), "rd": rd, "cmc": avg_cmc, "lands": n_lands,
+           "mv": mv, "ty": ty, "ref": avg_shape(ap, owned, name_meta) if ap and ap.get("cards") else None,
+           "adecks": (ap or {}).get("decks", 0), "core": [], "eng": [], "add": [], "buy": [], "cut": []}
+    if not cm: return out
+    profile = commander_profile(cm, (base or {}).get("tags") or [])
+    out["core"] = built_around(profile, nonland)
+    syn = DeckSynergy(cm, nonland, profile[0])
+    eng = {}
+    for m in nonland:
+        for _, lab in syn.links(m, True): eng[lab] = eng.get(lab, 0) + 1
+    out["eng"] = sorted(([lab, n] for lab, n in eng.items()), key=lambda x: (-x[1], x[0]))[:6]
+    _, play_of, value_of = card_values(base, base, owned, name_meta) if base else (None, lambda k: 0.0, lambda k: 0.0)
+    rate_of = (lambda k: (base["cards"].get(k) or (None, 0.0))[1]) if base else (lambda k: 0.0)
+    gems = hidden_gems(cm, profile, pool, play_of, "all") if base else {}    # the builder's own floor (e.g. Brallin for Doom)
+    def score(k, m, inside_=False):
+        f, why = cmdr_fit(cm, m, profile, "all")
+        if k in gems: why = "hidden gem: " + " + ".join(gems[k][1]) + (" · " + why if why else "")
+        return (max(value_of(k), gems[k][0]) if k in gems else value_of(k)) + f + syn.score(m, inside_), why
+    def reason(k, m, fit_why):
+        r = rate_of(k)
+        parts = [f"in {round(r * 100)}% of these decks" if r else "", syn.why(m), fit_why]
+        return " · ".join(x for x in parts if x)[:140] or role_text(m) or ""
+    # owned cards to add: first those doing a job the deck is short of, then the best by the builder's score
+    cand = [(k, m) for k, m, _, kd in pool if kd != "land" and k not in keys]
+    scored = sorted(((score(k, m), k, m) for k, m in cand), key=lambda t: (-t[0][0], t[1]))
+    added = set()
+    for r, val, tgt, ok in rd:
+        if ok or r not in ROLE_TARGETS: continue
+        for (sc, why), k, m in [t for t in scored if r in roles_of(t[2]) and t[1] not in added][:3]:
+            out["add"].append([T.add(m["name"], m), T.s(f"fills {r}: the deck has {val}, the checks want {tgt}")]); added.add(k)
+    src = next((r for r in rd if r[0] == "src" and not r[3]), None)
+    if src:                                                # a weak colour: owned lands that make it
+        c = src[1].split(" ")[0]
+        lands = sorted(((k, m) for k, m, _, kd in pool if kd == "land" and k not in keys and c in (m.get("produced") or [])
+                        and not restricted_mana(m)),
+                       key=lambda t: (enters_tapped(t[1]), -len(set(t[1].get("produced") or []) & ci), t[0]))[:2]
+        for k, m in lands:
+            out["add"].append([T.add(m["name"], m), T.s(f"fixes {c}: the deck has {src[1].split(' ')[1]} {c} sources, the checks want {src[2]}")]); added.add(k)
+    for (sc, why), k, m in [t for t in scored if t[1] not in added][:ANALYSIS_ADD]:
+        out["add"].append([T.add(m["name"], m), T.s(reason(k, m, why))])
+    # EDHREC cards worth buying: the most played cards for this commander you don't own and the deck doesn't run
+    if base:
+        miss = sorted(((value_of(k), k, v[0]) for k, v in base["cards"].items() if k not in owned and k not in keys
+                       and v[0].split(" // ")[0] not in BASIC_NAMES), key=lambda t: (-t[0], t[1]))[:ANALYSIS_BUY]
+        for _, k, nm in miss:
+            mm = name_meta.get(k)
+            out["buy"].append([T.add(mm["name"] if mm else nm, mm), T.s(f"in {round(rate_of(k) * 100)}% of these decks"
+                                                                       + (f" · {role_text(mm)}" if mm and role_text(mm) else ""))])
+    # cuts: the lowest-scoring cards no failed check, kept role or combo in the deck depends on
+    in_combo = {norm(x) for c in inside for x in c["cards"]}
+    short = {r for r, v, t, ok in rd if r in ROLE_TARGETS and v <= t}
+    cuts = []
+    for q, m in nl:
+        k = norm(m["name"])
+        if k == norm(cm["name"]) or k in in_combo or k in gems or (roles_of(m) & short) or m.get("gc"): continue
+        (sc, why) = score(k, m, True)
+        parts = [f"in {round(rate_of(k) * 100)}% of these decks" if rate_of(k) else "not on EDHREC's list for this commander"]
+        if not syn.links(m, True): parts.append("no links with the rest of the deck")
+        if not roles_of(m): parts.append("no tracked job (ramp, draw, removal…)")
+        if (m.get("cmc") or 0) >= 6: parts.append(f"mana value {int(m['cmc'])}")
+        if k not in owned: parts.append("you don't own it")
+        cuts.append((sc, k, m, " · ".join(parts)))
+    for _, k, m, why in sorted(cuts, key=lambda t: (t[0], t[1]))[:ANALYSIS_CUT]:
+        out["cut"].append([T.add(m["name"], m), T.s(why)])
+    return out
+
 def deck_combo_key(cmdrs, main):
     """Cache key of a decklist's combos: its commanders and cards, order and copies ignored."""
     return hashlib.sha1(json.dumps([sorted({n for _, n in cmdrs}), sorted({n for _, n in main})]).encode("utf-8")).hexdigest()
@@ -1966,7 +2077,10 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T, combo_cach
             combos = {"own": own["list"], "n_own": own["n"], "near": near["list"], "n_near": near["n"]}
             if combo_cache is not None: combo_cache[ck] = combos
     cm = meta(cmdrs[0][1]) if cmdrs else None
-    return {"title": os.path.splitext(os.path.basename(path))[0],
+    ap = edh_cache.get("avg:" + slugify(cmdrs[0][1])) if cmdrs else None
+    an = deck_analysis(cm, cmdrs, main, meta, owned, name_meta, base, ap, pool, [dict(c) for c in (combos or {}).get("own") or []], T)
+    an["combos_checked"] = combos is not None
+    return {"title": os.path.splitext(os.path.basename(path))[0], "an": an,
             "cmdr": [n for _, n in cmdrs], "cidx": [T.add((meta(n) or {}).get("name", n), meta(n)) for _, n in cmdrs],
             "ci": [c for c in "WUBRG" if c in ci], "img": (cm or {}).get("img", ""),
             "own": own_n, "total": tot_n, "pct": round(100 * own_n / tot_n, 1),
@@ -2204,7 +2318,7 @@ main{max-width:1400px}
 .tile .t{position:relative;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
 .tile .tbig{position:relative;font:900 4.6rem/.85 var(--head);font-stretch:62%;color:inherit}
 .tile ul{margin:0;padding-left:16px;font-size:.75rem;line-height:1.45}.tile small{color:inherit;opacity:.8}
-.tile.inv{background:var(--ink);color:var(--bg)}.tile.inv small{color:var(--bg)}
+.tile.inv{background:var(--ink);color:var(--bg)}.tile.inv small,.tile.inv .t{color:var(--bg)}
 .mburst{position:absolute;z-index:-1;right:-46px;top:-46px;width:190px;height:190px;background:var(--r);opacity:.9}
 .bat.big{width:150px;height:31px}.bat.sm{width:100px;height:20px}
 .cap{align-self:flex-start;padding:1px 5px;font:800 .68rem/1.3 var(--head);border:1.5px solid #141414;color:var(--onacc)}.cap.y{background:var(--y)}.cap.c{background:var(--c)}.cap.m{background:var(--m)}
@@ -2442,6 +2556,11 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .ushort{padding:12px 16px;border:2px solid var(--ink);border-left:8px solid var(--r);background:var(--card)}
 .ushort h3{margin:0 0 8px;font-size:18px}.ushort ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .ushort em{font-style:normal;font-weight:700;padding:0 5px;color:#FFFFFF;background:var(--r)}
+/* ---------- deck analysis (F4) ---------- */
+.an{display:flex;flex-direction:column;gap:12px;margin:10px 0 22px}.an h3.p5-slab{margin:0;font-size:clamp(1.8rem,4vw,2.8rem)}
+.an h4{margin:10px 0 4px}.ancols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.ancols ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5}.ang li::marker{content:"✓ ";color:#2A8443}.anb li::marker{content:"✗ ";color:var(--r)}.anb li.nm::marker{content:""}
+.anl{display:flex;flex-wrap:wrap;gap:12px}.anl .alt{width:132px}.anl small{display:block;font-size:11px;line-height:1.3}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -3133,12 +3252,42 @@ function cnote(k,i,o,use){if(!o) return "missing"; if(BASIC.has((CARDS[i]||[])[0
   const u=use.get(i), own=OWNQ.get(i), other=u?u.d.filter(z=>z[0]!==k.title):[];
   if(u&&u.n>own) return `short ${u.n-own}: own ${own}, used ${u.n}`;
   return other.length?`also in ${other[0][0]}${other.length>1?" +"+(other.length-1):""}`:"";}
+// deck analysis (F4): bracket with reasons, the checks (strengths / weaknesses), shape vs EDHREC's average deck,
+// what it's built around, owned cards to add (with free copies), cards worth buying, cuts to consider
+function anHTML(k,use){const A=k.an; if(!A) return "";
+  const RN={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Average mana value",src:"Colour sources (weakest)",win:"Win conditions"};
+  const ok=A.rd.filter(r=>r[3]), bad=A.rd.filter(r=>!r[3]);
+  const row=([c,v,t])=>`<li><b>${RN[c]||c}</b> ${esc(String(v))} <small>(${c==="mv"?"at most":"want"} ${t})</small></li>`;
+  const est=A.bf.est, lab=est<=2?"B1–2":est>=4?"B4+":"B3";
+  const shape=A.ref?(()=>{const d=A.mv.map((v,i)=>[i===7?"7+":String(i),v-Math.round(A.ref.mv[i]||0)]).filter(z=>Math.abs(z[1])>=2);
+      const lr=Math.round(A.ref.ty.Land||0), ld=A.lands-lr;
+      return `<li>${d.length?"Curve: "+d.map(([m,v])=>`${Math.abs(v)} ${v>0?"more":"fewer"} at ${m} mana`).join(", "):"Curve: close to the average deck at every cost"}</li>
+        <li>Lands: ${A.lands} <small>(average deck ${lr}${Math.abs(ld)>=2?`, ${Math.abs(ld)} ${ld>0?"more":"fewer"}`:""})</small></li>`;})()
+    :`<li>Lands: ${A.lands} <small>(no EDHREC average deck to compare)</small></li>`;
+  const freeTxt=c=>{if(!OWNQ.has(c)) return ""; const u=use.get(c), own=OWNQ.get(c), f=own-(u?u.n:0);
+    return f>0?`free ${f} of ${own}`:`all ${own} in ${u.d.map(z=>z[0]).join(", ")}`;};
+  const list=(L,extra)=>L.length?`<div class="anl">${L.map(([c,w])=>`<div class="alt">${tile(c)}<small>${esc(W(w))}${extra?`<br><b>${esc(extra(c))}</b>`:""}</small></div>`).join("")}</div>`:`<p class="dim">None.</p>`;
+  return `<section class="an"><h3 class="p5-slab"><span>Deck analysis</span></h3>
+  <div class="tiles"><div class="tile num"><span class="t">Bracket Fit</span><b class="tbig">${lab}</b>${A.bf.why.length?`<ul>${A.bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`
+      :`<span class="tt">No Game Changers, mass land denial, chained extra turns or two-card infinites found.</span>`}<small>${A.tut} tutor${A.tut===1?"":"s"} (B1–2 expect few)${A.combos_checked?"":" · combos not checked (app offline)"}</small></div>
+    <div class="tile num inv"><span class="t">Build checks</span><b class="tbig">${ok.length}/${A.rd.length}</b><span class="tt">average mana value ${A.cmc}</span></div>
+    <div class="tile num"><span class="t">You own</span><b class="tbig">${k.pct}%</b>${bat(k.pct,10,"big")}<span class="tt">${k.own} of ${k.total} non-basic cards</span></div></div>
+  <div class="ancols"><div><h4>Strengths</h4><ul class="ang">${ok.map(row).join("")||"<li>None of the checks pass yet.</li>"}</ul></div>
+    <div><h4>Weaknesses</h4><ul class="anb">${bad.map(row).join("")||'<li class="nm">None: every check passes.</li>'}</ul>
+      <h4>Shape <small>vs EDHREC's average deck</small></h4><ul>${shape}</ul></div>
+    <div><h4>Synergy</h4><ul>${A.core.length?`<li>Built around: ${A.core.map(([l,c])=>`${esc(l)} ${c}`).join(" · ")}</li>`:""}
+      ${A.eng.length?`<li>Engines: ${A.eng.map(([l,c])=>`${esc(l)} ×${c}`).join(" · ")}</li>`:""}
+      <li>Combos in the deck: ${k.combos?k.combos.n_own:"–"} · one card away: ${k.combos?k.combos.n_near:"–"}</li></ul></div></div>
+  <h4>Add from your collection</h4>${list(A.add,freeTxt)}
+  <h4>Worth buying <small>(most played for this commander, not in the deck)</small></h4>${list(A.buy)}${A.buy.length?`<p>${A.buy.map(([c])=>buyA(c,"🛒 "+esc(front(c)))).join(" · ")}</p>`:""}
+  <h4>Cuts to consider <small>(lowest by the builder's own measures; combo pieces, Game Changers, hidden gems and short roles kept)</small></h4>${list(A.cut)}</section>`;}
 function ibody(k){
   const use=usage(), items=k.cards.map(([i,o,q])=>({i,kind:o?"":"m",n:q,note:cnote(k,i,o,use)}));
   const nShort=items.filter(it=>it.note.startsWith("short")).length, nShared=items.filter(it=>it.note.startsWith("also")).length;
   const deckSet=new Set(k.cards.map(c=>c[0]));
   const text=["Commander",...k.cidx.map(i=>"1 "+front(i)),"","Deck",...k.cards.map(([i,o,q])=>q+" "+front(i))].join("\n")+"\n";
   return `<p>You own <strong>${k.own}</strong> of <strong>${k.total}</strong> non-basic cards (${k.pct}%)${nShared?` · <b>${nShared}</b> also in your other decks`:""}${nShort?` · <b class="miss">${nShort} short</b> (more copies needed than you own)`:""}.${SERVED?` <button type="button" class="ddel" data-ddel="${esc(k.title)}">🗑 Delete this deck</button>`:""}</p>
+  ${anHTML(k,use)}
   ${deckSection("Deck",k.cidx,items,text,"")}
   <div class="vbar"><h3>Missing cards &amp; substitutes</h3><span class="dim">${k.gaps.length} missing</span></div>
   ${gapsHTML(k.gaps,deckSet)}

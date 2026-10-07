@@ -267,6 +267,14 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       const row=[...document.querySelectorAll('#imp details.irow')].find(r=>DECKS[+r.dataset.k].title==='Check Deck');
       if(!row)out.errs.push('saved deck did not appear under Your decks');
       else{if(!row.open)out.errs.push('saved deck did not open');
+        // F4: the saved deck opens with its analysis
+        await wait(()=>row.querySelector('.an'),40);   // the body is filled on the toggle event, a moment after opening
+        const an=row.querySelector('.an');
+        if(!an)out.errs.push('saved deck has no Deck analysis');
+        else{if(!/B3/.test((an.querySelector('.tile .tbig')||{}).textContent||''))out.errs.push('analysis: no bracket tile');
+          if(!an.querySelector('.ang li')||!an.querySelector('.anb li'))out.errs.push('analysis: no strengths / weaknesses');
+          if(an.querySelectorAll('.anl .alt').length<2)out.errs.push('analysis: no cards to add / cut');
+          if(!/free|all [0-9]/.test(an.textContent))out.errs.push('analysis: suggestions do not show free copies');}
         const b2=document.querySelector('#imp .dadd'); b2.querySelector('.dtext').value='1 Sol Ring'; b2.querySelector('.dname').value='Check Deck'; b2.querySelector('.dsave').click();
         await new Promise(z=>setTimeout(z,300));
         if(DECKS.filter(d=>d.title==='Check Deck').length!==1)out.errs.push('replacing a deck made a second copy');
@@ -369,7 +377,12 @@ def stub_server(html):
                 else:
                     x = data[0]["b"]["all"]["deck"][:8]
                     SAVED[body["name"]] = {"title": body["name"], "cmdr": [data[0]["name"]], "cidx": [data[0]["cidx"]], "ci": data[0]["ci"],
-                                           "img": "", "own": 8, "total": 8, "pct": 100.0, "cards": [[e[0], 1, 1] for e in x], "gaps": [], "combos": None}
+                                           "img": "", "own": 8, "total": 8, "pct": 100.0, "cards": [[e[0], 1, 1] for e in x], "gaps": [], "combos": None,
+                                           "an": {"bf": {"est": 3, "why": ["1 Game Changer (B1-2 allow none)"]}, "gcn": [], "tut": 1,
+                                                  "rd": [["ramp", 5, 10, False], ["draw", 12, 9, True]], "cmc": 3.1, "lands": 36,
+                                                  "mv": [0, 5, 8, 9, 6, 3, 2, 1], "ty": {"Land": 36}, "ref": None, "adecks": 0,
+                                                  "core": [["discard", 9]], "eng": [["discard", 7]], "add": [[x[0][0], -1]], "buy": [],
+                                                  "cut": [[x[1][0], -1]], "combos_checked": True}}
                     saved = body["name"]
                 return self.send(200, json.dumps({"decks": list(SAVED.values()), "saved": saved, "cards": [], "strs": [], "combos": [], "opts": []}))
             if self.path != "/pins" or self.headers.get("X-Deck-Wizard") != "1": return self.send(403, "{}")

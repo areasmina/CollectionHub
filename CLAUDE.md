@@ -447,10 +447,14 @@ A new user starts empty and uploads a collection first. Order (one phase per com
   saved `DECKS` use, per deck), `unusedRender()` (unused = in none of your saved decks, else in no suggested 99; spare copies;
   **Short** list = decks use more copies than you own, with the decks + 🛒; "would use the most" ranked live from `DATA`), deck
   cards note `short N` / `also in <deck>` (`cnote`). Recounted on every deck add/delete. Reports built before F3 keep their
-  counts and say one full rebuild is needed. **F4** deck analysis for a saved deck: bracket with reasons,
-  strengths / weaknesses from the checks (roles, curve, colour sources vs EDHREC's average deck), synergies (built
-  around, engines, combos in / one card away), suggested cards (yours first, with free copies; then to buy), cuts with
-  reasons. Rule-based only, no invented scores.
+  counts and say one full rebuild is needed. ✅ **F4** deck analysis for every saved deck (`deck_analysis()`, called by
+  `analyze_imported`, stored as `an`; page `anHTML()` at the top of the deck): Bracket Fit (`bracket_fit`: Game Changers,
+  MLD, extra turns, two-card infinites in the deck with `tmv`), Build checks (`readiness` without "odd"), strengths /
+  weaknesses, shape vs EDHREC's average deck (`avg:<slug>`, curve ±2, land count), built around + engines (DeckSynergy
+  links), combos in / one card away, owned cards to add (first those filling a failed role or the weakest colour, then the
+  builder's score = value + `cmdr_fit` + deck synergy, hidden-gem floor included; free copies from F3), EDHREC cards worth
+  buying (`ANALYSIS_BUY`), cuts (`ANALYSIS_CUT`, lowest score; combo pieces, Game Changers, hidden gems and roles at/below
+  target kept). Rule-based only, no invented scores. Test case: Brallin (Doom's hidden gem) is never a suggested cut.
 - **Step 1** on-demand app (commander list ranks fast from Collection Match; a commander's decks are built when opened;
   small page instead of the 41 MB report). **F2** collection slots (up to 3 per user: choose, restart = erase, start
   empty; share by link or .txt). **Step 2** Phase 5 mobile layout. **Step 3** deck editing (add from collection, cuts,
