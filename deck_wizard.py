@@ -3314,6 +3314,27 @@ render();
 def js_data(obj):
     return json.dumps(obj, separators=(",", ":")).replace("</", "<\\/")
 
+def restyle_report(out_html):
+    """Re-renders an existing report.html with the current page template, reusing the data already in it (decks, cards,
+    strings, combos, options): seconds instead of a full rebuild, for changes to the page only. Returns an error or ''."""
+    if not os.path.exists(out_html): return f"No report at {out_html}: build one first."
+    html = open(out_html, encoding="utf-8").read()
+    i = html.find("const DATA=")
+    if i < 0: return "That report.html has no data block (too old?): rebuild it once."
+    dec, vals, pos = json.JSONDecoder(), {}, i + len("const ")
+    for name in ("DATA", "BR", "ST", "DECKS", "CARDS", "COMBOS", "STRS", "OPTS"):
+        j = html.find(name + "=", pos)
+        if j < 0 or j - pos > 8:
+            return f"That report.html has no {name} (built before this feature): rebuild it once."
+        vals[name], pos = dec.raw_decode(html, j + len(name) + 1)
+    if "own" not in vals["ST"]:
+        return "That report.html predates the pin suggestions: rebuild it once."
+    with open(out_html + ".tmp", "w", encoding="utf-8") as f:
+        f.write(render_report(vals["DATA"], vals["ST"], vals["BR"][1:], vals["DECKS"], vals["CARDS"], vals["COMBOS"],
+                              vals["STRS"], vals["OPTS"]))
+    os.replace(out_html + ".tmp", out_html)
+    return ""
+
 def render_report(results, stats, brackets, decks, cards, combos=(), strs=(), opts=()):
     return (HTML.replace("__DATA__", js_data(results))
                 .replace("__OPTS__", js_data(list(opts)))
@@ -3827,11 +3848,19 @@ def main():
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--serve", action="store_true", help="local app with an upload button")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--restyle", action="store_true",
+                    help="only re-render report.html with the current page code (seconds; keeps its decks and data)")
     ap.add_argument("--store-url", default=STORE_URL,
                     help="where 'buy' links search for a card; {card} = the card name (default: shop.com)")
     a = ap.parse_args()
     if a.offline and a.refresh: ap.error("--offline and --refresh can't be combined")
     if a.serve and a.refresh: ap.error("--serve and --refresh can't be combined")
+    if a.restyle:
+        out_html = os.path.join(a.out, "report.html")
+        err = restyle_report(out_html)
+        if err: sys.exit(err)
+        print(f"Restyled {out_html} with the current page code ({os.path.getsize(out_html) / 1e6:.1f} MB); reload it in the browser.")
+        return
     csv_path = a.csv or find_collection()
     if not csv_path:
         ap.error(f"no ManaBox CSV found: put your export in the '{COLLECTION_DIR}' folder or pass --csv")

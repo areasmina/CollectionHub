@@ -71,6 +71,7 @@ Useful flags:
 | `--refresh` | Ignore all caches (slow: re-downloads everything) |
 | `--no-open` | Don't open the report in the browser |
 | `--offline` | No network; cached data only (tests, quick reruns) |
+| `--restyle` | Only re-render `report.html` with the current page code, reusing its data (seconds; after page-only changes) |
 | `--store-url URL` | Where "buy" links search; `{card}` = card name (default `https://shop.com/search/results?query={card}`, the user's store) |
 
 Deck metrics for comparing builder versions (offline, ~30 s):
