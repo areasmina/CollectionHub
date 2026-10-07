@@ -15,6 +15,30 @@ MY COLLECTION → COMMANDER → SYNERGY → BEST DECK I CAN BUILD → MISSING UP
   Prefer rule-based checks (Game Changers, two-card combos, tutors) over invented ratings.
 - **No AI inside the app.** It must run free for anyone with Python and internet.
   AI is only used to *build* the tool, never at runtime.
+- **Reliable logic, not per-deck fixes.** A card the user flags (e.g. Brallin for Doctor Doom) is a test case
+  for a general rule. Fix the rule, then check it on all commanders with `tests/measure.py` (no rule
+  violations, sensible averages) and spot-check a few other commanders before committing.
+
+## Product structure: two modes, one engine (planned)
+
+**Discover** (what exists today): scan the whole collection, rank commanders, show a ready-made deck per
+commander, bracket and archetype. **Build** (the "LEGO" mode, not built yet): pick a commander and a strategy,
+add/remove cards from the collection, watch the deck react, export. Flow: Discover → Build → Export; every
+commander row gets "Open in Builder"; Auto Build is a button in Build using the same engine.
+- One engine for both: small reusable functions (`score_card`, `suggest_cards`, `add_card`, `remove_card`,
+  `analyze_deck`, `suggest_upgrades`), not a one-shot builder. Python precomputes tags/roles/scores; the browser
+  filters, adds up and displays (or asks the app, like `/deck`), so Python and JS scoring can't drift apart.
+- Build mode: strategy stack (primary + up to two secondary + extras, manual tag add/remove), live-filtered
+  collection, click to add, live role counts / curve / Game Changers / combos, "must include" pins, a "why this
+  card" breakdown of real parts (no invented percentages), role minimums so cute cards don't replace working ones.
+- **Strategy independence (hard rule):** a commander isn't locked to its most popular EDHREC archetype. The
+  user's strategy wins; EDHREC is evidence, not a requirement. A low-EDHREC owned card can score high when it
+  fits (today: commander-engine bonus + hidden gems). Success test: a less popular strategy gives a
+  meaningfully different deck and surfaces owned cards the EDHREC-style build misses.
+- **Price is a constraint, not a score:** price must never be added to a card's score; cards you own are never
+  excluded by price. Planned: a budget filter on *missing-card suggestions* (Scryfall USD → CAD, editable rate).
+  Open question: today's app $/$$/$$$ uses EDHREC's budget/expensive pages, which also shifts owned picks.
+- Other planned: "What if I buy this?" (which commanders gain the most from a card).
 
 ## How to run (Windows)
 
@@ -51,7 +75,8 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_step2.json` = collection-first scoring; adds picks, combo_pieces, avg_syn, combos_in;
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
-`baseline_synergy.json` = + card-to-card synergy swaps)
+`baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
+damage to each opponent = drain)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -168,8 +193,16 @@ Key functions:
   `blocked()`. Stored as `x.sw` [[in, out, why]] and `x.bench` (next `BENCH_SHOW` 8 owned cards, with why); report:
   "Synergy: N swaps · next in line" (`synHTML`). Effect vs `baseline_avg`: ~11 swaps per All-decks list,
   removal/wipes/ramp/counters kept, draw +4.5, combos in deck +0.05, run 33 → 46 s.
-  Test case (user): Doctor Doom, King of Latveria discard cards (Captain Howler, Library of Leng, Brallin, Gamble…)
-  still rank below other owned discard cards that EDHREC lists; Howler is closest.
+- **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
+  everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
+  card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you
+  discard" cards) → `FIT_CMDR` 0.12, "with commander: discard". Hidden gem = owned, EDHREC rate < `OFF_LIST` 5% on
+  this page, `commander_link`, and 2+ of the commander's profile mechanics; the best `GEM_MAX` 3 per deck get an
+  EDHREC-part floor `GEM_FLOOR` 0.35 × share of mechanics hit ("hidden gem: +1/+1 + discard + drain"). Low play can
+  mean new, overlooked or pricey. ~half the commanders have none (mean 5 candidates, max 54). MECHANICS "drain" also
+  matches "deals N damage to each opponent". Effect vs `baseline_synergy`: own picks +2.6, substitutes −1.7,
+  removal −0.6, draw +0.8, no rule violations. Test case (user): Brallin, Skyshark Rider is in every Doctor Doom
+  deck; Captain Howler (14.5% on EDHREC, one mechanic) is in the Discard archetype and offered as a swap.
 - `find_subs()` – closeness 0–1 of owned stand-ins: share of the missing card's roles × card kind
   (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
   `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon
@@ -251,6 +284,13 @@ Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why ad
 section has "Use this" / "Buy instead" for slots too. Choices are saved per commander+bracket in the
 browser (`localStorage` "dw:<slug>:<bracket>", per-viewer convenience) and change the card view, the
 copyable list and the shopping list (`effDeck`, kinds `s2` = your choice, `buy`). "Reset my choices" clears.
+"Your pick" slots: non-land `y` entries can be `[card, "y", why, [[alternative, why] ×≤PICK_ALTS 3], card to buy, why]`
+(end of `analyze()`): owned cards doing a similar job (`find_subs` on the pick) first, then the deck's best other
+owned cards, ranked by `total()` (score + deck synergy) + `PICK_CLOSE` × closeness, within GC cap / `blocked()`;
+"buy" = most played missing EDHREC card sharing a role (no roles: same type + engine). JS slot key `"y"+card`,
+chosen kinds `y2` / `buy`. `deck_diff` compares whole entries (options differ per deck). Saved choices: `rowSel()`
+is the one key for reading (body) and writing (clicks), incl. the weight/$ level; `MEM` keeps them for the visit
+when localStorage is blocked (bug: picks didn't apply at non-default levels). Report ~46 MB.
 Combos per commander (report): **Danger zone** (red box, `danger_zone()`): every two-card infinite you can
 assemble in its colours (commander + 1 card, or card + a card meeting its condition), earliest first, with
 the official rule and whether the selected bracket allows it. **Best combos** per bracket (`best_combos()`,
@@ -308,9 +348,10 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
    mass land denial, chained extra turns; Commander Spellbook also has an estimate-bracket endpoint).
 4. ✅ (first pass) Unused cards: cards not in any `decks_in` deck → find commanders/archetypes that use them.
    Needs real decklists in `decks_in/` to be meaningful (empty today → falls back to suggested decks).
-5. Shared cores / hidden archetypes: group commanders that draw on the same owned cards
+5. **Build mode** (see "Product structure"): must-include pins first, then strategy stack and the live builder.
+6. Shared cores / hidden archetypes: group commanders that draw on the same owned cards
    (e.g. an Izzet spellslinger core shared by Stella Lee, The Locust God, Niv-Mizzet).
-6. Later: missing-card prices (Scryfall USD/EUR → CAD), Archidekt real-deck matching,
+7. Later: missing-card prices (Scryfall USD/EUR → CAD), Archidekt real-deck matching,
    wizard UI, challenges, achievements.
 
 ## Working rules for Claude Code
