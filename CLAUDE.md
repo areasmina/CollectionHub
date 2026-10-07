@@ -204,7 +204,17 @@ Key functions:
 - **Card strength** (engine fix 2a): `strength()` = 1 − log10(Scryfall `edhrec_rank`)/4 (Sol Ring 1.0, rank 100 → 0.5,
   1,000 → 0.25, 10,000+ → 0) × `STRENGTH_W` 0.4 in `card_fit()` (replaces the old ±0.03 staple bonus); `win` cards
   skip the `FIT_MV` penalty. Effect vs `baseline_engine1`: substitutes −4.0, popular +4, combos in deck +0.3–0.6
-  (B3+), GC +0.2, ramp +1.3 (staple rocks), no rule violations (`baseline_engine2.json`).
+  (B3+), GC +0.2, ramp +1.3 (staple rocks), no rule violations (`baseline_engine2.json`). Raised to 0.6 in fix 3/4.
+- **Engine fixes 3/4** (test case Trostani at weight 1: Adeline, Elspeth, Craterhoof lost to City Pigeon-style cards):
+  `UNLISTED` 0.5: an owned card EDHREC doesn't list (its lists stop at ~5%, median lowest listed rate 4.8%) is valued
+  at half the page's lowest listed rate, not 0 (`card_values`, `value_of` only; `rate_of`/`play_of` unchanged).
+  `EDH_WEIGHT` = {1: 0.15, 2: 0.5, 3: 1.0, 4: 1.4} (weight 1 = the engine decides). `STRENGTH_W` 0.6.
+  `DeckSynergy.score` counts only a card's `SYN_TOP` 2 strongest engine links (touching many engines loosely
+  inflated cheap cards). Swaps: `SWAP_MAX` 30, `SWAP_POOL` 60; land fetchers (ramp + Scryfall "tutor") are
+  protected as ramp only; `weakest_for` memoized per role set per round (metrics run 2m15 → 1m15).
+  Effect vs `baseline_engine2` (weight 3): substitutes −1.8, popular +5.5, picks −3.7 (still above
+  `baseline_gems`), draw −3.6 (loot links no longer stack), combos in deck +0.2 (B4/B5), no rule violations
+  (`baseline_engine3.json`). Trostani weight 1: Craterhoof, Adeline, Elspeth in; weight 3: Craterhoof at B4+.
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you

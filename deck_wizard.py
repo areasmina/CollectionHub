@@ -611,13 +611,13 @@ FIT_TRIBE = 0.12        # has a type the commander (or its main theme) names, e.
 FIT_MECH = 0.05         # per shared mechanic (tokens, sacrifice, +1/+1 counters...), up to 3
 FIT_ROLE = (0, 0.03, 0.05)   # ramp/draw/removal/... : one role, two or more
 FIT_THEME_ROLE = 0.03   # the role is the theme itself (e.g. ramp for a Big Mana commander)
-STRENGTH_W = 0.4        # card strength across all Commander decks (Scryfall's EDHREC rank), see strength()
+STRENGTH_W = 0.6        # card strength across all Commander decks (Scryfall's EDHREC rank), see strength()
 FIT_GC = 0.05           # Game Changers, only in brackets without a cap
 FIT_MV = 0.02           # minus this per mana value above 4
 # EDHREC weight (app slider 1-4): multiplies the EDHREC part of a non-land card's score (play rate + synergy);
 # fit, theme focus and card-to-card synergy keep their weight. 1 = your collection decides, 4 = closest to
 # EDHREC's list. The static report is level 3 (x1.0).
-EDH_WEIGHT = {1: 0.4, 2: 0.7, 3: 1.0, 4: 1.4}
+EDH_WEIGHT = {1: 0.15, 2: 0.5, 3: 1.0, 4: 1.4}
 # Spending level (app slider $/$$/$$$): EDHREC's budget / normal / expensive version of every page
 # (commander, bracket, theme, average deck: "<path>/budget", "<path>/expensive"). The report is $$.
 SPEND_SUFFIX = {1: "budget", 2: "", 3: "expensive"}
@@ -871,14 +871,15 @@ ENGINES = [
 _ENG_RX = [(lab, re.compile(pr), set(ty), re.compile(co)) for lab, pr, ty, co in ENGINES]
 SYN_CMDR = 3            # the commander counts as this many cards on each side of its engines
 SYN_CAP = 12            # linked cards per engine that count (a 40th discard outlet adds nothing new)
+SYN_TOP = 2             # engines counted per card (its strongest links; the reason shows the same two)
 SYN_DECK_W = 0.05       # score per unit of deck synergy (sum over engines of sqrt(linked cards))
-SWAP_MAX = 15           # synergy swaps per deck at most
+SWAP_MAX = 30           # synergy swaps per deck at most
 SWAP_MARGIN = 0.04      # a swap must gain at least this much (keeps the deck from churning)
 SWAP_KEEP = {"removal", "wipe", "counter", "ramp", "tutor", "win"}   # a card doing one of these jobs only
                         # leaves for a card doing the same job (synergy must not eat the interaction)
 SWAP_SLACK = 2          # ...but only while that role is at most this many above its ROLE_TARGETS (a surplus can go)
 BENCH_SHOW = 8          # "next in line" cards listed per deck
-SWAP_POOL = 40          # candidates re-checked per swap (best by score + synergy at the start)
+SWAP_POOL = 60          # candidates re-checked per swap (best by score + synergy at the start)
 _ENG_MEMO = {}
 
 def card_engines(m):
@@ -934,7 +935,10 @@ class DeckSynergy:
             if n > 0: out.append((n, lab))
         return out
     def score(self, m, inside=False):
-        return SYN_DECK_W * sum(math.sqrt(min(n, SYN_CAP)) for n, _ in self.links(m, inside))
+        """The card's SYN_TOP strongest engine links only: touching many engines loosely (City Pigeon: tokens,
+        Food, artifacts...) mustn't beat being great at the deck's main plan."""
+        top = sorted((math.sqrt(min(n, SYN_CAP)) for n, _ in self.links(m, inside)), reverse=True)[:SYN_TOP]
+        return SYN_DECK_W * sum(top)
     def why(self, m):
         ls = sorted(self.links(m), reverse=True)[:2]
         return "synergy: " + ", ".join(f"{lab} ×{n}" for n, lab in ls) if ls else ""
@@ -1141,6 +1145,8 @@ def owned_duals(pool, ci, used, n_lands, n_tapped):
         out.append(m); n_tapped += tapped
     return out
 
+UNLISTED = 0.5          # an owned card EDHREC doesn't list: valued at this x the page's lowest listed rate
+
 def card_values(edh, base, owned, name_meta, ew=1.0):
     """(rate_of, play_of, value_of) for one EDHREC page: the play rate as EDHREC shows it, the rate
     used for choosing (non-lands blended with the all-decks page; lands keep the page's own rate, they
@@ -1157,7 +1163,12 @@ def card_values(edh, base, owned, name_meta, ew=1.0):
             if v and len(v) > 2 and v[2] is not None: return v[2]
         return 0.0
     play_of = lambda k: rate_of(k) if kind_of(k) == "land" else blend.get(k, 0.0)
-    value_of = lambda k: play_of(k) if kind_of(k) == "land" else ew * (play_of(k) + SYN_W * syn_of(k))
+    # EDHREC lists a commander's cards down to ~5% of decks (median lowest listed rate 4.8%), so an owned card
+    # missing from both pages is played somewhere below that: valued at UNLISTED x the lowest listed rate, not 0
+    allc = (base or edh)["cards"]
+    floor = UNLISTED * min((v[1] for v in allc.values() if v[1] > 0), default=0.0)
+    est = lambda k: floor if k in owned and k not in cards and k not in allc else play_of(k)
+    value_of = lambda k: play_of(k) if kind_of(k) == "land" else ew * (est(k) + SYN_W * syn_of(k))
     return rate_of, play_of, value_of
 
 # ------------------------------------------------------------ unused cards
@@ -1414,6 +1425,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             if any(combo_done(c, used) for c in by_card.get(dk, [])): continue    # completes a combo here
             drs = roles_of(dm)
             kept = {r for r in drs & SWAP_KEEP if r not in ROLE_TARGETS or rcount[r] <= ROLE_TARGETS[r] + SWAP_SLACK}
+            if "ramp" in drs: kept.discard("tutor")      # land fetchers (Cultivate) are ramp, not tutors
             if kept and not kept & rs: continue
             if any(rcount[r] <= ROLE_TARGETS[r] and r not in rs for r in drs if r in rcount): continue
             v = total(dm, True)
@@ -1424,9 +1436,11 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         # best candidates first; one that finds no room doesn't stop the others from trying
         order = sorted(((total(m, False), k, m) for k, m in cands if k not in used and k not in skip
                         and not (m["gc"] and not gc_room()) and not blocked(k)), key=lambda t: (-t[0], t[1]))
-        swapped = False
+        swapped, room = False, {}          # weakest_for depends only on the candidate's roles + GC flag this round
         for bv, k, m in order:
-            out, ov = weakest_for(m)
+            rk = (frozenset(roles_of(m)), m["gc"])
+            if rk not in room: room[rk] = weakest_for(m)
+            out, ov = room[rk]
             if out is None or bv < ov + SWAP_MARGIN: continue
             dm = chosen[out][0]
             dk = norm(dm["name"])
@@ -2146,7 +2160,7 @@ const rowSel=(d,b,r)=>{const L=lvlOf(r); return rowState(d,b,r).key+(L.w!==3||L.
 function deckOf(d,b,st){return st.t?(st.a?tavgd(d,b,st.t):themed(d,b,st.t)):(st.a?avgd(d,b):d.b[b]);}
 /* ---------- EDHREC weight (1-4) and spending ($/$$/$$$): other levels are built by the app on request ---------- */
 const SERVED=location.protocol.startsWith("http"), LIVE={};
-const WTIP={1:"Your collection decides: EDHREC popularity counts 40%, fit and synergy with your cards lead",2:"Collection first: EDHREC popularity counts 70%",
+const WTIP={1:"Your collection decides: EDHREC popularity counts 15%; card strength, fit and synergy with your cards lead",2:"Collection first: EDHREC popularity counts 50%",
   3:"Balanced (the report's decks): EDHREC popularity counts 100%",4:"Closest to EDHREC's list: popularity counts 140%"};
 const STIP={1:"$ Budget: built from EDHREC's cheapest 10% of decks",2:"$$ Normal: all EDHREC decks",3:"$$$ Expensive: built from EDHREC's priciest 10% of decks (fast mana, tutors, pricier combo pieces); bracket rules still decide which combos are allowed"};
 const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:+(r&&r.dataset.s||2)});

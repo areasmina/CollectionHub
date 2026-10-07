@@ -60,7 +60,8 @@ try{const tb=document.querySelector('[data-src="avg"]');
     out.clicks=(out.clicks||0)+2;}}
 catch(e){out.errs.push('top selector: '+e.message);}
 // substitute chooser: open a slot, pick an alternative, then "buy", then reset
-try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length));
+try{const hasAlt=(d,b)=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).length);   // any bracket: few decks have slots
+  const b=[bk()].concat(BR).find(b=>DATA.some(d=>hasAlt(d,b))), d=b&&DATA.find(d=>hasAlt(d,b));
   const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
   if(r){r.open=true;r.dataset.b=b;rerow(r);
     const e=d.b[b].deck.find(e=>e[1]==='s'&&(e[4]||[]).length), alt=e[4][0][0];
