@@ -2014,12 +2014,14 @@ function fetchLive(d,b,st,L){const k=liveKey(d,b,st,L); LIVE[k]={busy:1};
   const nc=CARDS.length, ns=STRS.length, nk=COMBOS.length;
   const qs=new URLSearchParams({c:d.name,b,t:st.t,a:st.a?"1":"0",w:L.w,s:L.s,v:ST.built,nc,ns,nk});
   const done=()=>{const row=document.querySelector(`details.row[data-i="${d.i}"]`); if(row&&row.dataset.f)rerow(row);};
-  fetch("/deck?"+qs,{headers:{"X-Deck-Wizard":"1"}}).then(async res=>{
+  const go=n=>fetch("/deck?"+qs,{headers:{"X-Deck-Wizard":"1"}}).then(async res=>{
     const j=await res.json().catch(()=>({error:"The app sent a reply the page can't read."}));
     if(!res.ok){LIVE[k]={err:j.error||("HTTP "+res.status)}; return done();}
     addRows(CARDS,j.cards,nc); addRows(STRS,j.strs,ns); addRows(COMBOS,j.combos,nk);
     LIVE[k]={x:j.x}; done();
-  }).catch(e=>{LIVE[k]={err:"The Deck Wizard app isn't answering. Is its window still open?"}; done();});}
+  },e=>{if(n) return setTimeout(()=>go(n-1),700);     // a dropped connection gets one more try
+    LIVE[k]={err:`The Deck Wizard app isn't answering (${e.message}). Is its window still open?`}; done();});
+  go(1);}
 function lvlHTML(L){
   const off=SERVED?"":` disabled title="Open Deck Wizard App.bat to build decks at other levels"`;
   const bt=(a,v,on,tip,lab)=>`<button class="srcb ${on?"on":""}" data-${a}="${v}"${off||` title="${esc(tip)}"`}>${lab}</button>`;

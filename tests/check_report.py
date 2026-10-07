@@ -83,7 +83,7 @@ const wait=c=>new Promise(res=>{let n=0;const f=()=>c()||++n>100?res():setTimeou
   else{r.open=true;r.dataset.b="all";r.dataset.t="";r.dataset.a="0";rerow(r);const n0=CARDS.length;
     r.querySelector('[data-wsel="1"]').click();
     await wait(()=>!r.querySelector('.body').textContent.includes('Building the deck'));
-    if(CARDS.length!==n0+1)out.errs.push('live deck: new card row not added ('+(CARDS.length-n0)+')');
+    if(CARDS.length!==n0+1)out.errs.push('live deck: new card row not added ('+(CARDS.length-n0)+'); state: '+JSON.stringify(Object.values(LIVE)[0]||null).slice(0,160));
     const ta=r.querySelector('textarea');
     if(!ta||!ta.value.includes('Test Card Live'))out.errs.push('live deck: new card not in the deck list');
     if(!r.querySelector('.tnote')||!r.querySelector('.tnote').textContent.includes('EDHREC weight 1'))out.errs.push('live deck: level not in the note');
