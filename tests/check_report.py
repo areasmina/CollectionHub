@@ -75,6 +75,24 @@ try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||
     out.clicks=(out.clicks||0)+5;}
   else out.errs.push('no substitute with alternatives found to test');}
 catch(e){out.errs.push('chooser: '+e.message);}
+// "your pick" options: swap in an owned alternative, then the EDHREC card to buy, then reset
+try{const b=bk(), d=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='y'&&(e[3]||[]).length&&e[4]>=0));
+  const r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b=b;r.dataset.t="";r.dataset.a="0";rerow(r);
+    const e=d.b[b].deck.find(e=>e[1]==='y'&&(e[3]||[]).length&&e[4]>=0), alt=e[3][0][0];
+    r.querySelector('[data-swap="y'+e[0]+'"]').click();
+    if(!r.querySelector('.chooser'))out.errs.push('pick chooser did not open');
+    r.querySelector('.opt[data-pick="'+alt+'"]').click();
+    const ta=r.querySelector('textarea').value;
+    if(!ta.includes(front(alt)))out.errs.push('swapped-in card not in the deck list');
+    if(ta.split('\\n').includes('1 '+front(e[0])))out.errs.push('swapped-out pick still in the deck list');
+    r.querySelector('[data-swap="y'+e[0]+'"]').click(); r.querySelector('.opt[data-pick="-1"]').click();
+    if(!(r.querySelector('.shop')||{}).textContent.includes(front(e[4])))out.errs.push('EDHREC card not on the shopping list');
+    r.querySelector('.reset-ch').click();
+    if(!r.querySelector('textarea').value.includes(front(e[0])))out.errs.push('reset did not bring the pick back');
+    out.clicks=(out.clicks||0)+5;}
+  else out.errs.push('no "your pick" with options found to test');}
+catch(e){out.errs.push('pick chooser: '+e.message);}
 // EDHREC weight / spending: weight 1 builds through /deck (stub), the new card is added and shown;
 // $$$ shows the app's error; weight 3 + $$ goes back to the report's own deck
 const wait=c=>new Promise(res=>{let n=0;const f=()=>c()||++n>100?res():setTimeout(f,50);f();});

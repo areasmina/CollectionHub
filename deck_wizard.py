@@ -608,6 +608,8 @@ EDH_WEIGHT = {1: 0.4, 2: 0.7, 3: 1.0, 4: 1.4}
 # Spending level (app slider $/$$/$$$): EDHREC's budget / normal / expensive version of every page
 # (commander, bracket, theme, average deck: "<path>/budget", "<path>/expensive"). The report is $$.
 SPEND_SUFFIX = {1: "budget", 2: "", 3: "expensive"}
+PICK_ALTS = 3           # owned cards offered to swap in for each of "your picks" (report: the options chooser)
+PICK_CLOSE = 0.15       # ...ranked by the builder's value + deck synergy, + this x closeness for a similar job
 OFF_LIST = 0.05         # cards below this play rate count as "your pick" rather than "popular"
 COMBO_W = {"upgraded": 0.12, "optimized": 0.25, "cedh": 0.25}   # bonus for a combo you own, per bracket
 COMBO_BRACKETS = set(COMBO_W)
@@ -696,7 +698,7 @@ def page_match(page, owned, me):
 def deck_diff(base_x, tx):
     """A theme deck stored as changes to the normal deck of the same bracket (keeps the page small):
     numbers of the theme deck + cards added + [card, kind] removed."""
-    key = lambda e: (e[0], e[1])
+    key = lambda e: json.dumps(e)       # whole entry: the same card can carry other options in this deck
     bset, tset = {key(e) for e in base_x["deck"]}, {key(e) for e in tx["deck"]}
     out = {k: tx[k] for k in DIFF_KEYS if k in tx}
     out["add"] = [e for e in tx["deck"] if key(e) not in bset]
@@ -1369,6 +1371,37 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     arena += [f"1 {m['name'].split(' // ')[0]}" for m, _, _ in chosen + lands]
     arena += [f"{c} {b}" for b, c in tally.items()]
 
+    # each "your pick": up to PICK_ALTS owned cards to swap in (a similar job by roles, type and Oracle text,
+    # or the next best owned cards), ranked by the builder's value + links with this deck, and the most
+    # played EDHREC card for the same job that you'd have to buy
+    pick_opts = {}
+    near = [k for _, k, m in sorted(((total(m, False), k, m) for k, m, _, kd in pool if kd != "land" and k not in used),
+                                    key=lambda t: (-t[0], t[1]))[:PICK_ALTS * 2]]
+    for m, kind, _ in chosen:
+        if kind != "y": continue
+        roles, (pv, cs) = roles_of(m), card_engines(m)
+        close = {k: q for q, k, _, _ in find_subs(m, rate_of, pool, by_role, used, True, 10, tribe=tribe, ci=ci)}
+        opts = []
+        val = lambda k: (-(total(owned[k], False) + PICK_CLOSE * close.get(k, 0)), k)
+        for k in sorted(close, key=val) + sorted(set(near) - set(close), key=val):   # a similar job first
+            m2 = owned[k]
+            if (m2["gc"] and not m["gc"] and not gc_room()) or blocked(k): continue
+            why = syn.why(m2) or fits.get(k, (0, ""))[1] or role_text(m2)
+            opts.append([T.add(m2["name"], m2), T.s(why + (" · similar job" if k in close else ""))])
+            if len(opts) >= PICK_ALTS: break
+        buy, bwhy = -1, -1
+        for k, name, rate in missing:
+            mm = name_meta.get(k)
+            if not mm or k in sub_for or card_kind(mm) != card_kind(m) or (mm.get("gc") and not m["gc"] and not gc_room()):
+                continue
+            p2, c2 = card_engines(mm)       # the same job: a shared role, or (no roles) same card type + engine
+            same = (roles_of(mm) & roles) if roles else \
+                (type_group(mm["type_line"]) == type_group(m["type_line"]) and (p2 | c2) & (pv | cs))
+            if same:
+                buy, bwhy = T.add(mm["name"], mm), T.s(f"EDHREC: in {round(rate * 100)}% of these decks · {role_text(mm)}")
+                break
+        if opts or buy >= 0: pick_opts[id(m)] = (opts, buy, bwhy)
+
     # each substitute slot: why the advised card, and up to 3 other owned cards you could use instead
     # (not already in the deck, within the Game Changer cap and the bracket's combo rules)
     slot_alts = {}
@@ -1429,8 +1462,10 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "bench": bench,         # next in line from your collection: [card, why]
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         # substitutes also carry [why the advised card, [[alternative, why] x up to 3]]
+        # "your pick" entries with options: [card, "y", why, [[alternative, why] x up to 3], card to buy, why]
         "deck": [[T.add(m["name"], m), kind, T.add(f["name"], f), *slot_alts.get(id(f), (-1, []))] if kind == "s"
-                 else [T.add(m["name"], m), kind, T.s(f) if isinstance(f, str) else -1] for m, kind, f in allc],
+                 else [T.add(m["name"], m), kind, T.s(f) if isinstance(f, str) else -1, *pick_opts.get(id(m), ())]
+                 for m, kind, f in allc],
         "basics": [[T.add(b), c] for b, c in tally.items()],
         "gaps": gaps,
         "arena": "\n".join(arena) + "\n",
@@ -1964,8 +1999,8 @@ function grid(cmdrs,items){
   let h=`<div class="grp"><h5>Commander</h5><div class="grid">${cmdrs.map(i=>tile(i)).join("")}</div></div>`;
   Object.keys(GL).forEach(g=>{const L=by[g]; if(!L)return; const cnt=L.reduce((s,it)=>s+(it.n||1),0);
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>tile(it.i,{
-      cls:{s:"sub",s2:"sub",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
-      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="s2"?"for "+front(it.f)+" (your choice)":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
+      cls:{s:"sub",s2:"sub",y2:"pick",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
+      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="s2"?"for "+front(it.f)+" (your choice)":it.kind==="y2"?"instead of "+front(it.f)+" (your choice)":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
         it.kind==="y"?(!W(it.f)?"your pick":CARDS[it.i][2]==="Land"?W(it.f):"fits: "+W(it.f)):it.kind==="c"?"combo piece":""})
       +(it.slot!=null?`<button class="swap" data-swap="${it.slot}" title="Choose what fills this slot">⇄ options</button>`:"")).map(h=>h.includes('data-swap')?`<div class="slotw">${h}</div>`:h).join("")+`</div></div>`;});
   return h;}
@@ -1979,8 +2014,13 @@ function gapsHTML(gaps,deckSet,slots){
     return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
 /* ---------- your choices for substitute slots (saved in this browser) ---------- */
 const chKey=(d,b,t)=>"dw:"+d.slug+":"+b+(t?":"+t:"");
-function getCh(d,b,t){try{return JSON.parse(localStorage.getItem(chKey(d,b,t))||"{}")||{};}catch(e){return {};}}
-function setCh(d,b,o,t){try{Object.keys(o).length?localStorage.setItem(chKey(d,b,t),JSON.stringify(o)):localStorage.removeItem(chKey(d,b,t));}catch(e){}}
+// choices live in localStorage; MEM keeps them for this visit when the browser blocks storage
+const MEM={};
+function getCh(d,b,t){const k=chKey(d,b,t);
+  try{const v=localStorage.getItem(k); if(v!=null) return JSON.parse(v)||{};}catch(e){}
+  return Object.assign({},MEM[k]);}
+function setCh(d,b,o,t){const k=chKey(d,b,t); MEM[k]=Object.assign({},o);
+  try{Object.keys(o).length?localStorage.setItem(k,JSON.stringify(o)):localStorage.removeItem(k);}catch(e){}}
 // the deck for a theme: the normal deck of this bracket with the theme deck's differences applied
 function applyDiff(x,df,extra){const rem=new Set(df.rem);
   return Object.assign({},x,df,{deck:x.deck.filter(e=>!rem.has(e[0])).concat(df.add)},extra);}
@@ -2000,7 +2040,9 @@ function rowState(d,b,r){
   const want=r&&r.dataset.a?r.dataset.a==="1":SRC==="avg";
   const a=want&&(t?hasTAvg(d,b,t):hasAvg(d,b));
   return {t,a,key:t?(a?t+":avg":t):(a?"avg":"")};}
-const rowSel=(d,b,r)=>rowState(d,b,r).key;
+// where a row's substitute / pick choices are saved: the deck's key, + the level when not weight 3 / $$
+// (body() reads and the click handler writes through this one function, so they always agree)
+const rowSel=(d,b,r)=>{const L=lvlOf(r); return rowState(d,b,r).key+(L.w!==3||L.s!==2?`:w${L.w}s${L.s}`:"");};
 function deckOf(d,b,st){return st.t?(st.a?tavgd(d,b,st.t):themed(d,b,st.t)):(st.a?avgd(d,b):d.b[b]);}
 /* ---------- EDHREC weight (1-4) and spending ($/$$/$$$): other levels are built by the app on request ---------- */
 const SERVED=location.protocol.startsWith("http"), LIVE={};
@@ -2054,18 +2096,29 @@ function shapeHTML(items,ref,b,tname){
   return `<div class="vbar"><h3>Deck shape</h3>${ref?"":`<span class="dim">no EDHREC average deck to compare</span>`}</div>${lgd}
   <div class="shape"><div><h4>Mana curve (non-land cards)</h4><div class="mvc">${cols}</div><div class="mvx">${mv.map((_,k)=>`<span>${k===7?"7+":k}</span>`).join("")}</div></div>
   <div><h4>Card types</h4><div class="tyr">${rows}</div></div></div>${tbl}`;}
-// the deck as you chose it: slot = the missing card's index; buy = keep the missing card
+// the deck as you chose it. Substitute slots: slot = the missing card's index, buy = keep the missing card.
+// "Your pick" slots (entries with options): slot = "y"+card, s2-like "y2" = an owned card you swapped in, buy = EDHREC's card
 function effDeck(d,b,x,t){const ch=getCh(d,b,t);
-  return x.deck.map(([i,k,f])=>{if(k!=="s"||f<0)return {i,kind:k,f};
+  return x.deck.map(e=>{const [i,k,f]=e;
+    if(k==="y"&&e.length>3){const sk="y"+i, c=ch[sk];
+      if(c===undefined)return {i,kind:"y",f,slot:sk}; if(c===-1)return {i:e[4],kind:"buy",f:i,slot:sk}; return {i:c,kind:"y2",f:i,slot:sk};}
+    if(k!=="s"||f<0)return {i,kind:k,f};
     const c=ch[f]; if(c===undefined)return {i,kind:"s",f,slot:f}; if(c===-1)return {i:f,kind:"buy",f,slot:f}; return {i:c,kind:"s2",f,slot:f};});}
 function chooserHTML(d,b,x,slot,t){
-  const e=x.deck.find(r=>r[1]==="s"&&r[2]===slot); if(!e) return "";
-  const [adv,,f,why,alts]=e, ch=getCh(d,b,t)[f], cur=ch===undefined?adv:ch;
-  const taken=new Set(effDeck(d,b,x,t).filter(it=>it.slot!==f).map(it=>it.i));
+  const yp=String(slot).startsWith("y");
+  const e=x.deck.find(r=>yp?r[1]==="y"&&"y"+r[0]===slot&&r.length>3:r[1]==="s"&&String(r[2])===String(slot)); if(!e) return "";
+  const key=yp?slot:e[2], ch=getCh(d,b,t)[key];
+  const taken=new Set(effDeck(d,b,x,t).filter(it=>String(it.slot)!==String(key)).map(it=>it.i));
   const opt=(pick,card,label)=>{const dis=pick!==-1&&pick!=="adv"&&taken.has(card);
     const on=(pick==="adv"&&ch===undefined)||(pick===-1&&ch===-1)||(typeof pick==="number"&&pick>=0&&ch===pick);
-    return `<button class="opt ${on?"on":""}" data-pick="${pick}" data-slot="${f}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><span><b>${esc(front(card))}</b><br><small>${label}</small></span></button>`;};
-  return `<div class="chooser"><div class="vbar"><h4>Slot for ${esc(front(f))}: pick what goes in</h4><button class="opt-close" data-slot="">Close</button></div>
+    return `<button class="opt ${on?"on":""}" data-pick="${pick}" data-slot="${key}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><span><b>${esc(front(card))}</b><br><small>${label}</small></span></button>`;};
+  const close=`<button class="opt-close" data-slot="">Close</button>`;
+  if(yp){const [mine,,why,alts,buy,bwhy]=e;
+    return `<div class="chooser"><div class="vbar"><h4>Your pick ${esc(front(mine))}: keep it or swap it</h4>${close}</div>
+    <div class="opts">${opt("adv",mine,"keep · "+esc(W(why)||"your pick"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy))):""}</div>
+    <small class="dim">Your cards ranked by how they work with this deck (Oracle and reminder text, roles, EDHREC play rate and synergy); "buy" = the most played EDHREC card for the same job.</small></div>`;}
+  const [adv,,f,why,alts]=e;
+  return `<div class="chooser"><div class="vbar"><h4>Slot for ${esc(front(f))}: pick what goes in</h4>${close}</div>
   <div class="opts">${opt(-1,f,"keep it: add to shopping list")}${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}</div>
   ${(alts||[]).length?"":`<small class="dim">No other close match in your collection.</small>`}</div>`;}
 function shopHTML(d,b,items,t){
@@ -2136,7 +2189,7 @@ const THIN=50;   /* fewer EDHREC decks than this behind a deck or archetype: war
 function body(d,b,r){
   const st=rowState(d,b,r), asel=st.a, tsel=st.t, L=lvlOf(r), lv=L.w!==3||L.s!==2;
   // another EDHREC weight / spending level: the app builds it (saved choices are kept per level)
-  const sel=st.key+(lv?`:w${L.w}s${L.s}`:""), suf=L.s===1?"/budget":L.s===3?"/expensive":"";
+  const sel=rowSel(d,b,r), suf=L.s===1?"/budget":L.s===3?"/expensive":"";
   const lx=lv?LIVE[liveKey(d,b,st,L)]:null;
   if(lv&&SERVED&&!lx) fetchLive(d,b,st,L);
   const x=lx&&lx.x?lx.x:deckOf(d,b,st), pre=b==="all"?"":"/"+b;
@@ -2168,7 +2221,7 @@ function body(d,b,r){
   const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
   const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
-  const slot=r&&r.dataset.slot?+r.dataset.slot:null;
+  const slot=r&&r.dataset.slot?r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
   <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${tnote}${more}
   ${numsHTML(x,b)}
