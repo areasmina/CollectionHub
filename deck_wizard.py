@@ -1820,7 +1820,7 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .danger{border:1px solid #f87171;background:rgba(248,113,113,.08);border-radius:8px;padding:10px 12px;margin:10px 0}.danger h4{color:#f87171;margin-top:0}
 .tag.thm{cursor:pointer;background:transparent;border:1px solid var(--line)}.tag.thm.on{border-color:var(--acc);background:rgba(45,212,191,.18);color:var(--ink)}
-.tnote{font-size:.85rem;margin:4px 0 8px}.tnote .tag{cursor:pointer}
+.tnote{font-size:.85rem;margin:4px 0 8px}.thinw{font-size:.85rem;margin:4px 0;color:#fbbf24}.srcb.thin{border-style:dashed}.tnote .tag{cursor:pointer}
 .srcsel{display:flex;gap:4px}.srcsel .srcb{font-size:.85rem;padding:4px 12px}
 .shape{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px;margin:4px 0 12px}
 .shape h4{margin:0 0 6px;font-size:.85rem;color:var(--mut)}
@@ -2086,24 +2086,27 @@ function numsHTML(x,b){
   <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
 
 /* ---------- commander rows ---------- */
+const THIN=50;   /* fewer EDHREC decks than this behind a deck or archetype: warn */
 function body(d,b,r){
   const st=rowState(d,b,r), sel=st.key, asel=st.a, tsel=st.t;
   const x=deckOf(d,b,st), pre=b==="all"?"":"/"+b;
   // level 1: archetype (overview + the archetypes you own most of)
   const ths=Object.entries(d.th||{}), tot=d.b.all.decks||1, tcount=Object.fromEntries(d.tags.map(t=>[t[1],t[2]]));
   const arch=`<div class="srcs"><span class="dim">Archetype:</span><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
-    +ths.map(([k,t])=>`<button class="srcb thm ${k===tsel?"on":""}" data-tsel="${k}" title="EDHREC: ${n(tcount[k]||0)} of ${n(tot)} decks are ${esc(t.name)} · you own ${t.own}% of the cards those decks play">${esc(t.name)} · ${Math.round(100*(tcount[k]||0)/tot)}% of decks · you own ${t.own}%</button>`).join("")
+    +ths.map(([k,t])=>{const thin=t.decks<THIN;return `<button class="srcb thm ${k===tsel?"on":""}${thin?" thin":""}" data-tsel="${k}" title="EDHREC: ${n(tcount[k]||0)} of ${n(tot)} decks are ${esc(t.name)} · you own ${t.own}% of the cards those decks play${thin?` · ⚠ thin data: only ${n(t.decks)} decks (under ${THIN})`:""}">${thin?"⚠ ":""}${esc(t.name)} · ${Math.round(100*(tcount[k]||0)/tot)}% of decks · you own ${t.own}%</button>`;}).join("")
     +(ths.length?"":`<span class="dim">no archetype pages</span>`)+`</div>`;
   const other=d.tags.filter(t=>!(d.th&&d.th[t[1]])).slice(0,5);
   const more=other.length?`<div class="tags"><span class="dim">More EDHREC themes:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
   // level 2: source within the archetype
   const avOK=tsel?hasTAvg(d,b,tsel):hasAvg(d,b), cmdX=tsel?themed(d,b,tsel):d.b[b], avX=avOK?(tsel?tavgd(d,b,tsel):avgd(d,b)):null;
   const srcs=`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
+  const srcN=asel||!tsel?x.decks:x.tdecks;
   const what=(tsel?`<b>${esc(x.theme)}</b> `:"")+(asel?"average deck":"commander page");
   const link=asel?`https://edhrec.com/average-decks/${d.slug}${tsel?"/"+tsel:pre}`:`https://edhrec.com/commanders/${d.slug}${tsel?"/"+tsel:pre}`;
   const tnote=`<p class="tnote">${asel?`EDHREC's ${tsel?esc(x.theme)+" ":""}average deck (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in`
       :`Built from EDHREC's ${n(tsel?x.tdecks:x.decks)} ${tsel?esc(x.theme)+" decks":LBL[b]+" decks"} and your cards`}${tsel?`, leaning into cards ${esc(x.theme.toLowerCase())} decks need`:""} · ${b==="all"?"no bracket rules":LBL[b]+" rules"}.
-    <a href="${link}" target="_blank" rel="noopener">EDHREC ${what} ↗</a></p>`;
+    <a href="${link}" target="_blank" rel="noopener">EDHREC ${what} ↗</a></p>`
+    +(srcN<THIN?`<p class="thinw">⚠ Thin data: this deck comes from only ${n(srcN)} EDHREC decks (under ${THIN}). Treat it as a rough guide, not a proven list.</p>`:"");
   const bks=BR.filter(k=>d.b[k]).map(k=>{const sk=rowState(d,k,r), xk=sk.t===tsel&&sk.a===asel?deckOf(d,k,sk):null;
     return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}${xk?`: ${xk.pct}% <small>(${n(xk.decks)})</small>`:""}</button>`;}).join("");
   const tags=d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("");

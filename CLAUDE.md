@@ -226,6 +226,8 @@ Average deck**. Four decks per bracket: overview `d.b[b]`, overview average `d.a
 + gaps + `ref`; `d.th[t].own`, `.adecks`). All stored as diffs of `d.b[b]`. JS `rowState()` → {t, a, key}
 (row `data-t`, `data-a` "1"/"0", else page `SRC`), `deckOf()`, `tavgd()`; saved-choices key "", "avg", t, t+":avg".
 Theme and average pages are all-bracket pages, built with each bracket's rules.
+**Thin data**: JS `THIN` = 50. An archetype button from fewer EDHREC decks gets ⚠ (dashed border, count in the tooltip), and any
+deck whose source has fewer decks (bracket page, theme page, average deck) shows a "Thin data" warning under its source note. Shown, not hidden.
 **Deck shape** charts per panel (`shapeHTML`): mana curve (non-lands, 7+) and card types of your deck (bars) vs
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".
