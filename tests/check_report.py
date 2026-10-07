@@ -160,7 +160,7 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if(r.open){r.open=false; await new Promise(res=>setTimeout(res,50));}
     r.open=true; await wait(()=>r.querySelector('.body .grid .ct.p5-wait, .body .grid .ct.p5-shown'),40);   // the panel is being watched
     r.querySelector('.body .grid .ct').scrollIntoView({block:'center'});
-    await wait(()=>r.querySelector('.ct.p5-shown'),40);
+    await wait(()=>r.querySelector('.ct.p5-shown'),Math.max(40,Math.ceil(DATA.length/2)));   // frames are slower on big pages
     if(!r.querySelector('.pname .rl'))out.errs.push('open panel has no ransom name');
     if(!r.querySelector('.ct.p5-shown'))out.errs.push('deck cards never slid in (IntersectionObserver): open '+r.open+', cards '+r.querySelectorAll('.body .grid .ct').length
       +', waiting '+r.querySelectorAll('.ct.p5-wait').length+', watched '+P5ON.length+', observer '+!!P5IO);
@@ -215,11 +215,15 @@ def main():
     html = open(src, encoding="utf-8").read()
     html = html.replace("<head>", "<head>" + CATCH, 1) if "<head>" in html else CATCH + html
     html = html[:html.rfind("</body>")] + PROBE + html[html.rfind("</body>"):] if "</body>" in html else html + PROBE
+    # bigger reports need more time: every panel is rendered once and each frame of a long page takes longer
+    # (15 s up to ~70 commanders, ~47 s for 288); the real-time limit grows with it
+    n_cmdrs = html.count('"slug":')
+    budget, limit = max(15000, 4000 + 150 * n_cmdrs), max(180, 60 + n_cmdrs)
     tmp, srv = tempfile.mkdtemp(prefix="dw_check_"), stub_server(html)
     try:
         cmd = [exe, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={os.path.join(tmp, 'profile')}",
-               "--virtual-time-budget=15000", "--dump-dom", f"http://127.0.0.1:{srv.server_address[1]}/"]
-        dom = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=180).stdout
+               f"--virtual-time-budget={budget}", "--dump-dom", f"http://127.0.0.1:{srv.server_address[1]}/"]
+        dom = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=limit).stdout
     finally:
         srv.shutdown()
         shutil.rmtree(tmp, ignore_errors=True)
