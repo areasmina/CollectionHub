@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Deck Wizard · Discover (Zine)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&amp;family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&amp;family=Courier+Prime:wght@400;700&amp;family=Caveat:wght@500;700&amp;display=swap">
+<style>
+body{margin:0;background:#0B0B0B}
+a{color:inherit}
+button,input,select{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--y,#FFE600);outline-offset:2px}
+[data-band]{transition:box-shadow .08s steps(2)}
+[data-band]:hover{box-shadow:inset 0 -3px 0 var(--y),inset 0 -6px 0 var(--m),inset 0 -9px 0 var(--c) !important}
+/* the filter column follows you on wide screens; on a phone it sits on top and scrolls away */
+@media (max-width: 900px){[data-follow]{position:static !important;max-height:none !important;overflow:visible !important}}
+</style>
+</helmet>
+<div style="--y: {{T.y}}; --c: {{T.c}}; --m: {{T.m}}; position: relative; min-height: 2000px; color: {{T.ink}}; background: {{T.bg}}; font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 14px; line-height: 1.55">
+
+  <svg aria-hidden="true" width="0" height="0" style="position: absolute">
+    <filter id="z-dark"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"></feTurbulence><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"></feFuncA></feComponentTransfer></filter>
+    <filter id="z-light"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="8"></feTurbulence><feColorMatrix values="0 0 0 0 0.95  0 0 0 0 0.93  0 0 0 0 0.88  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.55"></feFuncA></feComponentTransfer></filter>
+    <filter id="z-sepia"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"></feTurbulence><feColorMatrix values="0 0 0 0 0.22  0 0 0 0 0.19  0 0 0 0 0.15  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.75"></feFuncA></feComponentTransfer></filter>
+    <filter id="z-fiber"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.35" numOctaves="3" seed="21"></feTurbulence><feColorMatrix values="0 0 0 0 0.40  0 0 0 0 0.35  0 0 0 0 0.29  0 0 0 0.9 -0.25"></feColorMatrix></filter>
+    <filter id="z-stain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.005" numOctaves="4" seed="3"></feTurbulence><feColorMatrix values="0 0 0 0 0.33  0 0 0 0 0.27  0 0 0 0 0.21  1.1 0 0 0 -0.6"></feColorMatrix></filter>
+    <filter id="z-tide" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="2" seed="9"></feTurbulence><feColorMatrix values="0 0 0 0 0.28  0 0 0 0 0.23  0 0 0 0 0.18  1 0 0 0 0"></feColorMatrix><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0.12 0 0 0 0 0.08 0 0"></feFuncA></feComponentTransfer></filter>
+  </svg>
+  <!-- toner dust + scan lines over the whole sheet -->
+  <svg aria-hidden="true" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.4"><rect width="100%" height="100%" filter="{{T.dust}}"></rect></svg>
+  <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, {{T.scan}} 0 1px, transparent 1px 4px)"></div>
+  <!-- every mode: a photocopied page from an old maths textbook (inks recoloured per mode) -->
+  <div aria-hidden="true" style="position: absolute; inset: 0; overflow: hidden; pointer-events: none">
+    <svg aria-hidden="true" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: {{T.blendD}}; opacity: {{T.fiber}}"><rect width="100%" height="100%" filter="url(#z-fiber)"></rect></svg>
+    <!-- graph paper: 12px minor, 48px major -->
+    <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient({{T.grid}} 1px, transparent 1px), linear-gradient(90deg, {{T.grid}} 1px, transparent 1px), linear-gradient({{T.gridMinor}} 1px, transparent 1px), linear-gradient(90deg, {{T.gridMinor}} 1px, transparent 1px); background-size: 48px 48px, 48px 48px, 12px 12px, 12px 12px"></div>
+    <!-- ledger margin rule + fold creases -->
+    <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: 18px; width: 5px; border-left: 2px solid {{T.rule}}; border-right: 1px solid {{T.ruleSoft}}; pointer-events: none"></div>
+    <div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; pointer-events: none; background: linear-gradient(90deg, rgba(50,42,34,0.09), rgba(255,240,210,0.22), rgba(50,42,34,0.06))"></div>
+    <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 46%; height: 4px; pointer-events: none; background: linear-gradient(180deg, rgba(50,42,34,0.09), rgba(255,240,210,0.22), rgba(50,42,34,0.06))"></div>
+    <!-- pencilled working in the margins -->
+    <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; font-family: 'Caveat', cursive; font-weight: 500; color: {{T.pencil}}">
+      <span style="position: absolute; left: 60%; top: 168px; font-size: 32px; transform: rotate(-6deg); white-space: nowrap">P(combo by T6) = 1 − C(97,13) / C(99,13)</span>
+      <span style="position: absolute; left: 3%; top: 640px; font-size: 30px; transform: rotate(5deg); white-space: nowrap">99 − 35 lands = 64 spells</span>
+      <span style="position: absolute; left: 72%; top: 900px; font-size: 40px; transform: rotate(-3deg); white-space: nowrap">Σ syn ≈ 0.05·√links</span>
+      <span style="position: absolute; left: 38%; top: 1330px; font-size: 28px; transform: rotate(2deg); white-space: nowrap">avg MV 2.91 &lt; 3 · ok</span>
+      <span style="position: absolute; left: 6%; top: 1660px; font-size: 34px; transform: rotate(-4deg); white-space: nowrap">log nat a = 2 · 3(2p³ − 1)</span>
+      <span style="position: absolute; left: 60%; top: 1820px; font-size: 30px; transform: rotate(3deg); white-space: nowrap">B3 ⇒ GC ≤ 3 &#160; B4 ⇒ GC ≤ ∞</span>
+    </div>
+    <!-- compass construction -->
+    <svg aria-hidden="true" viewBox="0 0 300 300" fill="none" stroke="{{T.pencilSolid}}" stroke-width="1.2" style="position: absolute; right: 3%; top: 1080px; width: 300px; height: 300px; pointer-events: none; opacity: 0.16"><circle cx="150" cy="150" r="90"></circle><path d="M60 150 H240 M150 60 V240 M86 86 L214 214 M40 232 L150 58 L260 232 Z"></path><path d="M30 150 A120 120 0 0 1 90 46" stroke-dasharray="4 4"></path><circle cx="150" cy="150" r="3" fill="{{T.pencilSolid}}"></circle><text x="156" y="144" font-family="Caveat" font-size="20" fill="{{T.pencilSolid}}" stroke="none">O</text><text x="200" y="260" font-family="Caveat" font-size="20" fill="{{T.pencilSolid}}" stroke="none">r = 90</text></svg>
+    <!-- library rubber stamp -->
+    <div aria-hidden="true" style="position: absolute; left: 44%; top: 540px; width: 150px; height: 150px; border-radius: 50%; border: 5px double {{T.stamp}}; color: {{T.stamp}}; display: grid; place-items: center; text-align: center; transform: rotate(-14deg); font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 15px; line-height: 1.1; text-transform: uppercase; pointer-events: none; mix-blend-mode: {{T.blendD}}">Deck Wizard<br>Library<br>No. 0335</div>
+    <!-- burnt, handled edges -->
+    <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; box-shadow: {{T.edge}}"></div>
+  </div>
+
+  <header style="position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding: 16px 32px">
+    <a href="ZineDiscover.dc.html" style="text-decoration: none; font-family: 'Archivo', 'Arial Narrow', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 34px; line-height: 1; text-transform: uppercase; color: {{T.ink}}; text-shadow: 2px 0 0 rgba(0,174,239,0.85), -2px 1px 0 rgba(236,0,140,0.85)">Deck Wizard</a>
+    <nav aria-label="Modes" style="display: flex; border: 2px solid {{T.ink}}">
+      <a href="ZineDiscover.dc.html" aria-current="page" data-band style="padding: 10px 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; color: {{T.bg}}; background: {{T.ink}}; box-shadow: inset 0 -3px 0 {{T.y}}, inset 0 -6px 0 {{T.m}}, inset 0 -9px 0 {{T.c}}">Discover</a>
+      <a href="Build.dc.html" data-band style="padding: 10px 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; color: {{T.ink}}; border-left: 2px solid {{T.ink}}">Build</a>
+      <a href="Collection.dc.html" data-band style="padding: 10px 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; text-decoration: none; color: {{T.ink}}; border-left: 2px solid {{T.ink}}">Collection</a>
+    </nav>
+    <div style="flex: 1 1 0"></div>
+    <span style="font-size: 12px; text-transform: uppercase; color: {{T.mute}}">manabox 2026-10-06 140204.csv · <b style="color: #141414; background: {{T.y}}; padding: 0 4px">+7 new cards · 2 new commanders</b></span>
+    <div role="group" aria-label="Print mode" style="display: flex; border: 2px solid {{T.ink}}">
+      <sc-for list="{{modes}}" as="md" hint-placeholder-count="3">
+        <button type="button" onClick="{{md.pick}}" aria-pressed="{{md.on}}" data-band style="{{md.style}}">{{md.label}}</button>
+      </sc-for>
+    </div>
+    <button type="button" data-band style="min-height: 40px; padding: 0 16px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; color: {{T.ink}}; background: transparent; border: 2px solid {{T.ink}}">Upload CSV</button>
+  </header>
+
+  <!-- CMYK band divider -->
+  <div aria-hidden="true" style="position: relative; display: flex; flex-direction: column">
+    <span style="height: 3px; background: {{T.c}}; margin-left: 0; margin-right: 18%"></span>
+    <span style="height: 3px; background: {{T.m}}; margin-left: 6%; margin-right: 4%"></span>
+    <span style="height: 3px; background: {{T.y}}; margin-left: 2%; margin-right: 11%"></span>
+    <span style="height: 2px; background: {{T.ink}}"></span>
+  </div>
+
+  <main style="position: relative; max-width: 1400px; margin: 0 auto; padding: 40px 32px 80px; display: flex; flex-direction: column; gap: 32px">
+
+    <section style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px">
+      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 760px">
+        <h1 style="margin: 0; font-family: 'Archivo', 'Arial Narrow', sans-serif; font-weight: 900; font-stretch: 62%; font-size: 104px; line-height: 0.88; letter-spacing: -0.02em; text-transform: uppercase; color: {{T.ink}}; text-shadow: 3px 0 0 rgba(236,0,140,0.75), -2px 0 0 rgba(0,174,239,0.75)">What can<br>I build?</h1>
+        <p style="margin: 0; font-size: 15px; color: {{T.mute}}">&gt; 288 commanders in your binder, ranked by how much of each deck you already own_</p>
+        <dl style="margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 0; border: 2px solid {{T.ink}}; align-self: flex-start">
+          <div style="display: flex; flex-direction: column-reverse; padding: 8px 16px"><dt style="font-size: 11px; text-transform: uppercase; color: {{T.mute}}">cards</dt><dd style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 30px; line-height: 1">2,423</dd></div>
+          <div style="display: flex; flex-direction: column-reverse; padding: 8px 16px; border-left: 2px solid {{T.ink}}"><dt style="font-size: 11px; text-transform: uppercase; color: {{T.mute}}">unique</dt><dd style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 30px; line-height: 1">1,944</dd></div>
+          <div style="display: flex; flex-direction: column-reverse; padding: 8px 16px; border-left: 2px solid {{T.ink}}"><dt style="font-size: 11px; text-transform: uppercase; color: {{T.mute}}">commanders</dt><dd style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 30px; line-height: 1">288</dd></div>
+          <div style="display: flex; flex-direction: column-reverse; padding: 8px 16px; border-left: 2px solid {{T.ink}}; color: #141414; background: {{T.y}}"><dt style="font-size: 11px; text-transform: uppercase">unused cards</dt><dd style="margin: 0; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 30px; line-height: 1">306</dd></div>
+        </dl>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-start">
+        <span style="font-size: 12px; text-transform: uppercase; color: {{T.mute}}">bracket —</span>
+        <div role="group" aria-label="Bracket" style="display: flex; flex-wrap: wrap; border: 2px solid {{T.ink}}">
+          <sc-for list="{{brackets}}" as="bk" hint-placeholder-count="6">
+            <button type="button" onClick="{{bk.pick}}" aria-pressed="{{bk.on}}" title="{{bk.full}}" data-band style="{{bk.style}}">{{bk.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+
+      <aside data-follow aria-label="Filters" style="flex: 1 1 250px; max-width: 280px; min-width: 230px; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; display: flex; flex-direction: column; background: {{T.bg}}; border: 2px solid {{T.ink}}; box-shadow: 6px 6px 0 {{T.shadow}}">
+        <div style="padding: 6px 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 18px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Search</div>
+        <div style="padding: 14px 12px">
+          <label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Commander name</label>
+          <input id="q" type="search" placeholder="type a name_" onInput="{{onSearch}}" style="width: 100%; box-sizing: border-box; min-height: 42px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; color: {{T.ink}}; background: transparent; border: 0; border-bottom: 2px dashed {{T.ink}}; border-radius: 0">
+        </div>
+        <div style="padding: 6px 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 18px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">Colours</div>
+        <div role="group" aria-label="Colours" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding: 14px 12px">
+          <sc-for list="{{colors}}" as="c" hint-placeholder-count="5">
+            <button type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}" aria-label="{{c.name}}" data-band style="{{c.style}}">{{c.k}}</button>
+          </sc-for>
+        </div>
+        <div style="padding: 6px 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 18px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">You own at least</div>
+        <div role="group" aria-label="Minimum owned" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 14px 12px">
+          <sc-for list="{{mins}}" as="m" hint-placeholder-count="4">
+            <button type="button" onClick="{{m.pick}}" aria-pressed="{{m.on}}" data-band style="{{m.style}}"><span>{{m.label}}</span><span aria-hidden="true" style="display: flex; align-items: center"><span style="display: grid; grid-template-columns: repeat(5, 5px); gap: 1px; height: 9px; padding: 1px; border: 1.5px solid currentColor"><sc-for list="{{m.cells}}" as="c" hint-placeholder-count="5"><span style="{{c}}"></span></sc-for></span><span style="width: 2px; height: 5px; background: currentColor"></span></span></button>
+          </sc-for>
+        </div>
+        <div style="padding: 6px 12px; font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 18px; text-transform: uppercase; color: {{T.bg}}; background: {{T.ink}}">More</div>
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 12px">
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; text-transform: uppercase; color: {{T.mute}}">archetype
+            <select style="min-height: 40px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-transform: none; color: {{T.ink}}; background: {{T.bg}}; border: 2px solid {{T.ink}}; border-radius: 0"><option>Any archetype</option><option>Aristocrats</option><option>Reanimator</option><option>Spellslinger</option><option>Tokens</option><option>Wheels</option></select>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; text-transform: uppercase; color: {{T.mute}}">edhrec decks
+            <select style="min-height: 40px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-transform: none; color: {{T.ink}}; background: {{T.bg}}; border: 2px solid {{T.ink}}; border-radius: 0"><option>Any number</option><option>50+ (skip thin data)</option><option>500+</option><option>5,000+</option></select>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; text-transform: uppercase; color: {{T.mute}}">combos
+            <select style="min-height: 40px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-transform: none; color: {{T.ink}}; background: {{T.bg}}; border: 2px solid {{T.ink}}; border-radius: 0"><option>Any</option><option>I own one or more</option><option>Already in the deck</option></select>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; text-transform: uppercase; color: {{T.mute}}">sort by
+            <select style="min-height: 40px; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; text-transform: none; color: {{T.ink}}; background: {{T.bg}}; border: 2px solid {{T.ink}}; border-radius: 0"><option>Collection Match</option><option>Build Readiness</option><option>Combos owned</option><option>EDHREC deck count</option></select>
+          </label>
+        </div>
+      </aside>
+
+      <section aria-label="Commanders" style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <p style="margin: 0; font-size: 12px; text-transform: uppercase; color: {{T.mute}}">{{count}} commanders · {{bracketFull}} · <span style="color: #141414; background: {{T.c}}; padding: 0 4px">cyan tag = ready to play</span> <span style="color: #141414; background: {{T.y}}; padding: 0 4px">colour banding = above bracket</span></p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 28px 22px">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <article style="{{r.cardStyle}}">
+                <svg aria-hidden="true" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none"><rect width="100%" height="100%" filter="{{r.toner}}"></rect></svg>
+                <div style="position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+                  <a href="ZineCommander.dc.html" style="{{r.nameStyle}}">{{r.name}}</a>
+                  <span style="display: flex; gap: 3px; flex: none" aria-label="Colour identity {{r.ci}}"><sc-for list="{{r.pips}}" as="p" hint-placeholder-count="2"><span style="{{p.style}}">{{p.k}}</span></sc-for></span>
+                </div>
+                <span style="position: relative; font-size: 11px; margin-top: -2px">{{r.type}}</span>
+                <div aria-hidden="true" style="{{r.artStyle}}">
+                  <div style="{{r.dotsBig}}"></div>
+                  <div style="{{r.dotsSmall}}"></div>
+                </div>
+                <span style="position: relative; font-size: 12px; line-height: 1.35">Own {{r.pct}}% of the deck. Ready {{r.ready}}/7. {{r.combos}} combos in binder.</span>
+                <span style="{{r.capStyle}}">{{r.caption}}</span>
+                <div style="position: relative; margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end">
+                  <span style="font-family: 'Courier Prime', monospace; font-size: 10px; line-height: 1.25; text-transform: uppercase">No. {{r.no}}<br>{{r.decks}} edhrec decks</span>
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+                    <b style="font-family: 'Archivo', sans-serif; font-weight: 900; font-stretch: 75%; font-size: 28px; line-height: 0.9">{{r.pct}}%</b>
+                    <div role="img" aria-label="{{r.batLabel}}" style="display: flex; align-items: center">
+                      <div style="display: grid; grid-template-columns: repeat(10, 7px); gap: 2px; height: 14px; padding: 2px; border: 2px solid currentColor">
+                        <sc-for list="{{r.cells}}" as="c" hint-placeholder-count="10"><span style="{{c}}"></span></sc-for>
+                      </div>
+                      <span style="width: 4px; height: 8px; background: currentColor"></span>
+                    </div>
+                  </div>
+                </div>
+                <sc-if value="{{r.glitch}}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 18%; height: 9px; background: {{T.y}}; mix-blend-mode: {{T.blend}}"></span>
+                  <span aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 21%; height: 5px; background: {{T.c}}; mix-blend-mode: {{T.blend}}; opacity: 0.85"></span>
+                  <span aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 63%; height: 7px; background: {{T.m}}; mix-blend-mode: {{T.blend}}; opacity: 0.85"></span>
+                  <span aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 66%; height: 12px; background: {{T.y}}; mix-blend-mode: {{T.blend}}"></span>
+                </sc-if>
+              </article>
+              <div style="display: flex; justify-content: space-between; gap: 6px; font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase">
+                <a href="ZineCommander.dc.html" data-band style="flex: 1; display: grid; place-items: center; min-height: 40px; text-decoration: none; color: {{T.ink}}; border: 2px solid {{T.ink}}">Open</a>
+                <a href="Build.dc.html" data-band style="flex: 1; display: grid; place-items: center; min-height: 40px; text-decoration: none; color: {{T.bg}}; background: {{T.ink}}; border: 2px solid {{T.ink}}">Build</a>
+                <span style="flex: 1; display: grid; place-items: center; min-height: 40px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 12px; color: {{T.mute}}">{{r.fit}}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'neg', bracket: 'optimized', min: 0, q: '', colors: [] };
+  }
+  renderVals() {
+    const s = this.state;
+    // three print modes: photocopy positive, photocopy negative, aged sepia
+    const MODES = {
+      pos: { bg: '#F0EBDD', ink: '#141414', mute: '#4A4740', dust: 'url(#z-dark)', flipDust: 'url(#z-light)', scan: 'rgba(0,0,0,0.035)', blend: 'multiply',
+        y: '#FFE600', c: '#00AEEF', m: '#EC008C', flipBg: '#0B0B0B', flipFg: '#F0EBDD', art: '#E4DECE', flipArt: '#050505', shadow: '#141414',
+        grid: 'rgba(20,20,20,0.10)', gridMinor: 'rgba(20,20,20,0.04)', rule: 'rgba(236,0,140,0.38)', ruleSoft: 'rgba(236,0,140,0.22)', pencil: 'rgba(20,20,20,0.2)', pencilSolid: '#141414',
+        stamp: 'rgba(0,140,200,0.45)', blendD: 'multiply', fiber: '0.15', edge: 'inset 0 0 160px rgba(20,20,20,0.18)' },
+      neg: { bg: '#0B0B0B', ink: '#F0EBDD', mute: '#BDB8AC', dust: 'url(#z-light)', flipDust: 'url(#z-dark)', scan: 'rgba(255,255,255,0.025)', blend: 'screen',
+        y: '#FFE600', c: '#00AEEF', m: '#EC008C', flipBg: '#F0EBDD', flipFg: '#141414', art: '#050505', flipArt: '#E4DECE', shadow: '#2A2A2A',
+        grid: 'rgba(240,235,221,0.08)', gridMinor: 'rgba(240,235,221,0.03)', rule: 'rgba(236,0,140,0.5)', ruleSoft: 'rgba(236,0,140,0.3)', pencil: 'rgba(240,235,221,0.17)', pencilSolid: '#F0EBDD',
+        stamp: 'rgba(255,230,0,0.4)', blendD: 'screen', fiber: '0.12', edge: 'inset 0 0 160px rgba(0,0,0,0.6)' },
+      sepia: { bg: '#E4DDD0', ink: '#2B241C', mute: '#5C5247', dust: 'url(#z-sepia)', flipDust: 'url(#z-light)', scan: 'rgba(70,58,45,0.03)', blend: 'multiply',
+        y: '#D3C292', c: '#A9BCBC', m: '#CFA594', flipBg: '#332B23', flipFg: '#EAE3D6', art: '#D6CDBD', flipArt: '#26201A', shadow: '#332B23',
+        grid: 'rgba(62,52,42,0.12)', gridMinor: 'rgba(62,52,42,0.05)', rule: 'rgba(166,64,43,0.32)', ruleSoft: 'rgba(166,64,43,0.22)', pencil: 'rgba(42,26,11,0.2)', pencilSolid: '#2A1A0B',
+        stamp: 'rgba(166,64,43,0.36)', blendD: 'multiply', fiber: '0.3', edge: 'inset 0 0 160px rgba(50,42,34,0.28), inset 0 0 30px rgba(35,29,22,0.24)' }
+    };
+    const T = MODES[s.mode];
+    const Y = T.y, C = T.c, M = T.m;
+    const modes = [['pos', 'Positive'], ['neg', 'Negative'], ['sepia', 'Sepia']].map(([k, l], i) => {
+      const on = s.mode === k;
+      return { label: l, on: on ? 'true' : 'false', pick: () => this.setState({ mode: k }),
+        style: 'min-height: 40px; padding: 0 12px; font-family: "Archivo", sans-serif; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; border: 0; ' + (i ? 'border-left: 2px solid ' + T.ink + '; ' : '') +
+          (on ? 'color: ' + T.bg + '; background: ' + T.ink + '; box-shadow: inset 0 -3px 0 ' + Y + ', inset 0 -6px 0 ' + M + ', inset 0 -9px 0 ' + C : 'color: ' + T.ink + '; background: transparent') };
+    });
+    const BAND = 'box-shadow: inset 0 -3px 0 ' + Y + ', inset 0 -6px 0 ' + M + ', inset 0 -9px 0 ' + C;
+    const seg = on => 'cursor: pointer; border: 0; font-family: "Archivo", sans-serif; font-weight: 800; text-transform: uppercase; ' + (on ? 'color: ' + T.bg + '; background: ' + T.ink + '; ' + BAND : 'color: ' + T.ink + '; background: transparent');
+    const BR = [['all','All','All decks'],['exhibition','I','Bracket 1 · Exhibition'],['core','II','Bracket 2 · Core'],['upgraded','III','Bracket 3 · Upgraded'],['optimized','IV','Bracket 4 · Optimized'],['cedh','V','Bracket 5 · cEDH']];
+    const brackets = BR.map(([k, l, f], i) => {
+      const on = s.bracket === k;
+      return { label: l, full: f, on: on ? 'true' : 'false', pick: () => this.setState({ bracket: k }),
+        style: seg(on) + '; min-width: 52px; min-height: 50px; padding: 0 14px; font-weight: 900; font-stretch: 75%; font-size: 22px' + (i ? '; border-left: 2px solid ' + T.ink : '') };
+    });
+    const NAMES = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+    // the five colours of mana: [fill, text]
+    const MTG = { W: ['#F4EDCF', '#141414'], U: ['#2470BE', '#FFFFFF'], B: ['#2B2530', '#F0EBDD'], R: ['#D23B26', '#FFFFFF'], G: ['#2A8443', '#FFFFFF'] };
+    const colors = ['W','U','B','R','G'].map(k => {
+      const on = s.colors.includes(k);
+      return { k, name: NAMES[k], on: on ? 'true' : 'false',
+        pick: () => this.setState({ colors: on ? s.colors.filter(x => x !== k) : s.colors.concat(k) }),
+        style: 'min-height: 44px; cursor: pointer; font-family: "Archivo", sans-serif; font-weight: 900; font-size: 20px; border: 2px solid ' + T.ink + '; ' + (on
+          ? 'color: ' + MTG[k][1] + '; background: ' + MTG[k][0] + '; box-shadow: 3px 3px 0 ' + T.ink + '; transform: translate(-1px, -1px)'
+          : 'color: ' + T.ink + '; background: transparent; box-shadow: inset 0 -5px 0 ' + MTG[k][0]) };
+    });
+    // the "own %" battery: 10 cells, red under 60, yellow under 80, green from 80
+    const battery = (pct, cells) => {
+      const lit = Math.round(pct / (100 / cells)), col = pct >= 80 ? MTG.G[0] : pct >= 60 ? Y : MTG.R[0];
+      return Array.from({ length: cells }, (_, i) => 'display: block; height: 100%; ' + (i < lit ? 'background: ' + col : 'background: transparent; outline: 1px dashed currentColor; outline-offset: -2px; opacity: 0.35'));
+    };
+    const mins = [0, 40, 60, 80].map(v => {
+      const on = s.min === v;
+      return { label: v ? v + '%' : 'ANY', on: on ? 'true' : 'false', pick: () => this.setState({ min: v }), cells: battery(v, 5),
+        style: seg(on) + '; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 52px; font-family: "IBM Plex Mono", monospace; font-weight: 700; font-size: 13px; border: 2px solid ' + T.ink };
+    });
+    // from the live report, B4 Optimized (ready/fit for rows other than The Locust God are placeholders)
+    const data = [
+      ['Trostani, Selesnya\'s Voice', 'GW', 'Tokens · Lifegain · Populate', 88.2, 6, true, 17, '291'],
+      ['Stella Lee, Wild Card', 'UR', 'Spellslinger · Combo · Storm', 87.5, 6, true, 97, '1,057'],
+      ['Niv-Mizzet, Parun', 'UR', 'Spellslinger · Combo · Wheels', 81.6, 5, true, 97, '1,306'],
+      ['Doctor Doom, King of Latveria', 'BRU', 'Discard · Villains · Connive', 80.7, 6, true, 197, '196'],
+      ['The Locust God', 'UR', 'Wheels · Tokens · Card Draw', 78.5, 6, true, 97, '532'],
+      ['Sephiroth, Fabled SOLDIER', 'B', 'Aristocrats · Sacrifice', 76.0, 7, true, 6, '1,840'],
+      ['Carnage, Crimson Chaos', 'BR', 'Tokens · Sacrifice · Chaos', 71.3, 5, false, 9, '402'],
+      ['Ureni of the Unwritten', 'GUR', 'Dragons · Big mana', 64.9, 4, true, 2, '688']
+    ];
+    const q = s.q.toLowerCase();
+    const spots = ['42% 48%', '60% 40%', '35% 60%', '55% 55%'];
+    const rows = data.filter(d => d[3] >= s.min && d[0].toLowerCase().includes(q) && s.colors.every(c => d[1].includes(c))).map((d, i) => {
+      // mostly the page's own print mode, every 4th card printed the other way round
+      const flip = i % 4 === 1;
+      const bg = flip ? T.flipBg : T.bg, fg = flip ? T.flipFg : T.ink;
+      const caption = d[4] === 7 ? '(THIS ONE IS READY TO SLEEVE!)' : !d[5] ? '(TOO SPICY FOR THIS BRACKET!)' : d[6] >= 90 ? '(' + d[6] + ' COMBOS IN YOUR BINDER!)' : d[3] >= 75 ? '(MOSTLY IN YOUR BINDER!)' : '(NEEDS A FEW STAND-INS)';
+      const spot = spots[i % 4];
+      const ci = d[1].split('');
+      return {
+        name: d[0], ci: d[1], pct: d[3], ready: d[4], combos: d[7], decks: d[8], glitch: !d[5],
+        no: String(i + 1).padStart(3, '0'), type: 'Legendary Commander — ' + d[2],
+        fit: d[5] ? 'FITS IV' : 'ABOVE IV', caption,
+        pips: ci.map(k => ({ k, style: 'display: grid; place-items: center; width: 22px; height: 22px; font-family: "Archivo", sans-serif; font-weight: 900; font-size: 13px; color: ' + MTG[k][1] + '; background: ' + MTG[k][0] + '; border: 1.5px solid ' + fg })),
+        cells: battery(d[3], 10), batLabel: 'You own ' + d[3] + '% of this deck',
+        toner: flip ? T.flipDust : T.dust,
+        cardStyle: 'position: relative; aspect-ratio: 488 / 680; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; gap: 6px; padding: 14px 14px 10px; border-radius: 14px; background: ' + bg + '; color: ' + fg + '; border: 2px solid ' + (flip ? bg : T.ink) + '; box-shadow: 6px 6px 0 ' + T.shadow,
+        nameStyle: 'text-decoration: none; color: ' + fg + '; font-family: "Archivo", sans-serif; font-weight: 800; font-stretch: ' + (i % 2 ? '62%' : '85%') + '; font-size: ' + (i % 2 ? '24px' : '20px') + '; line-height: 1.02; text-transform: ' + (i % 2 ? 'uppercase' : 'none'),
+        artStyle: 'position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; border: 2px solid ' + fg + '; background: ' + (flip ? T.flipArt : T.art),
+        // 1-bit dither: a coarse halftone for the shadows, a fine one for the mid-tones
+        dotsBig: 'position: absolute; inset: 0; background-image: radial-gradient(circle, ' + fg + ' 0 2.2px, transparent 2.5px); background-size: 7px 7px; -webkit-mask-image: radial-gradient(ellipse at ' + spot + ', #000 16%, transparent 40%); mask-image: radial-gradient(ellipse at ' + spot + ', #000 16%, transparent 40%)',
+        dotsSmall: 'position: absolute; inset: 0; background-image: radial-gradient(circle, ' + fg + ' 0 1px, transparent 1.3px); background-size: 4px 4px; background-position: 2px 2px; -webkit-mask-image: radial-gradient(ellipse at ' + spot + ', #000 30%, transparent 70%); mask-image: radial-gradient(ellipse at ' + spot + ', #000 30%, transparent 70%)',
+        capStyle: 'position: relative; align-self: flex-start; padding: 1px 5px; font-family: "Archivo", sans-serif; font-weight: 700; font-size: 10px; border: 1.5px solid ' + fg + '; ' + (d[4] === 7 ? 'color: #141414; background: ' + C + '; border-color: #141414' : '')
+      };
+    });
+    const full = BR.find(b => b[0] === s.bracket)[2];
+    return { T, modes, isSepia: s.mode === 'sepia', brackets, colors, mins, rows, count: rows.length, bracketFull: full,
+      onSearch: e => this.setState({ q: e.target.value }) };
+  }
+}
+</script>
+</body>
+</html>
