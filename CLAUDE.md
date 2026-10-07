@@ -197,9 +197,10 @@ Key functions:
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you
   discard" cards) → `FIT_CMDR` 0.12, "with commander: discard". Hidden gem = owned, EDHREC rate < `OFF_LIST` 5% on
-  this page, `commander_link`, and 2+ of the commander's profile mechanics; the best `GEM_MAX` 3 per deck get an
+  this page, `commander_link`, and 2+ of the mechanics in the commander's *own* text (`profile[1] & card_mechanics(cmdr)`; theme-name
+  mechanics made weak matches like The Warring Triad for Spider-Slayer via "flying + graveyard"); the best `GEM_MAX` 3 per deck get an
   EDHREC-part floor `GEM_FLOOR` 0.35 × share of mechanics hit ("hidden gem: +1/+1 + discard + drain"). Low play can
-  mean new, overlooked or pricey. ~half the commanders have none (mean 5 candidates, max 54). MECHANICS "drain" also
+  mean new, overlooked or pricey. 109 of 288 commanders have gems (283 in all; audit: Woe Strider/Voracious Null for Yahenni, Library of Leng for Green Goblin, Mimic Vat for Killmonger). MECHANICS "drain" also
   matches "deals N damage to each opponent". Effect vs `baseline_synergy`: own picks +2.6, substitutes −1.7,
   removal −0.6, draw +0.8, no rule violations. Test case (user): Brallin, Skyshark Rider is in every Doctor Doom
   deck; Captain Howler (14.5% on EDHREC, one mechanic) is in the Discard archetype and offered as a swap.

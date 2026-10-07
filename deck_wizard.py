@@ -737,7 +737,7 @@ def hidden_gems(cmdr, profile, pool, play_of, bracket):
     Low play can mean nobody tried it, a new card or a pricey one, so fit decides: the best GEM_MAX get
     an EDHREC-part floor of GEM_FLOOR x share of the commander's mechanics they hit.
     {key: (floor, [mechanics hit])}."""
-    cm = profile[1]
+    cm = profile[1] & card_mechanics(cmdr)      # what the commander's own text does, not theme names
     if len(cm) < 2: return {}
     cands = []
     for k, m, _, kd in pool:
