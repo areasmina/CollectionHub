@@ -332,7 +332,8 @@ class CardTable:
             if img and not self.rows[i][1]: self.rows[i][1] = img
             return i
         if meta: row = [meta["name"], img, type_group(meta["type_line"]), 1 if meta.get("gc") else 0,
-                        int(meta.get("cmc") or 0), 1 if meta.get("layout") in TWO_FACED and "front/" in img else 0]
+                        int(meta.get("cmc") or 0), 1 if meta.get("layout") in TWO_FACED and "front/" in img else 0,
+                        sum(1 << i for i, r in enumerate(ROLE_NAMES) if r in roles_of(meta))]   # roles bitmask
         else: row = [name, "", "Land" if name in BASIC_NAMES else "Other", 0, 0]
         self.rows.append(row); self.idx[k] = len(self.rows) - 1
         return self.idx[k]
@@ -2157,9 +2158,100 @@ main{max-width:1400px}
   background:linear-gradient(transparent 18%,var(--y) 18% 21%,var(--c) 21% 23%,transparent 23% 63%,var(--m) 63% 65%,var(--y) 65% 68%,transparent 68%)}
 :root[data-mode="neg"] .row.above .cmd::after{mix-blend-mode:screen}
 .row[open] .cmd{aspect-ratio:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 18px}
-.row[open] .art,.row[open] .cap,.row[open] .facts{display:none}.row[open] .foot{margin:0 0 0 auto;gap:18px;align-items:center}
+.row[open] .cmd .art,.row[open] .cmd .cap,.row[open] .cmd .facts{display:none}.row[open] .foot{margin:0 0 0 auto;gap:18px;align-items:center}
 .row[open] .cmh{gap:12px}
 @media(max-width:900px){.disc{flex-direction:column;align-items:stretch}.filt{position:static;max-height:none;overflow:visible;flex-basis:auto}}
+/* ===================== Zine x P5, phase 3: commander panel (design/zine/P5Commander.dc.html) ===================== */
+.row[open] .body{padding:20px 18px 28px}
+.hero{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.hcol{position:relative;flex:none;width:260px;display:flex;flex-direction:column;gap:10px}
+.cslash{position:absolute;left:-60px;right:-60px;top:24%;height:120px;background:var(--r);clip-path:polygon(0 30%,100% 0,100% 70%,0 100%);transform:rotate(-14deg)}
+.himg{position:relative}.himg .cimg{width:100%;border-radius:14px;border:2px solid var(--ink);box-shadow:8px 8px 0 var(--shadow);transform:rotate(-1.5deg)}
+:root[data-img="copy"] .himg .cimg,:root[data-img="copy"] .mimg{filter:grayscale(1) contrast(1.4)}
+.imgmode{position:relative;display:flex;border:2px solid var(--ink);background:var(--bg)}.imgmode button{flex:1;border:0;min-height:34px;font-size:.68rem}.imgmode button+button{border-left:2px solid var(--ink)}
+.imgmode button[aria-pressed="true"]{background:var(--r);color:#FFFFFF;box-shadow:inset 0 -4px 0 #0B0B0B}
+.hmain{flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.hmain .ttl.pname{margin:0}
+.hmeta{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:.75rem;text-transform:uppercase;color:var(--mute)}.hmeta .pip{width:28px;height:28px;border-width:2px}
+.around{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}.around .lab{font-size:.7rem;font-weight:700;text-transform:uppercase}
+.ar{padding:3px 10px;font:900 1.15rem/1.1 var(--head);font-stretch:75%;text-transform:uppercase;border:2px solid var(--ink)}.ar.top{background:var(--y);color:var(--onacc);border-color:var(--y)}
+.mixl{margin:0;font-size:.78rem}
+.sheet{display:flex;flex-direction:column;border:2px solid var(--ink);background:var(--bg)}
+.srow{display:flex;flex-wrap:wrap;align-items:stretch}.srow+.srow{border-top:2px solid var(--ink)}
+.slab{display:flex;align-items:center;width:120px;padding:0 12px;font:900 1.05rem/1 var(--head);font-stretch:75%;text-transform:uppercase;background:var(--ink);color:var(--bg)}
+.scell{flex:1;display:flex;flex-direction:column;gap:8px;padding:10px 12px;min-width:0}.scell .srcs,.scell .tags{margin:0}
+.sheet .bks{margin:0;gap:0;flex:1}
+.sheet .bk{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:76px;min-height:58px;padding:0 10px;border:0;border-right:2px solid var(--ink)}
+.sheet .bk b{font:900 1.2rem/1 var(--head)}.sheet .bk span{font:400 .66rem/1 var(--body);text-transform:none}
+.srcb.thm b{font-weight:800}.srcb.thm span{font:400 .66rem var(--body);text-transform:none}
+.tnote{font-size:.78rem;color:var(--mute);margin:0}.tnote a{color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:20px;margin:26px 0 30px}
+.tile{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:18px 20px;border-radius:14px!important;background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--shadow);color:var(--ink);font-size:.8rem}
+.tile .t{position:relative;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+.tile .tbig{position:relative;font:900 4.6rem/.85 var(--head);font-stretch:62%;color:inherit}
+.tile ul{margin:0;padding-left:16px;font-size:.75rem;line-height:1.45}.tile small{color:inherit;opacity:.8}
+.tile.inv{background:var(--ink);color:var(--bg)}.tile.inv small{color:var(--bg)}
+.mburst{position:absolute;z-index:-1;right:-46px;top:-46px;width:190px;height:190px;background:var(--r);opacity:.9}
+.bat.big{width:150px;height:31px}.bat.sm{width:100px;height:20px}
+.cap{align-self:flex-start;padding:1px 5px;font:800 .68rem/1.3 var(--head);border:1.5px solid #141414;color:var(--onacc)}.cap.y{background:var(--y)}.cap.c{background:var(--c)}.cap.m{background:var(--m)}
+.stk{align-self:flex-start;padding:1px 6px;font:900 .9rem/1.25 var(--head);color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;transform:skewX(-10deg) rotate(-3deg)}.stk.m{background:var(--m);color:#141414}
+.slim{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:0 -18px 26px;padding:10px 18px;background:var(--bg);border-top:4px solid var(--r);border-bottom:2px solid var(--ink);box-shadow:0 3px 0 var(--y),0 6px 0 var(--m),0 9px 0 var(--c)}
+.ondeck{padding:3px 14px 1px;font:900 .72rem/1.3 var(--head);font-style:italic;letter-spacing:.08em;color:#FFFFFF;background:var(--r);clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
+.mimg{width:34px;border-radius:4px;border:2px solid var(--ink)}
+.sname{font:900 1.7rem/1 var(--head);font-stretch:62%;text-transform:uppercase}
+.sbat{display:flex;align-items:center;gap:8px}.sbat b{font:900 1.2rem/1 var(--head);font-stretch:75%}
+.sfit{font-size:.72rem;text-transform:uppercase}.sp{flex:1 1 0}
+.mbks{display:flex;border:2px solid var(--ink)}.mbk{border:0;min-width:38px;min-height:32px;padding:0 8px;font-size:.78rem}.mbk+.mbk{border-left:2px solid var(--ink)}
+.slab2{display:flex;align-items:center;gap:6px;font-size:.66rem;text-transform:uppercase;color:var(--mute)}.tsel{min-height:34px;font-size:.75rem}
+.tobuy{padding:4px 8px;font:700 .75rem/1 var(--serial);color:#141414;background:#F0EBDD;transform:rotate(-1deg)}
+.d99{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.dmain{flex:999 1 620px;min-width:0}.daside{flex:1 1 280px;max-width:360px;display:flex;flex-direction:column;gap:22px}
+.dmain .grp h5{font-size:1.2rem;font-stretch:75%;font-weight:900;border-bottom:2px solid var(--ink);padding-bottom:2px}
+.dmain .grid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:18px 14px}
+.cw{display:flex;flex-direction:column;gap:5px}
+.cw .ct img.c{outline:0!important;border:2px solid var(--ink);box-shadow:5px 5px 0 var(--shadow)}
+.cw.k-y .ct img.c,.cw.k-y2 .ct img.c,.cw.k-k .ct img.c{box-shadow:5px 5px 0 var(--y)}.cw.k-c .ct img.c{box-shadow:5px 5px 0 var(--m)}
+.cw.k-s .ct img.c,.cw.k-s2 .ct img.c{box-shadow:5px 5px 0 var(--c)}.cw.k-f .ct img.c{box-shadow:5px 5px 0 #A8A397}.cw.k-buy .ct img.c{box-shadow:5px 5px 0 var(--m)}
+.cw.wpin .ct img.c{outline:4px solid var(--r)!important;outline-offset:2px}
+.tape{align-self:flex-start;max-width:100%;padding:1px 5px;font:700 .62rem/1.3 var(--head);text-transform:uppercase;border:1.5px solid var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tape.y{background:var(--y);color:#141414;border-color:var(--y)}.tape.m{background:var(--m);color:#141414;border-color:var(--m)}.tape.c{background:var(--c);color:#141414;border-color:var(--c)}
+.tape.g{background:#A8A397;color:#141414;border-color:#A8A397}.tape.mo{border:1.5px dashed var(--m)}
+.tapew{font-size:.62rem;line-height:1.25;color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.whyhint{font-size:.7rem;text-transform:uppercase;margin:12px 0 0}
+.pnl{display:flex;flex-direction:column;gap:10px;padding:0 14px 14px;border:2px solid var(--ink);background:var(--bg);font-size:.8rem}
+.pnl.pc{border-top:6px solid var(--c);box-shadow:5px 5px 0 var(--c)}.pnl.py{border-top:6px solid var(--y);box-shadow:5px 5px 0 var(--y)}
+.ptl{align-self:flex-start;margin:-4px 0 0 -6px;padding:2px 8px;font-size:1.2rem;font-stretch:75%;color:#141414;transform:rotate(-1.5deg)}.pc .ptl{background:var(--c)}.py .ptl{background:var(--y);transform:rotate(1deg)}
+.pnl.why{padding:0 16px 16px;box-shadow:7px 7px 0 var(--r)}
+.wtl{align-self:flex-start;margin:-14px 0 0 -8px;padding:3px 12px 1px;font-size:1.25rem;font-stretch:75%;color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;transform:skewX(-10deg) rotate(-2deg)}
+.whead{display:flex;gap:12px;align-items:flex-start}.why img.c.wthumb{width:74px;flex:none;border:2px solid var(--ink)}
+.wtxt{display:flex;flex-direction:column;gap:4px;min-width:0}.wname{font:900 1.3rem/1 var(--head);font-stretch:75%;text-transform:uppercase}
+.wline{font-size:.72rem}.wmode{align-self:flex-start;font:700 .62rem/1.3 var(--head);text-transform:uppercase;padding:1px 5px;border:1.5px dashed var(--ink)}
+.wmode.on{background:var(--r);color:#FFFFFF;border:1.5px solid #0B0B0B}
+.wparts{margin:0;display:flex;flex-direction:column}.wparts div{display:flex;flex-direction:column;gap:1px;padding:6px 0;border-top:1.5px dashed var(--ink)}
+.wparts dt{font-weight:700;font-size:.62rem;text-transform:uppercase;color:var(--mute)}.wparts dd{margin:0;font-size:.8rem}
+.wbtn{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.wbtn .pinb{flex:1;min-height:36px;padding:0 8px;border:2px solid var(--ink)!important;color:#141414;font:800 .7rem var(--head);text-transform:uppercase}
+.wbtn .pa{background:var(--y)}.wbtn .pn{background:var(--m)}.wsf{font-size:.72rem}
+.swp{display:flex;flex-direction:column;gap:2px}.swp .in{align-self:flex-start;padding:0 4px;background:var(--c);color:#141414}.swp s{text-decoration-color:var(--m);text-decoration-thickness:2px}.swp small{font-size:.66rem}
+.pins{margin:0}.pchips{display:flex;flex-wrap:wrap;gap:6px}
+.pchip{display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 8px;font-size:.72rem;font-weight:700;color:#141414}.pchip.in{background:var(--y)}.pchip.out{background:var(--m)}.pchip .pinx{color:#141414}
+.padd{display:flex;gap:6px}.padd .pinq{flex:1;min-width:0;width:auto;border:0;border-bottom:2px dashed var(--ink);background:transparent}
+.padd .pa,.padd .pn{min-height:36px;padding:0 10px;font-size:.68rem;color:#141414;border:2px solid var(--ink)}.padd .pa{background:var(--y)}.padd .pn{background:var(--m)}
+.rcpt{display:flex;flex-direction:column;gap:6px;padding:16px 16px 24px;margin:0;font:400 .85rem/1.35 var(--serial);color:#141414!important;background:#F0EBDD!important;border:0!important;transform:rotate(1deg);box-shadow:6px 6px 0 var(--shadow);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - 8px),95% 100%,90% calc(100% - 8px),85% 100%,80% calc(100% - 8px),75% 100%,70% calc(100% - 8px),65% 100%,60% calc(100% - 8px),55% 100%,50% calc(100% - 8px),45% 100%,40% calc(100% - 8px),35% 100%,30% calc(100% - 8px),25% 100%,20% calc(100% - 8px),15% 100%,10% calc(100% - 8px),5% 100%,0 calc(100% - 8px))}
+.rcpt .rh{text-align:center;letter-spacing:.1em}.rcpt .rl{border-top:2px dashed #141414}.rcpt .rr{display:flex;justify-content:space-between;gap:8px}.rcpt .rr a{color:#141414;text-transform:uppercase}
+.rcpt small,.rcpt .dim{color:#4A4740}.rcpt .rbtn{display:flex;gap:8px;margin-top:4px}.rcpt button{flex:1;min-height:36px;font:700 .75rem var(--serial);color:#141414;border-color:#141414}
+.gh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}.gh p{margin:0;font-size:.75rem}
+.gslot{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch;padding:16px 0 22px;border-bottom:2px dashed var(--ink)}
+.gmiss{position:relative;width:150px;aspect-ratio:488/680;padding:12px;display:flex;flex-direction:column;justify-content:space-between;border-radius:12px;border:2px dashed var(--ink);overflow:hidden;
+  background:linear-gradient(to top right,transparent calc(50% - 1px),var(--m) 50%,transparent calc(50% + 1px)),linear-gradient(to top left,transparent calc(50% - 1px),var(--m) 50%,transparent calc(50% + 1px))}
+.gname{position:relative;font:800 1rem/1.1 var(--head)}.nib{align-self:flex-start;padding:1px 4px;font:700 .58rem var(--head);color:var(--bg);background:var(--ink)}.gmeta{font-size:.62rem;text-transform:uppercase}
+.garr{display:flex;align-items:center;font:900 2.4rem var(--head)}
+.gopts{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
+.gopt{display:flex;flex-direction:column;gap:4px;text-align:left;min-height:110px;padding:12px 14px;border-radius:10px;font:400 .72rem/1.35 var(--body);text-transform:none;letter-spacing:0}
+.gopt .gk{font:700 .66rem var(--body);text-transform:uppercase}.gopt b{font:800 1rem/1.15 var(--head)}
+.gopt.on{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B;transform:rotate(-1deg)}.gopt .stk{margin-top:auto}
+.ssec .profile{margin:10px 0}
+@media(max-width:760px){.slim .wide{display:none}.hcol{width:200px}.slab{width:100%;padding:6px 12px}.sheet .bk{min-width:60px}.garr{display:none}.daside{max-width:none}}
 /* ===================== Zine x P5, phase 2b: red, slants, ransom letters, motion (from design/zine/P5Discover.dc.html) ===================== */
 :root{--r:#E5191C}:root[data-mode="sepia"]{--r:#A6402B}
 /* ===== Persona-5 energy: red slabs, ransom letters, slashes, snap motion ===== */
@@ -2253,6 +2345,23 @@ const ransom=(txt,base)=>txt.split("").map((ch,i)=>ch===" "?'<span class="rsp"><
   :`<span class="rl rl${(ch.charCodeAt(0)*7+i*11+base)%6}" style="--rot:${((((i*37+base)%13)-6)*1.1).toFixed(1)}deg;--sz:${(0.84+((i*29+base)%5)*0.06).toFixed(2)}em;--d:${i*45+base*12}ms">${esc(ch)}</span>`).join("");
 const tickHTML=items=>{const t=`★ ${items.map(esc).join(" ★ ")} `; return `<span>${t}</span><span>${t}</span>`;};
 $("ttl").innerHTML=`<span aria-hidden="true">${ransom("What can",1)}</span><span aria-hidden="true">${ransom("I build?",4)}</span>`;
+/* ---------- card image style in commander headers: full colour or photocopy (saved in "dw:img") ---------- */
+try{document.documentElement.dataset.img=localStorage.getItem("dw:img")||"full";}catch(e){document.documentElement.dataset.img="full";}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-imgm]"); if(!t)return;
+  const m=t.dataset.imgm; document.documentElement.dataset.img=m; try{localStorage.setItem("dw:img",m);}catch(err){}
+  document.querySelectorAll("[data-imgm]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.imgm===m?"true":"false"));});
+document.addEventListener("change",e=>{const s=e.target.closest&&e.target.closest(".tsel"); if(!s)return;
+  const r=s.closest("details.row"); r.dataset.t=s.value; r.dataset.slot=""; rerow(r);});
+/* ---------- "Why this card?": hover or focus previews, a click pins (again or Esc lets go); taps are clicks ---------- */
+const whyCw=t=>t&&t.closest&&t.closest(".d99 .cw[data-wi]");
+function whyPreview(e){const cw=whyCw(e.target); if(!cw||e.target.closest(".bub"))return; const row=cw.closest("details.row"), W_=WHY[+row.dataset.i];
+  if(!W_||W_.pin!=null||W_.cur===+cw.dataset.wi)return; whyShow(row,+cw.dataset.wi);}
+document.addEventListener("mouseover",whyPreview); document.addEventListener("focusin",whyPreview);
+document.addEventListener("click",e=>{const cw=whyCw(e.target); if(!cw||!e.target.closest(".ct")||e.target.closest(".flip"))return;
+  e.preventDefault(); const row=cw.closest("details.row"), W_=WHY[+row.dataset.i], wi=+cw.dataset.wi; if(!W_)return;
+  W_.pin=W_.pin===wi?null:wi; whyShow(row,wi);});
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;
+  document.querySelectorAll("details.row[open]").forEach(row=>{const W_=WHY[+row.dataset.i]; if(W_&&W_.pin!=null){const wi=W_.pin; W_.pin=null; whyShow(row,wi);}});});
 /* ---------- print mode: Positive / Negative / Sepia ---------- */
 function setMode(m){document.documentElement.dataset.mode=m; try{localStorage.setItem("dw:mode",m);}catch(e){}
   document.querySelectorAll(".modes [data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===m?"true":"false"));}
@@ -2300,8 +2409,8 @@ const themes=new Set(); DATA.forEach(d=>d.tags.slice(0,3).forEach(t=>themes.add(
 [...themes].sort().forEach(t=>{const o=document.createElement("option");o.value=o.textContent=t;$("th").appendChild(o);});
 const pips=ci=>(ci.length?ci:["C"]).map(c=>`<i class="pip mb-${c}">${c}</i>`).join("");   // filled mana-colour boxes
 // the Collection Match battery: k cells, lit = round(pct / (100/k)); green 80+, yellow 60-79, red under 60
-const bat=(p,k=10)=>{const lit=Math.round(p/(100/k));
-  return `<span class="bat b${k} ${p>=80?"hi":p>=60?"mid":"lo"}" role="img" aria-label="You own ${p}% of this deck">${Array.from({length:k},(_,i)=>i<lit?'<i class="on"></i>':"<i></i>").join("")}</span>`;};
+const bat=(p,k=10,size)=>{const lit=Math.round(p/(100/k));
+  return `<span class="bat b${k} ${size||""} ${p>=80?"hi":p>=60?"mid":"lo"}" role="img" aria-label="You own ${p}% of this deck">${Array.from({length:k},(_,i)=>i<lit?'<i class="on"></i>':"<i></i>").join("")}</span>`;};
 /* ---------- Discover filters: colour chips (all selected colours must be in the identity) and "you own at least" ---------- */
 const COLS=new Set(); let MINP=0;
 const MTGN={W:"White",U:"Blue",B:"Black",R:"Red",G:"Green"};
@@ -2322,23 +2431,35 @@ function IMG(i){const s=CARDS[i][1];
     :s.startsWith("http")?s:"https://cards.scryfall.io/normal/"+s;}
 const BACK=i=>CARDS[i][5]?IMG(i).replace("/front/","/back/"):"";   // two-faced cards: Scryfall's back image
 function tile(i,o={}){if(i==null||i<0||!CARDS[i])return"";const c=CARDS[i];
-  return `<a class="ct ${o.cls||""}" href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">`+
+  return `<a class="ct ${o.cls||""}" href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener"${o.why?` role="button" aria-pressed="false" aria-label="Why ${esc(front(i))}? Click to pin"`:""}>`+
    `<img class="c" src="${IMG(i)}" alt="${esc(c[0])}" title="${esc(c[0])}" loading="lazy">`+
    (c[5]?`<span class="flip" data-back="${esc(BACK(i))}" title="Hover to see the back">⟲</span>`:"")+
    (o.badge?`<span class="badge">${esc(o.badge)}</span>`:"")+(o.note?`<span class="note">${esc(o.note)}</span>`:"")+`</a>`;}
 const KCLS={s:"miss",s2:"miss",y2:"pick",k:"pick",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"};
-function tileFor(it){
+function tileFor(it,taped){
   if((it.kind==="s"||it.kind==="s2")&&it.f>=0)     // the slot as EDHREC has it: the missing card, greyed, using yours
-    return tile(it.f,{cls:"miss",note:"using "+front(it.i)+(it.kind==="s2"?" (your choice)":"")});
+    return tile(it.f,{cls:"miss",why:taped,note:taped?"":"using "+front(it.i)+(it.kind==="s2"?" (your choice)":"")});
+  if(taped) return tile(it.i,{cls:KCLS[it.kind]||(it.kind==="s"?"sub":""),badge:(it.n||1)>1?"×"+it.n:"",why:true});
   return tile(it.i,{cls:KCLS[it.kind]||(it.kind==="s"?"sub":""),badge:(it.n||1)>1?"×"+it.n:"",
     note:it.kind==="y2"?"instead of "+front(it.f)+" (your choice)":it.kind==="k"?"📌 pinned by you":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
       it.kind==="y"?(!W(it.f)?"your pick":CARDS[it.i][2]==="Land"?W(it.f):"fits: "+W(it.f)):it.kind==="c"?"combo piece":""});}
+// tape label per card kind (the 99 in a commander panel): popular = outline, your pick / pinned = yellow,
+// combo = magenta, stand-in = cyan, role fill = grey, to buy = magenta outline; the full reason stays in the title
+const TAPE={p:["","POPULAR"],y:["y","YOUR PICK!"],y2:["y","YOUR CHOICE!"],k:["y","PINNED!"],c:["m","COMBO PIECE!"],s:["c","STAND-IN"],s2:["c","YOUR CHOICE!"],
+  f:["g","ROLE FILL"],buy:["mo","TO BUY!"],m:["mo","MISSING"],"":["","BASIC"]};
+function tapeFor(it){const [cls,lab]=TAPE[it.kind]||["",""];
+  const why=(it.kind==="s"||it.kind==="s2")&&it.f>=0?"using "+front(it.i):it.kind==="y2"?"instead of "+front(it.f):it.kind==="y"?W(it.f):"";
+  return `<span class="tape ${cls}" title="${esc(lab+(why?" · "+why:""))}">(${lab}${why&&it.kind!=="y"?" "+esc(why.toUpperCase()):""})</span>`
+    +(it.kind==="y"&&why?`<span class="tapew">${esc(why)}</span>`:"");}
+const kindOf=it=>it.kind||(it.n?"":"p");
 function grid(cmdrs,items,bub){
   const by={}; items.forEach(it=>{const s=(it.kind==="s"||it.kind==="s2")&&it.f>=0?it.f:it.i, g=CARDS[s][2]||"Other";(by[g]=by[g]||[]).push(it);});
   let h=`<div class="grp"><h5>Commander</h5><div class="grid">${cmdrs.map(i=>tile(i)).join("")}</div></div>`;
   Object.keys(GL).forEach(g=>{const L=by[g]; if(!L)return; const cnt=L.reduce((s,it)=>s+(it.n||1),0);
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>{
-      const t=tileFor(it), bb=bub?bub(it):""; return bb?`<div class="cw">${t}${bb}</div>`:t;}).join("")+`</div></div>`;});
+      if(!bub) return tileFor(it);
+      const k=kindOf(it);
+      return `<div class="cw k-${k}" data-wi="${it.w}">${tileFor(it,true)}${tapeFor(Object.assign({},it,{kind:k}))}${bub(it)}</div>`;}).join("")+`</div></div>`;});
   return h;}
 function gapsHTML(gaps,deckSet,slots){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
@@ -2408,11 +2529,11 @@ const pinsChanged=d=>pinKey(pinsOf(d))!==pinKey(d.pins||NOPIN);
 if(SERVED) fetch("/pins",{headers:{"X-Deck-Wizard":"1"}}).then(r=>r.ok?r.json():{}).then(j=>{PINS=j.pins||{};
   document.querySelectorAll("details.row[data-i]").forEach(r=>{if(r.dataset.f)rerow(r);});}).catch(()=>{});
 function pinHTML(d,x){const p=pinsOf(d);
-  const chip=(n,side)=>`<span class="tag">${side==="in"?"📌":"🚫"} ${esc(n)}${SERVED?`<button class="pinx" data-unpin="${esc(n)}" data-side="${side}" title="Remove this pin">✕</button>`:""}</span>`;
+  const chip=(n,side)=>`<span class="pchip ${side}">${side==="in"?"ALWAYS":"<s>NEVER</s>"} · ${esc(n)}${SERVED?`<button class="pinx" data-unpin="${esc(n)}" data-side="${side}" title="Remove this pin" aria-label="Remove pin">✕</button>`:""}</span>`;
   const miss=(x.pinx||[]).map(([i,w])=>`<li>📌 ${esc(front(i))} isn't in this deck: ${esc(W(w))}</li>`).join("");
-  return `<div class="pins"><span class="dim">Your pins:</span>${p.in.map(n=>chip(n,"in")).join("")}${p.out.map(n=>chip(n,"out")).join("")}${p.in.length||p.out.length?"":`<span class="dim">none</span>`}
-    ${SERVED?`<input class="pinq" placeholder="Card name" aria-label="Card name to pin"><button class="srcb" data-pinadd="in" title="Put this card in every deck of this commander (bracket rules permitting)">📌 Always include</button><button class="srcb" data-pinadd="out" title="Never use this card for this commander">🚫 Never use</button>`
-      :`<small class="dim">(add pins in Deck Wizard App.bat)</small>`}<span class="thinw pinerr"></span></div>${miss?`<ul class="thinw">${miss}</ul>`:""}`;}
+  return `<div class="pnl py pins"><h3 class="ptl">Pins</h3><div class="pchips">${p.in.map(n=>chip(n,"in")).join("")}${p.out.map(n=>chip(n,"out")).join("")}${p.in.length||p.out.length?"":`<span class="dim">none yet</span>`}</div>
+    ${SERVED?`<div class="padd"><input class="pinq" placeholder="card name_" aria-label="Card name to pin"><button class="pa" data-pinadd="in" title="Put this card in every deck of this commander (bracket rules permitting)">Always</button><button class="pn" data-pinadd="out" title="Never use this card for this commander">Never</button></div>`
+      :`<small class="dim">add pins in Deck Wizard App.bat</small>`}<span class="thinw pinerr"></span>${miss?`<ul class="thinw">${miss}</ul>`:""}</div>`;}
 function postPins(d,next,row){const err=row.querySelector(".pinerr"); if(err)err.textContent="Saving…";
   fetch("/pins",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"application/json"},body:JSON.stringify({c:d.name,in:next.in,out:next.out})})
   .then(async r=>{const j=await r.json().catch(()=>({error:"Bad reply"}));
@@ -2425,9 +2546,14 @@ function lvlHTML(L){
   return `<div class="srcs"><span class="dim">EDHREC weight:</span>${[1,2,3,4].map(v=>bt("wsel",v,L.w===v,WTIP[v],v)).join("")}
     <span class="dim" style="margin-left:10px">Spending:</span>${[1,2,3].map(v=>bt("ssel",v,L.s===v,STIP[v],"$".repeat(v))).join("")}</div>`;}
 /* ---------- synergy swaps and next in line (cards read by what they do with the rest of the deck) ---------- */
+// the aside's synergy panel: the first swaps (in = cyan, out = struck through in magenta), the rest folded
+function swapsHTML(x){const sw=x.sw||[]; if(!sw.length&&!(x.bench||[]).length) return "";
+  return `<div class="pnl pc"><h3 class="ptl">⇄ Synergy swaps (${sw.length})</h3>
+  ${sw.slice(0,3).map(([a,o,w])=>`<div class="swp"><b class="in">+ ${esc(front(a))}</b><span>out: <s>${esc(front(o))}</s></span><small>${esc(W(w)).toUpperCase()}</small></div>`).join("")}
+  ${synHTML(x)}</div>`;}
 function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length) return "";
   const nm=i=>`<a href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">${esc(front(i))}</a>`;
-  return `<details class="more"><summary>Synergy: ${sw.length} swap${sw.length===1?"":"s"} from your collection · ${bn.length} next in line</summary>
+  return `<details class="more"><summary>All ${sw.length} swap${sw.length===1?"":"s"} + ${bn.length} next in line</summary>
   <small class="dim">Cards are read by what they do with the cards already in this deck (Oracle and reminder text): outlets and payoffs, tribe, engines. ×N = linked cards (the commander counts 3).</small>
   ${sw.length?`<h4>Swapped in</h4><ul class="cl">${sw.map(([a,o,w])=>`<li>+ ${nm(a)} <small>for ${esc(front(o))} · ${esc(W(w))}</small></li>`).join("")}</ul>`:""}
   ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small>${SERVED?` <button class="pinb" data-pinquick="in" data-name="${esc(CARDS[a][0])}" title="Always include this card for this commander">📌 always include</button>`:""}</li>`).join("")}</ul>`:""}</details>`;}
@@ -2485,11 +2611,12 @@ const STORE=ST.store||{url:"https://shop.com/search/results?query={card}",name:"
 const BUY=i=>STORE.url.replace("{card}",encodeURIComponent(front(i)));
 const buyA=(i,lab)=>`<a class="shopl" href="${esc(BUY(i))}" target="_blank" rel="noopener" title="Search ${esc(STORE.name)} for ${esc(front(i))}">${lab||"🛒 "+esc(front(i))}</a>`;
 function shopHTML(d,b,items,t){
-  const buy=items.filter(it=>it.kind==="buy"); if(!buy.length&&!Object.keys(getCh(d,b,t)).length) return "";
-  const list=buy.map(it=>"1 "+front(it.i)).join("\n");
-  return `<div class="shop"><b>Shopping list (${buy.length})</b> ${buy.map(it=>buyA(it.i)).join(" · ")||"<span class='dim'>nothing yet</span>"}
-  ${buy.length?`<small class="dim">(each opens ${esc(STORE.name)})</small>`:""}
-  ${buy.length?`<button class="cps" data-text="${esc(list)}">Copy shopping list</button>`:""}<button class="reset-ch">Reset my choices</button></div>`;}
+  const buy=items.filter(it=>it.kind==="buy"), list=buy.map(it=>"1 "+front(it.i)).join("\n"), chosen=Object.keys(getCh(d,b,t)).length;
+  return `<div class="shop rcpt"><b class="rh">*** TO BUY ***</b><span class="rl"></span>
+  ${buy.length?buy.map(it=>`<span class="rr">${buyA(it.i,"1 "+esc(front(it.i)))}<span>🛒</span></span>`).join(""):`<span class="rr dim">nothing yet: "buy it" on a missing card adds it here</span>`}
+  <span class="rl"></span><span class="rr"><b>TOTAL CARDS</b><b>${buy.length}</b></span>
+  ${buy.length?`<small>each line opens ${esc(STORE.name)}</small>`:""}
+  <span class="rbtn">${buy.length?`<button class="cps" data-text="${esc(list)}">Copy</button>`:""}${chosen?`<button class="reset-ch">Reset my choices</button>`:""}</span></div>`;}
 function deckSection(title,cmdrs,items,text,link,bub){
   return `<div class="vbar">${title?`<h3>${title}</h3>`:""}<button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
   <span class="legend"><i class="lg y"></i>your pick / 📌 pinned <i class="lg c"></i>combo <i class="lg f"></i>role fill <i class="lg m"></i>missing (using your card) · hover a card for options</span></div>
@@ -2536,20 +2663,43 @@ function combosSection(d,b,x){
 
 /* ---------- the three numbers ---------- */
 const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill",win:"Win conditions (finishers, drain, alt wins)"};
+// the first failing readiness check, said plainly (it only repeats the check's own numbers)
+const READYCAP={ramp:"RAMP",draw:"CARD DRAW",removal:"REMOVAL",wipe:"BOARD WIPE",win:"WIN CONDITION"};
+function readyCap([k,v,t]){
+  if(READYCAP[k]){const d=t-v; return `(NEEDS ${d} MORE ${READYCAP[k]}${d===1?"":"S"}!)`;}
+  return k==="mv"?`(CURVE ABOVE ${t}!)`:k==="src"?`(FEW ${esc(String(v).split(" ")[0])} SOURCES!)`:k==="odd"?"(TOO MANY STAND-INS!)":"";}
 function numsHTML(x,b){
-  const rd=x.rd||[], ok=rd.filter(c=>c[3]).length;
-  const fail=rd.filter(c=>!c[3]).map(([k,v,t])=>`<li>${RDL[k]}: ${esc(v)} <small>(${k==="mv"||k==="odd"?"max":"want"} ${t})</small></li>`).join("");
+  const rd=x.rd||[], ok=rd.filter(c=>c[3]).length, bad=rd.filter(c=>!c[3]);
+  const fail=bad.map(([k,v,t])=>`<li>${RDL[k]}: ${esc(v)} <small>(${k==="mv"||k==="odd"?"max":"want"} ${t})</small></li>`).join("");
   const bf=x.bf||{est:2,why:[]}, sel={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b];
-  const lbl=bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3";
-  const fit=!sel?"":bf.est<=Math.max(sel,2)||sel===5?` <span class="ok">✓ fits ${LBL[b].split(" ")[0]}</span>`:` <span class="bad">above ${LBL[b].split(" ")[0]}</span>`;
-  return `<div class="nums">
-  <div class="num"><span class="t">Collection Match</span><b>${x.pct}%</b>${x.avg?`You own ${x.own_n} of the ${x.tmpl_n} non-basic cards in EDHREC's average ${x.theme?esc(x.theme)+" ":b==="all"?"":LBL[b]+" "}deck (${n(x.decks)} decks).`
-    :`You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${x.theme?esc(x.theme)+" decks (all brackets)":LBL[b]+" decks"}.`}</div>
-  <div class="num"><span class="t">Build Readiness</span><b>${ok}/${rd.length} checks</b>${fail?`<ul>${fail}</ul>`:"Roles, curve, mana and real cards all look fine."}</div>
-  <div class="num"><span class="t">Bracket Fit</span><b>${lbl}${fit}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:"No Game Changers, mass land denial, chained extra turns or two-card combos found."}<br><small>${x.tut||0} tutors (B1–2 expect few)</small></div></div>`;}
+  const lbl=bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3", BS=LBL[b].split(" ")[0], fits=!sel||bf.est<=Math.max(sel,2)||sel===5;
+  return `<div class="tiles">
+  <div class="tile num p5-card"><span class="p5-burst mburst" aria-hidden="true"></span><span class="t">Collection Match</span><b class="tbig">${x.pct}%</b>${bat(x.pct,10,"big")}<span class="tt">${x.avg?`You own ${x.own_n} of the ${x.tmpl_n} non-basic cards in EDHREC's average ${x.theme?esc(x.theme)+" ":b==="all"?"":LBL[b]+" "}deck (${n(x.decks)} decks).`
+    :`You own ${x.own_n} of the top ${x.tmpl_n} cards in ${n(x.decks)} ${x.theme?esc(x.theme)+" decks (all brackets)":LBL[b]+" decks"}.`}</span></div>
+  <div class="tile num inv p5-card"><span class="t">Build Readiness</span><b class="tbig">${ok}/${rd.length}</b>${fail?`<ul>${fail}</ul>`:`<span class="tt">Roles, curve, mana and real cards all look fine.</span>`}${bad.length?`<span class="cap y">${readyCap(bad[0])}</span>`:""}</div>
+  <div class="tile num p5-card"><span class="t">Bracket Fit</span><b class="tbig">${lbl}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:`<span class="tt">No Game Changers, mass land denial, chained extra turns or two-card combos found.</span>`}<small>${x.tut||0} tutors (B1–2 expect few)</small>${sel?`<span class="stk ${fits?"":"m"}">(${fits?"FITS":"ABOVE"} ${BS}!)</span>`:""}</div></div>`;}
 
 /* ---------- commander rows ---------- */
 const THIN=50;   /* fewer EDHREC decks than this behind a deck or archetype: warn */
+// gaps: each substitute slot as a row of option cards (Buy it / Advised / Or…), the same saved choices as the bubbles
+function slotRowsHTML(d,b,x,t){
+  const ch=getCh(d,b,t), eff=effDeck(d,b,x,t), slots=x.deck.filter(e=>e[1]==="s"&&e[2]>=0);
+  if(!slots.length) return `<p class="dim">No stand-ins in this deck: every card it plays is yours.</p>`;
+  return slots.map(e=>{const [adv,,f,why,alts]=e, c=ch[f], g=(x.gaps||[]).find(g=>g[0]===f);
+    const taken=new Set(eff.filter(it=>String(it.slot)!==String(f)).map(it=>it.i));
+    const opts=[[-1,"Buy it",f,"keep the original · goes on your shopping list"],["adv","Advised",adv,W(why)||"closest match"]]
+      .concat((alts||[]).map(([a,w])=>[a,"Or",a,W(w)]));
+    return `<div class="gslot"><div class="gmiss"><span class="gname">${esc(front(f))}</span><span class="nib">(NOT IN YOUR BINDER!)</span>
+      <span class="gmeta">${g&&g[1]?g[1]+"% of decks · ":""}${esc(g?W(g[4])||"synergy piece":"")}</span>${buyA(f,"🛒 "+esc(STORE.name))}</div>
+      <span class="garr" aria-hidden="true">-&gt;</span>
+      <div class="gopts" role="radiogroup" aria-label="Slot for ${esc(front(f))}">${opts.map(([pick,kind,card,w])=>{
+        const on=pick==="adv"?c===undefined:pick===-1?c===-1:c===pick, dis=pick!==-1&&pick!=="adv"&&taken.has(card);
+        return `<button type="button" role="radio" aria-checked="${on}" class="gopt${on?" on":""}" data-pick="${pick}" data-slot="${f}"${dis?" disabled title='already in this deck'":""}><span class="gk">${kind}</span><b>${esc(front(card))}</b><span>${esc(w)}</span>${on?`<span class="stk">(CHOSEN!)</span>`:""}</button>`;}).join("")}</div></div>`;}).join("");}
+/* ---------- commander panel: header + settings sheet, three tiles, slim sticky bar, the 99 + aside, gaps, stats ---------- */
+const SH={all:"ALL",exhibition:"B1",core:"B2",upgraded:"B3",optimized:"B4",cedh:"B5"};
+function imgModeHTML(){const m=document.documentElement.dataset.img||"full";
+  return `<div class="imgmode" role="group" aria-label="Card image style"><button type="button" data-imgm="full" aria-pressed="${m==="full"}">Full colour</button><button type="button" data-imgm="copy" aria-pressed="${m==="copy"}">Photocopy</button></div>`;}
+const WHY={};   // per commander row: what its "Why this card?" panel needs (filled by body(), read by the events)
 function body(d,b,r){
   const st=rowState(d,b,r), asel=st.a, tsel=st.t, L=lvlOf(r), lv=L.w!==3||L.s!==2||pinsChanged(d);
   // another EDHREC weight / spending level: the app builds it (saved choices are kept per level)
@@ -2557,57 +2707,133 @@ function body(d,b,r){
   const lx=lv?LIVE[liveKey(d,b,st,L)]:null;
   if(lv&&SERVED&&!lx) fetchLive(d,b,st,L);
   const x=lx&&lx.x?lx.x:deckOf(d,b,st), pre=b==="all"?"":"/"+b;
-  // level 1: archetype (overview + the archetypes you own most of)
+  // archetype (overview + EDHREC's top themes)
   const ths=Object.entries(d.th||{}), tot=d.b.all.decks||1, tcount=Object.fromEntries(d.tags.map(t=>[t[1],t[2]]));
-  const arch=`<div class="srcs"><span class="dim">Archetype:</span><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
-    +ths.map(([k,t])=>{const thin=t.decks<THIN;return `<button class="srcb thm ${k===tsel?"on":""}${thin?" thin":""}" data-tsel="${k}" title="EDHREC: ${n(tcount[k]||0)} of ${n(tot)} decks are ${esc(t.name)} · you own ${t.own}% of the cards those decks play${thin?` · ⚠ thin data: only ${n(t.decks)} decks (under ${THIN})`:""}">${thin?"⚠ ":""}${esc(t.name)} · ${Math.round(100*(tcount[k]||0)/tot)}% of decks · you own ${t.own}%</button>`;}).join("")
+  const arch=`<div class="srcs" role="group" aria-label="Archetype"><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
+    +ths.map(([k,t])=>{const thin=t.decks<THIN;return `<button class="srcb thm ${k===tsel?"on":""}${thin?" thin":""}" data-tsel="${k}" title="EDHREC: ${n(tcount[k]||0)} of ${n(tot)} decks are ${esc(t.name)} · you own ${t.own}% of the cards those decks play${thin?` · ⚠ thin data: only ${n(t.decks)} decks (under ${THIN})`:""}">${thin?"⚠ ":""}<b>${esc(t.name)}</b> <span>${Math.round(100*(tcount[k]||0)/tot)}% of decks · own ${t.own}%</span></button>`;}).join("")
     +(ths.length?"":`<span class="dim">no archetype pages</span>`)+`</div>`;
   const other=d.tags.filter(t=>!(d.th&&d.th[t[1]])).slice(0,5);
-  const more=other.length?`<div class="tags"><span class="dim">More EDHREC themes:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
-  // level 2: source within the archetype
+  const more=other.length?`<div class="tags"><span class="dim">More on EDHREC:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
+  // source within the archetype
   const avOK=tsel?hasTAvg(d,b,tsel):hasAvg(d,b), cmdX=tsel?themed(d,b,tsel):d.b[b], avX=avOK?(tsel?tavgd(d,b,tsel):avgd(d,b)):null;
-  const srcs=`<div class="srcs"><span class="dim">Deck from:</span><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
+  const srcs=`<div class="srcs"><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
   const srcN=asel||!tsel?x.decks:x.tdecks;
   const what=(tsel?`<b>${esc(x.theme)}</b> `:"")+(asel?"average deck":"commander page");
   const link=asel?`https://edhrec.com/average-decks/${d.slug}${tsel?"/"+tsel:pre}${suf}`:`https://edhrec.com/commanders/${d.slug}${tsel?"/"+tsel:pre}${suf}`;
-  const tnote=`<p class="tnote">${asel?`EDHREC's ${tsel?esc(x.theme)+" ":""}average deck (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in`
+  const tnote=`<p class="tnote">&gt; ${asel?`EDHREC's ${tsel?esc(x.theme)+" ":""}average deck (${n(x.decks)} decks), rebuilt with your cards: cards you own stay, missing ones get your closest stand-in`
       :`Built from EDHREC's ${n(tsel?x.tdecks:x.decks)} ${tsel?esc(x.theme)+" decks":LBL[b]+" decks"} and your cards`}${tsel?`, leaning into cards ${esc(x.theme.toLowerCase())} decks need`:""} · ${b==="all"?"no bracket rules":LBL[b]+" rules"}${lv?` · EDHREC weight ${L.w} · ${"$".repeat(L.s)}${L.s===1?" (budget decks)":L.s===3?" (expensive decks)":""}`:""}.
     <a href="${link}" target="_blank" rel="noopener">EDHREC ${what} ↗</a></p>`
     +(srcN<THIN?`<p class="thinw">⚠ Thin data: this deck comes from only ${n(srcN)} EDHREC decks (under ${THIN}). Treat it as a rough guide, not a proven list.</p>`:"");
   const bks=BR.filter(k=>d.b[k]).map(k=>{const sk=rowState(d,k,r), xk=sk.t===tsel&&sk.a===asel?deckOf(d,k,sk):null;
-    return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}${xk?`: ${xk.pct}% <small>(${n(xk.decks)})</small>`:""}</button>`;}).join("");
-  if(lv&&!(lx&&lx.x)) return `<div class="top"><div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${pinHTML(d,{})}
+    return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck"><b>${SH[k]}</b>${xk?`<span>${xk.pct}% · ${n(xk.decks)}</span>`:""}</button>`;}).join("");
+  const sheet=`<div class="sheet"><div class="srow"><span class="slab">Bracket</span><div class="bks" role="group" aria-label="Bracket">${bks}</div></div>
+    <div class="srow"><span class="slab">Archetype</span><div class="scell">${arch}${more}</div></div>
+    <div class="srow"><span class="slab">Deck from</span><div class="scell">${srcs}${lvlHTML(L)}</div></div></div>`;
+  const pipsH=`<span class="pips">${pips(d.ci)}</span>`;
+  const head=`<div class="hero"><div class="hcol"><div class="cslash p5-in" aria-hidden="true"></div><div class="himg">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}</div>${imgModeHTML()}</div>
+    <div class="hmain"><div class="ttl pname"><div class="p5-slash" aria-hidden="true"></div><h2 class="p5-h1c" aria-label="${esc(d.name)}"><span aria-hidden="true">${ransom(d.name.split(" // ")[0],d.i%6)}</span></h2></div>
+    <div class="hmeta">${pipsH}<span>· ${d.tags.slice(0,3).map(t=>esc(t[0].toLowerCase())).join(" · ")||"no EDHREC themes yet"} · ${n(x.decks)} ${b==="all"?"":SH[b]+" "}decks · ${d.combos?d.combos.n_own:0} combos owned</span></div>`;
+  if(lv&&!(lx&&lx.x)) return `${head}${sheet}${pinHTML(d,{})}
     <p class="${lx&&lx.err?"thinw":"tnote"}">${lx&&lx.err?"⚠ "+esc(lx.err)+" Pick a level to try again."
       :`Building the deck at EDHREC weight ${L.w} · ${"$".repeat(L.s)}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
-  const tags=d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("");
   const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
     .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
   const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
-  const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c})));
+  const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c}))); items.forEach((it,j)=>it.w=j);
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
-  const rdy=x.rd||[], okN=rdy.filter(c=>c[3]).length, bfx=x.bf||{est:2}, seln={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b];
-  const fitx=!seln||bfx.est<=Math.max(seln,2)||seln===5, nbuy=eff.filter(it=>it.kind==="buy").length;
-  const ptick=tickHTML([`Match ${x.pct}%`,`Ready ${okN}/${rdy.length}`,`Bracket ${bfx.est<=2?"B1–2":bfx.est>=4?"B4+":"B3"}`+(seln?` · ${fitx?"fits":"above"} ${LBL[b].split(" ")[0]}`:""),
-    `${d.combos?d.combos.n_own:0} combos owned`,`${(x.sw||[]).length} synergy swaps`,`${nbuy} to buy`]);
-  return `<div class="ttl pname"><div class="p5-slash" aria-hidden="true"></div><h2 class="p5-h1c" aria-label="${esc(d.name)}"><span aria-hidden="true">${ransom(d.name.split(" // ")[0],d.i%6)}</span></h2></div>
+  const rd=x.rd||[], ok=rd.filter(c=>c[3]).length, bf=x.bf||{est:2}, seln={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b];
+  const fits=!seln||bf.est<=Math.max(seln,2)||seln===5, toBuy=eff.filter(it=>it.kind==="buy").length;
+  const around=(x.core||[]).length?`<div class="around"><span class="lab">Built around</span>${x.core.map(([k,v],i)=>`<span class="ar${i?"":" top"}" title="cards in the 99 that share it with the commander">${esc(k)} ${v}</span>`).join("")}</div>`:"";
+  const mix=`<p class="mixl">${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks${x.pin?` + ${x.pin} pinned`:""}</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} stand-ins</span> + <span class="kf">${x.fill} role fill</span> · avg MV ${x.cmc} · ${x.gc} Game Changer${x.gc===1?"":"s"}${x.gc?` (${x.gcn.map(esc).join(", ")})`:""} · combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}</p>`;
+  const ptick=tickHTML([`Match ${x.pct}%`,`Ready ${ok}/${rd.length}`,`Bracket ${bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3"}`+(seln?` · ${fits?"fits":"above"} ${SH[b]}`:""),
+    `${d.combos?d.combos.n_own:0} combos owned`,`${(x.sw||[]).length} synergy swaps`,`${toBuy} to buy`]);
+  const slim=`<div class="slim"><span class="ondeck">ON DECK</span>${d.img?`<img class="mimg" src="${esc(d.img)}" alt="" loading="lazy">`:""}<b class="sname">${esc(d.name.split(" // ")[0])}</b>${pipsH}
+    <span class="sbat">${bat(x.pct,10,"sm")}<b>${x.pct}%</b></span>
+    <span class="wide sfit"><b>${ok}/${rd.length}</b> ready · <b>${bf.est<=2?"B1–2":bf.est>=4?"B4+":"B3"}</b>${seln?` <span class="cap ${fits?"c":"m"}">${fits?"fits":"above"} ${SH[b]}</span>`:""}</span>
+    <span class="sp"></span>
+    <div class="wide mbks" role="group" aria-label="Bracket">${BR.filter(k=>d.b[k]).map(k=>`<button class="mbk ${k===b?"on":""}" data-bsel="${k}" title="${LBL[k]}">${SH[k]}</button>`).join("")}</div>
+    <label class="wide slab2">archetype <select class="tsel">${[["","Overview"]].concat(ths.map(([k,t])=>[k,t.name])).map(([k,nm])=>`<option value="${k}"${k===tsel?" selected":""}>${esc(nm)}</option>`).join("")}</select></label>
+    <span class="wide tobuy">TO BUY · ${toBuy}</span></div>`;
+  // "Why this card?": the panel starts on the first of your picks (else the first card); hover previews, click pins
+  const first=items.find(it=>it.kind==="y")||items[0];
+  WHY[d.i]={items,x,b,st,L,pin:null,cur:first?first.w:null};
+  return `${head}${around}${mix}${sheet}${tnote}</div></div>
   <div class="tickw" aria-hidden="true"><div class="p5-ticker"><div class="p5-track">${ptick}</div></div></div>
-  <div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
-  <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${pinHTML(d,x)}${tnote}${more}
   ${numsHTML(x,b)}
-  ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
-  ${synHTML(x)}
-  <p>Deck: ${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks${x.pin?` + ${x.pin} pinned`:""}</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
-  <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p></div></div>
-  ${shopHTML(d,b,items,sel)}
-  <h3 class="p5-slab"><span>The 99</span></h3>
+  ${slim}
+  <div class="d99"><div class="dmain"><h3 class="p5-slab"><span>The 99</span></h3>
   ${deckSection("",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`,it=>bubbleHTML(d,b,x,it,sel))}
-  <h3 class="p5-slab"><span>Gaps &amp; stand-ins</span></h3>
+  <p class="dim whyhint">click any card for "why this card" · Esc or click it again to let go</p></div>
+  <aside class="daside"><div class="pnl why" aria-live="polite">${first?whyHTML(d.i,first.w):""}</div>${shopHTML(d,b,items,sel)}${swapsHTML(x)}${pinHTML(d,x)}</aside></div>
+  <div class="cmyk" aria-hidden="true"></div>
+  <section class="gsec"><div class="gh"><h3 class="p5-slab"><span>Gaps &amp; stand-ins</span></h3><p class="dim">&gt; ${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing; each stand-in slot below_</p></div>
+  ${slotRowsHTML(d,b,x,sel)}
   <details class="more"><summary>Other ${x.avg?"average-deck":"popular"} cards you're missing: ${x.n_miss} (top ${x.gaps.length} with your alternatives)</summary>
-  ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}</details>
-  <h3 class="p5-slab"><span>Deck stats &amp; combos</span></h3>
+  ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}</details></section>
+  <div class="cmyk" aria-hidden="true"></div>
+  <section class="ssec"><h3 class="p5-slab"><span>Deck stats &amp; combos</span></h3>
   ${shapeHTML(items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div>
-  ${combosSection(d,b,x)}`;}
+  ${combosSection(d,b,x)}</section>`;}
+/* ---------- "Why this card?": the real parts of a card's place in this deck (no score). The static report shows what
+   it holds (kind, reason, roles, combos, swaps); the app adds EDHREC numbers and deck links from GET /why. ---------- */
+const ROLEN=["ramp","draw","removal","wipe","tutor","counter","recursion","sac outlet","win condition"];
+const rolesOf=i=>{const m=(CARDS[i]||[])[6]||0; return ROLEN.filter((_,k)=>m&(1<<k));};
+const WHYC={}; let WHYT=null;     // app answers per (deck, card), and the 150 ms rest timer
+const whyKey=(d,W_,card)=>[d.slug,W_.b,W_.st.t,W_.st.a?1:0,W_.L.w,W_.L.s,card].join("|");
+let COMBO_ID=null;
+function whyHTML(di,wi){
+  const d=DATA[di], W_=WHY[di], it=W_&&W_.items[wi]; if(!it) return "";
+  const x=W_.x, k=kindOf(it), card=(it.kind==="s"||it.kind==="s2")&&it.f>=0?it.i:it.i, c=CARDS[card];
+  const [tcls,tlab]=TAPE[k]||["",""], pinned=W_.pin===wi, parts=[];
+  // why it's here, from the deck entry itself
+  const e=x.deck.find(r=>r[0]===it.i||(r[1]==="s"&&r[2]===it.f));
+  if(it.kind==="s"||it.kind==="s2") parts.push(["Stands in for",`${front(it.f)}${it.kind==="s"&&e&&W(e[3])?" · "+W(e[3]):""}${it.kind==="s2"?" (your choice)":""}`]);
+  else if(it.kind==="y") parts.push(["Why it's here",W(it.f)||"your pick: it fits this commander"]);
+  else if(it.kind==="y2") parts.push(["Why it's here",`your choice, instead of ${front(it.f)}`]);
+  else if(it.kind==="k") parts.push(["Why it's here","pinned by you (always include)"]);
+  else if(it.kind==="c") parts.push(["Why it's here","a piece of a combo you own"]);
+  else if(it.kind==="f") parts.push(["Why it's here","role fill: the deck needed this job done"]);
+  else if(it.kind==="buy") parts.push(["Why it's here",`you chose to buy it for this slot`]);
+  else if(it.n) parts.push(["Why it's here","basic land"]);
+  else parts.push(["Why it's here","popular: EDHREC decks for this commander play it"]);
+  const sw=(x.sw||[]).find(s=>s[0]===card); if(sw) parts.push(["Synergy swap",`replaced ${front(sw[1])} · ${W(sw[2])}`]);
+  const ro=rolesOf(card); parts.push(["Roles",ro.length?ro.join(" · "):"none of the tracked jobs"]);
+  if(!COMBO_ID){COMBO_ID={}; COMBOS.forEach(r=>COMBO_ID[r.id]=r);}
+  const cmb=(x.cin||[]).map(id=>COMBO_ID[id]).filter(r=>r&&r.cards.some(nm=>nm.split(" // ")[0]===front(card)));
+  if(cmb.length) parts.push(["Combos in this deck",cmb.slice(0,3).map(r=>r.cards.map(nm=>nm.split(" // ")[0]).join(" + ")).join(" · ")]);
+  // the app adds EDHREC's numbers and this deck's links
+  const a=SERVED?WHYC[whyKey(d,W_,c[0])]:null;
+  if(a&&a.ok){const r=a.ok;
+    parts.push(["EDHREC",r.listed?`played in ${r.rate}% of these ${n(r.decks)} decks${r.syn!=null?` · synergy ${r.syn>0?"+":""}${r.syn}%`:""}`:`not in EDHREC's list for this page (under ~5% of ${n(r.decks)} decks)`]);
+    if(r.fit||(r.cmdr||[]).length) parts.push(["Shares with the commander",[r.fit,(r.cmdr||[]).length?"engine: "+r.cmdr.join(", "):""].filter(Boolean).join(" · ")]);
+    if((r.links||[]).length) parts.push(["Links in this deck",r.links.map(([nn,lab])=>`${lab} ×${nn}`).join(" · ")]);}
+  else if(SERVED&&a&&a.err) parts.push(["EDHREC","⚠ "+a.err]);
+  else if(SERVED) parts.push(["EDHREC","…"]);
+  else parts.push(["EDHREC","open the app (Deck Wizard App.bat) for play rate, synergy and deck links"]);
+  const nm=esc(c[0]), own=k!=="buy"&&k!=="m"&&!it.n;
+  return `<h3 class="wtl">Why this card?</h3><div class="whead"><img class="c wthumb" src="${IMG(card)}" alt="" loading="lazy"><div class="wtxt">
+    <b class="wname">${esc(front(card))}</b><span class="tape ${tcls}">(${tlab})</span>
+    <span class="wline">${esc(c[2])} · MV ${c[4]||0}${c[3]?" · Game Changer":""}</span>
+    <span class="wmode${pinned?" on":""}">${pinned?"📍 PINNED · Esc or click again to let go":"PREVIEW · click the card to pin"}</span></div></div>
+    <dl class="wparts">${parts.map(([kk,v])=>`<div><dt>${esc(kk)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
+    <div class="wbtn">${SERVED&&own?`<button class="pinb pa" data-pinquick="in" data-name="${nm}">📌 Always include</button><button class="pinb pn" data-pinquick="out" data-name="${nm}">🚫 Never use</button>`:""}
+    <a class="wsf" href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(card)+'"')}" target="_blank" rel="noopener">Scryfall ↗</a></div>`;}
+function whyShow(row,wi){const di=+row.dataset.i, W_=WHY[di]; if(!W_||wi==null)return; W_.cur=wi;
+  const box=row.querySelector(".why"); if(box) box.innerHTML=whyHTML(di,wi);
+  row.querySelectorAll(".d99 .cw .ct[aria-pressed]").forEach(a=>a.setAttribute("aria-pressed",String(W_.pin!=null&&+a.closest(".cw").dataset.wi===W_.pin)));
+  row.querySelectorAll(".d99 .cw.wpin").forEach(c=>c.classList.remove("wpin"));
+  if(W_.pin!=null){const c=row.querySelector(`.d99 .cw[data-wi="${W_.pin}"]`); if(c)c.classList.add("wpin");}
+  if(!SERVED) return;
+  const it=W_.items[wi], card=CARDS[it.i][0], key=whyKey(DATA[di],W_,card);
+  if(WHYC[key]) return;
+  clearTimeout(WHYT);             // ask the app only once the mouse has rested on the card for ~150 ms
+  WHYT=setTimeout(()=>{WHYC[key]={busy:1};
+    const qs=new URLSearchParams({c:DATA[di].name,b:W_.b,t:W_.st.t,a:W_.st.a?"1":"0",w:W_.L.w,s:W_.L.s,card});
+    fetch("/why?"+qs,{headers:{"X-Deck-Wizard":"1"}}).then(async res=>{const j=await res.json().catch(()=>({error:"bad reply"}));
+      WHYC[key]=res.ok&&j&&j.card?{ok:j}:{err:(j&&j.error)||("HTTP "+res.status)};})
+    .catch(()=>{WHYC[key]={err:"the app isn't answering"};})
+    .finally(()=>{if(WHY[di]&&WHY[di].cur===wi){const b2=row.querySelector(".why"); if(b2)b2.innerHTML=whyHTML(di,wi);}});},150);}
 
 function render(){
   const b=bk(); $("bv").textContent=LBL[b];
@@ -2680,10 +2906,12 @@ let P5ON=[];   // cards of the panel being watched; switching panels shows any t
 function p5show(c){if(!c.classList.contains("p5-wait"))return; c.classList.remove("p5-wait"); c.classList.add("p5-shown"); P5IO.unobserve(c);}
 // backup for engines whose observer misses a card (seen in headless Chromium after switching panels): a waiting card
 // that is on screen is shown on the next scroll, at most once per frame, so a card can never stay invisible
-let P5RAF=0;
-addEventListener("scroll",()=>{if(!P5ON.length||P5RAF)return; P5RAF=requestAnimationFrame(()=>{P5RAF=0;
+// (checked on the scroll event itself, at most every 60 ms plus one trailing check, so it doesn't depend on frames)
+let P5T=0, P5TT=null;
+function p5scan(){P5T=Date.now();
   P5ON=P5ON.filter(c=>{if(!c.classList.contains("p5-wait"))return false; const b=c.getBoundingClientRect();
-    if(b.top<innerHeight*0.92&&b.bottom>0){p5show(c);return false;} return true;});});},{passive:true});
+    if(b.top<innerHeight*0.92&&b.bottom>0){p5show(c);return false;} return true;});}
+addEventListener("scroll",()=>{if(!P5ON.length)return; if(Date.now()-P5T>60)p5scan(); clearTimeout(P5TT); P5TT=setTimeout(p5scan,80);},{passive:true});
 function p5watch(r){if(!P5IO)return;
   P5ON.forEach(c=>{P5IO.unobserve(c); c.classList.remove("p5-wait");}); P5ON=[];
   r.querySelectorAll(".body .grid .ct").forEach(c=>{c.classList.add("p5-wait"); P5IO.observe(c); P5ON.push(c);});}
@@ -2747,6 +2975,8 @@ if(matchMedia("(hover:hover)").matches){
     const ct=e.target.closest&&!e.target.closest(".bub")&&e.target.closest(".ct"), r=ct&&ct.getBoundingClientRect();
     let x=r?r.right+12:e.clientX+24, y=r?r.top:e.clientY-h/2;          // beside the card, so the bubble below stays visible
     if(x+w>innerWidth-8)x=(r?r.left:e.clientX)-w-12;
+    const wy=ct&&ct.closest(".d99")&&ct.closest(".d99").querySelector(".why");   // keep the "Why this card?" panel visible
+    if(wy){const q=wy.getBoundingClientRect(); if(x<q.right&&x+w>q.left&&y<q.bottom&&y+h>q.top) x=(r?r.left:e.clientX)-w-12;}
     pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";}}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".flip"))e.preventDefault();},true);
 ["br","q","th","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
@@ -2984,9 +3214,57 @@ class LiveDecks:
             x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew, pins=pn,
                         spend=s)
         if t: x["theme"], x["tdecks"] = tname, x["decks"]
+        # for /why: the page the deck was built from (the theme page for an archetype; the commander page otherwise,
+        # also for average decks, whose own page rates every card 1.0) and the cards it ended up with
+        self.last = {"m": m, "page": tp if t else pg, "base": tp if t else base, "prof": prof, "own": own, "b": b,
+                     "names": {norm(T.rows[e[0]][0]) for e in x["deck"]} | {norm(m["name"])}, "name_meta": name_meta}
         finish_deck(x, b, own, legal, c["CT"])
         x.pop("arena", None)
         return x
+
+    def why(self, q):
+        """GET /why: the real parts behind one card in one built deck (no score): EDHREC play rate and synergy on the
+        page the deck came from, what it shares with the commander (cmdr_fit / commander_link), its links in this deck
+        (DeckSynergy), its roles and its combos. Built decks are kept per (commander, bracket, theme, avg, level),
+        so hovering across a deck costs one build. Returns (HTTP code, reply)."""
+        with self.lock:
+            tab_path = os.path.join(self.a.out, TABLES_FILE)
+            if not os.path.exists(tab_path): return 404, {"error": "No report yet."}
+            try:
+                if not self.ctx or self.ctx["mt"] != os.path.getmtime(tab_path): self._load(tab_path)
+                key = tuple(q.get(k, "") for k in ("c", "b", "t", "a", "w", "s"))
+                cache = self.ctx.setdefault("why", {})
+                if key not in cache:
+                    self._build(q.get("c", ""), q.get("b", "all"), q.get("t", ""), q.get("a") == "1",
+                                int(q.get("w") or 3), int(q.get("s") or 2))
+                    L = self.last
+                    deck = [self.ctx["owned"][k] for k in L["names"] if k in self.ctx["owned"] and k != norm(L["m"]["name"])]
+                    L["syn"] = DeckSynergy(L["m"], [m for m in deck if card_kind(m) != "land"], L["prof"][0])
+                    if len(cache) >= 24: cache.pop(next(iter(cache)))
+                    cache[key] = L
+            except LookupError as e:
+                return 404, {"error": str(e)}
+            except ValueError as e:
+                return 400, {"error": str(e) or "Bad request."}
+            L, owned = cache[key], self.ctx["owned"]
+            k = norm(q.get("card", ""))
+            m = owned.get(k) or L["name_meta"].get(k)
+            if not m: return 404, {"error": "Unknown card."}
+            page, base, cmdr = L["page"], L["base"], L["m"]
+            rate_of, play_of, _ = card_values(page, base, owned, L["name_meta"])
+            v = page["cards"].get(k) or base["cards"].get(k)
+            syn = v[2] if v and len(v) > 2 and v[2] is not None else None
+            nonland = card_kind(m) != "land"
+            inside = k in L["names"]
+            links = sorted(L["syn"].links(m, inside), reverse=True)[:6] if nonland else []
+            return 200, {"card": m["name"], "decks": page["decks"], "listed": k in page["cards"],
+                         "rate": round(100 * rate_of(k), 1), "blend": round(100 * play_of(k), 1),
+                         "syn": None if syn is None else round(100 * syn, 1),
+                         "fit": cmdr_fit(cmdr, m, L["prof"], L["b"])[1] if k in owned and nonland else "",
+                         "cmdr": commander_link(cmdr, m) if nonland else [], "roles": sorted(roles_of(m) - {"land"}),
+                         "links": [[n, lab] for n, lab in links], "in_deck": inside,
+                         "combos": [[c["cards"], bool(combo_done(c, L["names"]))] for c in L["own"]
+                                    if any(norm(x) == k for x in c["cards"])][:6]}
 
 def serve(a, csv_path, child_args):
     """Local-only web app: serves report.html, accepts collection uploads and builds decks at other
@@ -3020,6 +3298,16 @@ def serve(a, csv_path, child_args):
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
                 code, out = live.pins()
                 self.reply(code, out)
+            elif path == "/why":
+                if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
+                if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
+                q = {k: v[0] for k, v in urllib.parse.parse_qs(self.path.partition("?")[2]).items()}
+                try:
+                    code, out = live.why(q)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    code, out = 500, {"error": f"Why failed: {e}"}
+                self.reply(code, json.dumps(out))
             elif path == "/deck":
                 # same custom-header rule as uploads: other websites can't make this PC build decks
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})

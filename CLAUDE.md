@@ -311,6 +311,23 @@ title + the open panel's name only), tickers (`#tick`, panel ticker in `body()`)
 hover + `p5-in` stagger (first 24) + #1–#3 tags, deck cards slide in via one shared IntersectionObserver
 (`p5watch`, open panel only, `p5-wait`/`p5-shown`; Firefox-safe, no `animation-timeline`). No upload button in the
 header: `window.dwUpload(file)` keeps the upload + `/status` polling for the Collection page (Phase 3b).
+**Commander panel (Zine × P5 Phase 3, P5Commander):** `body()` = hero (red slash `.cslash` behind the card image,
+Full colour / Photocopy `data-imgm` + `dw:img`, ransom name, meta line, Built around, mix line, settings sheet:
+Bracket / Archetype / Deck from + weight + $) → panel ticker → three tiles (`numsHTML`: Match with `bat(...,"big")` and a
+spinning `p5-burst`, Readiness inverted with `readyCap()`, Bracket Fit with a red skewed `.stk`) → slim sticky bar
+(`.slim`: ON DECK, mini battery, ready/fit, mini bracket switch `.mbk[data-bsel]`, archetype `select.tsel`, TO BUY) →
+The 99 (`p5-slab`; tape labels `TAPE`/`tapeFor`, coloured offset shadows per kind) + aside (Why this card?, receipt
+`shopHTML`, cyan `swapsHTML`, yellow `pinHTML`) → Gaps & stand-ins (`slotRowsHTML`: Buy it / Advised / Or… option cards,
+same saved choices; chosen = red + (CHOSEN!)) → Deck stats & combos (charts, power profile, combos; Phase 4 restyles).
+**"Why this card?"** (`WHY[d.i]`, `whyHTML`, `whyShow`): hover/focus previews, click pins (`.wpin` red outline, 📍
+PINNED), click again or Esc lets go; `aria-live`; 📌/🚫 buttons use the pins (`data-pinquick`). Static parts: kind, reason,
+stand-in, swap, roles (CardTable row field 6 = `roles_of()` bitmask in `ROLE_NAMES` order), combos in the deck (`x.cin` ×
+`COMBOS`). App: `GET /why?c=&b=&t=&a=&w=&s=&card=` (`LiveDecks.why`, header rule; builds the deck once per key, cached
+24) adds EDHREC play rate + synergy on the source page, `cmdr_fit` / `commander_link`, `DeckSynergy.links`; asked after
+150 ms of rest, answers cached per deck+card (`WHYC`). Card clicks in The 99 pin instead of opening Scryfall (link in
+the panel). The big preview flips to the other side rather than cover the panel. Slide-in backup now checks on the
+scroll event itself (time-throttled), not on animation frames (headless Edge's simulated clock produced no frames
+for the heavier panel; Firefox was fine).
 **Buy links:** `STORE_URL` / `--store-url` → `STATS.store` {url, name}; JS `BUY(i)` / `buyA()`: 🛒 links in the shopping
 list, under the "buy" option in bubbles and under each card in "Other cards you're missing" (front face name, URL-encoded).
 **Deck grid UI (Oct 2026):** the deck shows "as it should be": a substitute slot shows the *missing* card greyed with

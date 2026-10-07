@@ -73,6 +73,42 @@ try{const all=document.querySelectorAll('details.row').length, k=DATA[0].ci[0]||
   if(!document.querySelector('details.row .bat'))out.errs.push('no battery on the commander cards');
   out.clicks=(out.clicks||0)+4;}
 catch(e){out.errs.push('discover filters: '+e.message);}
+// commander panel: photocopy toggle, slim bar archetype select, a gaps option card (wired to the saved choices)
+try{const d=DATA.find(d=>Object.keys(d.th||{}).length&&d.b.all), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b='all';r.dataset.t='';r.dataset.a='0';rerow(r);
+    if(!r.querySelector('.slim .ondeck'))out.errs.push('no slim bar with ON DECK');
+    if(!r.querySelector('.tile .mburst'))out.errs.push('no starburst behind the Match score');
+    r.querySelector('[data-imgm="copy"]').click(); if(document.documentElement.dataset.img!=='copy')out.errs.push('photocopy toggle did not switch');
+    r.querySelector('[data-imgm="full"]').click();
+    const t=Object.keys(d.th)[0], s=r.querySelector('.slim .tsel'); s.value=t; s.dispatchEvent(new Event('change',{bubbles:true}));
+    if(r.dataset.t!==t||!r.querySelector('.thm.on[data-tsel="'+t+'"]'))out.errs.push('slim bar archetype select did not switch');
+    r.querySelector('[data-tsel=""]').click(); out.clicks=(out.clicks||0)+4;}
+  const b=bk(), g=DATA.find(d=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&e[2]>=0)), rg=g&&document.querySelector('details.row[data-i="'+g.i+'"]');
+  if(rg){rg.open=true;rg.dataset.b=b;rg.dataset.t='';rg.dataset.a='0';rerow(rg);
+    const e=g.b[b].deck.find(e=>e[1]==='s'&&e[2]>=0); rg.querySelector('.gopt[data-slot="'+e[2]+'"][data-pick="-1"]').click();
+    if(!rg.querySelector('.gopt.on[data-slot="'+e[2]+'"][data-pick="-1"]')||!rg.querySelector('.shop').textContent.includes(front(e[2])))out.errs.push('gaps "Buy it" card did not choose the slot');
+    if(!rg.querySelector('.gopt.on .stk'))out.errs.push('no (CHOSEN!) sticker');
+    rg.querySelector('.reset-ch').click(); out.clicks=(out.clicks||0)+2;}}
+catch(e){out.errs.push('panel: '+e.message);}
+// "Why this card?": starts on a card, hover previews, a click pins (red outline, PINNED), a second click or Esc lets go
+try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b='all';r.dataset.t='';r.dataset.a='0';rerow(r);
+    const box=r.querySelector('.why'), cws=[...r.querySelectorAll('.d99 .cw[data-wi]')];
+    if(!box||!box.querySelector('.wname'))out.errs.push('why panel is empty');
+    if(!CARDS.some(c=>c[6]>0))out.errs.push('card rows carry no roles');
+    const a=cws[1], b2=cws[2], nm=x=>x.querySelector('img.c').alt.split(' // ')[0];
+    a.dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+    if(!box.textContent.toUpperCase().includes(nm(a).toUpperCase()))out.errs.push('hover did not preview the card');
+    a.querySelector('.ct').click();
+    if(!a.classList.contains('wpin')||!box.textContent.includes('PINNED'))out.errs.push('click did not pin the card');
+    b2.dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+    if(!box.textContent.toUpperCase().includes(nm(a).toUpperCase()))out.errs.push('hover changed a pinned panel');
+    a.querySelector('.ct').click(); if(a.classList.contains('wpin'))out.errs.push('second click did not unpin');
+    a.querySelector('.ct').click(); document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));
+    if(a.classList.contains('wpin'))out.errs.push('Esc did not unpin');
+    if(!box.getAttribute('aria-live'))out.errs.push('why panel is not aria-live');
+    out.clicks=(out.clicks||0)+5;}}
+catch(e){out.errs.push('why: '+e.message);}
 // print modes: each header button switches the page's mode and marks itself pressed
 try{for(const m of ["pos","sepia","neg"]){const b=document.querySelector('.modes [data-mode="'+m+'"]');
     if(!b){out.errs.push('no print-mode button '+m);continue;} b.click();
@@ -160,6 +196,7 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if(r.open){r.open=false; await new Promise(res=>setTimeout(res,50));}
     r.open=true; await wait(()=>r.querySelector('.body .grid .ct.p5-wait, .body .grid .ct.p5-shown'),40);   // the panel is being watched
     r.querySelector('.body .grid .ct').scrollIntoView({block:'center'});
+    window.dispatchEvent(new Event('scroll'));   // headless Edge (simulated clock) sends no scroll event without frames
     await wait(()=>r.querySelector('.ct.p5-shown'),Math.max(40,Math.ceil(DATA.length/2)));   // frames are slower on big pages
     if(!r.querySelector('.pname .rl'))out.errs.push('open panel has no ransom name');
     if(!r.querySelector('.ct.p5-shown'))out.errs.push('deck cards never slid in (IntersectionObserver): open '+r.open+', cards '+r.querySelectorAll('.body .grid .ct').length
