@@ -349,7 +349,24 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
    mass land denial, chained extra turns; Commander Spellbook also has an estimate-bracket endpoint).
 4. ✅ (first pass) Unused cards: cards not in any `decks_in` deck → find commanders/archetypes that use them.
    Needs real decklists in `decks_in/` to be meaningful (empty today → falls back to suggested decks).
-5. **Build mode** (see "Product structure"): must-include pins first, then strategy stack and the live builder.
+5. **Next, in this order** (ideas reviewed Oct 2026 from Manafoundry, mtg-mcp-server, CommanderBracket,
+   deckscraper — READMEs only; check licences before copying code, credit MIT sources):
+   a. **Pins:** must-include / must-exclude / locked cards per commander; builder, swaps and options never touch
+      locked cards (app `/deck` takes them). First brick of Build mode.
+   b. **Partner and Background commanders:** pairs (Partner, Partner with, Choose a Background, Friends forever,
+      Doctor's companion), colour identity = union, EDHREC pair pages.
+   c. **Mana base and deck shape:** land count from the curve (not a fixed `LAND_TARGET` 35), basics split by
+      colour pips (today: even split; avg 24.5 basics + 10.5 non-basic), curve and card-type targets taken from
+      EDHREC's average deck of that commander/archetype (`avg_shape`), not invented. Plus a **fast mana** signal
+      in Bracket Fit. No "estimated win turn" (invented precision).
+   d. **Price filter (CAD)** on missing-card suggestions only (Scryfall USD × editable rate; owned cards never
+      excluded) + upgrades ranked by synergy per dollar. Settles the open $/$$/$$$ question.
+   e. **Collection import formats:** detect Deckbox, Deckstats, Moxfield, MTGGoldfish, TappedOut CSV headers
+      (name + set lookup on Scryfall). No cube scanning.
+   f. **Partial decks:** fill a `decks_in` deck up to 99 from the collection + "suggest cuts" with reasons.
+   Already done from that review: EDHREC failures non-fatal, Spellbook bracket flags + visible signals, deck
+   validation (`tests/measure.py` checks). Skipped: Scryfall bulk file (cache covers it), cube support.
+   Then **Build mode** UI (strategy stack, live builder) through the app, not more precomputed HTML (report ~46 MB).
 6. Shared cores / hidden archetypes: group commanders that draw on the same owned cards
    (e.g. an Izzet spellslinger core shared by Stella Lee, The Locust God, Niv-Mizzet).
 7. Later: missing-card prices (Scryfall USD/EUR → CAD), Archidekt real-deck matching,
