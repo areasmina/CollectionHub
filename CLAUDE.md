@@ -433,6 +433,23 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
 
 ## Roadmap (in order)
 
+**Current plan (user decision, Oct 2026): app-first, usable anywhere on PC and phone, friends with their own data.**
+The app (`--serve`) becomes the product and builds decks on demand; the full static report stays as an export.
+Friends sign in by private invite link; nobody sees another person's collection unless it's shared by link or .txt.
+A new user starts empty and uploads a collection first. Order (one phase per commit, ask before steps 4–5):
+- **F1** upload and save decks in the app (Collection page: drop a .txt or paste; saved in `decks_in/`, analysed at once,
+  delete/replace). **F3** card counts across decks: ManaBox quantities vs the saved decks (which decks use a card, copies
+  free / short) so "unused cards" is exact (was roadmap 5g). **F4** deck analysis for a saved deck: bracket with reasons,
+  strengths / weaknesses from the checks (roles, curve, colour sources vs EDHREC's average deck), synergies (built
+  around, engines, combos in / one card away), suggested cards (yours first, with free copies; then to buy), cuts with
+  reasons. Rule-based only, no invented scores.
+- **Step 1** on-demand app (commander list ranks fast from Collection Match; a commander's decks are built when opened;
+  small page instead of the 41 MB report). **F2** collection slots (up to 3 per user: choose, restart = erase, start
+  empty; share by link or .txt). **Step 2** Phase 5 mobile layout. **Step 3** deck editing (add from collection, cuts,
+  export) — the start of Build mode.
+- Then ask: **step 4** users (invite links, per-user space, shared EDHREC/Scryfall/Spellbook caches, one rate limiter);
+  **step 5** online (PC + tunnel first, cloud server later) + installable app (PWA) with an offline copy.
+
 1. ✅ Scryfall tags for roles + collection substitutes + visual card view (v5)
 2. ✅ (first pass) **Collection-first scoring and deck construction.** Score every legal owned card per commander:
    commander synergy (EDHREC `synergy`, oracle keyword overlap with the commander), theme fit, role,
