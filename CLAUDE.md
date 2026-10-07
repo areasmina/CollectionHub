@@ -358,12 +358,19 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
    c. **Mana base and deck shape:** land count from the curve (not a fixed `LAND_TARGET` 35), basics split by
       colour pips (today: even split; avg 24.5 basics + 10.5 non-basic), curve and card-type targets taken from
       EDHREC's average deck of that commander/archetype (`avg_shape`), not invented. Plus a **fast mana** signal
-      in Bracket Fit. No "estimated win turn" (invented precision).
+      in Bracket Fit. No "estimated win turn" (invented precision). Land count: Karsten's regression (average
+      mana value + cheap ramp/draw, Commander offset; verify coefficients from the source before coding; mtg-skills
+      uses a published formula too). Also: a rule-based **win-condition** check in Build Readiness (combos, drain/burn
+      payoffs, big evasive threats, alt wins; Manafoundry has a win-con role) and **deck changes between runs**
+      (per commander: + / − cards since the previous report, with the builder's reasons).
    d. **Price filter (CAD)** on missing-card suggestions only (Scryfall USD × editable rate; owned cards never
       excluded) + upgrades ranked by synergy per dollar. Settles the open $/$$/$$$ question.
    e. **Collection import formats:** detect Deckbox, Deckstats, Moxfield, MTGGoldfish, TappedOut CSV headers
       (name + set lookup on Scryfall). No cube scanning.
    f. **Partial decks:** fill a `decks_in` deck up to 99 from the collection + "suggest cuts" with reasons.
+   g. **Allocation and pull list** (idea from Commander Workshop MCP, MIT): use ManaBox quantities; a card you own
+      once can't be in five built decks. Per deck: pull from binder / already in deck X / substitute / buy.
+   h. **Two archetypes at once** (Manafoundry): e.g. Doom Discard + Connive, built in the app (light strategy stack).
    Already done from that review: EDHREC failures non-fatal, Spellbook bracket flags + visible signals, deck
    validation (`tests/measure.py` checks). Skipped: Scryfall bulk file (cache covers it), cube support.
    Then **Build mode** UI (strategy stack, live builder) through the app, not more precomputed HTML (report ~46 MB).
