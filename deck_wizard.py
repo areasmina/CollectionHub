@@ -2107,6 +2107,57 @@ input[type=search],select,.pinq,textarea{border:2px solid var(--ink);border-radi
 :root[data-mode="neg"] .ks,:root[data-mode="neg"] .kf,:root[data-mode="neg"] .kp,:root[data-mode="neg"] .kc{box-shadow:none;text-decoration:underline 3px;text-underline-offset:3px}
 :root[data-mode="neg"] .ks{text-decoration-color:var(--c)}:root[data-mode="neg"] .kf{text-decoration-color:var(--fill)}
 :root[data-mode="neg"] .kp{text-decoration-color:var(--y)}:root[data-mode="neg"] .kc{text-decoration-color:var(--m)}
+/* ===================== Zine phase 2: Discover (commander cards, colour chips, battery, sticky filters) ===================== */
+:root,:root[data-mode="neg"]{--shadow:#2A2A2A}:root[data-mode="pos"]{--shadow:#141414}:root[data-mode="sepia"]{--shadow:#332B23}
+main{max-width:1400px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.stats{display:inline-flex;flex-wrap:wrap;gap:0;border:2px solid var(--ink)}.stats li{padding:8px 16px;color:var(--mute);font-size:.72rem;text-transform:uppercase}
+.stats li+li{border-left:2px solid var(--ink)}.stats li.hl{background:var(--y);color:var(--onacc)}.stats li.hl strong{color:var(--onacc)}
+/* mana colours: identity boxes and colour chips share them */
+.mb-W{--mc:#F4EDCF;--mt:#141414}.mb-U{--mc:#2470BE;--mt:#FFFFFF}.mb-B{--mc:#2B2530;--mt:#F0EBDD}.mb-R{--mc:#D23B26;--mt:#FFFFFF}.mb-G{--mc:#2A8443;--mt:#FFFFFF}.mb-C{--mc:#A8A397;--mt:#141414}
+.pip{width:22px;height:22px;border-radius:0;border:1.5px solid var(--ink);background:var(--mc);color:var(--mt);font:900 13px/1 var(--head);display:grid;place-items:center;font-style:normal}
+/* battery: 10 cells, lit = round(pct/10); green 80+, yellow 60-79, red under 60 */
+.bat{display:inline-grid;grid-auto-flow:column;grid-auto-columns:6px;gap:2px;height:14px;padding:2px;border:2px solid currentColor;position:relative;margin-right:5px}
+.bat::after{content:"";position:absolute;right:-6px;top:50%;width:4px;height:8px;margin-top:-4px;background:currentColor}
+.bat i{display:block;outline:1px dashed currentColor;outline-offset:-2px;opacity:.35}.bat i.on{background:var(--bc);outline:0;opacity:1}
+.bat.hi{--bc:#2A8443}.bat.mid{--bc:var(--y)}.bat.lo{--bc:#D23B26}
+.bat.b5{grid-auto-columns:5px;gap:1px;height:9px;padding:1px;border-width:1.5px}.bat.b5::after{width:3px;height:5px;margin-top:-2.5px;right:-5px}
+/* two columns: sticky filters + the cards (static on small screens) */
+.disc{display:flex;gap:32px;align-items:flex-start}
+.filt{flex:0 0 260px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--shadow)}
+.fh{margin:0;padding:6px 12px;font-size:1.1rem;font-stretch:75%;font-weight:900;background:var(--ink);color:var(--bg)}
+.fb{padding:14px 12px}.fb input[type=search]{width:100%;min-height:42px;border:0;border-bottom:2px dashed var(--ink);background:transparent}
+.cchips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.cc{min-height:44px;font:900 20px/1 var(--head);box-shadow:inset 0 -5px 0 var(--mc)}
+.cc[aria-pressed="true"]{background:var(--mc);color:var(--mt);box-shadow:3px 3px 0 var(--ink);transform:translate(-1px,-1px)}
+.mins{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.mins button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:52px;padding:4px;font:700 13px/1 var(--body)}
+.mins button[aria-pressed="true"]{background:var(--ink);color:var(--bg);box-shadow:var(--band)}
+.more{display:flex;flex-direction:column;gap:12px}.more label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;text-transform:uppercase;color:var(--mute)}
+.more select{min-height:40px;text-transform:none}
+.lst{flex:1;min-width:0}#count{text-transform:uppercase;font-size:.75rem;margin:0 0 12px}
+/* commander cards; an opened card spans the whole row so its panel keeps the full width */
+#list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:28px 22px;grid-auto-flow:dense;align-items:start}
+.row{overflow:visible;margin:0;border-radius:14px;background:var(--bg);box-shadow:6px 6px 0 var(--shadow)}
+.row[open]{grid-column:1/-1;border-radius:0}
+.cmd{position:relative;display:flex;flex-direction:column;gap:6px;padding:14px 14px 10px;aspect-ratio:488/680;overflow:hidden}
+.cmh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cmd .nm{font:800 1.15rem/1.05 var(--head);font-stretch:75%;text-transform:uppercase;overflow-wrap:anywhere}
+.cmd .pips{flex:none}.ctype{font-size:.7rem;margin-top:-2px;color:var(--mute)}
+.art{flex:1 1 0;min-height:0;width:100%;object-fit:cover;border:2px solid var(--ink);background:var(--bar);border-radius:0;display:block}
+.facts{font-size:.75rem;line-height:1.35}
+.cap{align-self:flex-start;padding:1px 5px;font:700 .62rem/1.3 var(--head);border:1.5px solid var(--ink)}.cap.go{background:var(--c);color:var(--onacc);border-color:#141414}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:10px}
+.serial{font:400 .62rem/1.25 var(--serial);text-transform:uppercase;min-width:0}
+.score{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}.score b{font:900 1.75rem/.9 var(--head);font-stretch:75%;color:var(--ink)}
+/* above the selected bracket: CMYK misregistration bands across the card */
+.row.above .cmd::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.85;mix-blend-mode:multiply;
+  background:linear-gradient(transparent 18%,var(--y) 18% 21%,var(--c) 21% 23%,transparent 23% 63%,var(--m) 63% 65%,var(--y) 65% 68%,transparent 68%)}
+:root[data-mode="neg"] .row.above .cmd::after{mix-blend-mode:screen}
+.row[open] .cmd{aspect-ratio:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 18px}
+.row[open] .art,.row[open] .cap,.row[open] .facts{display:none}.row[open] .foot{margin:0 0 0 auto;gap:18px;align-items:center}
+.row[open] .cmh{gap:12px}
+@media(max-width:900px){.disc{flex-direction:column;align-items:stretch}.filt{position:static;max-height:none;overflow:visible;flex-basis:auto}}
 </style></head><body>
 <div id="zt" aria-hidden="true"><svg><filter id="zdust"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"/><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"/></feComponentTransfer></filter><rect width="100%" height="100%" filter="url(#zdust)"/></svg></div>
 <main>
@@ -2118,20 +2169,18 @@ input[type=search],select,.pinq,textarea{border:2px solid var(--ink);border-radi
 <div id="coll"></div>
 <div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span>
 <div class="srcsel" role="group" aria-label="Deck source"><button class="srcb" data-src="">Commander page</button><button class="srcb" data-src="avg">Average deck</button></div></div>
-<div class="tools">
-<input id="q" type="search" placeholder="Search commanders" aria-label="Search">
-<select id="th" aria-label="Archetype"><option value="">Any archetype</option></select>
-<select id="c" aria-label="Color"><option value="">Any color</option><option>W</option><option>U</option><option>B</option><option>R</option><option>G</option></select>
-<select id="p" aria-label="Min owned"><option value="0">Any %</option><option value="40">40%+</option><option value="60">60%+</option><option value="80">80%+</option></select>
-<select id="dk" aria-label="Min decks"><option value="0">Any deck count</option><option value="20">20+ decks</option><option value="100">100+ decks</option><option value="500">500+ decks</option><option value="1000">1000+ decks</option><option value="5000">5000+ decks</option></select>
-<select id="cf" aria-label="Combos"><option value="">Any combos</option><option value="own">Owns 1+ combo</option><option value="skel">Combo in deck</option></select>
-<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select>
-</div>
 <div id="imp"></div>
 <div id="unused"></div>
 <div class="cmyk" aria-hidden="true"></div>
-<div id="count"></div>
-<div id="list"></div>
+<div class="disc">
+<aside class="filt" aria-label="Filters">
+<h3 class="fh">Search</h3><div class="fb"><label class="sr" for="q">Commander name</label><input id="q" type="search" placeholder="type a name_"></div>
+<h3 class="fh">Colours</h3><div class="fb cchips" role="group" aria-label="Colours"></div>
+<h3 class="fh">You own at least</h3><div class="fb mins" role="group" aria-label="Minimum owned"></div>
+<h3 class="fh">More</h3><div class="fb more"><label>archetype<select id="th" aria-label="Archetype"><option value="">Any archetype</option></select></label><label>edhrec decks<select id="dk" aria-label="Min decks"><option value="0">Any deck count</option><option value="20">20+ decks</option><option value="100">100+ decks</option><option value="500">500+ decks</option><option value="1000">1000+ decks</option><option value="5000">5000+ decks</option></select></label><label>combos<select id="cf" aria-label="Combos"><option value="">Any combos</option><option value="own">Owns 1+ combo</option><option value="skel">Combo in deck</option></select></label><label>sort by<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select></label></div>
+</aside>
+<section class="lst" aria-label="Commanders"><div id="count"></div><div id="list"></div></section>
+</div>
 </main><img id="pv" alt=""><script>
 const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__, STRS=__STRS__;
 const W=i=>typeof i==="number"?(i>=0?STRS[i]:""):(i||"");   // a reason from the shared string table
@@ -2148,7 +2197,7 @@ function setMode(m){document.documentElement.dataset.mode=m; try{localStorage.se
   document.querySelectorAll(".modes [data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===m?"true":"false"));}
 setMode(document.documentElement.dataset.mode||"neg");
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest(".modes [data-mode]"); if(b)setMode(b.dataset.mode);});
-$("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>${n(ST.unique)}</strong>unique</li><li><strong>${ST.cands}</strong>commanders</li><li><strong>${DATA.length}</strong>analyzed</li>`;
+$("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>${n(ST.unique)}</strong>unique</li><li><strong>${ST.cands}</strong>commanders</li><li><strong>${DATA.length}</strong>analyzed</li>${ST.unused?`<li class="hl"><strong>${n(ST.unused.n_unused)}</strong>unused cards</li>`:""}`;
 
 /* ---------- collection file + upload (upload works when opened through Deck Wizard App) ---------- */
 (function(){
@@ -2187,7 +2236,19 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
 const br=$("br"); br.max=BR.length-1;
 const themes=new Set(); DATA.forEach(d=>d.tags.slice(0,3).forEach(t=>themes.add(t[0])));
 [...themes].sort().forEach(t=>{const o=document.createElement("option");o.value=o.textContent=t;$("th").appendChild(o);});
-const pips=ci=>ci.length?ci.map(c=>`<i class="pip" style="background:${PIP[c]}">${c}</i>`).join(""):`<i class="pip" style="background:#bbb">C</i>`;
+const pips=ci=>(ci.length?ci:["C"]).map(c=>`<i class="pip mb-${c}">${c}</i>`).join("");   // filled mana-colour boxes
+// the Collection Match battery: k cells, lit = round(pct / (100/k)); green 80+, yellow 60-79, red under 60
+const bat=(p,k=10)=>{const lit=Math.round(p/(100/k));
+  return `<span class="bat b${k} ${p>=80?"hi":p>=60?"mid":"lo"}" role="img" aria-label="You own ${p}% of this deck">${Array.from({length:k},(_,i)=>i<lit?'<i class="on"></i>':"<i></i>").join("")}</span>`;};
+/* ---------- Discover filters: colour chips (all selected colours must be in the identity) and "you own at least" ---------- */
+const COLS=new Set(); let MINP=0;
+const MTGN={W:"White",U:"Blue",B:"Black",R:"Red",G:"Green"};
+document.querySelector(".cchips").innerHTML="WUBRG".split("").map(k=>`<button type="button" class="cc mb-${k}" data-col="${k}" aria-pressed="false" aria-label="${MTGN[k]}" title="${MTGN[k]}">${k}</button>`).join("");
+document.querySelector(".mins").innerHTML=[0,40,60,80].map(v=>`<button type="button" data-minp="${v}" aria-pressed="${v?"false":"true"}"><span>${v?v+"%":"ANY"}</span>${bat(v,5)}</button>`).join("");
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-col],[data-minp]"); if(!t)return;
+  if(t.dataset.col){const k=t.dataset.col; COLS.has(k)?COLS.delete(k):COLS.add(k); t.setAttribute("aria-pressed",COLS.has(k)?"true":"false");}
+  else{MINP=+t.dataset.minp; document.querySelectorAll(".mins [data-minp]").forEach(x=>x.setAttribute("aria-pressed",x===t?"true":"false"));}
+  render();});
 const bk=()=>BR[+br.value];
 // deck source for the whole page, like EDHREC: "" = commander page (card stats), "avg" = average deck
 let SRC=""; try{SRC=localStorage.getItem("dw:src")||"";}catch(e){}
@@ -2479,21 +2540,30 @@ function body(d,b,r){
 
 function render(){
   const b=bk(); $("bv").textContent=LBL[b];
-  const q=$("q").value.toLowerCase(), c=$("c").value, p=+$("p").value, dk=+$("dk").value, th=$("th").value, cf=$("cf").value;
+  const q=$("q").value.toLowerCase(), p=MINP, dk=+$("dk").value, th=$("th").value, cf=$("cf").value;
   const nc=d=>d.combos?d.combos.n_own:0;
   document.querySelectorAll(".srcsel .srcb").forEach(x=>x.classList.toggle("on",x.dataset.src===SRC));
-  const rows=DATA.filter(d=>{const x=X(d,b); return x&&d.name.toLowerCase().includes(q)&&(!c||d.ci.includes(c))
+  const rows=DATA.filter(d=>{const x=X(d,b); return x&&d.name.toLowerCase().includes(q)&&[...COLS].every(k=>d.ci.includes(k))
     &&x.pct>=p&&x.decks>=dk&&(!th||d.tags.slice(0,3).some(t=>t[0]===th))
     &&(!cf||(cf==="own"?nc(d)>0:(x.cin||[]).length>0));});
   const so=$("so").value;
   const rdy=x=>(x.rd||[]).filter(c=>c[3]).length;
   rows.sort(so==="ready"?(a,z)=>rdy(X(z,b))-rdy(X(a,b))||X(z,b).pct-X(a,b).pct:so==="decks"?(a,z)=>X(z,b).decks-X(a,b).decks:so==="combos"?(a,z)=>nc(z)-nc(a)||X(z,b).pct-X(a,b).pct:(a,z)=>X(z,b).pct-X(a,b).pct);
   $("count").textContent=`${rows.length} commanders with ${SRC==="avg"?"an EDHREC average deck for "+LBL[b]:LBL[b]+" data"}`;
-  $("list").innerHTML=rows.map(d=>{const x=X(d,b); return `<details class="row" data-i="${d.i}"><summary>
-    <span class="pips">${pips(d.ci)}</span>
-    <span class="nm">${esc(d.name)}<span class="mini">${d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("")}</span></span>
-    <span class="bar"><b style="width:${x.pct}%"></b></span><span class="pct">${x.pct}%</span>
-    <span class="dk">${n(x.decks)} decks</span><span class="cb" title="combos you own">${d.combos?d.combos.n_own+"⚡":"–"}</span></summary><div class="body"></div></details>`;}).join("");
+  const sel={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b], RN=["","I","II","III","IV","V"];
+  $("list").innerHTML=rows.map((d,k)=>{const x=X(d,b), rd=x.rd||[], ok=rd.filter(c=>c[3]).length, est=(x.bf||{est:2}).est;
+    const above=!!sel&&sel<5&&est>Math.max(sel,2), combos=nc(d);
+    // the caption comes from the deck's own numbers, nothing invented
+    const cap=rd.length&&ok===rd.length?"(READY TO SLEEVE!)":above?"(TOO SPICY FOR THIS BRACKET!)":combos>=50?`(${combos} COMBOS IN YOUR BINDER!)`
+      :x.pct>=75?"(MOSTLY IN YOUR BINDER!)":x.subs?"(NEEDS A FEW STAND-INS)":"";
+    return `<details class="row${above?" above":""}" data-i="${d.i}"><summary class="cmd">
+    <span class="cmh"><span class="nm">${esc(d.name)}</span><span class="pips" aria-label="Colour identity ${d.ci.join("")||"colourless"}">${pips(d.ci)}</span></span>
+    <span class="ctype">${d.tags.slice(0,3).map(t=>esc(t[0])).join(" · ")||"no EDHREC themes yet"}</span>
+    ${d.img?`<img class="art" src="${esc(d.img.replace("/normal/","/art_crop/"))}" alt="" loading="lazy">`:`<span class="art"></span>`}
+    <span class="facts">Own ${x.pct}% of the deck. Ready ${ok}/${rd.length}. ${combos} combos in binder.${sel?` ${above?"Above":"Fits"} ${RN[sel]}.`:""}</span>
+    ${cap?`<span class="cap${cap==="(READY TO SLEEVE!)"?" go":""}">${cap}</span>`:""}
+    <span class="foot"><span class="serial">No. ${String(k+1).padStart(3,"0")}<br>${n(x.decks)} EDHREC decks</span><span class="score"><b>${x.pct}%</b>${bat(x.pct)}</span></span>
+    </summary><div class="body"></div></details>`;}).join("");
 }
 
 /* ---------- imported decks ---------- */
@@ -2586,7 +2656,7 @@ if(matchMedia("(hover:hover)").matches){
     if(x+w>innerWidth-8)x=(r?r.left:e.clientX)-w-12;
     pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";}}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".flip"))e.preventDefault();},true);
-["br","q","th","c","p","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
+["br","q","th","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
 render();
 </script></body></html>"""
 

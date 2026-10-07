@@ -59,6 +59,20 @@ try{const tb=document.querySelector('[data-src="avg"]');
     document.querySelector('[data-src=""]').click(); if($('count').textContent.includes('average deck'))out.errs.push('top selector did not go back');
     out.clicks=(out.clicks||0)+2;}}
 catch(e){out.errs.push('top selector: '+e.message);}
+// Discover filters: a colour chip keeps only commanders with that colour; "you own at least 80%" keeps 80%+;
+// pressing them again / ANY brings every commander back
+try{const all=document.querySelectorAll('details.row').length, k=DATA[0].ci[0]||'U';
+  document.querySelector('[data-col="'+k+'"]').click();
+  const rows=[...document.querySelectorAll('details.row')].map(r=>DATA[+r.dataset.i]);
+  if(rows.some(d=>!d.ci.includes(k)))out.errs.push('colour chip '+k+' let other colours through');
+  document.querySelector('[data-col="'+k+'"]').click();
+  document.querySelector('[data-minp="80"]').click();
+  if([...document.querySelectorAll('details.row')].some(r=>X(DATA[+r.dataset.i],bk()).pct<80))out.errs.push('"own at least 80%" let lower rows through');
+  document.querySelector('[data-minp="0"]').click();
+  if(document.querySelectorAll('details.row').length!==all)out.errs.push('filters did not reset');
+  if(!document.querySelector('details.row .bat'))out.errs.push('no battery on the commander cards');
+  out.clicks=(out.clicks||0)+4;}
+catch(e){out.errs.push('discover filters: '+e.message);}
 // print modes: each header button switches the page's mode and marks itself pressed
 try{for(const m of ["pos","sepia","neg"]){const b=document.querySelector('.modes [data-mode="'+m+'"]');
     if(!b){out.errs.push('no print-mode button '+m);continue;} b.click();
