@@ -107,11 +107,27 @@ const wait=c=>new Promise(res=>{let n=0;const f=()=>c()||++n>100?res():setTimeou
     if(!r.querySelector('.tnote')||!r.querySelector('.tnote').textContent.includes('EDHREC weight 1'))out.errs.push('live deck: level not in the note');
     r.querySelector('[data-ssel="3"]').click();
     await wait(()=>!r.querySelector('.body').textContent.includes('Building the deck'));
-    if(!r.querySelector('.thinw')||!r.querySelector('.thinw').textContent.includes('Stub: no expensive page'))out.errs.push('live deck: error not shown');
+    if(!r.querySelector('p.thinw')||!r.querySelector('p.thinw').textContent.includes('Stub: no expensive page'))out.errs.push('live deck: error not shown');
     r.querySelector('[data-wsel="3"]').click();r.querySelector('[data-ssel="2"]').click();
     if(r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('weight 3 + $$ did not go back to the report deck');
     out.clicks=(out.clicks||0)+4;}}
   catch(e){out.errs.push('levels: '+e.message);}
+// pins: "always include" a typed card (stub /pins answers, then the deck is rebuilt through /deck), a bad
+// name shows the app's error, and removing the pin goes back to the report's deck
+try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
+  if(r){r.open=true;r.dataset.b="all";r.dataset.t="";r.dataset.a="0";r.dataset.w="3";r.dataset.s="2";rerow(r);
+    r.querySelector('.pinq').value='Pinned Test Card'; r.querySelector('[data-pinadd="in"]').click();
+    await wait(()=>r.querySelector('.pins')&&r.querySelector('.pins').textContent.includes('Pinned Test Card')&&!r.querySelector('.body').textContent.includes('Building the deck'));
+    if(!r.querySelector('.pins').textContent.includes('Pinned Test Card'))out.errs.push('pin chip not shown');
+    if(!r.querySelector('textarea')||!r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('pinned: deck was not rebuilt through the app');
+    r.querySelector('.pinq').value='Nope Card'; r.querySelector('[data-pinadd="out"]').click();
+    await wait(()=>(r.querySelector('.pinerr')||{}).textContent.includes('Stub: not in your collection'));
+    if(!(r.querySelector('.pinerr')||{}).textContent.includes('Stub: not in your collection'))out.errs.push('pin error not shown');
+    r.querySelector('[data-unpin="Pinned Test Card"]').click();
+    await wait(()=>!r.querySelector('.pins').textContent.includes('Pinned Test Card'));
+    if(r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('unpinned: deck did not go back to the report deck');
+    out.clicks=(out.clicks||0)+3;}}
+  catch(e){out.errs.push('pins: '+e.message);}
   const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);})();},500);</script>"""
 
 def stub_server(html):
@@ -129,6 +145,7 @@ def stub_server(html):
             q = {k: v[0] for k, v in urllib.parse.parse_qs(qs).items()}
             if path == "/": return self.send(200, html, "text/html; charset=utf-8")
             if path == "/status": return self.send(200, json.dumps({"running": False, "ok": None}))
+            if path == "/pins": return self.send(200, json.dumps({"pins": {}}))
             if path != "/deck": return self.send(404, "{}")
             if self.headers.get("X-Deck-Wizard") != "1": return self.send(403, json.dumps({"error": "no header"}))
             if q.get("s") == "3": return self.send(404, json.dumps({"error": "Stub: no expensive page."}))
@@ -137,6 +154,12 @@ def stub_server(html):
             x["deck"] = x["deck"] + [[int(q["nc"]), "y", int(q["ns"])]]
             self.send(200, json.dumps({"x": x, "cards": [["Test Card Live", "", "Creature", 0, 2]],
                                        "strs": ["stub reason"], "combos": []}))
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            if self.path != "/pins" or self.headers.get("X-Deck-Wizard") != "1": return self.send(403, "{}")
+            if "Nope Card" in body.get("in", []) + body.get("out", []):
+                return self.send(400, json.dumps({"error": "Stub: not in your collection"}))
+            self.send(200, json.dumps({"pins": {"in": sorted(set(body.get("in", []))), "out": sorted(set(body.get("out", [])))}}))
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     return srv

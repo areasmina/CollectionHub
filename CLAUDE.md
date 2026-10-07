@@ -351,8 +351,15 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
    Needs real decklists in `decks_in/` to be meaningful (empty today → falls back to suggested decks).
 5. **Next, in this order** (ideas reviewed Oct 2026 from Manafoundry, mtg-mcp-server, CommanderBracket,
    deckscraper — READMEs only; check licences before copying code, credit MIT sources):
-   a. **Pins:** must-include / must-exclude / locked cards per commander; builder, swaps and options never touch
-      locked cards (app `/deck` takes them). First brick of Build mode.
+   a. ✅ **Pins** (`pins.json` in the output folder, tracked in git; `PINS_FILE`, `pins_for()`, `analyze(pins=)`):
+      per commander "always include" / "never use". Never-use cards leave that deck's pool (no pick, substitute,
+      option, bench or combo). Always-include cards go in first as kind `k` ("📌 pinned by you"), unless the bracket
+      forbids them (GC cap, `blocked()`: combo / MLD / extra turns) → `x.pinx` [[card, reason]] shown in the panel;
+      swaps never remove them (kind not in "pyf"). Full runs apply the file to every deck (`entry.pins` = pins used).
+      App: `GET /pins`, `POST /pins` (`LiveDecks.pins()`: checks owned / legal / colours, suggests full names,
+      rejects in+out overlap); the panel's pin box, "📌 always include" in next-in-line, "🚫 never" on deck cards;
+      when a commander's pins differ from the report's (`pinsChanged`), its decks are built through `/deck`
+      (pins in `liveKey`). "Locked" = always include until Build mode exists.
    b. **Partner and Background commanders:** pairs (Partner, Partner with, Choose a Background, Friends forever,
       Doctor's companion), colour identity = union, EDHREC pair pages.
    c. **Mana base and deck shape:** land count from the curve (not a fixed `LAND_TARGET` 35), basics split by

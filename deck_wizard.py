@@ -685,7 +685,7 @@ def fetch_theme_page(path, cache, refresh=False, avg=False, max_days=None):
     elif p is not None: miss.pop(mk, None)
     return p
 
-DIFF_KEYS = ("decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
+DIFF_KEYS = ("pin", "pinx", "decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
              "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl", "sw", "bench")
 
 def page_match(page, owned, me):
@@ -1179,20 +1179,28 @@ def power_profile(roles, gc, avg_cmc):
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
-            want_gaps=True, profile=None, show=None, ew=1.0):
+            want_gaps=True, profile=None, show=None, ew=1.0, pins=None):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
     `combos` = combos you own in these colours (combos_for_commander()["own"]).
     `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
     `want_gaps` = False skips the gaps list (theme decks show the overview's). `profile` = the
     commander's profile (computed once per commander by the caller; else from the page's themes).
     `show` = real play rates (average decks): order and label the gaps instead of the page's rates.
-    `ew` = EDHREC weight (EDH_WEIGHT[level]): how much EDHREC's numbers count against fit and synergy."""
+    `ew` = EDHREC weight (EDH_WEIGHT[level]): how much EDHREC's numbers count against fit and synergy.
+    `pins` = (keys always included, keys never used) for this commander (pins.json): excluded cards leave the
+    pool (no pick, substitute, option or combo uses them); included ones go in first, kind "k", unless a bracket
+    rule forbids them (then listed in x["pinx"] with the reason) and synergy swaps never take them out."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
     _SUB_MEMO.clear()
     tribe = commander_types(cmdr)
     profile = profile or commander_profile(cmdr, (base or edh).get("tags") or [])
     tprof = theme_profile(focus) if focus else None
     pool, by_role = pool_info
+    pin_in, pin_out = pins or ((), ())
+    if pin_out:                         # "never use": out of this deck's pool everywhere
+        keep = lambda L: [it for it in L if it[0] not in pin_out]
+        pool = keep(pool)
+        by_role = {r: ({bg: keep(L2) for bg, L2 in L.items()} if r == "_text" else keep(L)) for r, L in by_role.items()}
     legal = {it[0] for it in pool}      # owned, commander-legal, inside the color identity
     gc_cap = GC_CAP.get(bracket)        # None = no cap
     chosen, lands = [], []
@@ -1265,6 +1273,16 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         if bnum is None: return
         state["xt"] += is_xturn(owned[k])
 
+    # your pins first: "always include" cards, as long as the bracket's rules allow them
+    pin_miss = []
+    for k in sorted(pin_in):
+        m = owned.get(k)
+        why = ("not in your collection" if not m else "not legal or outside the commander's colours" if k not in legal
+               else "Game Changer limit for this bracket" if m["gc"] and not gc_room()
+               else "breaks this bracket's rules (combo, land denial or extra turns)" if blocked(k) else "")
+        if k == me: continue
+        if why: pin_miss.append([T.add(m["name"], m) if m else T.add(k), T.s(why)]); continue
+        (lands if card_kind(m) == "land" else chosen).append((m, "k", "pinned by you")); used.add(k); note(k)
     # combos you own go in whole, valued at their weakest piece + COMBO_W: every piece must earn a
     # slot on its own synergy/fit, and the combo must be allowed in this bracket
     if bracket in COMBO_BRACKETS:
@@ -1493,6 +1511,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "subs": sum(1 for c in allc if c[1] == "s"),
         "fill": sum(1 for c in allc if c[1] == "f"),
         "pick": sum(1 for c in allc if c[1] == "y"),
+        "pin": sum(1 for c in allc if c[1] == "k"), "pinx": pin_miss,
         "cpc": sum(1 for c in allc if c[1] == "c"),
         "gc": len(gc_names), "gcn": gc_names, "cmc": avg_cmc,
         "pw": power_profile(roles, len(gc_names), avg_cmc),
@@ -1938,6 +1957,9 @@ table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{paddi
 .srcs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:.8rem}
 .srcb{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut);background:transparent;cursor:pointer}.srcb:hover{border-color:var(--acc);color:var(--ink);background:transparent}.srcb.on{border-color:var(--acc);color:var(--ink);background:rgba(45,212,191,.12)}.srcb:disabled{opacity:.5;cursor:default}
 .slotw{display:flex;flex-direction:column;gap:4px}.swap{font-size:.72rem;padding:3px 6px}
+.pins{font-size:.85rem;margin:6px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.pins .tag{display:inline-flex;gap:4px;align-items:center}
+.pinx,.pinb{border:0;background:none;color:var(--mut);cursor:pointer;padding:0 3px;font-size:.75rem}.pinx:hover,.pinb:hover{color:var(--ink)}
+.pinq{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px;width:14em}
 .ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
 .chooser{border:1px solid var(--acc);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(45,212,191,.06)}
 .opts{display:flex;gap:8px;flex-wrap:wrap}.opt{display:flex;gap:8px;align-items:flex-start;text-align:left;width:250px;padding:6px;color:var(--ink);border-color:var(--line)}
@@ -2037,15 +2059,17 @@ function tile(i,o={}){if(i==null||i<0||!CARDS[i])return"";const c=CARDS[i];
   return `<a class="ct ${o.cls||""}" href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">`+
    `<img class="c" src="${IMG(i)}" alt="${esc(c[0])}" title="${esc(c[0])}" loading="lazy">`+
    (o.badge?`<span class="badge">${esc(o.badge)}</span>`:"")+(o.note?`<span class="note">${esc(o.note)}</span>`:"")+`</a>`;}
-function grid(cmdrs,items){
+function grid(cmdrs,items,pinable){
   const by={}; items.forEach(it=>{const g=CARDS[it.i][2]||"Other";(by[g]=by[g]||[]).push(it);});
   let h=`<div class="grp"><h5>Commander</h5><div class="grid">${cmdrs.map(i=>tile(i)).join("")}</div></div>`;
   Object.keys(GL).forEach(g=>{const L=by[g]; if(!L)return; const cnt=L.reduce((s,it)=>s+(it.n||1),0);
     h+=`<div class="grp"><h5>${GL[g]} <small>${cnt}</small></h5><div class="grid">`+L.map(it=>tile(it.i,{
-      cls:{s:"sub",s2:"sub",y2:"pick",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
-      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="s2"?"for "+front(it.f)+" (your choice)":it.kind==="y2"?"instead of "+front(it.f)+" (your choice)":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
+      cls:{s:"sub",s2:"sub",y2:"pick",k:"pick",buy:"miss buy",f:"fill",m:"miss",y:"pick",c:"combo"}[it.kind]||"",badge:(it.n||1)>1?"×"+it.n:"",
+      note:it.kind==="s"&&it.f>=0?"for "+front(it.f):it.kind==="s2"?"for "+front(it.f)+" (your choice)":it.kind==="y2"?"instead of "+front(it.f)+" (your choice)":it.kind==="k"?"📌 pinned by you":it.kind==="buy"?"to buy":it.kind==="f"?"role fill":it.kind==="m"?"missing":
         it.kind==="y"?(!W(it.f)?"your pick":CARDS[it.i][2]==="Land"?W(it.f):"fits: "+W(it.f)):it.kind==="c"?"combo piece":""})
-      +(it.slot!=null?`<button class="swap" data-swap="${it.slot}" title="Choose what fills this slot">⇄ options</button>`:"")).map(h=>h.includes('data-swap')?`<div class="slotw">${h}</div>`:h).join("")+`</div></div>`;});
+      +(it.slot!=null?`<button class="swap" data-swap="${it.slot}" title="Choose what fills this slot">⇄ options</button>`:"")
+      +(pinable&&it.kind!=="buy"&&it.kind!=="m"&&it.kind!=="k"?`<button class="pinb" data-pinquick="out" data-name="${esc(CARDS[it.i][0])}" title="Never use this card for this commander">🚫 never</button>`:""))
+      .map(h=>h.includes('data-swap')||h.includes('data-pinquick')?`<div class="slotw">${h}</div>`:h).join("")+`</div></div>`;});
   return h;}
 function gapsHTML(gaps,deckSet,slots){
   if(!gaps.length) return `<p class="dim">No gaps: you own every popular card.</p>`;
@@ -2093,7 +2117,7 @@ const WTIP={1:"Your collection decides: EDHREC popularity counts 40%, fit and sy
   3:"Balanced (the report's decks): EDHREC popularity counts 100%",4:"Closest to EDHREC's list: popularity counts 140%"};
 const STIP={1:"$ Budget: built from EDHREC's cheapest 10% of decks",2:"$$ Normal: all EDHREC decks",3:"$$$ Expensive: built from EDHREC's priciest 10% of decks (fast mana, tutors, pricier combo pieces); bracket rules still decide which combos are allowed"};
 const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:+(r&&r.dataset.s||2)});
-const liveKey=(d,b,st,L)=>[d.slug,b,st.t,st.a?1:0,L.w,L.s].join("|");
+const liveKey=(d,b,st,L)=>[d.slug,b,st.t,st.a?1:0,L.w,L.s,pinKey(pinsOf(d))].join("|");
 function addRows(arr,rows,from){rows.forEach((x,j)=>{if(from+j===arr.length)arr.push(x);});}
 function fetchLive(d,b,st,L){const k=liveKey(d,b,st,L); LIVE[k]={busy:1};
   const nc=CARDS.length, ns=STRS.length, nk=COMBOS.length;
@@ -2107,6 +2131,25 @@ function fetchLive(d,b,st,L){const k=liveKey(d,b,st,L); LIVE[k]={busy:1};
   },e=>{if(n) return setTimeout(()=>go(n-1),700);     // a dropped connection gets one more try
     LIVE[k]={err:`The Deck Wizard app isn't answering (${e.message}). Is its window still open?`}; done();});
   go(1);}
+/* ---------- pins: always include / never use, per commander (pins.json, edited through the app) ---------- */
+let PINS={};   // commander -> {in,out} from the app's pins.json; else the pins the report was built with
+const NOPIN={in:[],out:[]};
+const pinsOf=d=>PINS[d.name]||d.pins||NOPIN, pinKey=p=>JSON.stringify([p.in||[],p.out||[]]);
+const pinsChanged=d=>pinKey(pinsOf(d))!==pinKey(d.pins||NOPIN);
+if(SERVED) fetch("/pins",{headers:{"X-Deck-Wizard":"1"}}).then(r=>r.ok?r.json():{}).then(j=>{PINS=j.pins||{};
+  document.querySelectorAll("details.row[data-i]").forEach(r=>{if(r.dataset.f)rerow(r);});}).catch(()=>{});
+function pinHTML(d,x){const p=pinsOf(d);
+  const chip=(n,side)=>`<span class="tag">${side==="in"?"📌":"🚫"} ${esc(n)}${SERVED?`<button class="pinx" data-unpin="${esc(n)}" data-side="${side}" title="Remove this pin">✕</button>`:""}</span>`;
+  const miss=(x.pinx||[]).map(([i,w])=>`<li>📌 ${esc(front(i))} isn't in this deck: ${esc(W(w))}</li>`).join("");
+  return `<div class="pins"><span class="dim">Your pins:</span>${p.in.map(n=>chip(n,"in")).join("")}${p.out.map(n=>chip(n,"out")).join("")}${p.in.length||p.out.length?"":`<span class="dim">none</span>`}
+    ${SERVED?`<input class="pinq" placeholder="Card name" aria-label="Card name to pin"><button class="srcb" data-pinadd="in" title="Put this card in every deck of this commander (bracket rules permitting)">📌 Always include</button><button class="srcb" data-pinadd="out" title="Never use this card for this commander">🚫 Never use</button>`
+      :`<small class="dim">(add pins in Deck Wizard App.bat)</small>`}<span class="thinw pinerr"></span></div>${miss?`<ul class="thinw">${miss}</ul>`:""}`;}
+function postPins(d,next,row){const err=row.querySelector(".pinerr"); if(err)err.textContent="Saving…";
+  fetch("/pins",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"application/json"},body:JSON.stringify({c:d.name,in:next.in,out:next.out})})
+  .then(async r=>{const j=await r.json().catch(()=>({error:"Bad reply"}));
+    if(!r.ok){const e=row.querySelector(".pinerr"); if(e)e.textContent="⚠ "+(j.error||("HTTP "+r.status)); return;}
+    PINS[d.name]=j.pins; row.dataset.slot=""; rerow(row);})
+  .catch(()=>{const e=row.querySelector(".pinerr"); if(e)e.textContent="⚠ The Deck Wizard app isn't answering.";});}
 function lvlHTML(L){
   const off=SERVED?"":` disabled title="Open Deck Wizard App.bat to build decks at other levels"`;
   const bt=(a,v,on,tip,lab)=>`<button class="srcb ${on?"on":""}" data-${a}="${v}"${off||` title="${esc(tip)}"`}>${lab}</button>`;
@@ -2118,7 +2161,7 @@ function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length
   return `<details class="more"><summary>Synergy: ${sw.length} swap${sw.length===1?"":"s"} from your collection · ${bn.length} next in line</summary>
   <small class="dim">Cards are read by what they do with the cards already in this deck (Oracle and reminder text): outlets and payoffs, tribe, engines. ×N = linked cards (the commander counts 3).</small>
   ${sw.length?`<h4>Swapped in</h4><ul class="cl">${sw.map(([a,o,w])=>`<li>+ ${nm(a)} <small>for ${esc(front(o))} · ${esc(W(w))}</small></li>`).join("")}</ul>`:""}
-  ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small></li>`).join("")}</ul>`:""}</details>`;}
+  ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small>${SERVED?` <button class="pinb" data-pinquick="in" data-name="${esc(CARDS[a][0])}" title="Always include this card for this commander">📌 always include</button>`:""}</li>`).join("")}</ul>`:""}</details>`;}
 /* ---------- deck shape: your deck (bars) against EDHREC's average deck (line) ---------- */
 const TYO=["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Other","Land"];
 function shapeHTML(items,ref,b,tname){
@@ -2169,10 +2212,10 @@ function shopHTML(d,b,items,t){
   const list=buy.map(it=>"1 "+front(it.i)).join("\n");
   return `<div class="shop"><b>Shopping list (${buy.length})</b> ${buy.map(it=>esc(front(it.i))).join(", ")||"<span class='dim'>nothing yet</span>"}
   ${buy.length?`<button class="cps" data-text="${esc(list)}">Copy shopping list</button>`:""}<button class="reset-ch">Reset my choices</button></div>`;}
-function deckSection(title,cmdrs,items,text,link){
+function deckSection(title,cmdrs,items,text,link,pinable){
   return `<div class="vbar"><h3>${title}</h3><button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
-  <span class="legend"><i class="lg y"></i>your pick <i class="lg c"></i>combo <i class="lg s"></i>substitute <i class="lg f"></i>role fill <i class="lg m"></i>missing</span></div>
-  <div class="view v-cards">${grid(cmdrs,items)}</div>
+  <span class="legend"><i class="lg y"></i>your pick / 📌 pinned <i class="lg c"></i>combo <i class="lg s"></i>substitute <i class="lg f"></i>role fill <i class="lg m"></i>missing</span></div>
+  <div class="view v-cards">${grid(cmdrs,items,pinable)}</div>
   <div class="view v-list" hidden><textarea readonly rows="16">${esc(text)}</textarea></div>`;}
 
 /* ---------- combos ---------- */
@@ -2230,7 +2273,7 @@ function numsHTML(x,b){
 /* ---------- commander rows ---------- */
 const THIN=50;   /* fewer EDHREC decks than this behind a deck or archetype: warn */
 function body(d,b,r){
-  const st=rowState(d,b,r), asel=st.a, tsel=st.t, L=lvlOf(r), lv=L.w!==3||L.s!==2;
+  const st=rowState(d,b,r), asel=st.a, tsel=st.t, L=lvlOf(r), lv=L.w!==3||L.s!==2||pinsChanged(d);
   // another EDHREC weight / spending level: the app builds it (saved choices are kept per level)
   const sel=rowSel(d,b,r), suf=L.s===1?"/budget":L.s===3?"/expensive":"";
   const lx=lv?LIVE[liveKey(d,b,st,L)]:null;
@@ -2255,7 +2298,7 @@ function body(d,b,r){
     +(srcN<THIN?`<p class="thinw">⚠ Thin data: this deck comes from only ${n(srcN)} EDHREC decks (under ${THIN}). Treat it as a rough guide, not a proven list.</p>`:"");
   const bks=BR.filter(k=>d.b[k]).map(k=>{const sk=rowState(d,k,r), xk=sk.t===tsel&&sk.a===asel?deckOf(d,k,sk):null;
     return `<button class="bk ${k===b?"on":""}" data-bsel="${k}" title="Show the ${LBL[k]} deck">${LBL[k]}${xk?`: ${xk.pct}% <small>(${n(xk.decks)})</small>`:""}</button>`;}).join("");
-  if(lv&&!(lx&&lx.x)) return `<div class="top"><div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}
+  if(lv&&!(lx&&lx.x)) return `<div class="top"><div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${pinHTML(d,{})}
     <p class="${lx&&lx.err?"thinw":"tnote"}">${lx&&lx.err?"⚠ "+esc(lx.err)+" Pick a level to try again."
       :`Building the deck at EDHREC weight ${L.w} · ${"$".repeat(L.s)}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
   const tags=d.tags.slice(0,3).map(t=>`<span class="tag">${esc(t[0])}</span>`).join("");
@@ -2266,16 +2309,16 @@ function body(d,b,r){
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
   const slot=r&&r.dataset.slot?r.dataset.slot:null;
   return `<div class="top">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}
-  <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${tnote}${more}
+  <div class="info"><div class="bks">${bks}</div>${arch}${srcs}${lvlHTML(L)}${pinHTML(d,x)}${tnote}${more}
   ${numsHTML(x,b)}
   ${(x.core||[]).length?`<p>Built around: ${x.core.map(([k,v])=>`<span class="tag">${esc(k)} ${v}</span>`).join(" ")} <small>(cards in the 99 that share it with the commander)</small></p>`:""}
   ${synHTML(x)}
-  <p>Deck: ${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
+  <p>Deck: ${x.rec} ${x.avg?"from the average deck":"popular"} + <span class="kp">${x.pick||0} your picks${x.pin?` + ${x.pin} pinned`:""}</span>${x.cpc?` + <span class="kc">${x.cpc} combo pieces</span>`:""} + <span class="ks">${x.subs} substitutes</span> + <span class="kf">${x.fill} role fill</span>. Avg MV ${x.cmc}.</p>
   <p>Game Changers: ${x.gc} (${x.gcn.map(esc).join(", ")||"none"}). Combos in deck: ${(x.cin||[]).length}${x.c2?` (${x.c2} two-card)`:""}.</p>
   <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div></div></div>
   ${slot!=null?chooserHTML(d,b,x,slot,sel):""}${shopHTML(d,b,items,sel)}
   ${shapeHTML(items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
-  ${deckSection("Your deck",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`)}
+  ${deckSection("Your deck",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`,SERVED)}
   <div class="vbar"><h3>Gaps &amp; substitutes</h3><span class="dim">${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown${x.avg?" (most played first)":""}</span></div>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}
   ${combosSection(d,b,x)}`;}
@@ -2341,6 +2384,12 @@ document.addEventListener("click",e=>{const t=e.target;
   const row=t.closest&&t.closest("details.row[data-i]");
   const ts=t.closest&&t.closest("[data-tsel]");
   if(ts){const r=ts.closest("details.row"); r.dataset.t=ts.dataset.tsel; r.dataset.slot=""; rerow(r); return;}
+  const pq=t.closest&&t.closest("[data-pinadd],[data-unpin],[data-pinquick]");
+  if(pq){const r=pq.closest("details.row[data-i]"); if(!r)return; const d=DATA[+r.dataset.i], p=pinsOf(d), next={in:[...p.in],out:[...p.out]};
+    if(pq.dataset.unpin){const L=next[pq.dataset.side]; L.splice(L.indexOf(pq.dataset.unpin),1);}
+    else{const side=pq.dataset.pinadd||pq.dataset.pinquick, nm=pq.dataset.pinadd?(r.querySelector(".pinq")||{}).value||"":pq.dataset.name;
+      if(!nm.trim())return; const o=side==="in"?"out":"in"; next[o]=next[o].filter(x=>x!==nm.trim()); if(!next[side].includes(nm.trim()))next[side].push(nm.trim());}
+    postPins(d,next,r); return;}
   const lsel=t.closest&&t.closest("[data-wsel],[data-ssel]");
   if(lsel&&!lsel.disabled){const r=lsel.closest("details.row");
     if(lsel.dataset.wsel) r.dataset.w=lsel.dataset.wsel; else r.dataset.s=lsel.dataset.ssel;
@@ -2426,6 +2475,17 @@ class Rebuild:
         return {"running": self.running(), "ok": self.ok, "started": self.started,
                 "line": self.lines[-1] if self.lines else ""}
 
+PINS_FILE = "pins.json"   # your pins per commander: {"<commander>": {"in": [card names], "out": [card names]}}
+
+def pins_clean(p):
+    p = p or {}
+    return {"in": sorted(set(p.get("in") or [])), "out": sorted(set(p.get("out") or []))}
+
+def pins_for(pins, cmdr_name):
+    """(keys always included, keys never used) for analyze()."""
+    p = pins_clean(pins.get(cmdr_name))
+    return {norm(x) for x in p["in"]}, {norm(x) for x in p["out"]}
+
 TABLES_FILE = "report_tables.json"   # the report's card/string/combo tables and collection file, for LiveDecks
 
 class LiveDecks:
@@ -2489,6 +2549,46 @@ class LiveDecks:
             T, CT = c["T"], c["CT"]
             return 200, {"x": x, "cards": T.rows[have[0]:], "strs": T.strs[have[1]:], "combos": CT.rows[have[2]:]}
 
+    def pins(self, body=None):
+        """GET (body None): all pins. POST: {"c": commander, "in": [names], "out": [names]} replaces that
+        commander's pins after checking each card is yours, legal and in its colours. Returns (code, reply)."""
+        path = os.path.join(self.a.out, PINS_FILE)
+        with self.lock:
+            allp = load_json(path)
+            if body is None: return 200, {"pins": {k: pins_clean(v) for k, v in allp.items()}}
+            tab_path = os.path.join(self.a.out, TABLES_FILE)
+            try:
+                if not self.ctx or self.ctx["mt"] != os.path.getmtime(tab_path): self._load(tab_path)
+            except (LookupError, OSError) as e:
+                return 404, {"error": str(e)}
+            owned, cands = self.ctx["owned"], self.ctx["cands"]
+            m = cands.get(norm(str(body.get("c", ""))))
+            if not m: return 404, {"error": "Not one of your commanders."}
+            ci = set(m["ci"])
+            ok = lambda c: c["commander_legal"] and set(c["ci"]) <= ci and c["layout"] not in ("token", "emblem")
+            front_of = {norm(c["name"].split(" // ")[0]): c for c in owned.values()}
+            new, errs = {"in": [], "out": []}, []
+            for side in ("in", "out"):
+                for nm in body.get(side) or []:
+                    q = norm(str(nm).strip())
+                    c = owned.get(q) or front_of.get(q)
+                    if not c:
+                        near = sorted(c2["name"] for c2 in owned.values() if q and q in norm(c2["name"]) and ok(c2))[:4]
+                        errs.append(f"{nm}: not in your collection" + (f" (did you mean {', '.join(near)}?)" if near else ""))
+                    elif not ok(c) or norm(c["name"]) == norm(m["name"]):
+                        errs.append(f"{c['name']}: not legal in this deck (colours or legality)")
+                    else:
+                        new[side].append(c["name"])
+            both = set(new["in"]) & set(new["out"])
+            if both: errs.append(f"{', '.join(sorted(both))}: can't be both always included and never used")
+            if errs: return 400, {"error": "; ".join(errs)}
+            new = pins_clean(new)
+            if new["in"] or new["out"]: allp[m["name"]] = new
+            else: allp.pop(m["name"], None)
+            save_json(path, allp)
+            print(f"Pins for {m['name']}: +{len(new['in'])} always, -{len(new['out'])} never")
+            return 200, {"pins": new}
+
     def _build(self, name, b, t, avg, w, s):
         c, a = self.ctx, self.a
         owned, cache = c["owned"], c["cache"]
@@ -2542,14 +2642,15 @@ class LiveDecks:
             c["per"][slug] = (pool_info, (combos or {}).get("own", []), legal, commander_profile(m, tags))
         pool_info, own, legal, prof = c["per"][slug]
         ew, T = EDH_WEIGHT[w], c["T"]
+        pn = pins_for(load_json(os.path.join(a.out, PINS_FILE)), m["name"])
         if avg:
             apage, show = avg_as_page(ap, tp, tp, "all") if t else avg_as_page(ap, pg, base, b)
             x = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname, profile=prof,
-                        show=show, ew=ew)
+                        show=show, ew=ew, pins=pn)
             x["ref"], x["avg"] = avg_shape(ap, owned, name_meta), 1
         else:
             src, bs = (tp, tp) if t else (pg, base)
-            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew)
+            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew, pins=pn)
         if t: x["theme"], x["tdecks"] = tname, x["decks"]
         finish_deck(x, b, own, legal, c["CT"])
         x.pop("arena", None)
@@ -2583,6 +2684,10 @@ def serve(a, csv_path, child_args):
                     self.reply(200, WAIT_PAGE, "text/html; charset=utf-8")
             elif path == "/status":
                 self.reply(200, rb.status())
+            elif path == "/pins":
+                if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
+                code, out = live.pins()
+                self.reply(code, out)
             elif path == "/deck":
                 # same custom-header rule as uploads: other websites can't make this PC build decks
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
@@ -2605,6 +2710,15 @@ def serve(a, csv_path, child_args):
             data = self.rfile.read(size)   # read before replying, or Windows resets the connection
             # The custom header can't be sent cross-site without a CORS preflight we never answer,
             # so other websites open in the browser can't trigger uploads.
+            if self.path == "/pins" and self.headers.get("X-Deck-Wizard") == "1":
+                try:
+                    body = json.loads(data.decode("utf-8"))
+                    if not isinstance(body, dict): raise ValueError
+                except ValueError:
+                    return self.reply(400, {"error": "Bad pins request."})
+                if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
+                code, out = live.pins(body)
+                return self.reply(code, out)
             if self.path != "/upload" or self.headers.get("X-Deck-Wizard") != "1":
                 return self.reply(403, {"error": "forbidden"})
             if not data: return self.reply(400, {"error": "The file is empty."})
@@ -2711,6 +2825,8 @@ def main():
     # pass 1: EDHREC pages
     edh_path = os.path.join(cache_dir, EDH_CACHE)
     cache = load_edhrec_cache(cache_dir, a.refresh)
+    pins = load_json(os.path.join(a.out, PINS_FILE))
+    if pins: print(f"Pins: {sum(len(v.get('in', [])) + len(v.get('out', [])) for v in pins.values())} cards for {len(pins)} commanders ({PINS_FILE})")
     pages, themes, avgs, skipped = {}, {}, {}, 0
     for i, m in enumerate(cands, 1):
         slug = slugify(m["name"])
@@ -2770,10 +2886,12 @@ def main():
                             - set(TEMPLATES), tpl_path)
             combos = annotate_combos(combos, owned, set(m["ci"]))
         prof = commander_profile(m, pg["all"].get("tags") or [])
+        pn = pins_for(pins, m["name"])
         entry = {"name": m["name"], "ci": sorted(m["ci"]), "img": m.get("img", ""),
                  "slug": slugify(m["name"]), "tags": pg["all"]["tags"], "cidx": T.add(m["name"], m),
+                 "pins": pins_clean(pins.get(m["name"])),
                  "b": {b: analyze(m, p, owned, name_meta, pool_info, b, T, pg["all"],
-                                  (combos or {}).get("own"), profile=prof)
+                                  (combos or {}).get("own"), profile=prof, pins=pn)
                        for b, p in pg.items()}}
         ranked = rank_combos(combos, entry["b"]["all"]["_names"])
         own = (combos or {}).get("own", [])
@@ -2799,11 +2917,11 @@ def main():
                 tshape = avg_shape(tap, owned, name_meta)
             for b in entry["b"]:
                 tx = analyze(m, tp, owned, name_meta, pool_info, b, T, tp, own, focus=tname,
-                             want_gaps=False, profile=prof)
+                             want_gaps=False, profile=prof, pins=pn)
                 per[b] = combo_info(tx, b)
                 if tap:
                     ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname,
-                                 profile=prof, show=show)
+                                 profile=prof, show=show, pins=pn)
                     aper[b] = combo_info(ax, b); ax["ref"] = tshape
             entry["th"][tslug] = {"name": tname, "decks": tp["decks"], "own": match, "b": per, "av": aper,
                                   "adecks": apage["decks"] if tap else 0}
@@ -2813,7 +2931,7 @@ def main():
         for b, ap_ in (avgs.get(m["name"]) or {}).items():
             if b not in entry["b"]: continue
             apage, show = avg_as_page(ap_, pg[b], pg["all"], b)
-            ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, profile=prof, show=show)
+            ax = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, profile=prof, show=show, pins=pn)
             entry["av"][b] = combo_info(ax, b)
             ax["ref"] = avg_shape(ap_, owned, name_meta)
         for b, x in entry["b"].items():
