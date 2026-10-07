@@ -2026,9 +2026,14 @@ table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{paddi
 .ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
 .shopl{font-size:.75rem;white-space:nowrap}.bub .shopl{display:block;margin:-2px 0 6px 4px}
 .cw{position:relative}
-.bub{display:none;position:absolute;top:100%;left:0;margin-top:-8px;z-index:30;width:290px;padding:8px;background:var(--card);border:1px solid var(--acc);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);line-height:1.3}
+.bub{display:none;position:absolute;top:100%;left:0;margin-top:-8px;z-index:30;width:max-content;max-width:min(560px,94vw);padding:8px;background:var(--card);border:1px solid var(--acc);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);line-height:1.3}
 .bub.r{left:auto;right:0}.cw:hover .bub,.cw:focus-within .bub{display:block}
-.bub h6{margin:0 0 6px;font-size:.78rem;color:var(--ink);font-weight:600}.bub .opt{width:100%;margin:0 0 4px;padding:4px;font-size:.75rem}.bub .opt img.c{width:44px}
+.bub h6{margin:0 0 6px;font-size:.78rem;color:var(--ink);font-weight:600}
+.bub .orow{display:flex;gap:6px;align-items:stretch;margin-bottom:6px}
+.bub .opt{flex-direction:column;align-items:stretch;gap:3px;width:104px;margin:0;padding:4px;font-size:.7rem;text-align:left}
+.bub .opt img.c{width:100%}.bub .opt b{font-size:.72rem;line-height:1.2}
+.bub .opt small{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
+.bub .opt.want{border:2px solid var(--pick);background:rgba(251,191,36,.14)}.bub .opt.want b{color:var(--pick)}
 .bub .acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.bub .acts button{font-size:.72rem;padding:3px 7px}.bub small{font-size:.7rem;color:var(--mut)}
 .flip{position:absolute;top:6px;left:6px;z-index:2;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.78);color:#fff;font:700 16px/26px system-ui;text-align:center;cursor:pointer}
 .chooser{border:1px solid var(--acc);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(45,212,191,.06)}
@@ -2269,13 +2274,15 @@ function chooserHTML(d,b,x,slot,t){
   const e=x.deck.find(r=>yp?r[1]==="y"&&"y"+r[0]===slot&&r.length>3:r[1]==="s"&&String(r[2])===String(slot)); if(!e) return "";
   const key=yp?slot:e[2], ch=getCh(d,b,t)[key];
   const taken=new Set(effDeck(d,b,x,t).filter(it=>String(it.slot)!==String(key)).map(it=>it.i));
-  const opt=(pick,card,label)=>{const dis=pick!==-1&&pick!=="adv"&&taken.has(card);
+  const opt=(pick,card,label,cls)=>{const dis=pick!==-1&&pick!=="adv"&&taken.has(card);
     const on=(pick==="adv"&&ch===undefined)||(pick===-1&&ch===-1)||(typeof pick==="number"&&pick>=0&&ch===pick);
-    return `<button class="opt ${on?"on":""}" data-pick="${pick}" data-slot="${key}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><span><b>${esc(front(card))}</b><br><small>${label}</small></span></button>`;};
+    return `<button class="opt ${cls||""} ${on?"on":""}" data-pick="${pick}" data-slot="${key}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><b>${esc(front(card))}</b><small>${label}</small></button>`;};
+  const shop=c=>buyA(c,"🛒 Find "+esc(front(c))+" on "+esc(STORE.name));
   if(yp){const [mine,,why,alts,buy,bwhy]=e;
-    return `<h6>Your pick · keep it or swap it</h6>${opt("adv",mine,"keep · "+esc(W(why)||"your pick"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy)))+buyA(buy,"🛒 Find "+esc(front(buy))+" on "+esc(STORE.name)):""}`;}
+    return `<h6>Your pick · keep it or swap it</h6><div class="orow">${opt("adv",mine,"keep · "+esc(W(why)||"your pick"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy)),"want"):""}</div>${buy>=0?shop(buy):""}`;}
   const [adv,,f,why,alts]=e;
-  return `<h6>You don't own ${esc(front(f))} · use instead</h6>${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${opt(-1,f,"buy it: add to shopping list")}${buyA(f,"🛒 Find "+esc(front(f))+" on "+esc(STORE.name))}
+  // the card the deck is meant to have comes first, highlighted: click it to buy it; then your stand-ins
+  return `<h6>${esc(front(f))} belongs here · buy it or use one of yours</h6><div class="orow">${opt(-1,f,"meant for this deck · click to buy","want")}${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}</div>${shop(f)}
   ${(alts||[]).length?"":`<small>No other close match in your collection.</small>`}`;}
 // what hovering a card in the deck shows: its options (substitute slot / your pick) and, in the app, pins
 function bubbleHTML(d,b,x,it,t){
@@ -2491,20 +2498,26 @@ document.addEventListener("click",e=>{const t=e.target;
   if(t.classList.contains("cp")){navigator.clipboard.writeText(t.closest(".body").querySelector("textarea").value);t.textContent="Copied";}});
 const pv=$("pv");
 if(matchMedia("(hover:hover)").matches){
+  // the big preview opens only after the mouse rests on a card for PV_DELAY ms (instant pop-ups got in the way)
+  const PV_DELAY=1000; let pvT=null, pvWant="", pvE=null;
+  const pvHide=()=>{clearTimeout(pvT); pvWant=""; pv.style.display="none";};
+  const pvLater=src=>{if(src===pvWant)return; pvHide(); pvWant=src;
+    pvT=setTimeout(()=>{pv.src=src; pv.style.display="block"; if(pvE)pvPlace(pvE);},PV_DELAY);};
   document.addEventListener("mouseover",e=>{const t=e.target, cw=t.closest&&t.closest(".cw");
-    if(cw){const bb=cw.querySelector(".bub"); if(bb)bb.classList.toggle("r",cw.getBoundingClientRect().left+300>innerWidth);}
+    if(cw){const bb=cw.querySelector(".bub"); if(bb)bb.classList.toggle("r",cw.getBoundingClientRect().left+480>innerWidth);}
     const fl=t.closest&&t.closest(".flip");
     if(fl){const im=fl.parentNode.querySelector("img.c"); if(!im.dataset.front)im.dataset.front=im.src; im.src=fl.dataset.back;
-      pv.src=fl.dataset.back.replace("/normal/","/large/"); pv.style.display="block"; return;}
+      pvLater(fl.dataset.back.replace("/normal/","/large/")); return;}
     const im=t.closest&&t.closest("img.c");
-    if(!im){pv.style.display="none";return;} pv.src=im.src.replace("/normal/","/large/").replace("version=normal","version=large"); pv.style.display="block";});
+    if(!im){pvHide();return;} pvLater(im.src.replace("/normal/","/large/").replace("version=normal","version=large"));});
   document.addEventListener("mouseout",e=>{const fl=e.target.closest&&e.target.closest(".flip");
     if(fl&&!fl.contains(e.relatedTarget)){const im=fl.parentNode.querySelector("img.c"); if(im.dataset.front)im.src=im.dataset.front;}});
-  document.addEventListener("mousemove",e=>{if(pv.style.display!=="block")return; const w=300,h=418;
+  document.addEventListener("mousemove",e=>{pvE=e; if(pv.style.display==="block")pvPlace(e);});
+  function pvPlace(e){const w=300,h=418;
     const ct=e.target.closest&&!e.target.closest(".bub")&&e.target.closest(".ct"), r=ct&&ct.getBoundingClientRect();
     let x=r?r.right+12:e.clientX+24, y=r?r.top:e.clientY-h/2;          // beside the card, so the bubble below stays visible
     if(x+w>innerWidth-8)x=(r?r.left:e.clientX)-w-12;
-    pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";});}
+    pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";}}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".flip"))e.preventDefault();},true);
 ["br","q","th","c","p","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
 render();

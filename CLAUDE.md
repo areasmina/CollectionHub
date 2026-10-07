@@ -312,6 +312,9 @@ list, under the "buy" option in bubbles and under each card in "Other cards you'
 `bubbleHTML` = `chooserHTML` options for substitute / your-pick slots + in the app "📌 Always include / 🚫 Never use"
 pins). No buttons under cards, no chooser panel at the top; "Other cards you're missing" is a folded `<details>`.
 The big preview sits beside the hovered card (not over its bubble); bubbles near the right edge open leftwards (`.r`).
+Bubble options run left to right (`.orow`, small cards with the reason under each); in a substitute slot the
+missing card comes first in gold (`.opt.want`, "meant for this deck · click to buy" = pick -1 → shopping list) with
+its 🛒 link below. The big preview opens only after the mouse rests on a card `PV_DELAY` 1000 ms (`pvLater`/`pvHide`).
 Two-faced cards: CardTable row field 5 = 1 (`TWO_FACED` layouts, image path `front/`); tile shows ⟲, hovering it shows
 `BACK(i)` (Scryfall `/back/` image) in the tile and the preview.
 Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
