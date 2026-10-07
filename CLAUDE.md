@@ -305,7 +305,7 @@ deck whose source has fewer decks (bracket page, theme page, average deck) shows
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
-**Zine × P5 UI** (design/ZINE_UI_SPEC.md; Phases 1, 2, 2b, 3, 3b done): print modes (`dw:mode`), Discover cards with P5
+**Zine × P5 UI** (design/ZINE_UI_SPEC.md; Phases 1, 2, 2b, 3, 3b, 4 done): print modes (`dw:mode`), Discover cards with P5
 slanted-bar batteries (`bat()`, heights via nth-child), red `--r` active state, ransom-note titles (`ransom()`; page
 title + the open panel's name only), tickers (`#tick`, panel ticker in `body()`), `p5-slab` section titles, `p5-card`
 hover + `p5-in` stagger (first 24) + #1–#3 tags, deck cards slide in via one shared IntersectionObserver
@@ -328,7 +328,14 @@ spinning `p5-burst`, Readiness inverted with `readyCap()`, Bracket Fit with a re
 (`.slim`: ON DECK, mini battery, ready/fit, mini bracket switch `.mbk[data-bsel]`, archetype `select.tsel`, TO BUY) →
 The 99 (`p5-slab`; tape labels `TAPE`/`tapeFor`, coloured offset shadows per kind) + aside (Why this card?, receipt
 `shopHTML`, cyan `swapsHTML`, yellow `pinHTML`) → Gaps & stand-ins (`slotRowsHTML`: Buy it / Advised / Or… option cards,
-same saved choices; chosen = red + (CHOSEN!)) → Deck stats & combos (charts, power profile, combos; Phase 4 restyles).
+same saved choices; chosen = red, skewed, cream offset shadow + (CHOSEN!) dropping in at the card's foot; one row of options;
+the 🛒 store link sits under the missing-card tile) → Deck stats & combos (Phase 4, below).
+**Deck stats pile (Phase 4):** `pileHTML()` = one pile of post-its with tabs (`.ptab[data-stat]`, `role=tab`, `aria-selected`,
+arrow keys; last tab in `dw:stat`, `setStat()`; the two other notes peek out behind as `.pback`): Mana curve (yellow: solid
+bars yours, hatched = EDHREC average deck `ref`, verdict SAME / N MORE / N FEWER, ±2 printed red; facts row; "As a table"),
+Card types (cyan rows, same verdicts), Power profile (magenta 10-cell meters from `x.pw`, each with what it counts),
+Combos (paper: best combo `x.cl[0]`, Danger zone `dz` first 6 with early/late · mana · wins · OK/not allowed, the rest +
+best combos + all combos folded). Note text always #141414. Replaces `shapeHTML`, `dangerHTML`, `combosSection`.
 **"Why this card?"** (`WHY[d.i]`, `whyHTML`, `whyShow`): hover/focus previews, click pins (`.wpin` red outline, 📍
 PINNED), click again or Esc lets go; `aria-live`; 📌/🚫 buttons use the pins (`data-pinquick`). Static parts: kind, reason,
 stand-in, swap, roles (CardTable row field 6 = `roles_of()` bitmask in `ROLE_NAMES` order), combos in the deck (`x.cin` ×

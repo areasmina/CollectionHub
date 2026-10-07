@@ -1976,10 +1976,6 @@ summary:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var
 .tag{font-size:.78rem;padding:3px 10px;border-radius:12px;background:var(--bar);color:var(--acc);text-decoration:none}
 a.tag:hover{background:var(--acc);color:var(--bg)}.tag.dim{color:var(--mut)}
 .bk{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut);background:transparent;cursor:pointer}.bk:hover{border-color:var(--acc);color:var(--ink);background:transparent}.bk.on{border-color:var(--acc);color:var(--ink);background:rgba(45,212,191,.12)}
-.profile h4{margin:10px 0 6px;font-size:.85rem;color:var(--mut)}
-.bars{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;max-width:420px}
-.seg{height:7px;background:var(--bar);border-radius:3px;overflow:hidden}.sf{height:100%;background:var(--acc)}
-.sl{font-size:.75rem;color:var(--mut);font-variant-numeric:tabular-nums}
 .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.num{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--mut)}
 .num b{display:block;font-size:1.25rem;color:var(--ink)}.num .t{font-weight:600;color:var(--ink);font-size:.8rem}.num ul{padding-left:16px;margin:4px 0 0}.num .bad{color:#fbbf24}.num .ok{color:#34d399}
 @media(max-width:700px){.nums{grid-template-columns:1fr}}
@@ -2008,19 +2004,6 @@ img.c{width:100%;aspect-ratio:488/680;border-radius:4.75%/3.5%;background:var(--
 .tag.thm{cursor:pointer;background:transparent;border:1px solid var(--line)}.tag.thm.on{border-color:var(--acc);background:rgba(45,212,191,.18);color:var(--ink)}
 .tnote{font-size:.85rem;margin:4px 0 8px}.thinw{font-size:.85rem;margin:4px 0;color:#fbbf24}.srcb.thin{border-style:dashed}.tnote .tag{cursor:pointer}
 .srcsel{display:flex;gap:4px}.srcsel .srcb{font-size:.85rem;padding:4px 12px}
-.shape{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 24px;margin:4px 0 12px}
-.shape h4{margin:0 0 6px;font-size:.85rem;color:var(--mut)}
-.mvc{display:flex;align-items:flex-end;gap:2px;height:110px;padding-top:16px;border-bottom:1px solid var(--line)}
-.mvc .col{flex:1;height:100%;position:relative;display:flex;align-items:flex-end;justify-content:center}
-.mvc .b{width:70%;background:var(--fill);border-radius:4px 4px 0 0}
-.mvc .rf,.tyb .rf{position:absolute;background:var(--ink)}.mvc .rf{left:6%;right:6%;height:2px}
-.mvc .v{position:absolute;font-size:.7rem;color:var(--mut)}
-.mvx{display:flex;gap:2px;margin-top:2px}.mvx span{flex:1;text-align:center;font-size:.7rem;color:var(--mut)}
-.tyr{display:grid;grid-template-columns:96px 1fr 26px;gap:3px 8px;align-items:center;font-size:.75rem}
-.tyl{color:var(--mut)}.tyn{text-align:right}
-.tyb{height:10px;position:relative}.tyb .b{height:100%;background:var(--fill);border-radius:0 4px 4px 0}.tyb .rf{top:-3px;bottom:-3px;width:2px}
-.lgd{font-size:.75rem;color:var(--mut);display:flex;gap:14px;margin-bottom:6px}.lgd i{display:inline-block;vertical-align:middle;margin-right:4px}
-.lgd .ly{width:10px;height:10px;border-radius:2px;background:var(--fill)}.lgd .lr{width:12px;height:2px;background:var(--ink)}
 table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{padding:2px 10px;text-align:right;border-bottom:1px solid var(--line)}table.st td:first-child{text-align:left}
 .srcs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:.8rem}
 .srcb{font-size:.75rem;padding:3px 8px;border:1px solid var(--line);border-radius:6px;color:var(--mut);background:transparent;cursor:pointer}.srcb:hover{border-color:var(--acc);color:var(--ink);background:transparent}.srcb.on{border-color:var(--acc);color:var(--ink);background:rgba(45,212,191,.12)}.srcb:disabled{opacity:.5;cursor:default}
@@ -2244,13 +2227,16 @@ main{max-width:1400px}
 .gslot{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch;padding:16px 0 22px;border-bottom:2px dashed var(--ink)}
 .gmiss{position:relative;width:150px;aspect-ratio:488/680;padding:12px;display:flex;flex-direction:column;justify-content:space-between;border-radius:12px;border:2px dashed var(--ink);overflow:hidden;
   background:linear-gradient(to top right,transparent calc(50% - 1px),var(--m) 50%,transparent calc(50% + 1px)),linear-gradient(to top left,transparent calc(50% - 1px),var(--m) 50%,transparent calc(50% + 1px))}
-.gname{position:relative;font:800 1rem/1.1 var(--head)}.nib{align-self:flex-start;padding:1px 4px;font:700 .58rem var(--head);color:var(--bg);background:var(--ink)}.gmeta{font-size:.62rem;text-transform:uppercase}
-.garr{display:flex;align-items:center;font:900 2.4rem var(--head)}
-.gopts{flex:1 1 480px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
-.gopt{display:flex;flex-direction:column;gap:4px;text-align:left;min-height:110px;padding:12px 14px;border-radius:10px;font:400 .72rem/1.35 var(--body);text-transform:none;letter-spacing:0}
-.gopt .gk{font:700 .66rem var(--body);text-transform:uppercase}.gopt b{font:800 1rem/1.15 var(--head)}
-.gopt.on{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B;transform:rotate(-1deg)}.gopt .stk{margin-top:auto}
-.ssec .profile{margin:10px 0}
+.gname{position:relative;font:800 17px/1.1 var(--head)}.nib{position:relative;align-self:flex-start;padding:1px 4px;font:700 10px/1.3 var(--head);color:var(--bg);background:var(--ink)}.gmeta{position:relative;font-size:11px;text-transform:uppercase}
+.gmc{display:flex;flex-direction:column;gap:6px}.gmc .shopl{font-size:11px}
+.garr{display:flex;align-items:center;font:900 40px var(--head)}
+.gopts{flex:1 1 520px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+.gopt{display:flex;flex-direction:column;gap:4px;text-align:left;min-height:120px;padding:12px 14px;border:2px solid var(--ink);border-radius:10px;background:transparent;color:var(--ink);font:400 12px/1.4 var(--body);text-transform:none;letter-spacing:0}
+.gopt .gk{font:700 11px var(--body);text-transform:uppercase}.gopt b{font:800 17px/1.15 var(--head)}
+.gopt.on{background:var(--r);color:#FFFFFF;border-color:var(--ink);box-shadow:6px 6px 0 var(--ink);transform:skewX(-4deg) rotate(-1.5deg)}
+.gopt .stk{margin-top:auto;padding:1px 5px;font:800 11px/1.3 var(--head);transform:skewX(-10deg) rotate(-4deg);animation:p5drop .35s cubic-bezier(.2,1.6,.4,1) both}
+.gsec,.ssec{display:flex;flex-direction:column;gap:20px}.gsec h3.p5-slab,.ssec h3.p5-slab{margin:0;font-size:clamp(2.2rem,4.6vw,3.5rem);line-height:.9}
+.gsec>details.more>summary{display:inline;align-self:flex-start;font-size:12px;text-transform:uppercase;border-bottom:2px solid var(--r)}
 @media(max-width:760px){.slim .wide{display:none}.hcol{width:200px}.slab{width:100%;padding:6px 12px}.sheet .bk{min-width:60px}.garr{display:none}.daside{max-width:none}}
 /* ===================== Zine x P5, phase 2b: red, slants, ransom letters, motion (from design/zine/P5Discover.dc.html) ===================== */
 :root{--r:#E5191C}:root[data-mode="sepia"]{--r:#A6402B}
@@ -2353,6 +2339,49 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .bh{align-self:flex-start;padding:1px 8px;font-weight:700;font-size:10px;text-transform:uppercase;color:#FFFFFF;background:#0B0B0B;transform:skewX(-10deg)}
 .uinfo>a{align-self:flex-start;font:800 15px var(--head);text-decoration:none;border-bottom:3px solid var(--r)}.uinfo small{font-size:12px}
 .umore{align-self:flex-start;padding:8px 14px;font:900 14px var(--head);text-transform:uppercase;color:var(--bg);background:var(--ink);border:0;cursor:pointer}
+/* ---------- Deck stats & combos: post-it pile (Phase 4); note text is always #141414 ---------- */
+.pile{position:relative;max-width:1120px;margin-top:6px}.n-curve{--nc:var(--y)}.n-types{--nc:var(--c)}.n-power{--nc:var(--m)}.n-combos{--nc:#F0EBDD}
+.ptabs{position:relative;z-index:3;display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px;padding-left:28px}
+.ptab{position:relative;cursor:pointer;padding:9px 18px 10px;font:900 16px/1.1 var(--head);font-stretch:75%;text-transform:uppercase;color:#141414;background:var(--nc);border:2px solid #141414;border-radius:6px 6px 0 0;box-shadow:3px -2px 0 rgba(0,0,0,.35);opacity:.92}
+.ptab.n-curve{transform:rotate(-2deg)}.ptab.n-types{transform:rotate(1.5deg)}.ptab.n-power{transform:rotate(-1deg)}.ptab.n-combos{transform:rotate(2deg)}
+.ptab[aria-selected="true"]{padding:14px 22px 18px;margin-bottom:-8px;font-size:20px;border-bottom:0;transform:none;box-shadow:none;opacity:1}
+.pstack{position:relative}.pback{position:absolute;inset:0;background:var(--nc);border:2px solid #141414;box-shadow:6px 6px 0 rgba(0,0,0,.35)}
+.pback.b2{transform:translate(14px,12px) rotate(2.2deg)}.pback.b1{transform:translate(-8px,8px) rotate(-1.6deg)}
+.pnote{position:relative;z-index:2;min-height:560px;display:flex;flex-direction:column;gap:16px;padding:34px 36px 30px;color:#141414;border:2px solid #141414;box-shadow:8px 8px 0 var(--shadow);
+  background:var(--nc) linear-gradient(transparent 31px,rgba(0,0,0,.07) 32px) 0 0/100% 32px}
+.pnote[hidden]{display:none}.pnote a{color:#141414}.pnote small,.pnote .dim{color:#141414}
+.ptape{position:absolute;top:-14px;left:46%;width:120px;height:28px;background:rgba(255,255,255,.45);border:1px solid rgba(0,0,0,.08);transform:rotate(-3deg)}
+.nh{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px}.pnote h4{margin:0;font:900 48px/.9 var(--head);font-stretch:62%;text-transform:uppercase;color:#141414}
+.nlg{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;font-weight:700;text-transform:uppercase}.nlg>span{display:inline-flex;align-items:center;gap:8px;padding:4px 10px}
+.nlg .ly{color:#FFFFFF;background:#141414}.nlg .ly i{width:16px;height:16px;background:#FFFFFF}.nlg .lr{background:#FFFFFF;border:2px solid #141414}.nlg .lr i{width:16px;height:16px}
+.hatch{background-color:#FFFFFF;background-image:repeating-linear-gradient(45deg,#141414 0 2px,transparent 2px 7px);border:2px solid #141414;box-sizing:border-box}
+.nsay{margin:0;padding:10px 14px;font-size:15px;line-height:1.45;background:rgba(255,255,255,.55);border-left:6px solid #141414}
+.nfacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.nfacts div{display:flex;flex-direction:column;padding:8px 10px;border:2px solid #141414}
+.nfacts span{font-size:11px;text-transform:uppercase}.nfacts b{font:900 26px/1.05 var(--head);font-stretch:75%}
+.ncurve{display:flex;align-items:flex-end;gap:14px;height:300px;padding-top:30px;border-bottom:3px solid #141414}
+.cpair{flex:1;height:100%;display:flex;align-items:flex-end;justify-content:center;gap:4px}
+.cy,.ca{flex:1;max-width:46px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
+.cy i,.ca i{display:block;width:100%;box-sizing:border-box}.cy i{background:#141414;border:2px solid #141414}.cy b{font:900 22px/1 var(--head)}.ca span{font-size:14px;line-height:1}
+.nmv{display:flex;gap:14px}.nmv div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}.nmv b{font:900 18px var(--head);text-transform:uppercase;white-space:nowrap}
+.vd{justify-self:start;padding:2px 8px;font:900 13px var(--head);white-space:nowrap;border:2px solid #141414}.vd.d1{color:#FFFFFF;background:#141414}
+.vd.d2{color:#FFFFFF;background:var(--r);transform:skewX(-8deg)}.nfoot{margin:0;font-size:12px}
+.trow{display:grid;grid-template-columns:150px 1fr 120px;gap:6px 14px;align-items:center;padding:8px 0;border-bottom:1.5px dashed #141414}
+.tn{font:900 20px var(--head);font-stretch:75%;text-transform:uppercase}.tb{display:flex;flex-direction:column;gap:4px}.tb div{display:flex;align-items:center;gap:8px}
+.tb i{display:block;height:18px;box-sizing:border-box}.tb div:first-child i{background:#141414;border:2px solid #141414}.tb b{font-size:15px}.tb span{font-size:13px}
+.prow{display:grid;grid-template-columns:170px 1fr 40px;gap:4px 14px;align-items:center;padding-bottom:10px;border-bottom:1.5px dashed #141414}
+.pk{font:800 16px var(--head);text-transform:uppercase}.prow>b{text-align:right;font:900 22px var(--head)}.pw{grid-column:2/4;font-size:12px}
+.pcells{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}.pcells i{height:20px;border:2px dashed #141414;opacity:.5}
+.pcells i.on{border-style:solid;opacity:1;background:rgba(255,255,255,.35) radial-gradient(circle,#141414 0 1.6px,transparent 1.9px) 0 0/4px 4px}
+.ncount{font-size:12px;text-transform:uppercase}.nbest{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:2px solid #141414;background:rgba(255,255,255,.35)}
+.nbest .lbl{font-size:11px;font-weight:700;text-transform:uppercase}.nbest>b{font:800 20px var(--head)}.nbest>b a{text-decoration:none}.nbest>span{font-size:12px}
+.ntags{display:flex;gap:6px}.ntags span{padding:1px 6px;font-weight:700;font-size:11px;text-transform:uppercase;border:1.5px solid #141414}.ntags .inv{color:#F0EBDD;background:#141414}
+.ndz{display:flex;flex-direction:column}.dzh{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;padding-bottom:6px;border-bottom:3px solid #141414}
+.dzh b{font:900 24px var(--head);font-stretch:75%;text-transform:uppercase}.dzh span{font-size:11px}
+.dzr{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:9px 0;border-bottom:1.5px dashed #141414}.dzr b{font:800 15px var(--head)}.dzr b a{text-decoration:none}
+.dzr>span{font-size:11px;text-transform:uppercase}.dzr>span.bad{padding:0 5px;color:#F0EBDD;background:#141414}
+.pnote details.more>summary{display:inline;align-self:flex-start;font-size:12px;text-transform:uppercase;color:#141414;border-bottom:2px solid #141414}
+.pnote .tag{color:#141414;border-color:#141414}.pnote b.miss{color:#B3161A}
+@media(max-width:760px){.trow{grid-template-columns:1fr}.prow{grid-template-columns:1fr 34px}.prow .pcells{grid-column:1/3}.pw{grid-column:1/3}.ncurve{gap:4px;height:220px}.nmv{gap:4px}.nmv b{font-size:12px}.pnote{padding:28px 16px 20px}}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -2647,24 +2676,62 @@ function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length
   ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small>${SERVED?` <button class="pinb" data-pinquick="in" data-name="${esc(CARDS[a][0])}" title="Always include this card for this commander">📌 always include</button>`:""}</li>`).join("")}</ul>`:""}</details>`;}
 /* ---------- deck shape: your deck (bars) against EDHREC's average deck (line) ---------- */
 const TYO=["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Other","Land"];
-function shapeHTML(items,ref,b,tname){
-  const mv=[0,0,0,0,0,0,0,0], ty={};
+/* ---------- Deck stats & combos: a pile of post-its (mana curve, card types, power profile, combos); the tab picked last is
+   kept in "dw:stat". Everything comes from the deck, EDHREC's average deck (av[b].ref) and Spellbook; nothing invented. ---------- */
+const NOTES=[["curve","Mana curve"],["types","Card types"],["power","Power profile"],["combos","Combos"]];
+let STAT="curve"; try{STAT=localStorage.getItem("dw:stat")||"curve";}catch(e){}
+if(!NOTES.some(n=>n[0]===STAT)) STAT="curve";
+const vword=v=>v===0?"SAME":v>0?v+" MORE":(-v)+" FEWER";
+const vtag=v=>`<span class="vd${v===0?"":Math.abs(v)>=2?" d2":" d1"}">${vword(v)}</span>`;
+const fmt=v=>Math.round(v*10)/10;
+function pileHTML(d,b,x,items,ref,tname){
+  const mv=[0,0,0,0,0,0,0,0], ty={}; let nl=0, cmc=0;
   items.forEach(it=>{const c=CARDS[it.i]; if(!c)return; const q=it.n||1; ty[c[2]]=(ty[c[2]]||0)+q;
-    if(c[2]!=="Land") mv[Math.min(7,c[4]||0)]+=q;});
-  const tip=(l,y,r)=>`${l}: your deck ${y}`+(r==null?"":` · average deck ${r}`);
-  const top=Math.max(1,...mv,...(ref?ref.mv:[]));
-  const cols=mv.map((v,k)=>{const r=ref?ref.mv[k]||0:null, lab="MV "+(k===7?"7+":k);
-    return `<div class="col" title="${tip(lab,v,r)}"><span class="v" style="bottom:calc(${100*Math.max(v,r||0)/top}% + 3px)">${v||""}</span><div class="b" style="height:${100*v/top}%"></div>${r==null?"":`<div class="rf" style="bottom:${100*r/top}%"></div>`}</div>`;}).join("");
+    if(c[2]!=="Land"){mv[Math.min(7,c[4]||0)]+=q; nl+=q; cmc+=q*(c[4]||0);}});
+  const avgN=`EDHREC average ${tname?esc(tname)+" ":b==="all"?"":SH[b]+" "}deck`;
+  const lgd=`<span class="nlg"><span class="ly"><i></i>your deck</span>${ref?`<span class="lr"><i class="hatch"></i>${avgN}</span>`:""}</span>`;
+  const sumR=(a,lo,hi)=>a.slice(lo,hi+1).reduce((s,v)=>s+v,0);
+  // mana curve: two bars per mana value; the sentence and the verdicts only repeat the numbers
+  const MV=k=>k===7?"7+":String(k), top=Math.max(1,...mv,...(ref?ref.mv:[]))+2;
+  const cd=ref?mv.map((v,k)=>[MV(k),v-(ref.mv[k]||0)]).filter(z=>z[1]).sort((p,q)=>Math.abs(q[1])-Math.abs(p[1])):[];
+  const curveSay=!ref?`<b>No EDHREC average deck to compare with.</b>`:!cd.length?`<b>Your curve matches the average deck.</b> Same count at every cost.`
+    :`<b>Your curve is ${cd.every(z=>Math.abs(z[1])<=2)?"almost the same as":"different from"} the average deck.</b> Differences: ${cd.map(([m,v])=>vword(v).toLowerCase()+" at "+m+" mana").join(", ")}. Everything else matches.`;
+  const facts=[["Non-land cards",nl],["Average mana value",nl?(cmc/nl).toFixed(2):"–"],
+    ["Cheap (0–2 mana)",sumR(mv,0,2)+(ref?` · avg ${fmt(sumR(ref.mv,0,2))}`:"")],["Big (5+ mana)",sumR(mv,5,7)+(ref?` · avg ${fmt(sumR(ref.mv,5,7))}`:"")]];
+  const curve=`<div class="nh"><h4>Mana curve</h4>${lgd}</div><p class="nsay">${curveSay}</p>
+    <div class="nfacts">${facts.map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
+    <div class="ncurve" role="img" aria-label="Mana curve. ${mv.map((v,k)=>MV(k)+" mana: yours "+v+(ref?", average "+fmt(ref.mv[k]||0):"")).join("; ")}">${mv.map((v,k)=>{const r=ref?ref.mv[k]||0:null;
+      return `<div class="cpair" title="${MV(k)} mana: you have ${v}${ref?", the average deck has "+fmt(r):""}"><div class="cy"><b>${v}</b><i style="height:${100*v/top}%"></i></div>${ref?`<div class="ca"><span>${fmt(r)}</span><i class="hatch" style="height:${100*r/top}%"></i></div>`:""}</div>`;}).join("")}</div>
+    <div class="nmv">${mv.map((v,k)=>`<div><b>${MV(k)} mana</b>${ref?vtag(v-Math.round(ref.mv[k]||0)):""}</div>`).join("")}</div>
+    <p class="nfoot">${ref?`Each pair: left = your deck, right = the ${avgN}.`:"Your deck's non-land cards by mana value."}</p>
+    <details class="more"><summary>As a table</summary><table class="st"><tr><th></th><th>Your deck</th>${ref?"<th>Average deck</th>":""}</tr>
+    ${mv.map((v,k)=>`<tr><td>MV ${MV(k)}</td><td>${v}</td>${ref?`<td>${fmt(ref.mv[k]||0)}</td>`:""}</tr>`).join("")}</table></details>`;
+  // card types: one row per type, yours vs the average deck
   const tys=TYO.filter(g=>ty[g]||(ref&&ref.ty[g])), tmax=Math.max(1,...tys.map(g=>Math.max(ty[g]||0,ref?ref.ty[g]||0:0)));
-  const rows=tys.map(g=>{const v=ty[g]||0, r=ref?ref.ty[g]||0:null, tt=tip(g,v,r);
-    return `<span class="tyl" title="${tt}">${g}</span><div class="tyb" title="${tt}"><div class="b" style="width:${100*v/tmax}%"></div>${r==null?"":`<div class="rf" style="left:${100*r/tmax}%"></div>`}</div><span class="tyn" title="${tt}">${v}</span>`;}).join("");
-  const lgd=`<div class="lgd"><span><i class="ly"></i>Your deck</span>${ref?`<span><i class="lr"></i>EDHREC average ${tname?esc(tname)+" ":b==="all"?"":LBL[b]+" "}deck</span>`:""}</div>`;
-  const tbl=`<details class="more"><summary>As a table</summary><table class="st"><tr><th></th><th>Your deck</th>${ref?"<th>Average deck</th>":""}</tr>
-    ${mv.map((v,k)=>`<tr><td>MV ${k===7?"7+":k}</td><td>${v}</td>${ref?`<td>${ref.mv[k]||0}</td>`:""}</tr>`).join("")}
-    ${tys.map(g=>`<tr><td>${g}</td><td>${ty[g]||0}</td>${ref?`<td>${ref.ty[g]||0}</td>`:""}</tr>`).join("")}</table></details>`;
-  return `<div class="vbar"><h3>Deck shape</h3>${ref?"":`<span class="dim">no EDHREC average deck to compare</span>`}</div>${lgd}
-  <div class="shape"><div><h4>Mana curve (non-land cards)</h4><div class="mvc">${cols}</div><div class="mvx">${mv.map((_,k)=>`<span>${k===7?"7+":k}</span>`).join("")}</div></div>
-  <div><h4>Card types</h4><div class="tyr">${rows}</div></div></div>${tbl}`;}
+  const PL={Creature:"creatures",Instant:"instants",Sorcery:"sorceries",Artifact:"artifacts",Enchantment:"enchantments",Planeswalker:"planeswalkers",Battle:"battles",Other:"others",Land:"lands"};
+  const td=ref?tys.map(g=>[g,(ty[g]||0)-Math.round(ref.ty[g]||0)]).filter(z=>Math.abs(z[1])>=2).sort((p,q)=>Math.abs(q[1])-Math.abs(p[1])):[];
+  const types=`<div class="nh"><h4>Card types</h4>${lgd}</div><p class="nsay">${!ref?`<b>No EDHREC average deck to compare with.</b>`
+      :td.length?`<b>Biggest differences: ${td.map(([g,v])=>vword(v).toLowerCase()+" "+PL[g]).join(", ")}.</b> The rest is within 1 card of the average.`:`<b>Your card types match the average deck.</b> Every type is within 1 card.`}</p>
+    ${tys.map(g=>{const v=ty[g]||0, r=ref?ref.ty[g]||0:null;
+      return `<div class="trow" title="${g}: you have ${v}${ref?", the average deck has "+fmt(r):""}"><span class="tn">${g}</span><div class="tb"><div><i style="width:${100*v/tmax}%"></i><b>${v}</b></div>${ref?`<div><i class="hatch" style="width:${100*r/tmax}%"></i><span>${fmt(r)} avg</span></div>`:""}</div>${ref?vtag(v-Math.round(r)):"<span></span>"}</div>`;}).join("")}`;
+  // power profile: power_profile() counts, each with what it counts
+  const p=x.pw||{}, PW=[["Speed",p.speed,"10 minus the average mana value: a lower curve acts earlier"],["Interaction",p.interaction,"removal, board wipes and counterspells in the 99"],
+    ["Ramp",p.ramp,"ramp cards in the 99 (Scryfall tags)"],["Draw",p.draw,"card draw in the 99 (Scryfall tags)"],["Tutor",p.tutor,"tutors × 3 (Scryfall otag:tutor)"],
+    ["Combo",p.combo,"combos you own that are complete in this 99, × 3"],["Game Changers",p.gc,"cards on the official Game Changers list, × 3"]];
+  const power=`<div class="nh"><h4>Power profile</h4></div>${PW.map(([k,v,w])=>`<div class="prow"><span class="pk">${k}</span><div class="pcells" role="img" aria-label="${k} ${v||0} of 10">${Array.from({length:10},(_,i)=>`<i${i<(v||0)?' class="on"':""}></i>`).join("")}</div><b>${v||0}</b><span class="pw">${w}</span></div>`).join("")}
+    <p class="nfoot">A rough summary of what the 99 is made of, each capped at 10, not a power rating. Bracket Fit above is the rule-based check.</p>`;
+  return `<div class="pile" data-cur="${STAT}"><div class="ptabs" role="tablist" aria-label="Deck stats">${NOTES.map(([k,l])=>`<button type="button" role="tab" class="ptab n-${k}" data-stat="${k}" id="pt-${d.i}-${k}" aria-controls="pn-${d.i}-${k}" aria-selected="${k===STAT}">${l}</button>`).join("")}</div>
+  <div class="pstack">${backsHTML(STAT)}${[["curve",curve],["types",types],["power",power],["combos",combosNote(d,b,x)]].map(([k,h])=>`<div class="pnote n-${k}" role="tabpanel" id="pn-${d.i}-${k}" aria-labelledby="pt-${d.i}-${k}"${k===STAT?"":" hidden"}><span class="ptape" aria-hidden="true"></span>${h}</div>`).join("")}</div></div>`;}
+// the two notes peeking out behind the front one
+const backsHTML=cur=>{const o=NOTES.map(n=>n[0]).filter(k=>k!==cur);
+  return `<span class="pback b2 n-${o[1]}" aria-hidden="true"></span><span class="pback b1 n-${o[0]}" aria-hidden="true"></span>`;};
+function setStat(pile,k){STAT=k; try{localStorage.setItem("dw:stat",k);}catch(e){}
+  pile.dataset.cur=k; pile.querySelectorAll(".ptab").forEach(t=>t.setAttribute("aria-selected",t.dataset.stat===k?"true":"false"));
+  pile.querySelectorAll(".pnote").forEach(n=>n.hidden=!n.classList.contains("n-"+k));
+  pile.querySelectorAll(".pback").forEach(x=>x.remove()); pile.querySelector(".pstack").insertAdjacentHTML("afterbegin",backsHTML(k));}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest(".ptab[data-stat]"); if(t) setStat(t.closest(".pile"),t.dataset.stat);});
+document.addEventListener("keydown",e=>{const t=e.target.closest&&e.target.closest(".ptab[data-stat]"); if(!t||(e.key!=="ArrowRight"&&e.key!=="ArrowLeft"))return;
+  const L=[...t.parentNode.children], j=(L.indexOf(t)+(e.key==="ArrowRight"?1:L.length-1))%L.length; L[j].focus(); setStat(t.closest(".pile"),L[j].dataset.stat);});
 // the deck as you chose it. Substitute slots: slot = the missing card's index, buy = keep the missing card.
 // "Your pick" slots (entries with options): slot = "y"+card, s2-like "y2" = an owned card you swapped in, buy = EDHREC's card
 function effDeck(d,b,x,t){const ch=getCh(d,b,t);
@@ -2730,24 +2797,29 @@ function comboName(c){
 function comboTags(c){
   return (c.win?' <span class="tag">wins</span>':"")+(c.inf?' <span class="tag" title="infinite">∞</span>':"")+
     (c.bt?` <span class="tag" title="Commander Spellbook's own tag, information only">${esc(TAGN[c.bt]||c.bt)}</span>`:"");}
-function dangerHTML(d,b,x){
-  if(!d.dz||!d.dz.length) return "";
-  const sel=BNUM[b], inS=new Set(x.cin||[]);
-  const li=d.dz.map(i=>{const c=COMBOS[i], ok=!sel||sel>=4||(sel===3&&c.need===3);
-    const rule=c.need===3?`late game (${c.tmv} mana total): allowed from B3`:`early game (${c.tmv} mana total): B4+ only`;
-    return `<li>${comboName(c)}${comboTags(c)}${inS.has(c.id)?' <span class="tag">in this deck</span>':""}<br><small>${rule}${sel?(ok?` · OK in ${LBL[b].split(" ")[0]}`:` · <b class="miss">not allowed in ${LBL[b].split(" ")[0]}</b>, the deck leaves it out`):""}</small></li>`;}).join("");
-  return `<div class="danger"><h4>⚠ Danger zone: two-card infinite combos you can assemble (${d.dz.length})</h4>
-  <small>Official bracket rules: none in B1–B2, only late-game ones in B3, anything in B4–B5. A card that meets a condition counts as the second card.</small><ul class="cl">${li}</ul></div>`;}
 function bestHTML(d,b,x){
   const L=(x.cl||[]).map(([i,st])=>{const c=COMBOS[i];
     return `<li>${comboName(c)}${comboTags(c)} <span class="tag">${st===2?"in this deck":"you own every piece"}</span><br><small>${c.prod.map(esc).join(" · ")}${c.two?" · two-card infinite":""}</small></li>`;}).join("");
   const scope=b==="all"?"(all decks: no bracket rules)":`allowed in ${LBL[b]}`;
   return `<h4>Best combos you own, ${scope}</h4><small>Order: in this deck first, then combos that win the game, then fewer pieces, then cheaper.</small><ul class="cl">${L||"<li>None you can assemble in these colours.</li>"}</ul>`;}
-function combosSection(d,b,x){
-  if(!d.combos) return '<div class="vbar"><h3>Combos</h3></div><p class="dim">Combo data unavailable (rerun to retry).</p>';
-  const C={own:(d.co||[]).map(i=>COMBOS[i]),near:(d.cn||[]).map(i=>COMBOS[i]),n_own:d.combos.n_own,n_near:d.combos.n_near};
-  return `<div class="vbar"><h3>Combos</h3></div>${dangerHTML(d,b,x)}${bestHTML(d,b,x)}
-  <details class="more"><summary>All combos in your collection (${C.n_own}) and one card away (${C.n_near})</summary>${comboHTML(C,x.cin,"In your collection","One card away",true)}</details>`;}
+function combosNote(d,b,x){
+  if(!d.combos) return `<div class="nh"><h4>Combos</h4></div><p class="nsay"><b>Combo data unavailable</b> (rerun to retry).</p>`;
+  const sel=BNUM[b], inS=new Set(x.cin||[]), BS=b==="all"?"":LBL[b].split(" ")[0];
+  const best=(x.cl||[])[0], bc=best&&COMBOS[best[0]];
+  const bestBox=bc?`<div class="nbest"><span class="lbl">Best combo · ${b==="all"?"all decks (no bracket rules)":"allowed in "+BS}</span><b>${comboName(bc)}</b>
+      <span>${bc.prod.map(esc).join(" · ")}${bc.two?" · two-card infinite":""}</span>
+      <span class="ntags"><span class="${best[1]===2?"inv":""}">${best[1]===2?"In this deck":"You own every piece"}</span>${bc.win?"<span>Wins</span>":""}</span></div>`
+    :`<div class="nbest"><span class="lbl">Best combo</span><b>None you can assemble in these colours${b==="all"?"":" that "+BS+" allows"}.</b></div>`;
+  const row=i=>{const c=COMBOS[i], late=c.need===3, ok=!sel||sel>=4||(sel===3&&late);
+    const rule=[late?"late":"early",c.tmv+" mana"].concat(c.win?["wins"]:[],inS.has(c.id)?["in this deck"]:[],
+      [sel?(ok?"OK in "+BS:"not allowed in "+BS+": left out"):late?"allowed from B3":"B4+ only"]).join(" · ");
+    return `<div class="dzr"><b>${comboName(c)}</b><span${ok?"":' class="bad"'}>${rule}</span></div>`;};
+  const dz=d.dz||[], C={own:(d.co||[]).map(i=>COMBOS[i]),near:(d.cn||[]).map(i=>COMBOS[i]),n_own:d.combos.n_own,n_near:d.combos.n_near};
+  return `<div class="nh"><h4>Combos</h4><span class="ncount">${d.combos.n_own} in your collection · ${(x.cin||[]).length} in this deck</span></div>${bestBox}
+  <div class="ndz"><div class="dzh"><b>Danger zone (${dz.length})</b><span title="A card that meets a combo's condition counts as its second card.">two-card infinites you can assemble · none in B1–B2, late-game only in B3, anything in B4–B5</span></div>
+  ${dz.slice(0,6).map(row).join("")||'<div class="dzr"><b>No two-card infinites you can assemble in these colours.</b></div>'}</div>
+  <details class="more nmore"><summary>${dz.length>6?`+ ${dz.length-6} more · `:""}all ${C.n_own} combos -&gt;</summary>
+  ${dz.length>6?`<div class="ndz">${dz.slice(6).map(row).join("")}</div>`:""}${bestHTML(d,b,x)}${comboHTML(C,x.cin,"In your collection","One card away",true)}</details>`;}
 
 /* ---------- the three numbers ---------- */
 const RDL={ramp:"Ramp",draw:"Card draw",removal:"Removal",wipe:"Board wipes",mv:"Avg mana value",src:"Colour sources (weakest)",odd:"Stand-ins + role fill",win:"Win conditions (finishers, drain, alt wins)"};
@@ -2775,10 +2847,10 @@ function slotRowsHTML(d,b,x,t){
   if(!slots.length) return `<p class="dim">No stand-ins in this deck: every card it plays is yours.</p>`;
   return slots.map(e=>{const [adv,,f,why,alts]=e, c=ch[f], g=(x.gaps||[]).find(g=>g[0]===f);
     const taken=new Set(eff.filter(it=>String(it.slot)!==String(f)).map(it=>it.i));
-    const opts=[[-1,"Buy it",f,"keep the original · goes on your shopping list"],["adv","Advised",adv,W(why)||"closest match"]]
+    const opts=[[-1,"Buy it",f,"keep the original · goes on the receipt"],["adv","Advised",adv,W(why)||"closest match"]]
       .concat((alts||[]).map(([a,w])=>[a,"Or",a,W(w)]));
-    return `<div class="gslot"><div class="gmiss"><span class="gname">${esc(front(f))}</span><span class="nib">(NOT IN YOUR BINDER!)</span>
-      <span class="gmeta">${g&&g[1]?g[1]+"% of decks · ":""}${esc(g?W(g[4])||"synergy piece":"")}</span>${buyA(f,"🛒 "+esc(STORE.name))}</div>
+    return `<div class="gslot"><div class="gmc"><div class="gmiss"><span class="gname">${esc(front(f))}</span><span class="nib">(NOT IN YOUR BINDER!)</span>
+      <span class="gmeta">${g&&g[1]?g[1]+"% of decks":"—"} · ${esc(g?W(g[4])||"synergy piece":"")}</span></div>${buyA(f,"🛒 "+esc(STORE.name))}</div>
       <span class="garr" aria-hidden="true">-&gt;</span>
       <div class="gopts" role="radiogroup" aria-label="Slot for ${esc(front(f))}">${opts.map(([pick,kind,card,w])=>{
         const on=pick==="adv"?c===undefined:pick===-1?c===-1:c===pick, dis=pick!==-1&&pick!=="adv"&&taken.has(card);
@@ -2824,8 +2896,6 @@ function body(d,b,r){
   if(lv&&!(lx&&lx.x)) return `${head}${sheet}${pinHTML(d,{})}
     <p class="${lx&&lx.err?"thinw":"tnote"}">${lx&&lx.err?"⚠ "+esc(lx.err)+" Pick a level to try again."
       :`Building the deck at EDHREC weight ${L.w} · ${"$".repeat(L.s)}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
-  const p=x.pw, bars=[["Speed",p.speed],["Interaction",p.interaction],["Ramp",p.ramp],["Draw",p.draw],["Tutor",p.tutor],["Combo",p.combo],["Game Changers",p.gc]]
-    .map(([l,v])=>`<div class="seg"><div class="sf" style="width:${v*10}%"></div></div><span class="sl">${l} ${v}</span>`).join("");
   const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
   const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c}))); items.forEach((it,j)=>it.w=j);
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
@@ -2854,15 +2924,14 @@ function body(d,b,r){
   <p class="dim whyhint">click any card for "why this card" · Esc or click it again to let go</p></div>
   <aside class="daside"><div class="pnl why" aria-live="polite">${first?whyHTML(d.i,first.w):""}</div>${shopHTML(d,b,items,sel)}${swapsHTML(x)}${pinHTML(d,x)}</aside></div>
   <div class="cmyk" aria-hidden="true"></div>
-  <section class="gsec"><div class="gh"><h3 class="p5-slab"><span>Gaps &amp; stand-ins</span></h3><p class="dim">&gt; ${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing; each stand-in slot below_</p></div>
+  <section class="gsec"><div class="gh"><h3 class="p5-slab"><span>Gaps &amp; stand-ins</span></h3><p class="dim">&gt; ${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown_</p></div>
   ${slotRowsHTML(d,b,x,sel)}
   <details class="more"><summary>Other ${x.avg?"average-deck":"popular"} cards you're missing: ${x.n_miss} (top ${x.gaps.length} with your alternatives)</summary>
   ${gapsHTML(x.gaps,deckSet,new Set(eff.filter(it=>it.slot!=null).map(it=>it.slot)))}</details></section>
   <div class="cmyk" aria-hidden="true"></div>
   <section class="ssec"><h3 class="p5-slab"><span>Deck stats &amp; combos</span></h3>
-  ${shapeHTML(items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),b,tsel?d.th[tsel].name:"")}
-  <div class="profile"><h4>Power profile (deck)</h4><div class="bars">${bars}</div></div>
-  ${combosSection(d,b,x)}</section>`;}
+  <p class="dim">&gt; a pile of post-its: pull a tab to bring that note to the top_</p>
+  ${pileHTML(d,b,x,items,lv?x.ref||null:tsel?(hasTAvg(d,b,tsel)?d.th[tsel].av[b].ref:null):(hasAvg(d,b)?d.av[b].ref:null),tsel?d.th[tsel].name:"")}</section>`;}
 /* ---------- "Why this card?": the real parts of a card's place in this deck (no score). The static report shows what
    it holds (kind, reason, roles, combos, swaps); the app adds EDHREC numbers and deck links from GET /why. ---------- */
 const ROLEN=["ramp","draw","removal","wipe","tutor","counter","recursion","sac outlet","win condition"];

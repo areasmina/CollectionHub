@@ -55,7 +55,7 @@ try{const tb=document.querySelector('[data-src="avg"]');
   else{tb.click(); if(!$('count').textContent.includes('average deck'))out.errs.push('top selector did not switch the list');
     const r=document.querySelector('details.row[data-i]');
     if(r){r.open=true; rerow(r); if(!r.querySelector('.srcb.on[data-asel="1"]'))out.errs.push('panel did not follow the top selector');
-      if(!r.querySelector('.shape .mvc .rf'))out.errs.push('deck shape chart has no average-deck marker');}
+      if(!r.querySelector('.pile .ca i.hatch'))out.errs.push('mana curve note has no average-deck bars');}
     document.querySelector('[data-src=""]').click(); if($('count').textContent.includes('average deck'))out.errs.push('top selector did not go back');
     out.clicks=(out.clicks||0)+2;}}
 catch(e){out.errs.push('top selector: '+e.message);}
@@ -203,6 +203,17 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       +', waiting '+r.querySelectorAll('.ct.p5-wait').length+', watched '+P5ON.length+', observer '+!!P5IO);
     out.clicks=(out.clicks||0)+1;}
   catch(e){out.errs.push('p5: '+e.message);}
+  // Deck stats pile: each tab brings its note to the front (aria-selected, one visible note) and is remembered in dw:stat
+  try{const r=document.querySelector('details.row[data-i][open]')||document.querySelector('details.row[data-i]'); if(!r.open){r.open=true; await new Promise(z=>setTimeout(z,50));}
+    const pile=r.querySelector('.pile'); if(!pile)out.errs.push('no deck stats pile');
+    else{for(const k of ['types','power','combos','curve']){pile.querySelector('.ptab[data-stat="'+k+'"]').click();
+        const vis=[...pile.querySelectorAll('.pnote')].filter(n=>!n.hidden);
+        if(vis.length!==1||!vis[0].classList.contains('n-'+k)||pile.querySelector('.ptab[aria-selected="true"]').dataset.stat!==k||pile.querySelectorAll('.pback').length!==2)
+          out.errs.push('stats tab '+k+' did not come to the front');}
+      if(pile.querySelectorAll('.pnote.n-power .pcells').length!==7)out.errs.push('power profile should have 7 meters');
+      if(!pile.querySelector('.pnote.n-combos .nbest'))out.errs.push('combos note has no best-combo box');
+      out.clicks=(out.clicks||0)+4;}}
+  catch(e){out.errs.push('stats pile: '+e.message);}
   // Collection view (#collection): opens without errors, the drop box is the only upload control (none in the header),
   // the unused grid starts at 24, "show all" and a commander chip work, a card's home link opens that commander in Discover
   try{if(document.querySelector('header.zh input[type=file], header.zh .up, header.zh button:not([data-mode])'))out.errs.push('header has an upload control');
