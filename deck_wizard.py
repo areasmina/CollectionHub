@@ -310,6 +310,7 @@ def type_group(type_line):
         if g in t: return g
     return "Other"
 
+STORE_URL = "https://shop.com/search/results?query={card}"   # 'buy' links (the user's store); --store-url changes it
 TWO_FACED = {"transform", "modal_dfc", "reversible_card", "double_faced_token"}   # back image = /back/ path
 
 class CardTable:
@@ -2023,6 +2024,7 @@ table.st{font-size:.75rem;border-collapse:collapse}table.st td,table.st th{paddi
 .pinx,.pinb{border:0;background:none;color:var(--mut);cursor:pointer;padding:0 3px;font-size:.75rem}.pinx:hover,.pinb:hover{color:var(--ink)}
 .pinq{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 8px;width:14em}
 .ct.buy img.c{outline:3px dashed #f87171;outline-offset:-2px;filter:none}
+.shopl{font-size:.75rem;white-space:nowrap}.bub .shopl{display:block;margin:-2px 0 6px 4px}
 .cw{position:relative}
 .bub{display:none;position:absolute;top:100%;left:0;margin-top:-8px;z-index:30;width:290px;padding:8px;background:var(--card);border:1px solid var(--acc);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);line-height:1.3}
 .bub.r{left:auto;right:0}.cw:hover .bub,.cw:focus-within .bub{display:block}
@@ -2150,7 +2152,7 @@ function gapsHTML(gaps,deckSet,slots){
     const alts=subs.map(([s,why])=>`<div class="alt">${tile(s,{cls:s===used?"sub":"",note:s===used?"in your deck":deckSet.has(s)?"already in deck":""})}<small>${esc(W(why))}</small>${isSlot&&!deckSet.has(s)?`<button class="opt mini" data-pick="${s}" data-slot="${i}">Use this</button>`:""}</div>`).join("")
       +(isSlot&&!deckSet.has(i)?`<div class="alt"><button class="opt mini" data-pick="-1" data-slot="${i}">Buy ${esc(front(i))} instead</button></div>`:"");
     const adv=subs.length?"":`<p class="adv">No close match in your collection for this ${esc(roles||"synergy")} slot.${r>=25?" It's a core card for this commander, worth picking up.":" The deck fills this slot with other cards you own."}</p>`;
-    return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
+    return `<div class="gap"><div class="alt">${tile(i,{cls:"miss",note:r?r+"% of decks":"missing"})}${buyA(i,"🛒 "+esc(STORE.name))}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
 /* ---------- your choices for substitute slots (saved in this browser) ---------- */
 const chKey=(d,b,t)=>"dw:"+d.slug+":"+b+(t?":"+t:"");
 // choices live in localStorage; MEM keeps them for this visit when the browser blocks storage
@@ -2271,9 +2273,9 @@ function chooserHTML(d,b,x,slot,t){
     const on=(pick==="adv"&&ch===undefined)||(pick===-1&&ch===-1)||(typeof pick==="number"&&pick>=0&&ch===pick);
     return `<button class="opt ${on?"on":""}" data-pick="${pick}" data-slot="${key}" ${dis?"disabled title='already in this deck'":""}><img class="c" src="${IMG(card)}" alt="${esc(CARDS[card][0])}" loading="lazy"><span><b>${esc(front(card))}</b><br><small>${label}</small></span></button>`;};
   if(yp){const [mine,,why,alts,buy,bwhy]=e;
-    return `<h6>Your pick · keep it or swap it</h6>${opt("adv",mine,"keep · "+esc(W(why)||"your pick"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy))):""}`;}
+    return `<h6>Your pick · keep it or swap it</h6>${opt("adv",mine,"keep · "+esc(W(why)||"your pick"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${buy>=0?opt(-1,buy,"buy · "+esc(W(bwhy)))+buyA(buy,"🛒 Find "+esc(front(buy))+" on "+esc(STORE.name)):""}`;}
   const [adv,,f,why,alts]=e;
-  return `<h6>You don't own ${esc(front(f))} · use instead</h6>${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${opt(-1,f,"buy it: add to shopping list")}
+  return `<h6>You don't own ${esc(front(f))} · use instead</h6>${opt("adv",adv,"advised · "+esc(W(why)||"closest match"))}${(alts||[]).map(([c,w])=>opt(c,c,esc(W(w)))).join("")}${opt(-1,f,"buy it: add to shopping list")}${buyA(f,"🛒 Find "+esc(front(f))+" on "+esc(STORE.name))}
   ${(alts||[]).length?"":`<small>No other close match in your collection.</small>`}`;}
 // what hovering a card in the deck shows: its options (substitute slot / your pick) and, in the app, pins
 function bubbleHTML(d,b,x,it,t){
@@ -2281,10 +2283,15 @@ function bubbleHTML(d,b,x,it,t){
   const acts=!SERVED||!own?"":it.kind==="k"?`<button class="pinx srcb" data-unpin="${nm}" data-side="in">Remove 📌 pin</button>`
     :`<button class="pinb srcb" data-pinquick="in" data-name="${nm}" title="Put ${nm} in every deck of this commander">📌 Always include</button><button class="pinb srcb" data-pinquick="out" data-name="${nm}" title="Never use ${nm} for this commander">🚫 Never use</button>`;
   return body||acts?`<div class="bub">${body}${acts?`<div class="acts">${acts}</div>`:""}</div>`:"";}
+// where to buy: the store's search page for a card (STATS.store, --store-url; {card} = front face name)
+const STORE=ST.store||{url:"https://shop.com/search/results?query={card}",name:"shop.com"};
+const BUY=i=>STORE.url.replace("{card}",encodeURIComponent(front(i)));
+const buyA=(i,lab)=>`<a class="shopl" href="${esc(BUY(i))}" target="_blank" rel="noopener" title="Search ${esc(STORE.name)} for ${esc(front(i))}">${lab||"🛒 "+esc(front(i))}</a>`;
 function shopHTML(d,b,items,t){
   const buy=items.filter(it=>it.kind==="buy"); if(!buy.length&&!Object.keys(getCh(d,b,t)).length) return "";
   const list=buy.map(it=>"1 "+front(it.i)).join("\n");
-  return `<div class="shop"><b>Shopping list (${buy.length})</b> ${buy.map(it=>esc(front(it.i))).join(", ")||"<span class='dim'>nothing yet</span>"}
+  return `<div class="shop"><b>Shopping list (${buy.length})</b> ${buy.map(it=>buyA(it.i)).join(" · ")||"<span class='dim'>nothing yet</span>"}
+  ${buy.length?`<small class="dim">(each opens ${esc(STORE.name)})</small>`:""}
   ${buy.length?`<button class="cps" data-text="${esc(list)}">Copy shopping list</button>`:""}<button class="reset-ch">Reset my choices</button></div>`;}
 function deckSection(title,cmdrs,items,text,link,bub){
   return `<div class="vbar"><h3>${title}</h3><button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
@@ -2873,6 +2880,8 @@ def main():
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--serve", action="store_true", help="local app with an upload button")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--store-url", default=STORE_URL,
+                    help="where 'buy' links search for a card; {card} = the card name (default: shop.com)")
     a = ap.parse_args()
     if a.offline and a.refresh: ap.error("--offline and --refresh can't be combined")
     if a.serve and a.refresh: ap.error("--serve and --refresh can't be combined")
@@ -2880,7 +2889,7 @@ def main():
     if not csv_path:
         ap.error(f"no ManaBox CSV found: put your export in the '{COLLECTION_DIR}' folder or pass --csv")
     if a.serve:   # rebuilds after an upload use the same options
-        child = ["--out", a.out, "--brackets", a.brackets, "--decks-in", a.decks_in]
+        child = ["--out", a.out, "--brackets", a.brackets, "--decks-in", a.decks_in, "--store-url", a.store_url]
         child += ["--only", a.only] if a.only else []
         child += ["--limit", str(a.limit)] if a.limit else []
         child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline), ("--no-themes", a.no_themes),
@@ -3067,6 +3076,7 @@ def main():
                 f.write(x.pop("arena"))
     stats = {"cards": sum(q for _, q in coll.values()), "unique": len(owned), "cands": len(cands),
              "built": time.time(), "unused": unused,
+             "store": {"url": a.store_url, "name": urllib.parse.urlparse(a.store_url).netloc.replace("www.", "")},
              "coll": {"csv": os.path.basename(csv_path),
                       "at": time.strftime("saved %Y-%m-%d %H:%M", time.localtime(os.path.getmtime(csv_path))),
                       "diff": {k2: v for k, l in (diff or {}).items()

@@ -71,6 +71,7 @@ Useful flags:
 | `--refresh` | Ignore all caches (slow: re-downloads everything) |
 | `--no-open` | Don't open the report in the browser |
 | `--offline` | No network; cached data only (tests, quick reruns) |
+| `--store-url URL` | Where "buy" links search; `{card}` = card name (default `https://shop.com/search/results?query={card}`, the user's store) |
 
 Deck metrics for comparing builder versions (offline, ~30 s):
 `py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_step2.json`
@@ -304,6 +305,8 @@ deck whose source has fewer decks (bracket page, theme page, average deck) shows
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
+**Buy links:** `STORE_URL` / `--store-url` → `STATS.store` {url, name}; JS `BUY(i)` / `buyA()`: 🛒 links in the shopping
+list, under the "buy" option in bubbles and under each card in "Other cards you're missing" (front face name, URL-encoded).
 **Deck grid UI (Oct 2026):** the deck shows "as it should be": a substitute slot shows the *missing* card greyed with
 "using <your card>" (`tileFor`); hovering any card opens a bubble on it (`.cw` > `.bub`, CSS :hover/:focus-within;
 `bubbleHTML` = `chooserHTML` options for substitute / your-pick slots + in the app "📌 Always include / 🚫 Never use"

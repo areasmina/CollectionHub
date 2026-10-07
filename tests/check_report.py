@@ -71,6 +71,7 @@ try{const hasAlt=(d,b)=>d.b[b]&&d.b[b].deck.some(e=>e[1]==='s'&&(e[4]||[]).lengt
     if(!r.querySelector('textarea').value.includes(front(alt)))out.errs.push('picked alternative not in the deck list');
     bq('[data-pick="-1"]').click();
     if(!(r.querySelector('.shop')||{}).textContent.includes(front(e[2])))out.errs.push('bought card not on the shopping list');
+    const sl=r.querySelector('.shop a.shopl'); if(!sl||!sl.href.includes(encodeURIComponent(front(e[2])).slice(0,8))||!sl.href.startsWith('http'))out.errs.push('shopping list has no store link for the card');
     r.querySelector('.reset-ch').click();
     if(Object.keys(getCh(d,b)).length)out.errs.push('reset did not clear choices');
     out.clicks=(out.clicks||0)+5;}
