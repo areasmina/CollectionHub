@@ -252,8 +252,8 @@ Key functions:
   of times across commanders/brackets/themes (report 18.6 → 10.7 MB).
 - Speed: `sub_candidates()` memoizes stand-in candidates per missing card within one `analyze()` (cleared
   at its start; `rate_of.key` tells pages apart), `fit_cached()` keeps `card_fit` per commander, `main()`
-  computes the commander profile once, theme decks skip gaps (`want_gaps=False`). Full offline run with
-  ~5,000 decks (themes included): ~2.5 min; `--no-themes` ~1 min.
+  computes the commander profile once, theme decks skip gaps (`want_gaps=False`). Full offline run (288 commanders,
+  ~1,300 bracket + ~5,000 theme decks + average decks): ~31 min (Oct 2026); `--only` one commander ~20 s.
 - "% owned" = weighted share of the EDHREC template (top ≤99 cards at ≥10% inclusion) that is owned.
 
 App mode (`--serve`, `serve()` + `Rebuild`): stdlib `ThreadingHTTPServer` on 127.0.0.1. `GET /` serves
@@ -276,7 +276,7 @@ Weight 3 + $$ through `/deck` reproduces the report's deck exactly (checked on S
 
 Report features: Collection page (file, changes, drop box when served, your decks, unused cards), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
-combos, power profile bars, imported decks section.
+combos, deck stats pile (curve, types, power profile, combos), imported decks (Collection page).
 Theme decks: each top theme gets a deck per bracket: `analyze(theme page, base = theme page, bracket
 rules, focus=theme)`; cards matching the theme (`theme_profile`/`hits_theme`: tribe, MECHANICS, roles,
 keywords from the theme name, via Oracle text) get `FOCUS_W` 0.15 ("theme: discard" reason). Stored as
@@ -301,9 +301,9 @@ Average deck**. Four decks per bracket: overview `d.b[b]`, overview average `d.a
 Theme and average pages are all-bracket pages, built with each bracket's rules.
 **Thin data**: JS `THIN` = 50. An archetype button from fewer EDHREC decks gets ⚠ (dashed border, count in the tooltip), and any
 deck whose source has fewer decks (bracket page, theme page, average deck) shows a "Thin data" warning under its source note. Shown, not hidden.
-**Deck shape** charts per panel (`shapeHTML`): mana curve (non-lands, 7+) and card types of your deck (bars) vs
-EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
-mana value as field 4. Table view under "As a table".
+**Deck shape:** EDHREC's average deck of each bracket, `avg_shape()` stored as `av[b].ref`, is the comparison in the
+Mana curve and Card types notes of the stats pile (`pileHTML`, see Phase 4 below); CardTable rows carry mana value as
+field 4.
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
 **Zine × P5 UI** (design/ZINE_UI_SPEC.md; Phases 1, 2, 2b, 3, 3b, 4 done): print modes (`dw:mode`), Discover cards with P5
 slanted-bar batteries (`bat()`, heights via nth-child), red `--r` active state, ransom-note titles (`ransom()`; page
@@ -349,20 +349,18 @@ scroll event itself (time-throttled), not on animation frames (headless Edge's s
 for the heavier panel; Firefox was fine).
 **Buy links:** `STORE_URL` / `--store-url` → `STATS.store` {url, name}; JS `BUY(i)` / `buyA()`: 🛒 links in the shopping
 list, under the "buy" option in bubbles and under each card in "Other cards you're missing" (front face name, URL-encoded).
-**Deck grid UI (Oct 2026):** the deck shows "as it should be": a substitute slot shows the *missing* card greyed with
-"using <your card>" (`tileFor`); hovering any card opens a bubble on it (`.cw` > `.bub`, CSS :hover/:focus-within;
-`bubbleHTML` = `chooserHTML` options for substitute / your-pick slots + in the app "📌 Always include / 🚫 Never use"
+**Deck grid UI:** the big tile is always the card in the deck (see "Labels and swaps" below for tapes and the greyed
+"was" thumbnail); hovering any card opens a bubble on it (`.cw` > `.bub`, CSS :hover/:focus-within;
+`bubbleHTML` = `chooserHTML`, the same swap menu for every card, + in the app "📌 Always include / 🚫 Never use"
 pins). No buttons under cards, no chooser panel at the top; "Other cards you're missing" is a folded `<details>`.
 The big preview sits beside the hovered card (not over its bubble); bubbles near the right edge open leftwards (`.r`).
-Bubble options run left to right (`.orow`, small cards with the reason under each); in a substitute slot the
-missing card comes first in gold (`.opt.want`, "meant for this deck · click to buy" = pick -1 → shopping list) with
-its 🛒 link below. The big preview opens only after the mouse rests on a card `PV_DELAY` 1000 ms (`pvLater`/`pvHide`).
+Bubble options run left to right (`.orow`, small cards with the reason under each): keep this card, up to 3 of yours,
+then the card to buy (`.opt.want`, dashed outline, pick -1 → shopping list) with its 🛒 link below. The big preview opens only after the mouse rests on a card `PV_DELAY` 1000 ms (`pvLater`/`pvHide`).
 Two-faced cards: CardTable row field 5 = 1 (`TWO_FACED` layouts, image path `front/`); tile shows ⟲, hovering it shows
 `BACK(i)` (Scryfall `/back/` image) in the tile and the preview.
 Substitute slots: deck entries of kind `s` are `[card, "s", missing card, why advised, [[alternative, why] ×≤3]]`
-(alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). In the report
-"⇄ options" opens a chooser (keep the missing card → shopping list / advised / alternatives); the gaps
-section has "Use this" / "Buy instead" for slots too. Choices are saved per commander+bracket in the
+(alternatives from `find_subs`, not already in the deck, within the GC cap and `blocked()` rules). The hover menu offers
+keep / alternatives / buy EDHREC's card; the Gaps section's option cards and folded list do the same. Choices are saved per commander+bracket in the
 browser (`localStorage` "dw:<slug>:<bracket>", per-viewer convenience) and change the card view, the
 copyable list and the shopping list (`effDeck`, kinds `s2` = your choice, `buy`). "Reset my choices" clears.
 **Autocomplete (every search box, `[data-ac]`):** one component (`AC` sources, `acOpen`/`acPick`/`acClose`, `#acl` listbox,
@@ -385,9 +383,9 @@ missing EDHREC card sharing a role (no roles: same type + engine; lands: makes t
 commander + bracket in `main()`) reuses the overview deck's options in its theme / average decks (run time, size).
 Display only: `tests/measure.py --compare tests/baseline_ui.json` (card lists, saved before this change) = 0 of 1,298
 decks differ. COMBO menus warn "breaks combo: A + B". `/deck` replies with new `opts` rows (`no`); weight 3 + $$
-reproduces deck and options. JS slot key `"y"+card`, chosen kinds `y2` / `buy`. `deck_diff` compares whole entries (options differ per deck). Saved choices: `rowSel()`
+reproduces deck and options. JS slot key `"y"+card`, chosen kinds `y2` / `buy`. `deck_diff` compares whole entries. Saved choices: `rowSel()`
 is the one key for reading (body) and writing (clicks), incl. the weight/$ level; `MEM` keeps them for the visit
-when localStorage is blocked (bug: picks didn't apply at non-default levels). Report ~46 MB.
+when localStorage is blocked (bug: picks didn't apply at non-default levels). Full report ~41 MB (Oct 2026; 31 min offline).
 Combos per commander (report): **Danger zone** (red box, `danger_zone()`): every two-card infinite you can
 assemble in its colours (commander + 1 card, or card + a card meeting its condition), earliest first, with
 the official rule and whether the selected bracket allows it. **Best combos** per bracket (`best_combos()`,
@@ -489,7 +487,7 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
       ~2–3 h to build; runs ~2 min offline. Needs: a few user decklists in `decks_in/` (empty today), the commander list.
    Already done from that review: EDHREC failures non-fatal, Spellbook bracket flags + visible signals, deck
    validation (`tests/measure.py` checks). Skipped: Scryfall bulk file (cache covers it), cube support.
-   Then **Build mode** UI (strategy stack, live builder) through the app, not more precomputed HTML (report ~46 MB).
+   Then **Build mode** UI (strategy stack, live builder) through the app, not more precomputed HTML (report ~41 MB).
 6. Shared cores / hidden archetypes: group commanders that draw on the same owned cards
    (e.g. an Izzet spellslinger core shared by Stella Lee, The Locust God, Niv-Mizzet).
 7. Later: missing-card prices (Scryfall USD/EUR → CAD), Archidekt real-deck matching,
