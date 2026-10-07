@@ -1893,28 +1893,35 @@ def rank_combos(combos, deck_names, keep_own=30, keep_near=20):
             "near": pick(combos["near"], keep_near), "n_near": combos["n_near"]}
 
 # ---------------------------------------------------------- imported decks
-def parse_decklist(path):
-    """Reads Moxfield / Archidekt / Arena style text exports."""
+def parse_decklist(path, text=None):
+    """Reads Moxfield / Archidekt / Arena style text exports (a file, or pasted `text`)."""
     cmdrs, main, section = [], [], "main"
-    with open(path, encoding="utf-8-sig") as f:
-        for line in f:
-            s = line.strip()
-            if not s: continue
-            low = s.lower().strip("/# :")
-            if low in ("commander", "commanders"): section = "cmd"; continue
-            if low in ("deck", "main", "mainboard", "companion"): section = "main"; continue
-            if low in ("sideboard", "maybeboard", "considering", "tokens"): section = "skip"; continue
-            if s.startswith(("//", "#")): continue
-            mt = re.match(r"^(\d+)\s*x?\s+(.+)$", s)
-            qty, name = (int(mt.group(1)), mt.group(2)) if mt else (1, s)
-            is_cmd = "*CMDR*" in name.upper()
-            name = re.sub(r"\s*\*[A-Za-z]+\*", "", name)
-            name = re.sub(r"\s+\([A-Za-z0-9]{2,6}\)(\s+\S+)?$", "", name).strip()
-            if section == "skip" or not name: continue
-            (cmdrs if section == "cmd" or is_cmd else main).append((qty, name))
+    if text is None:
+        with open(path, encoding="utf-8-sig") as f: text = f.read()
+    for line in text.lstrip("\ufeff").splitlines():
+        s = line.strip()
+        if not s: continue
+        low = s.lower().strip("/# :")
+        if low in ("commander", "commanders"): section = "cmd"; continue
+        if low in ("deck", "main", "mainboard", "companion"): section = "main"; continue
+        if low in ("sideboard", "maybeboard", "considering", "tokens"): section = "skip"; continue
+        if s.startswith(("//", "#")): continue
+        mt = re.match(r"^(\d+)\s*x?\s+(.+)$", s)
+        qty, name = (int(mt.group(1)), mt.group(2)) if mt else (1, s)
+        is_cmd = "*CMDR*" in name.upper()
+        name = re.sub(r"\s*\*[A-Za-z]+\*", "", name)
+        name = re.sub(r"\s+\([A-Za-z0-9]{2,6}\)(\s+\S+)?$", "", name).strip()
+        if section == "skip" or not name: continue
+        (cmdrs if section == "cmd" or is_cmd else main).append((qty, name))
     return cmdrs, main
 
-def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
+def deck_combo_key(cmdrs, main):
+    """Cache key of a decklist's combos: its commanders and cards, order and copies ignored."""
+    return hashlib.sha1(json.dumps([sorted({n for _, n in cmdrs}), sorted({n for _, n in main})]).encode("utf-8")).hexdigest()
+
+def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T, combo_cache=None):
+    """One of your decklists (decks_in): % owned, missing cards with your stand-ins, combos (Spellbook, cached in
+    `combo_cache` by the deck's card list so a deck is only sent once per version)."""
     cmdrs, main = parse_decklist(path)
     meta = lambda n: owned.get(norm(n)) or name_meta.get(norm(n))
     if not cmdrs:   # guess: legendary creature whose colors cover the whole deck
@@ -1948,13 +1955,16 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T):
         subs = find_subs(mm, rate_of, pool, by_role, deck_keys, True, 3, tribe=tribe) if mm else []
         gaps.append([T.add(mm["name"] if mm else n, mm), round(rate_of(norm(n)) * 100),
                      [[T.add(sm["name"], sm), T.s(why)] for _, _, sm, why in subs], -1, T.s(role_text(mm))])
-    combos = None
-    if do_combos and not OFFLINE and not CSB_DOWN[0]:
+    combos, ck = None, deck_combo_key(cmdrs, main)
+    if combo_cache is not None and ck in combo_cache:
+        combos = combo_cache[ck]
+    elif do_combos and not OFFLINE and not CSB_DOWN[0]:
         res = csb_find([n for _, n in cmdrs], [n for _, n in main])
         if res is not None:
             own = compact_combos(res.get("included", []), deck_keys, 30)
             near = compact_combos(res.get("almostIncluded", []), deck_keys, 20)
             combos = {"own": own["list"], "n_own": own["n"], "near": near["list"], "n_near": near["n"]}
+            if combo_cache is not None: combo_cache[ck] = combos
     cm = meta(cmdrs[0][1]) if cmdrs else None
     return {"title": os.path.splitext(os.path.basename(path))[0],
             "cmdr": [n for _, n in cmdrs], "cidx": [T.add((meta(n) or {}).get("name", n), meta(n)) for _, n in cmdrs],
@@ -2420,6 +2430,13 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .acl b{font:800 15px/1.15 var(--head);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.acl small{font-size:11px;color:var(--mute);display:flex;gap:6px;align-items:center}
 .acl small .pip{width:14px;height:14px;font-size:9px}.acl mark{background:var(--y);color:#141414;padding:0 1px}
 .acl li[aria-selected="true"]{background:var(--r);color:#FFFFFF}.acl li[aria-selected="true"] small{color:#FFFFFF}
+/* ---------- add a deck (Collection page, app only) ---------- */
+.dadd{margin:0 0 30px 14px;padding-top:2px}.dadd .dropd{min-height:120px}.dadd .dlab{font-size:22px}
+.dl{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase}
+.dtext{width:100%;font:13px/1.4 var(--body);padding:8px;resize:vertical}.drow{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+.drow .dl{flex:1 1 240px}.dname{padding:8px;font:14px var(--body);border:2px solid var(--ink);background:var(--bg);color:var(--ink)}
+.dsave{min-height:44px;padding:0 18px;font:900 14px var(--head);text-transform:uppercase;color:#FFFFFF;background:var(--r);border:2px solid var(--ink);cursor:pointer}
+.dmsg{font-weight:700}.dmsg:empty{display:none}.ddel{margin-left:10px;padding:2px 8px;font-size:12px;cursor:pointer}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -3074,21 +3091,58 @@ function render(){
 }
 
 /* ---------- imported decks ---------- */
+const dAddHTML=()=>`<div class="ccard dadd"><h2>Add a deck</h2>
+  <label class="drop dropd"><span class="dlab">Drop a decklist ★</span><span>or click to choose a .txt from Moxfield, Archidekt or ManaBox</span><input type="file" accept=".txt,.dek,.dck,text/plain" aria-label="Choose a decklist file"></label>
+  <label class="dl">…or paste it<textarea class="dtext" rows="6" placeholder="Commander&#10;1 The Locust God&#10;&#10;Deck&#10;1 Sol Ring&#10;1 Counterspell"></textarea></label>
+  <div class="drow"><label class="dl">Deck name<input class="dname" placeholder="deck name_" maxlength="60"></label><button type="button" class="dsave">Save deck</button></div>
+  <span class="dmsg" role="status"></span></div>`;
+// GET or POST /decks; on success the page gets the new rows and every saved deck, analysed
+async function decksLive(body){const q={v:ST.built,nc:CARDS.length,ns:STRS.length,nk:COMBOS.length,no:OPTS.length};
+  const opt=body?{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"application/json"},body:JSON.stringify(Object.assign(q,body))}
+    :{headers:{"X-Deck-Wizard":"1"}};
+  const res=await fetch("/decks"+(body?"":"?"+new URLSearchParams(q)),opt), j=await res.json().catch(()=>({error:"The app sent a reply the page can't read."}));
+  if(!res.ok) return Object.assign(j,{code:res.status});
+  addRows(CARDS,j.cards,q.nc); addRows(STRS,j.strs,q.ns); addRows(COMBOS,j.combos,q.nk); addRows(OPTS,j.opts||[],q.no);
+  DECKS.splice(0,DECKS.length,...j.decks); impRender(j.saved); return j;}
+async function dSave(){const box=document.querySelector("#imp .dadd"), msg=box.querySelector(".dmsg");
+  const name=box.querySelector(".dname").value.trim(), text=box.querySelector(".dtext").value;
+  if(!text.trim()){msg.textContent="Paste a decklist or drop a .txt first."; return;}
+  if(!name){msg.textContent="Give the deck a name."; box.querySelector(".dname").focus(); return;}
+  msg.textContent="Saving and analysing "+name+"…";
+  let j=await decksLive({name,text}).catch(()=>({error:"Lost connection to Deck Wizard App (is its window still open?)"}));
+  if(j.exists&&confirm(`You already have a deck called "${j.exists}". Replace it with this list?`)) j=await decksLive({name,text,replace:true});
+  if(j.error){const m=document.querySelector("#imp .dadd .dmsg"); if(m) m.textContent=j.error;}}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("#imp .dsave,[data-ddel]"); if(!t)return;
+  if(t.classList.contains("dsave")){dSave(); return;}
+  const nm=t.dataset.ddel; if(!confirm(`Delete the deck "${nm}"? (It goes to decks_in/.trash, so it can be restored.)`))return;
+  decksLive({delete:nm}).then(j=>{if(j.error) alert(j.error);});});
+document.addEventListener("change",e=>{const inp=e.target.closest&&e.target.closest("#imp .dadd input[type=file]"); if(inp&&inp.files[0]) dFile(inp.files[0]);});
+async function dFile(f){const box=document.querySelector("#imp .dadd"); box.querySelector(".dtext").value=await f.text();
+  const nm=box.querySelector(".dname"); if(!nm.value) nm.value=f.name.replace(/\.[^.]+$/,"");
+  box.querySelector(".dmsg").textContent="Loaded "+f.name+": check the name, then Save deck.";}
+["dragenter","dragover"].forEach(ev=>document.addEventListener(ev,e=>{const dz=e.target.closest&&e.target.closest("#imp .dropd"); if(dz){e.preventDefault(); dz.classList.add("over");}}));
+document.addEventListener("dragleave",e=>{const dz=e.target.closest&&e.target.closest("#imp .dropd"); if(dz) dz.classList.remove("over");});
+document.addEventListener("drop",e=>{const dz=e.target.closest&&e.target.closest("#imp .dropd"); if(!dz)return; e.preventDefault(); dz.classList.remove("over");
+  if(e.dataTransfer.files[0]) dFile(e.dataTransfer.files[0]);});
 function ibody(k){
   const items=k.cards.map(([i,o,q])=>({i,kind:o?"":"m",n:q}));
   const deckSet=new Set(k.cards.map(c=>c[0]));
   const text=["Commander",...k.cidx.map(i=>"1 "+front(i)),"","Deck",...k.cards.map(([i,o,q])=>q+" "+front(i))].join("\n")+"\n";
-  return `<p>You own <strong>${k.own}</strong> of <strong>${k.total}</strong> non-basic cards (${k.pct}%).</p>
+  return `<p>You own <strong>${k.own}</strong> of <strong>${k.total}</strong> non-basic cards (${k.pct}%).${SERVED?` <button type="button" class="ddel" data-ddel="${esc(k.title)}">🗑 Delete this deck</button>`:""}</p>
   ${deckSection("Deck",k.cidx,items,text,"")}
   <div class="vbar"><h3>Missing cards &amp; substitutes</h3><span class="dim">${k.gaps.length} missing</span></div>
   ${gapsHTML(k.gaps,deckSet)}
   ${comboHTML(k.combos,null,"Combos in this deck","One card away")}`;}
-$("imp").innerHTML=`<div class="shead"><h2 class="p5-slab"><span>Your decks</span></h2><span class="dim">&gt; from the decks_in folder · .txt exports from Moxfield, Archidekt or ManaBox_</span></div>`
+// your decklists: the last full run's, refreshed from the app (GET /decks), where you can add, replace and delete them
+function impRender(open){
+$("imp").innerHTML=`<div class="shead"><h2 class="p5-slab"><span>Your decks</span></h2><span class="dim">&gt; from the decks_in folder · .txt exports from Moxfield, Archidekt or ManaBox_</span></div>`+(SERVED?dAddHTML():"")
   +(DECKS.length?DECKS.map((k,j)=>`<details class="row irow p5-card${j<24?" p5-in":""}" data-k="${j}"><summary><span class="ino${j?"":" first"}" aria-hidden="true">${String(j+1).padStart(2,"0")}</span>
   <span class="inm"><b>${esc(k.title)}</b><span>${esc(k.cmdr.join(" + ")||"commander not found")}</span></span>
   <span class="iown">${bat(k.pct)}<span><b>${k.pct}%</b><small>${k.own} of ${k.total} owned</small></span></span>
   <span class="icb">${k.combos?k.combos.n_own:0} combos</span><span class="iopen" aria-hidden="true"></span></summary><div class="body"></div></details>`).join("")
-  :`<p class="dim">No decklists yet. Put your decks (.txt exports from Moxfield, Archidekt or ManaBox) in the <b>decks_in</b> folder and rerun: you'll see how much of each you own, and which of your cards sit unused.</p>`);
+  :`<p class="dim">No decklists yet. ${SERVED?"Add one above":"Put your decks (.txt exports from Moxfield, Archidekt or ManaBox) in the <b>decks_in</b> folder and rerun, or open <b>Deck Wizard App.bat</b> to add them here"}: you'll see how much of each you own, and which of your cards sit unused.</p>`);
+  if(open!=null){const r=[...document.querySelectorAll("#imp details.irow")].find(x=>DECKS[+x.dataset.k].title===open); if(r){r.open=true; r.scrollIntoView({block:"nearest"});}}}
+impRender();
 
 /* ---------- unused cards: the commanders that would use the most (a chip filters the grid), then each card's best home ---------- */
 (function(){
@@ -3252,6 +3306,7 @@ ACL.addEventListener("click",e=>{const li=e.target.closest("li[data-j]"); if(li)
 document.addEventListener("click",e=>{if(ACI&&e.target!==ACI&&!ACL.contains(e.target)) acClose();});
 document.addEventListener("focusout",e=>{if(e.target===ACI) setTimeout(()=>{if(ACI&&document.activeElement!==ACI) acClose();},150);});
 addEventListener("resize",acPlace); addEventListener("scroll",acPlace,true);
+if(SERVED) decksLive().catch(()=>{});
 showView(location.hash==="#collection"?"collection":location.hash==="#discover"?"discover":(()=>{try{return localStorage.getItem("dw:view");}catch(e){return "";}})());
 render();
 </script></body></html>"""
@@ -3321,6 +3376,7 @@ def pins_for(pins, cmdr_name):
     p = pins_clean(pins.get(cmdr_name))
     return {norm(x) for x in p["in"]}, {norm(x) for x in p["out"]}
 
+DECK_COMBOS = "spellbook_decks.json"   # combos of your saved decklists, by card list (deck_combo_key)
 TABLES_FILE = "report_tables.json"   # the report's card/string/combo tables and collection file, for LiveDecks
 
 class LiveDecks:
@@ -3362,6 +3418,66 @@ class LiveDecks:
                     "name_meta": name_meta,
                     "combo_cards": {} if a.no_combos else fetch_combo_cards(os.path.join(cache_dir, "spellbook_cards.json")),
                     "per": {}}
+
+    def decks(self, q, body=None):
+        """GET / POST /decks (app): your decklists in the decks_in folder, each analysed once per file version.
+        body {"name", "text", "replace"} saves one (a new name, or replace an existing one when asked);
+        body {"delete": name} moves it to decks_in/.trash. q: v (page build time), nc/ns/nk/no (rows the page has).
+        Replies with every deck and only the table rows the page lacks. Returns (HTTP code, reply)."""
+        with self.lock:
+            tab_path = os.path.join(self.a.out, TABLES_FILE)
+            if not os.path.exists(tab_path): return 404, {"error": "No report yet."}
+            try:
+                if not self.ctx or self.ctx["mt"] != os.path.getmtime(tab_path): self._load(tab_path)
+            except LookupError as e:
+                return 404, {"error": str(e)}
+            c = self.ctx
+            have = [int(q.get(k) or 0) for k in ("nc", "ns", "nk", "no")]
+            if abs(float(q.get("v") or 0) - c["built"]) > 0.01 or have[0] > len(c["T"].rows) or have[1] > len(c["T"].strs):
+                return 409, {"error": "The report was rebuilt: reload the page."}
+            folder, saved = self.a.decks_in, None
+            os.makedirs(folder, exist_ok=True)
+            clean = lambda nm: re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", str(nm or "")).strip().strip(".")[:60]
+            if body and "delete" in body:
+                nm = clean(body["delete"]); fp = os.path.join(folder, nm + ".txt")
+                if not nm or not os.path.isfile(fp): return 404, {"error": f"No saved deck called {nm or '?'}."}
+                os.makedirs(os.path.join(folder, ".trash"), exist_ok=True)
+                os.replace(fp, os.path.join(folder, ".trash", time.strftime(f"{nm} %Y-%m-%d %H%M%S.txt")))
+            elif body:
+                nm, text = clean(body.get("name")), str(body.get("text") or "")
+                if not nm: return 400, {"error": "Give the deck a name."}
+                if len(text) > 300_000: return 400, {"error": "That list is too long for a Commander deck."}
+                cm, mn = parse_decklist(None, text)
+                n_cards = sum(q_ for q_, _ in cm + mn)
+                if not n_cards: return 400, {"error": "No cards found. Paste one card per line, like \"1 Sol Ring\"."}
+                fp = os.path.join(folder, nm + ".txt")
+                if os.path.exists(fp) and not body.get("replace"):
+                    return 409, {"error": f"You already have a deck called {nm}.", "exists": nm}
+                tmp = fp + ".tmp"
+                with open(tmp, "w", encoding="utf-8") as f: f.write(text.replace("\r\n", "\n"))
+                os.replace(tmp, fp)
+                saved = nm
+            files = sorted(glob.glob(os.path.join(folder, "*.txt")))
+            # card data for names you don't own (Scryfall, cached; none offline)
+            extra = set()
+            for fp in files:
+                c_, m_ = parse_decklist(fp)
+                extra |= {n_ for _, n_ in c_ + m_ if norm(n_) not in c["owned"] and norm(n_) not in c["name_meta"]}
+            if extra: c["name_meta"] = resolve_names(extra, c["names_path"])
+            dc_path = os.path.join(self.a.out, "cache", DECK_COMBOS)
+            if "dcombos" not in c: c["dcombos"] = load_json(dc_path)
+            memo, n_dc, out = c.setdefault("imp", {}), len(c["dcombos"]), []
+            for fp in files:
+                st_ = os.stat(fp); k = (fp, st_.st_mtime, st_.st_size)
+                if k not in memo:
+                    memo[k] = analyze_imported(fp, c["owned"], c["name_meta"], not self.a.no_combos, c["cache"], c["T"],
+                                               c["dcombos"])
+                out.append(memo[k])
+            if len(c["dcombos"]) != n_dc: save_json(dc_path, c["dcombos"])
+            out.sort(key=lambda d: -d["pct"])
+            T = c["T"]
+            return 200, {"decks": out, "saved": saved, "cards": T.rows[have[0]:], "strs": T.strs[have[1]:],
+                         "combos": c["CT"].rows[have[2]:], "opts": T.opts[have[3]:]}
 
     def deck(self, q):
         """q = query: c commander, b bracket, t theme slug, a "1" average deck, w weight 1-4, s spending 1-3,
@@ -3571,6 +3687,16 @@ def serve(a, csv_path, child_args):
                     self.reply(200, WAIT_PAGE, "text/html; charset=utf-8")
             elif path == "/status":
                 self.reply(200, rb.status())
+            elif path == "/decks":
+                if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
+                if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
+                q = {k: v[0] for k, v in urllib.parse.parse_qs(self.path.partition("?")[2]).items()}
+                try:
+                    code, out = live.decks(q)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    code, out = 500, {"error": f"Reading your decks failed: {e}"}
+                self.reply(code, json.dumps(out))
             elif path == "/pins":
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
                 code, out = live.pins()
@@ -3616,6 +3742,19 @@ def serve(a, csv_path, child_args):
                 if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
                 code, out = live.pins(body)
                 return self.reply(code, out)
+            if self.path == "/decks" and self.headers.get("X-Deck-Wizard") == "1":
+                try:
+                    body = json.loads(data.decode("utf-8"))
+                    if not isinstance(body, dict): raise ValueError
+                except ValueError:
+                    return self.reply(400, {"error": "Bad deck request."})
+                if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
+                try:
+                    code, out = live.decks({k: str(body.get(k, "")) for k in ("v", "nc", "ns", "nk", "no")}, body)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    code, out = 500, {"error": f"Saving the deck failed: {e}"}
+                return self.reply(code, json.dumps(out))
             if self.path != "/upload" or self.headers.get("X-Deck-Wizard") != "1":
                 return self.reply(403, {"error": "forbidden"})
             if not data: return self.reply(400, {"error": "The file is empty."})
@@ -3863,12 +4002,15 @@ def main():
             extra |= {nm for _, nm in c_ + m_ if norm(nm) not in owned}
             in_decks |= {norm(nm) for _, nm in c_ + m_}
         name_meta = resolve_names(extra, os.path.join(cache_dir, "scryfall_names.json"))
+        dc_path = os.path.join(cache_dir, DECK_COMBOS)
+        dcombos = load_json(dc_path); n_dc = len(dcombos)
         for fp in files:
-            d = analyze_imported(fp, owned, name_meta, not a.no_combos, cache, T)
+            d = analyze_imported(fp, owned, name_meta, not a.no_combos, cache, T, dcombos)
             decks.append(d)
             print(f"  {d['title']}: {d['pct']}% owned, {len(d['gaps'])} missing"
                   + (f", {d['combos']['n_own']} combos" if d["combos"] else ""))
         decks.sort(key=lambda d: -d["pct"])
+        if len(dcombos) != n_dc: save_json(dc_path, dcombos)
     else:
         os.makedirs(a.decks_in, exist_ok=True)
 

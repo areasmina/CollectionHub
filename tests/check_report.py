@@ -257,6 +257,26 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
           if(!acl.hidden)out.errs.push('pin suggestions stayed open after picking');}}}
     out.clicks=(out.clicks||0)+6;}
   catch(e){out.errs.push('autocomplete: '+e.message);}
+  // your decks (app): paste a list and save it; it appears and opens; the same name asks before replacing; delete removes it
+  try{showView('collection'); const box=document.querySelector('#imp .dadd');
+    if(!box)out.errs.push('no "Add a deck" box in the app');
+    else{window.confirm=()=>true;
+      box.querySelector('.dtext').value='Commander\\n1 '+DATA[0].name+'\\n\\nDeck\\n1 Sol Ring';
+      box.querySelector('.dname').value='Check Deck'; box.querySelector('.dsave').click();
+      await wait(()=>[...document.querySelectorAll('#imp details.irow')].some(r=>DECKS[+r.dataset.k].title==='Check Deck'),60);
+      const row=[...document.querySelectorAll('#imp details.irow')].find(r=>DECKS[+r.dataset.k].title==='Check Deck');
+      if(!row)out.errs.push('saved deck did not appear under Your decks');
+      else{if(!row.open)out.errs.push('saved deck did not open');
+        const b2=document.querySelector('#imp .dadd'); b2.querySelector('.dtext').value='1 Sol Ring'; b2.querySelector('.dname').value='Check Deck'; b2.querySelector('.dsave').click();
+        await new Promise(z=>setTimeout(z,300));
+        if(DECKS.filter(d=>d.title==='Check Deck').length!==1)out.errs.push('replacing a deck made a second copy');
+        const del=[...document.querySelectorAll('#imp details.irow')].find(r=>DECKS[+r.dataset.k].title==='Check Deck');
+        if(!del.open){del.open=true; await new Promise(z=>setTimeout(z,50));}
+        const db=del.querySelector('[data-ddel]'); if(!db)out.errs.push('no delete button on a saved deck'); else{db.click();
+          await wait(()=>!DECKS.some(d=>d.title==='Check Deck'),60);
+          if(DECKS.some(d=>d.title==='Check Deck'))out.errs.push('deleted deck is still listed');}}}
+    showView('discover'); out.clicks=(out.clicks||0)+4;}
+  catch(e){out.errs.push('your decks: '+e.message);}
   // Deck stats pile: each tab brings its note to the front (aria-selected, one visible note) and is remembered in dw:stat
   try{const r=document.querySelector('details.row[data-i][open]')||document.querySelector('details.row[data-i]'); if(!r.open){r.open=true; await new Promise(z=>setTimeout(z,50));}
     const pile=r.querySelector('.pile'); if(!pile)out.errs.push('no deck stats pile');
@@ -287,7 +307,7 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if(!document.querySelector('.vnav [data-view="collection"][aria-current="page"]'))out.errs.push('nav does not mark Collection');
     if(document.querySelectorAll('#cttl .rl').length<10)out.errs.push('collection title missing');
     if(!document.querySelector('#coll .drop input[type=file]')||typeof dwUpload!=='function')out.errs.push('no drop box / dwUpload in the app');
-    if(document.querySelectorAll('input[type=file]').length!==1)out.errs.push('expected exactly one upload control');
+    if(document.querySelectorAll('#coll input[type=file]').length!==1)out.errs.push('expected exactly one collection upload control');
     if(!$('imp').querySelector('h2'))out.errs.push('"Your decks" missing');
     if(ST.unused){const cnt=()=>document.querySelectorAll('#unused .ugrid .ucard').length, g=cnt();
       if(!g||g>24)out.errs.push('unused grid shows '+g+' cards first');
@@ -304,6 +324,7 @@ def stub_server(html):
     """Serves the test page like the app does, with a stub /deck (see the module docstring)."""
     i = html.index("const DATA=") + len("const DATA=")
     data, _ = json.JSONDecoder().raw_decode(html[i:])
+    SAVED = {}          # stub /decks: decks saved during this check
     class H(http.server.BaseHTTPRequestHandler):
         def log_message(self, *a): pass
         def send(self, code, body, ctype="application/json"):
@@ -316,6 +337,9 @@ def stub_server(html):
             if path == "/": return self.send(200, html, "text/html; charset=utf-8")
             if path == "/status": return self.send(200, json.dumps({"running": False, "ok": None}))
             if path == "/pins": return self.send(200, json.dumps({"pins": {}}))
+            if path == "/decks":
+                if self.headers.get("X-Deck-Wizard") != "1": return self.send(403, "{}")
+                return self.send(200, json.dumps({"decks": list(SAVED.values()), "saved": None, "cards": [], "strs": [], "combos": [], "opts": []}))
             if path != "/deck": return self.send(404, "{}")
             if self.headers.get("X-Deck-Wizard") != "1": return self.send(403, json.dumps({"error": "no header"}))
             if q.get("s") == "3": return self.send(404, json.dumps({"error": "Stub: no expensive page."}))
@@ -326,6 +350,17 @@ def stub_server(html):
                                        "strs": ["stub reason"], "combos": []}))
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            if self.path == "/decks" and self.headers.get("X-Deck-Wizard") == "1":
+                saved = None
+                if "delete" in body: SAVED.pop(body["delete"], None)
+                elif not body.get("text", "").strip(): return self.send(400, json.dumps({"error": "Stub: no cards"}))
+                elif body["name"] in SAVED and not body.get("replace"): return self.send(409, json.dumps({"error": "exists", "exists": body["name"]}))
+                else:
+                    x = data[0]["b"]["all"]["deck"][:8]
+                    SAVED[body["name"]] = {"title": body["name"], "cmdr": [data[0]["name"]], "cidx": [data[0]["cidx"]], "ci": data[0]["ci"],
+                                           "img": "", "own": 8, "total": 8, "pct": 100.0, "cards": [[e[0], 1, 1] for e in x], "gaps": [], "combos": None}
+                    saved = body["name"]
+                return self.send(200, json.dumps({"decks": list(SAVED.values()), "saved": saved, "cards": [], "strs": [], "combos": [], "opts": []}))
             if self.path != "/pins" or self.headers.get("X-Deck-Wizard") != "1": return self.send(403, "{}")
             if "Nope Card" in body.get("in", []) + body.get("out", []):
                 return self.send(400, json.dumps({"error": "Stub: not in your collection"}))

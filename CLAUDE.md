@@ -437,8 +437,11 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
 The app (`--serve`) becomes the product and builds decks on demand; the full static report stays as an export.
 Friends sign in by private invite link; nobody sees another person's collection unless it's shared by link or .txt.
 A new user starts empty and uploads a collection first. Order (one phase per commit, ask before steps 4–5):
-- **F1** upload and save decks in the app (Collection page: drop a .txt or paste; saved in `decks_in/`, analysed at once,
-  delete/replace). **F3** card counts across decks: ManaBox quantities vs the saved decks (which decks use a card, copies
+- ✅ **F1** upload and save decks in the app: Collection page "Add a deck" (drop a .txt or paste + name, `dAddHTML`,
+  `dSave`, `decksLive`) → `GET`/`POST /decks` (`LiveDecks.decks`: save as `decks_in/<name>.txt`, 409 + confirm to replace,
+  delete → `decks_in/.trash/`), analysed at once (`analyze_imported`, memo per file version), Spellbook combos cached per
+  card list (`DECK_COMBOS` `cache/spellbook_decks.json`, `deck_combo_key`, also used by full runs); `parse_decklist(path,
+  text)` reads pasted text. The app refreshes Your decks on load; unused cards update on the next rebuild until F3. **F3** card counts across decks: ManaBox quantities vs the saved decks (which decks use a card, copies
   free / short) so "unused cards" is exact (was roadmap 5g). **F4** deck analysis for a saved deck: bracket with reasons,
   strengths / weaknesses from the checks (roles, curve, colour sources vs EDHREC's average deck), synergies (built
   around, engines, combos in / one card away), suggested cards (yours first, with free copies; then to buy), cuts with
