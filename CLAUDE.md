@@ -416,6 +416,19 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
    g. **Allocation and pull list** (idea from Commander Workshop MCP, MIT): use ManaBox quantities; a card you own
       once can't be in five built decks. Per deck: pull from binder / already in deck X / substitute / buy.
    h. **Two archetypes at once** (Manafoundry): e.g. Doom Discard + Connive, built in the app (light strategy stack).
+   i. **Benchmark before the next engine tuning** (planned Oct 2026, parked by the user; do it first when scoring is
+      touched again): `tests/benchmark.py` reconstruction test. Per real deck (`decks_in/` via `parse_decklist`, and
+      `--archidekt`: ~20 owned commanders × 3 public decks), collection = the deck's 99 + commander + ~300 random cards
+      (fixed seed, mixed colours, from the Scryfall caches) or `--with-my-collection`; run `analyze()` at the deck's own
+      bracket (`bracket_fit` on the real 99) and "all", at weights 1–4. Report plain numbers, no pass/fail: overlap of
+      non-basics (non-lands / lands), lands, basics, ramp/draw/removal/wipe/win, avg MV + curve diff, GC, bracket
+      estimate; top real cards left out with score parts; random cards that got in. Median/range summary,
+      `tests/bench_results.json` + `--compare`. Caveats to print: EDHREC aggregates Archidekt/Moxfield decks (overlap
+      inflated, esp. weight 4); random cards are weaker than a real collection; real decks aren't optimal.
+      Archidekt (undocumented read API `archidekt.com/api/decks/<id>/`, search `api/decks/cards/`; verify the commander
+      filter by hand first): ≤60 requests/min, User-Agent, stop on 429, ~80 requests once, cached in
+      `cache/archidekt.json`, mainboard only, single commander, legal 100, updated ≤2 years; tests only, never the app.
+      ~2–3 h to build; runs ~2 min offline. Needs: a few user decklists in `decks_in/` (empty today), the commander list.
    Already done from that review: EDHREC failures non-fatal, Spellbook bracket flags + visible signals, deck
    validation (`tests/measure.py` checks). Skipped: Scryfall bulk file (cache covers it), cube support.
    Then **Build mode** UI (strategy stack, live builder) through the app, not more precomputed HTML (report ~46 MB).
