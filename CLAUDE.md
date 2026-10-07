@@ -442,8 +442,12 @@ A new user starts empty and uploads a collection first. Order (one phase per com
   `dSave`, `decksLive`) → `GET`/`POST /decks` (`LiveDecks.decks`: save as `decks_in/<name>.txt`, 409 + confirm to replace,
   delete → `decks_in/.trash/`), analysed at once (`analyze_imported`, memo per file version), Spellbook combos cached per
   card list (`DECK_COMBOS` `cache/spellbook_decks.json`, `deck_combo_key`, also used by full runs); `parse_decklist(path,
-  text)` reads pasted text. The app refreshes Your decks on load; unused cards update on the next rebuild until F3. **F3** card counts across decks: ManaBox quantities vs the saved decks (which decks use a card, copies
-  free / short) so "unused cards" is exact (was roadmap 5g). **F4** deck analysis for a saved deck: bracket with reasons,
+  text)` reads pasted text. The app refreshes Your decks on load; unused cards update on the next rebuild until F3. ✅ **F3** card counts across decks, live in the page: `load_owned` → copies per card (`qty`), `STATS.own` field 3;
+  `find_homes` gives every owned legal card its best homes (`ST.unused.cards`, all of them, best first); JS `usage()` (copies your
+  saved `DECKS` use, per deck), `unusedRender()` (unused = in none of your saved decks, else in no suggested 99; spare copies;
+  **Short** list = decks use more copies than you own, with the decks + 🛒; "would use the most" ranked live from `DATA`), deck
+  cards note `short N` / `also in <deck>` (`cnote`). Recounted on every deck add/delete. Reports built before F3 keep their
+  counts and say one full rebuild is needed. **F4** deck analysis for a saved deck: bracket with reasons,
   strengths / weaknesses from the checks (roles, curve, colour sources vs EDHREC's average deck), synergies (built
   around, engines, combos in / one card away), suggested cards (yours first, with free copies; then to buy), cuts with
   reasons. Rule-based only, no invented scores.

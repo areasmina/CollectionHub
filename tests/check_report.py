@@ -270,6 +270,17 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
         const b2=document.querySelector('#imp .dadd'); b2.querySelector('.dtext').value='1 Sol Ring'; b2.querySelector('.dname').value='Check Deck'; b2.querySelector('.dsave').click();
         await new Promise(z=>setTimeout(z,300));
         if(DECKS.filter(d=>d.title==='Check Deck').length!==1)out.errs.push('replacing a deck made a second copy');
+        // F3: a second deck with the same cards -> those you own once are short; counts follow the saved decks
+        const b3=document.querySelector('#imp .dadd'); b3.querySelector('.dtext').value='1 Sol Ring'; b3.querySelector('.dname').value='Check Deck 2'; b3.querySelector('.dsave').click();
+        await wait(()=>DECKS.some(d=>d.title==='Check Deck 2'),60);
+        if(!(($('unused').querySelector('.ulead')||{}).textContent||'').includes('saved deck'))out.errs.push('unused cards are not counted against your saved decks');
+        const once=DECKS[0].cards.map(c=>c[0]).filter(i=>OWNQ.get(i)===1);
+        if(once.length&&!$('unused').querySelector('.ushort li'))out.errs.push('cards used by two decks but owned once are not listed as short');
+        const r2=[...document.querySelectorAll('#imp details.irow')].find(r=>DECKS[+r.dataset.k].title==='Check Deck 2'); r2.open=true; await new Promise(z=>setTimeout(z,50));
+        if(once.length&&![...r2.querySelectorAll('.note')].some(x=>/^(short|also in)/.test(x.textContent)))out.errs.push('deck cards do not show short / also in');
+        if(usage().get(DECKS[0].cards[0][0]).d.length!==2)out.errs.push('usage() does not list both decks for a shared card');
+        const d2=r2.querySelector('[data-ddel]'); d2.click(); await wait(()=>!DECKS.some(d=>d.title==='Check Deck 2'),60);
+        if($('unused').querySelector('.ushort li'))out.errs.push('short list did not clear after deleting the second deck');
         const del=[...document.querySelectorAll('#imp details.irow')].find(r=>DECKS[+r.dataset.k].title==='Check Deck');
         if(!del.open){del.open=true; await new Promise(z=>setTimeout(z,50));}
         const db=del.querySelector('[data-ddel]'); if(!db)out.errs.push('no delete button on a saved deck'); else{db.click();

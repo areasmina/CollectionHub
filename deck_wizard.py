@@ -1192,13 +1192,14 @@ def card_values(edh, base, owned, name_meta, ew=1.0):
 # ------------------------------------------------------------ unused cards
 HOME_MIN = 0.12         # a commander is a "home" for a card if the card scores at least this there
 HOMES = 3               # homes shown per card
-UNUSED_SHOW = 150       # cards listed in the report (best homes first)
 
 def find_homes(cmdrs, owned, name_meta, used, T):
-    """Owned cards outside `used` (your decks) and where they'd fit best.
+    """Where every card you own (commander-legal, no basics) would fit best, best home first. The page decides live which
+    cards are unused (copies you own vs your saved decks, or the suggested 99s when you have none); `used` (your decks at
+    build time, else the suggested 99s) only sets the counts printed by the run.
     cmdrs = [(DATA index, commander meta, all-decks EDHREC page, names in its suggested 99)].
     Score is the deck builder's own (play rate + synergy + fit), on the all-decks page."""
-    cand = {k: m for k, m in owned.items() if k not in used and m["commander_legal"]
+    cand = {k: m for k, m in owned.items() if m["commander_legal"]
             and m["name"] not in BASIC_NAMES and m["layout"] not in ("token", "emblem")}
     homes = {k: [] for k in cand}
     for i, m, page, names in cmdrs:
@@ -1213,14 +1214,13 @@ def find_homes(cmdrs, owned, name_meta, used, T):
     rows = []
     for k, L in homes.items():
         L.sort(key=lambda h: (-h[0], h[1]))
-        if L: rows.append((L[0][0], k, L[:HOMES]))
+        rows.append((L[0][0] if L else -1.0, k, L[:HOMES]))
     rows.sort(key=lambda r: (-r[0], r[1]))
-    by_cmdr = sorted(((i, sorted(names & set(cand))) for i, _, _, names in cmdrs), key=lambda t: (-len(t[1]), t[0]))
     in_any = set().union(*(names for _, _, _, names in cmdrs)) if cmdrs else set()
-    return {"n_unused": len(cand), "n_home": len(rows), "n_sugg": len(set(cand) & in_any),
+    unused = set(cand) - used
+    return {"n_unused": len(unused), "n_home": sum(1 for _, k, L in rows if L and k in unused), "n_sugg": len(unused & in_any),
             "cards": [[T.add(cand[k]["name"], cand[k]), [[i, round(r * 100), why, int(ind)] for _, i, r, why, ind in L]]
-                      for _, k, L in rows[:UNUSED_SHOW]],
-            "by_cmdr": [[i, len(ks), [T.add(cand[k]["name"], cand[k]) for k in ks[:40]]] for i, ks in by_cmdr[:15] if ks]}
+                      for _, k, L in rows]}
 
 # --------------------------------------------------------------- analysis
 def power_profile(roles, gc, avg_cmc):
@@ -2437,6 +2437,11 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .drow .dl{flex:1 1 240px}.dname{padding:8px;font:14px var(--body);border:2px solid var(--ink);background:var(--bg);color:var(--ink)}
 .dsave{min-height:44px;padding:0 18px;font:900 14px var(--head);text-transform:uppercase;color:#FFFFFF;background:var(--r);border:2px solid var(--ink);cursor:pointer}
 .dmsg{font-weight:700}.dmsg:empty{display:none}.ddel{margin-left:10px;padding:2px 8px;font-size:12px;cursor:pointer}
+/* ---------- card counts (F3) ---------- */
+.uq{font-size:11px;font-weight:700;text-transform:uppercase}
+.ushort{padding:12px 16px;border:2px solid var(--ink);border-left:8px solid var(--r);background:var(--card)}
+.ushort h3{margin:0 0 8px;font-size:18px}.ushort ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.ushort em{font-style:normal;font-weight:700;padding:0 5px;color:#FFFFFF;background:var(--r)}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -2532,9 +2537,8 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
   $("cttl").innerHTML=`<span aria-hidden="true">${ransom("Your",3)}</span><span aria-hidden="true">${ransom("collection",6)}</span>`;
   $("cstats").innerHTML=[["cards",n(ST.cards)],["unique",n(ST.unique)],["commanders",n(ST.cands)]].concat(ST.unused?[["unused",n(ST.unused.n_unused)]]:[])
     .map(([k,v],i)=>`<div${i===3?' class="u"':""}><dt>${k}</dt><dd>${v}</dd></div>`).join("");
-  const top=ST.unused&&ST.unused.by_cmdr[0];
-  CTICK=["Your binder",`${n(ST.cards)} cards`,`${n(ST.unique)} unique`].concat(D&&D.added_n?[`+${n(D.added_n)} new since last file`]:[])
-    .concat(ST.unused?[`${n(ST.unused.n_unused)} cards waiting for a home`]:[]).concat(top?[`${DATA[top[0]].name.split(" // ")[0]} would use ${top[1]} of them`]:[]);
+  // the unused-card items are added by unusedRender() (live counts)
+  CTICK=["Your binder",`${n(ST.cards)} cards`,`${n(ST.unique)} unique`].concat(D&&D.added_n?[`+${n(D.added_n)} new since last file`]:[]);
   const isC=nm=>DATA.some(d=>d.name===nm);
   const file=`<div class="ccard p5-in p5-card"><h2>Current file</h2><div class="cfile"><b>${esc(C.csv||"?")}</b><span>ManaBox export · ${esc(C.at||"")}</span></div>
     ${served?`<label class="drop"><span class="dlab">Drop a new CSV ★</span><span>or click to choose a ManaBox export</span><small>only new cards hit Scryfall · the rebuild takes a few minutes</small><input type="file" accept=".csv,text/csv" aria-label="Choose a new ManaBox CSV"></label><span id="ups" role="status"></span>`
@@ -2612,7 +2616,7 @@ function tileFor(it,taped){const badge=(it.n||1)>1?"×"+it.n:"";
   if(taped) return tile(it.i,{badge,why:true,was:it.was});
   // imported decks and lists without tapes: a short note; a card you don't own gets a dashed outline (never grey)
   return tile(it.i,{cls:it.kind==="m"||it.kind==="buy"?"nown":"",badge,was:it.was,
-    note:it.kind==="m"?"missing":it.kind==="buy"?"to buy":""});}
+    note:it.note||(it.kind==="m"?"missing":it.kind==="buy"?"to buy":"")});}
 // one label system for the 99 (zine palette): [tape colour, label, what it means]. Every tape has the meaning as its title.
 const TAPE={p:["","POPULAR","most decks for this commander play it"],y:["y","GOOD FIT","you own it, few decks play it, but it fits this commander"],
   k:["r","ALWAYS IN","you pinned it"],c:["m","COMBO","part of a combo in this deck"],f:["g","FILLER","added to reach the minimum for a role"],
@@ -3124,11 +3128,17 @@ async function dFile(f){const box=document.querySelector("#imp .dadd"); box.quer
 document.addEventListener("dragleave",e=>{const dz=e.target.closest&&e.target.closest("#imp .dropd"); if(dz) dz.classList.remove("over");});
 document.addEventListener("drop",e=>{const dz=e.target.closest&&e.target.closest("#imp .dropd"); if(!dz)return; e.preventDefault(); dz.classList.remove("over");
   if(e.dataTransfer.files[0]) dFile(e.dataTransfer.files[0]);});
+// a card of a saved deck against your copies: missing, short (decks use more than you own), also in another deck
+function cnote(k,i,o,use){if(!o) return "missing"; if(BASIC.has((CARDS[i]||[])[0])||!OWNQ.has(i)) return "";
+  const u=use.get(i), own=OWNQ.get(i), other=u?u.d.filter(z=>z[0]!==k.title):[];
+  if(u&&u.n>own) return `short ${u.n-own}: own ${own}, used ${u.n}`;
+  return other.length?`also in ${other[0][0]}${other.length>1?" +"+(other.length-1):""}`:"";}
 function ibody(k){
-  const items=k.cards.map(([i,o,q])=>({i,kind:o?"":"m",n:q}));
+  const use=usage(), items=k.cards.map(([i,o,q])=>({i,kind:o?"":"m",n:q,note:cnote(k,i,o,use)}));
+  const nShort=items.filter(it=>it.note.startsWith("short")).length, nShared=items.filter(it=>it.note.startsWith("also")).length;
   const deckSet=new Set(k.cards.map(c=>c[0]));
   const text=["Commander",...k.cidx.map(i=>"1 "+front(i)),"","Deck",...k.cards.map(([i,o,q])=>q+" "+front(i))].join("\n")+"\n";
-  return `<p>You own <strong>${k.own}</strong> of <strong>${k.total}</strong> non-basic cards (${k.pct}%).${SERVED?` <button type="button" class="ddel" data-ddel="${esc(k.title)}">🗑 Delete this deck</button>`:""}</p>
+  return `<p>You own <strong>${k.own}</strong> of <strong>${k.total}</strong> non-basic cards (${k.pct}%)${nShared?` · <b>${nShared}</b> also in your other decks`:""}${nShort?` · <b class="miss">${nShort} short</b> (more copies needed than you own)`:""}.${SERVED?` <button type="button" class="ddel" data-ddel="${esc(k.title)}">🗑 Delete this deck</button>`:""}</p>
   ${deckSection("Deck",k.cidx,items,text,"")}
   <div class="vbar"><h3>Missing cards &amp; substitutes</h3><span class="dim">${k.gaps.length} missing</span></div>
   ${gapsHTML(k.gaps,deckSet)}
@@ -3141,38 +3151,62 @@ $("imp").innerHTML=`<div class="shead"><h2 class="p5-slab"><span>Your decks</spa
   <span class="iown">${bat(k.pct)}<span><b>${k.pct}%</b><small>${k.own} of ${k.total} owned</small></span></span>
   <span class="icb">${k.combos?k.combos.n_own:0} combos</span><span class="iopen" aria-hidden="true"></span></summary><div class="body"></div></details>`).join("")
   :`<p class="dim">No decklists yet. ${SERVED?"Add one above":"Put your decks (.txt exports from Moxfield, Archidekt or ManaBox) in the <b>decks_in</b> folder and rerun, or open <b>Deck Wizard App.bat</b> to add them here"}: you'll see how much of each you own, and which of your cards sit unused.</p>`);
-  if(open!=null){const r=[...document.querySelectorAll("#imp details.irow")].find(x=>DECKS[+x.dataset.k].title===open); if(r){r.open=true; r.scrollIntoView({block:"nearest"});}}}
+  if(open!=null){const r=[...document.querySelectorAll("#imp details.irow")].find(x=>DECKS[+x.dataset.k].title===open); if(r){r.open=true; r.scrollIntoView({block:"nearest"});}}
+  if(typeof UST!=="undefined") unusedRender();}
 impRender();
 
-/* ---------- unused cards: the commanders that would use the most (a chip filters the grid), then each card's best home ---------- */
-(function(){
-  const U=ST.unused; if(!U) return;
-  const sn=i=>esc(DATA[i].name.split(" // ")[0]);
-  const intro=U.src==="decks_in"
-    ?`<p class="ulead"><b class="big">${n(U.n_unused)}</b> of your cards aren't in any of your ${U.n_decks} decks in <b>decks_in</b>. <b class="hy">${n(U.n_sugg)}</b> of them make the suggested deck of one of your commanders; ${n(U.n_home-U.n_sugg)} more are a weaker fit somewhere; ${n(U.n_unused-U.n_home)} have no real home.</p>`
-    :`<p class="ulead"><b class="big">${n(U.n_unused)}</b> of your cards aren't in any suggested deck. <b class="hy">${n(U.n_home)}</b> of them are a weaker fit somewhere. <span class="dim">Put your real decklists in the <b>decks_in</b> folder and rerun to check against your own decks.</span></p>`;
-  const who=U.by_cmdr.map(([i,k],r)=>`<button type="button" class="uh${r?"":" first"}" data-uf="${r}" aria-pressed="false"><small>#${r+1}</small> ${sn(i)} <b>${k}</b></button>`).join("");
-  const card=([c,H],j)=>{const h=H[0];
-    return `<div class="ucard p5-card${j<24?" p5-in":""}">${CARDS[c]&&CARDS[c][1]?`<img class="c" src="${IMG(c)}" alt="" loading="lazy">`:'<span class="c"></span>'}<div class="uinfo"><b>${esc(CARDS[c]?CARDS[c][0]:"?")}</b>
-      ${h?`<span class="bh">Best home</span><a href="#discover" data-cmdr="${esc(DATA[h[0]].name)}">${sn(h[0])} -&gt;</a><small>${[h[1]?h[1]+"% of decks":"",h[2]?"fits: "+esc(h[2]):"",h[3]?"in its suggested deck":""].filter(Boolean).join(" · ")}</small>`:""}
-      ${H.length>1?`<small class="dim">also: ${H.slice(1).map(([i])=>`<a href="#discover" data-cmdr="${esc(DATA[i].name)}">${sn(i)}</a>`).join(", ")}</small>`:""}</div></div>`;};
-  let UF=-1, ALL=false;
-  // a chip shows the cards that commander's suggested deck would use, plus those whose best homes include it
-  const shown=()=>{if(UF<0)return U.cards; const [i,,ks]=U.by_cmdr[UF], set=new Set(ks), have=new Set();
-    const L=U.cards.filter(([c,H])=>{const ok=set.has(c)||H.some(h=>h[0]===i); if(ok)have.add(c); return ok;});
-    return L.concat(ks.filter(c=>!have.has(c)).map(c=>[c,[[i,0,"",1]]]));};
-  const grid=()=>{const L=shown(), V=ALL?L:L.slice(0,24);
-    $("unused").querySelector(".ugrid").innerHTML=V.map(card).join("")||"<p class='dim'>None.</p>";
-    const m=$("unused").querySelector(".umore"); m.hidden=V.length>=L.length; m.textContent=`Show all ${L.length} ->`;};
-  $("unused").innerHTML=`<h2 class="p5-slab"><span>Cards sitting unused</span></h2>${intro}
+/* ---------- card counts (F3): copies you own (ManaBox quantities) vs your saved decks; recounted whenever a deck is added
+   or deleted. Unused = owned and in none of your saved decks (with none saved: in no suggested deck). Short = your decks use
+   more copies than you own. Best homes come from the run (ST.unused.cards); "would use the most" ranks the suggested decks. ---------- */
+const BASIC=new Set(["Plains","Island","Swamp","Mountain","Forest","Wastes"].flatMap(b=>[b,"Snow-Covered "+b]));
+const OWNQ=new Map((ST.own||[]).map(o=>[o[0],o[3]||1]));        // card -> copies you own
+function usage(){const U=new Map(), add=(i,q,t)=>{if(!CARDS[i]||BASIC.has(CARDS[i][0]))return; const u=U.get(i)||{n:0,d:[]};
+    u.n+=q; const x=u.d.find(z=>z[0]===t); if(x)x[1]+=q; else u.d.push([t,q]); U.set(i,u);};
+  DECKS.forEach(k=>{k.cidx.forEach(i=>add(i,1,k.title)); k.cards.forEach(([i,,q])=>add(i,q||1,k.title));}); return U;}
+const sugg99=()=>{const S=new Set(); DATA.forEach(d=>(d.b.all||d.b[Object.keys(d.b)[0]]).deck.forEach(e=>S.add(e[0]))); return S;};
+var UST={f:-1, all:false};   // var: impRender() checks it before this line runs     // unused grid: commander filter (index into the ranking), show all
+function unusedRender(){
+  const U=ST.unused, el=$("unused"); if(!U){el.innerHTML=""; return;}
+  // a report built before F3 lists only ~150 cards and no copies: keep its own counts and say a rebuild is needed
+  const full=(ST.own||[]).length>0&&U.cards.length>=ST.own.length&&ST.own[0].length>3;
+  const use=full?usage():new Map(), mine=full&&DECKS.length>0, S=sugg99(), sn=i=>esc(DATA[i].name.split(" // ")[0]);
+  const rows=U.cards.filter(([c])=>mine?!use.has(c):!S.has(c)), un=new Set(rows.map(r=>r[0]));
+  const nH=rows.filter(r=>r[1].length).length, nS=rows.filter(r=>S.has(r[0])).length;
+  const spare=[...use].filter(([c,u])=>OWNQ.has(c)&&OWNQ.get(c)>u.n).length;
+  const short=[...use].filter(([c,u])=>OWNQ.has(c)&&u.n>OWNQ.get(c)).sort((a,z)=>(z[1].n-OWNQ.get(z[0]))-(a[1].n-OWNQ.get(a[0])));
+  const missing=[...use].filter(([c])=>!OWNQ.has(c)).length;
+  // which commanders' suggested decks would use the most of the unused cards (live)
+  const rank=DATA.map(d=>{const ks=[...new Set((d.b.all||d.b[Object.keys(d.b)[0]]).deck.map(e=>e[0]).filter(c=>un.has(c)))]; return [d.i,ks];})
+    .filter(r=>r[1].length).sort((a,z)=>z[1].length-a[1].length||a[0]-z[0]).slice(0,15);
+  if(UST.f>=rank.length) UST.f=-1;
+  const intro=!full?`<p class="ulead"><b class="big">${n(U.n_unused)}</b> of your cards aren't in any ${U.src==="decks_in"?"of your decks":"suggested deck"} (counted when this report was built). <span class="dim">Exact copy-by-copy counts against your saved decks need one full rebuild (<b>Update Deck Wizard.bat</b>).</span></p>`
+    :mine?`<p class="ulead"><b class="big">${n(rows.length)}</b> of your cards aren't in any of your ${DECKS.length} saved deck${DECKS.length===1?"":"s"}. <b class="hy">${n(nS)}</b> of them make the suggested deck of one of your commanders; ${n(nH-nS)} more are a weaker fit somewhere; ${n(rows.length-nH)} have no real home.${spare?` ${n(spare)} more card${spare===1?" has":"s have"} spare copies.`:""}</p>`
+    :`<p class="ulead"><b class="big">${n(rows.length)}</b> of your cards aren't in any suggested deck. <b class="hy">${n(nH)}</b> of them are a weaker fit somewhere. <span class="dim">${SERVED?"Save your real decks under Your decks":"Put your real decklists in the <b>decks_in</b> folder and rerun"} to count against your own decks, copy by copy.</span></p>`;
+  const shortH=short.length?`<div class="ushort"><h3>Short: your decks need more copies than you own (${short.length})</h3><ul>${short.slice(0,40).map(([c,u])=>
+      `<li><b>${esc(front(c))}</b> <span>own ${OWNQ.get(c)} · used ${u.n} in ${u.d.map(([t,q])=>esc(t)+(q>1?" ×"+q:"")).join(", ")}</span> <em>short ${u.n-OWNQ.get(c)}</em> ${buyA(c,"🛒 buy")}</li>`).join("")}</ul>${short.length>40?`<small>+${short.length-40} more</small>`:""}</div>`:"";
+  const who=rank.map(([i,ks],r)=>`<button type="button" class="uh${r?"":" first"}" data-uf="${r}" aria-pressed="${UST.f===r}"><small>#${r+1}</small> ${sn(i)} <b>${ks.length}</b></button>`).join("");
+  el.innerHTML=`<h2 class="p5-slab"><span>Cards sitting unused</span></h2>${intro}
+    ${mine&&missing?`<p class="dim">Your saved decks also play ${n(missing)} card${missing===1?"":"s"} you don't own (see each deck's missing cards).</p>`:""}${shortH}
     ${who?`<div class="uhs"><span class="lbl">Would use the most</span>${who}</div>`:""}<div class="ugrid"></div><button type="button" class="umore"></button>`;
-  grid();
-  document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("#unused [data-uf], #unused .umore"); if(!t)return;
-    if(t.classList.contains("umore")) ALL=true;
-    else{const k=+t.dataset.uf; UF=UF===k?-1:k; ALL=false;
-      $("unused").querySelectorAll("[data-uf]").forEach(x=>x.setAttribute("aria-pressed",+x.dataset.uf===UF?"true":"false"));}
-    grid();});
-})();
+  const card=([c,H],j)=>{const h=H[0], q=OWNQ.get(c)||1;
+    return `<div class="ucard p5-card${j<24?" p5-in":""}">${CARDS[c]&&CARDS[c][1]?`<img class="c" src="${IMG(c)}" alt="" loading="lazy">`:'<span class="c"></span>'}<div class="uinfo"><b>${esc(CARDS[c]?CARDS[c][0]:"?")}</b>
+      <span class="uq">own ${q} · ${q} free</span>
+      ${h?`<span class="bh">Best home</span><a href="#discover" data-cmdr="${esc(DATA[h[0]].name)}">${sn(h[0])} -&gt;</a><small>${[h[1]?h[1]+"% of decks":"",h[2]?"fits: "+esc(h[2]):"",h[3]?"in its suggested deck":""].filter(Boolean).join(" · ")}</small>`:"<small class='dim'>no real home among your commanders</small>"}
+      ${H.length>1?`<small class="dim">also: ${H.slice(1).map(([i])=>`<a href="#discover" data-cmdr="${esc(DATA[i].name)}">${sn(i)}</a>`).join(", ")}</small>`:""}</div></div>`;};
+  // a chip shows the unused cards that commander's suggested deck would use
+  const L=UST.f<0?rows:(()=>{const [i,ks]=rank[UST.f], set=new Set(ks); return rows.filter(r=>set.has(r[0]));})(), V=UST.all?L:L.slice(0,24);
+  el.querySelector(".ugrid").innerHTML=V.map(card).join("")||"<p class='dim'>None: every card you own is in one of your decks.</p>";
+  const m=el.querySelector(".umore"); m.hidden=V.length>=L.length; m.textContent=`Show all ${L.length} ->`;
+  // the counts elsewhere on the page follow
+  CTICK=CTICK.filter(t=>!/waiting for a home|would use/.test(t)).concat([`${n(rows.length)} cards waiting for a home`])
+    .concat(rank[0]?[`${DATA[rank[0][0]].name.split(" // ")[0]} would use ${rank[0][1].length} of them`]:[]);
+  if(VIEW==="collection") $("tick").innerHTML=tickHTML(CTICK);
+  const cs=document.querySelector("#cstats .u dd"); if(cs) cs.textContent=n(rows.length);
+  const ds=document.querySelector("#stats li.hl strong"); if(ds) ds.textContent=n(rows.length);}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("#unused [data-uf], #unused .umore"); if(!t)return;
+  if(t.classList.contains("umore")) UST.all=true; else{const k=+t.dataset.uf; UST.f=UST.f===k?-1:k; UST.all=false;}
+  unusedRender();});
+unusedRender();
 
 /* ---------- events ---------- */
 // cards are visible by default; with an observer (and motion allowed) they wait (p5-wait) and slide in (p5-shown) as they
@@ -3417,7 +3451,7 @@ class LiveDecks:
         OFFLINE = a.offline
         if a.no_combos: CSB_DOWN[0] = True
         cache_dir = os.path.join(a.out, "cache")
-        _, owned = load_owned(tab["csv"], cache_dir)
+        _, owned, _ = load_owned(tab["csv"], cache_dir)
         names_path = os.path.join(cache_dir, "scryfall_names.json")
         name_meta = resolve_names(set(), names_path)
         prepare_types(list(owned.values()) + [x for x in name_meta.values() if x])
@@ -3810,19 +3844,21 @@ def serve(a, csv_path, child_args):
 
 # -------------------------------------------------------------------- main
 def load_owned(csv_path, cache_dir, refresh=False):
-    """Collection -> (printings, owned cards by normalized name), with role tags and card flags loaded."""
+    """Collection -> (printings, owned cards by normalized name, copies owned by normalized name, all printings
+    together), with role tags and card flags loaded."""
     coll = load_collection(csv_path)
     print(f"Collection file: {csv_path}")
     print(f"Collection: {len(coll)} printings, {sum(q for _, q in coll.values())} cards")
     meta = enrich_scryfall(list(coll), os.path.join(cache_dir, "scryfall.json"), refresh)
-    owned = {}
+    owned, qty = {}, {}
     for sid in coll:
         m = meta.get(sid)
         if m and m["layout"] not in ("token", "emblem") and m["name"] not in BASIC_NAMES:
             owned[norm(m["name"])] = m
+            qty[norm(m["name"])] = qty.get(norm(m["name"]), 0) + coll[sid][1]
     ROLE_TAGS.update(fetch_role_tags(os.path.join(cache_dir, "role_tags.json"), refresh))
     fetch_card_flags(owned, os.path.join(cache_dir, "spellbook_flags.json"), refresh)
-    return coll, owned
+    return coll, owned, qty
 
 def commander_candidates(owned):
     """Owned legendary creatures and cards that say they can be your commander, by name."""
@@ -3877,7 +3913,7 @@ def main():
 
     cache_dir = os.path.join(a.out, "cache")
     if a.no_combos: CSB_DOWN[0] = True          # --no-combos: no Spellbook requests, cached flags only
-    coll, owned = load_owned(csv_path, cache_dir, a.refresh)
+    coll, owned, qty = load_owned(csv_path, cache_dir, a.refresh)
     cands = commander_candidates(owned)
     diff = collection_changes(csv_path, owned, [m["name"] for m in cands], cache_dir)
     if diff:
@@ -4063,8 +4099,9 @@ def main():
                       "diff": {k2: v for k, l in (diff or {}).items()
                                for k2, v in ((k, l[:40]), (k + "_n", len(l)))} if diff else None}}
     # for the pin box's suggestions: every card you own that a pin could add (commander-legal, no basics)
-    stats["own"] = [[T.add(m["name"], m), sum(1 << j for j, c in enumerate("WUBRG") if c in m["ci"]), T.s(m["type_line"])]
-                    for _, m in sorted(owned.items()) if m["commander_legal"] and m["name"] not in BASIC_NAMES]
+    # every card you own that a pin could add (commander-legal, no basics): [card, colour bits, type line, copies]
+    stats["own"] = [[T.add(m["name"], m), sum(1 << j for j, c in enumerate("WUBRG") if c in m["ci"]), T.s(m["type_line"]),
+                     qty.get(k, 1)] for k, m in sorted(owned.items()) if m["commander_legal"] and m["name"] not in BASIC_NAMES]
     out_html = os.path.join(a.out, "report.html")
     with open(out_html + ".tmp", "w", encoding="utf-8") as f:   # swap in whole: the app never serves half a file
         f.write(render_report(results, stats, brackets, decks, T.rows, CT.rows, T.strs, T.opts))
