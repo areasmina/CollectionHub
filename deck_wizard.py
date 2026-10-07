@@ -60,7 +60,7 @@ def norm(name):
 def slugify(name):
     s = unicodedata.normalize("NFKD", norm(name))
     s = "".join(ch for ch in s if not unicodedata.combining(ch))
-    s = s.replace("'", "").replace("\u2019", "")
+    s = s.replace("'", "").replace("\u2019", "").replace(".", "")    # EDHREC: "M.O.D.O.K." -> modok
     return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 def http_json(url, data=None, retries=3):
