@@ -566,7 +566,9 @@ MECHANICS = {
                    ("reanimator", "graveyard", "self-mill", "mill"), ()),
     "lifegain":   (r"\byou gain [^.]{0,12}life|\bgains? \d+ life|whenever you gain life|\blifelink\b",
                    ("lifegain", "lifedrain"), ()),
-    "drain":      (r"\b(each opponent|target opponent|each player) loses? \w+ life", ("lifedrain",), ()),
+    # losing life and being dealt damage both end the same plan (Doom drains 2; Brallin deals 1 to each opponent)
+    "drain":      (r"\b(each opponent|target opponent|each player) loses? \w+ life|deals? \w+ damage to each opponent",
+                   ("lifedrain", "burn", "group slug"), ()),
     "spells":     (r"instant (or|and) sorcery|noncreature spell|whenever you cast (a|an|your) (instant|sorcery|noncreature)",
                    ("spellslinger", "storm", "spell copy", "cantrips"), ("instant", "sorcery")),
     "artifacts":  (r"\bartifacts?\b", ("artifacts",), ("artifact",)),
@@ -707,12 +709,50 @@ def deck_diff(base_x, tx):
 
 _FIT_MEMO = {"who": None}
 
+FIT_CMDR = 0.12        # the card works with what the commander does by itself (Doom connives every turn ->
+                        # "whenever you discard" cards trigger every turn); once per card, Oracle text via ENGINES
+
+def commander_link(cmdr, m):
+    """Engines where card m consumes what the commander provides, or provides what it consumes
+    (e.g. Doom: connive = discard -> Captain Howler, Brallin), as labels; [] when none."""
+    cp, cc = card_engines(cmdr)
+    p, c = card_engines(m)
+    return sorted({_ENG_RX[i][0] for i in (cp & c) | (cc & p) if i < len(_ENG_RX)})
+
+def cmdr_fit(cmdr, m, profile, bracket):
+    """card_fit + FIT_CMDR when the card works with the commander's own engine (commander_link)."""
+    f, why = card_fit(m, profile, bracket)
+    link = commander_link(cmdr, m) if card_kind(m) != "land" else []
+    if link:
+        f += FIT_CMDR
+        why = "with commander: " + ", ".join(link[:2]) + (" · " + why if why else "")
+    return f, why
+
+GEM_FLOOR = 0.35       # hidden gem hitting all the commander's mechanics: valued like a card in 35% of decks
+GEM_MAX = 3             # hidden gems per deck that get the floor (best first)
+
+def hidden_gems(cmdr, profile, pool, play_of, bracket):
+    """Owned cards EDHREC rarely plays here (< OFF_LIST) that work with the commander's own engine
+    (commander_link) and hit 2+ of its mechanics, e.g. Brallin for Doom (discard + drain + +1/+1).
+    Low play can mean nobody tried it, a new card or a pricey one, so fit decides: the best GEM_MAX get
+    an EDHREC-part floor of GEM_FLOOR x share of the commander's mechanics they hit.
+    {key: (floor, [mechanics hit])}."""
+    cm = profile[1]
+    if len(cm) < 2: return {}
+    cands = []
+    for k, m, _, kd in pool:
+        if kd == "land" or play_of(k) >= OFF_LIST: continue
+        hit = card_mechanics(m) & cm
+        if len(hit) >= 2 and commander_link(cmdr, m):
+            cands.append((-len(hit), -fit_cached(cmdr, m, profile, bracket)[0], k, sorted(hit)))
+    return {k: (GEM_FLOOR * len(hit) / len(cm), hit) for _, _, k, hit in sorted(cands)[:GEM_MAX]}
+
 def fit_cached(cmdr, m, profile, bracket):
-    """card_fit, remembered per commander (it only depends on the bracket through Game Changers)."""
+    """cmdr_fit, remembered per commander (it only depends on the bracket through Game Changers)."""
     if _FIT_MEMO["who"] != (cmdr["name"], id(profile)):
         _FIT_MEMO.clear(); _FIT_MEMO["who"] = (cmdr["name"], id(profile))
     key = (norm(m["name"]), bracket in ("optimized", "cedh"))
-    if key not in _FIT_MEMO: _FIT_MEMO[key] = card_fit(m, profile, bracket)
+    if key not in _FIT_MEMO: _FIT_MEMO[key] = cmdr_fit(cmdr, m, profile, bracket)
     return _FIT_MEMO[key]
 
 def built_around(profile, cards):
@@ -1115,7 +1155,7 @@ def find_homes(cmdrs, owned, name_meta, used, T):
         rate_of, _, value_of = card_values(page, page, owned, name_meta)
         for k, c in cand.items():
             if k == me or not set(c["ci"]) <= ci: continue
-            f, why = (0.0, "") if card_kind(c) == "land" else card_fit(c, prof, "all")
+            f, why = (0.0, "") if card_kind(c) == "land" else cmdr_fit(m, c, prof, "all")
             sc = value_of(k) + f
             if sc >= HOME_MIN: homes[k].append((sc, i, rate_of(k), why, k in names))
     rows = []
@@ -1160,14 +1200,17 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         return gc_cap is None or sum(1 for m, _, _ in chosen + lands if m["gc"]) < gc_cap
     cards = edh["cards"]
     rate_of, play_of, value_of = card_values(edh, base, owned, name_meta, ew)
+    gems = hidden_gems(cmdr, profile, pool, play_of, bracket)
     fits = {}
-    def score(k):           # an owned card: EDHREC value + how well it fits this commander
+    def score(k):           # an owned card: EDHREC value (a hidden gem's has a floor) + how well it fits this commander
         if k not in fits:
             m = owned[k]
             fits[k] = (0.0, "") if card_kind(m) == "land" else fit_cached(cmdr, m, profile, bracket)
             if tprof and card_kind(m) != "land" and hits_theme(m, tprof):
                 fits[k] = (fits[k][0] + FOCUS_W, ("theme: " + focus.lower() + (" · " + fits[k][1] if fits[k][1] else "")))
-        return value_of(k) + fits[k][0]
+            if k in gems:
+                fits[k] = (fits[k][0], "hidden gem: " + " + ".join(gems[k][1]) + " · " + fits[k][1])
+        return (max(value_of(k), gems[k][0]) if k in gems else value_of(k)) + fits[k][0]
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
     rec.sort(key=lambda x: -x[2])
     template = [x for x in rec if x[2] >= 0.10][:99] or rec[:99]
