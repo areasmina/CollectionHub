@@ -2121,7 +2121,7 @@ main{max-width:1400px}
 .mins button[aria-pressed="true"]{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B}
 .more{display:flex;flex-direction:column;gap:12px}.more label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;text-transform:uppercase;color:var(--mute)}
 .more select{min-height:40px;text-transform:none}
-.lst{flex:1;min-width:0}#count{text-transform:uppercase;font-size:.75rem;margin:0 0 12px}
+.lst{flex:1;min-width:0}.disc.wide .filt{display:none}#count{text-transform:uppercase;font-size:.75rem;margin:0 0 12px}
 /* commander cards; an opened card spans the whole row so its panel keeps the full width */
 #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:40px 22px;padding-top:22px;grid-auto-flow:dense;align-items:start}
 .row{overflow:visible;margin:0;border-radius:14px;background:var(--bg);box-shadow:6px 6px 0 var(--shadow)}
@@ -3092,6 +3092,9 @@ addEventListener("scroll",()=>{if(!P5ON.length)return; if(Date.now()-P5T>60)p5sc
 function p5watch(r){if(!P5IO)return;
   P5ON.forEach(c=>{P5IO.unobserve(c); c.classList.remove("p5-wait");}); P5ON=[];
   r.querySelectorAll(".body .grid .ct").forEach(c=>{c.classList.add("p5-wait"); P5IO.observe(c); P5ON.push(c);});}
+// an open commander panel takes the full page width (like P5Commander): the filter column hides until every panel is closed
+const discWide=()=>document.querySelector(".disc").classList.toggle("wide",!!document.querySelector("#list details.row[open]"));
+document.addEventListener("toggle",e=>{if(e.target.matches&&e.target.matches("#list details.row"))discWide();},true);
 document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open)return;
   if(!r.dataset.f){r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;}
   p5watch(r);},true);

@@ -330,6 +330,8 @@ The 99 (`p5-slab`; tape labels `TAPE`/`tapeFor`, coloured offset shadows per kin
 `shopHTML`, cyan `swapsHTML`, yellow `pinHTML`) → Gaps & stand-ins (`slotRowsHTML`: Buy it / Advised / Or… option cards,
 same saved choices; chosen = red, skewed, cream offset shadow + (CHOSEN!) dropping in at the card's foot; one row of options;
 the 🛒 store link sits under the missing-card tile) → Deck stats & combos (Phase 4, below).
+**Full-width panel:** while any commander panel is open, `.disc` gets class `wide` (`discWide()` on the toggle event) and the
+filter column hides, so the panel uses the page width like P5Commander; closing the last panel brings it back.
 **Deck stats pile (Phase 4):** `pileHTML()` = one pile of post-its with tabs (`.ptab[data-stat]`, `role=tab`, `aria-selected`,
 arrow keys; last tab in `dw:stat`, `setStat()`; the two other notes peek out behind as `.pback`): Mana curve (yellow: solid
 bars yours, hatched = EDHREC average deck `ref`, verdict SAME / N MORE / N FEWER, ±2 printed red; facts row; "As a table"),

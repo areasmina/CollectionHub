@@ -214,6 +214,17 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       if(!pile.querySelector('.pnote.n-combos .nbest'))out.errs.push('combos note has no best-combo box');
       out.clicks=(out.clicks||0)+4;}}
   catch(e){out.errs.push('stats pile: '+e.message);}
+  // an open panel hides the filter column (full width); closing every panel brings it back
+  try{const rs=[...document.querySelectorAll('#list details.row')]; rs.forEach(x=>x.open=false); await new Promise(z=>setTimeout(z,50));
+    const f=document.querySelector('.disc .filt');
+    if(getComputedStyle(f).display==='none')out.errs.push('filter column hidden with no panel open');
+    rs[0].open=true; await new Promise(z=>setTimeout(z,50));
+    if(getComputedStyle(f).display!=='none')out.errs.push('filter column still shown with a panel open');
+    if(rs[0].getBoundingClientRect().width<document.querySelector('.disc').getBoundingClientRect().width-4)out.errs.push('open panel is not full width');
+    rs[0].open=false; await new Promise(z=>setTimeout(z,50));
+    if(getComputedStyle(f).display==='none')out.errs.push('filter column did not come back after closing the panel');
+    out.clicks=(out.clicks||0)+2;}
+  catch(e){out.errs.push('full width: '+e.message);}
   // Collection view (#collection): opens without errors, the drop box is the only upload control (none in the header),
   // the unused grid starts at 24, "show all" and a commander chip work, a card's home link opens that commander in Discover
   try{if(document.querySelector('header.zh input[type=file], header.zh .up, header.zh button:not([data-mode])'))out.errs.push('header has an upload control');
