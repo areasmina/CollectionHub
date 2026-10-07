@@ -21,7 +21,7 @@ BROWSERS = [
 # runs before the page's own script: records uncaught errors
 CATCH = "<script>window.__errs=[];window.addEventListener('error',e=>__errs.push('page: '+e.message));</script>"
 # runs after it: renders every panel the user could open
-PROBE = """<script>setTimeout(()=>{const out={panels:0,errs:window.__errs,rows:document.querySelectorAll('details.row').length};
+PROBE = """<script>setTimeout(()=>{const out={panels:0,errs:window.__errs,rows:document.querySelectorAll('#list details.row').length};
 try{for(const d of DATA)for(const b of BR){if(!d.b[b])continue;try{const h=body(d,b);if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+': text contains "undefined"');out.panels++;}
 catch(e){out.errs.push(d.name+' | '+b+': '+e.message);}}}catch(e){out.errs.push('probe: '+e.message);}
 try{const r=document.querySelector('details.row[data-i]');if(r){r.open=true;r.querySelector('.body').innerHTML=body(DATA[+r.dataset.i],bk());r.dataset.f=1;
@@ -61,16 +61,16 @@ try{const tb=document.querySelector('[data-src="avg"]');
 catch(e){out.errs.push('top selector: '+e.message);}
 // Discover filters: a colour chip keeps only commanders with that colour; "you own at least 80%" keeps 80%+;
 // pressing them again / ANY brings every commander back
-try{const all=document.querySelectorAll('details.row').length, k=DATA[0].ci[0]||'U';
+try{const all=document.querySelectorAll('#list details.row').length, k=DATA[0].ci[0]||'U';
   document.querySelector('[data-col="'+k+'"]').click();
-  const rows=[...document.querySelectorAll('details.row')].map(r=>DATA[+r.dataset.i]);
+  const rows=[...document.querySelectorAll('#list details.row')].map(r=>DATA[+r.dataset.i]);
   if(rows.some(d=>!d.ci.includes(k)))out.errs.push('colour chip '+k+' let other colours through');
   document.querySelector('[data-col="'+k+'"]').click();
   document.querySelector('[data-minp="80"]').click();
-  if([...document.querySelectorAll('details.row')].some(r=>X(DATA[+r.dataset.i],bk()).pct<80))out.errs.push('"own at least 80%" let lower rows through');
+  if([...document.querySelectorAll('#list details.row')].some(r=>X(DATA[+r.dataset.i],bk()).pct<80))out.errs.push('"own at least 80%" let lower rows through');
   document.querySelector('[data-minp="0"]').click();
-  if(document.querySelectorAll('details.row').length!==all)out.errs.push('filters did not reset');
-  if(!document.querySelector('details.row .bat'))out.errs.push('no battery on the commander cards');
+  if(document.querySelectorAll('#list details.row').length!==all)out.errs.push('filters did not reset');
+  if(!document.querySelector('#list details.row .bat'))out.errs.push('no battery on the commander cards');
   out.clicks=(out.clicks||0)+4;}
 catch(e){out.errs.push('discover filters: '+e.message);}
 // commander panel: photocopy toggle, slim bar archetype select, a gaps option card (wired to the saved choices)
@@ -189,7 +189,7 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
   // P5 layer: ticker with real numbers, ransom title, #1-#3 tags, open panel's deck cards slide in when on screen
   try{if(!document.querySelector('#tick span')||!document.querySelector('#tick').textContent.includes('commanders'))out.errs.push('ticker is empty');
     if(document.querySelectorAll('#ttl .rl').length<10)out.errs.push('ransom title missing');
-    const nr=document.querySelectorAll('details.row').length, nt=document.querySelectorAll('details.row .rank').length;
+    const nr=document.querySelectorAll('#list details.row').length, nt=document.querySelectorAll('#list details.row .rank').length;
     if(nt!==Math.min(3,nr))out.errs.push('expected '+Math.min(3,nr)+' rank tags, found '+nt);
     // a commander that's closed now (re-opening one in the same task fires no toggle event)
     const r=document.querySelector('details.row[data-i]:not([open])')||document.querySelector('details.row[data-i]');
@@ -203,6 +203,25 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       +', waiting '+r.querySelectorAll('.ct.p5-wait').length+', watched '+P5ON.length+', observer '+!!P5IO);
     out.clicks=(out.clicks||0)+1;}
   catch(e){out.errs.push('p5: '+e.message);}
+  // Collection view (#collection): opens without errors, the drop box is the only upload control (none in the header),
+  // the unused grid starts at 24, "show all" and a commander chip work, a card's home link opens that commander in Discover
+  try{if(document.querySelector('header.zh input[type=file], header.zh .up, header.zh button:not([data-mode])'))out.errs.push('header has an upload control');
+    location.hash='#collection'; await wait(()=>!$('vcoll').hidden,40);
+    if($('vcoll').hidden||!$('vdisc').hidden)out.errs.push('collection view did not open');
+    if(!document.querySelector('.vnav [data-view="collection"][aria-current="page"]'))out.errs.push('nav does not mark Collection');
+    if(document.querySelectorAll('#cttl .rl').length<10)out.errs.push('collection title missing');
+    if(!document.querySelector('#coll .drop input[type=file]')||typeof dwUpload!=='function')out.errs.push('no drop box / dwUpload in the app');
+    if(document.querySelectorAll('input[type=file]').length!==1)out.errs.push('expected exactly one upload control');
+    if(!$('imp').querySelector('h2'))out.errs.push('"Your decks" missing');
+    if(ST.unused){const cnt=()=>document.querySelectorAll('#unused .ugrid .ucard').length, g=cnt();
+      if(!g||g>24)out.errs.push('unused grid shows '+g+' cards first');
+      const m=document.querySelector('#unused .umore'); if(m&&!m.hidden){m.click(); if(cnt()<=g)out.errs.push('show all did nothing');}
+      const c=document.querySelector('#unused [data-uf]'); if(c){c.click(); if(c.getAttribute('aria-pressed')!=='true'||!cnt())out.errs.push('commander chip did not filter'); c.click();}
+      const a=document.querySelector('#unused .ugrid a[data-cmdr]');
+      if(a){a.click(); await wait(()=>!$('vdisc').hidden,40);
+        if($('vdisc').hidden||!document.querySelector('#list details.row[open]'))out.errs.push('home link did not open the commander');}}
+    out.clicks=(out.clicks||0)+1;}
+  catch(e){out.errs.push('collection: '+e.message);}
   const p=document.createElement('pre');p.id='__test';p.textContent=JSON.stringify(out);document.body.appendChild(p);})();},500);</script>"""
 
 def stub_server(html):

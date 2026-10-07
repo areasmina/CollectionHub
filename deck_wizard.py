@@ -2302,23 +2302,74 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .rank{position:absolute;z-index:3;left:-12px;top:-34px;padding:0 14px;font:900 34px/1.15 var(--head);font-stretch:75%;color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;box-shadow:4px 4px 0 #0B0B0B;transform:skewX(-12deg) rotate(-7deg)}
 .rank.r2{font-size:30px}.rank.r3{font-size:26px}.row[open] .rank{display:none}
 /* deck cards slide in when they reach the screen (IntersectionObserver; Firefox-safe, no view() timelines) */
+/* ---------- views: nav, Collection page (phase 3b) ---------- */
+.vnav{display:flex;border:2px solid var(--ink)}
+.vnav a{padding:10px 16px;font:800 14px/1 var(--head);letter-spacing:.04em;text-transform:uppercase;text-decoration:none;color:var(--ink)}
+.vnav a+a{border-left:2px solid var(--ink)}.vnav a[aria-current="page"]{color:#FFFFFF;background:var(--r);box-shadow:inset 0 -4px 0 #0B0B0B}
+.hfile{margin-left:auto;font-size:12px;text-transform:uppercase;color:var(--mute);overflow-wrap:anywhere}.hfile b{color:#141414;background:var(--y);padding:0 4px}.hfile~.modes{margin-left:0}
+.chero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:24px;margin:8px 0 34px}
+.cstats{margin:0;display:flex;flex-wrap:wrap;border:2px solid var(--ink);box-shadow:8px 8px 0 var(--r);background:var(--bg)}
+.cstats div{display:flex;flex-direction:column-reverse;padding:10px 20px}.cstats div+div{border-left:2px solid var(--ink)}
+.cstats dt{font-size:11px;text-transform:uppercase}.cstats dd{margin:0;font:900 40px/1 var(--head);font-stretch:75%}.cstats .u{color:#FFFFFF;background:var(--r)}
+#coll{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));gap:28px;align-items:stretch;margin:0;padding:16px 0 0;border:0;background:none;font-size:inherit}
+.ccard{position:relative;display:flex;flex-direction:column;gap:14px;padding:0 20px 20px;border:2px solid var(--ink);background:var(--bg);box-shadow:8px 8px 0 var(--shadow)}.ccard+.ccard{animation-delay:90ms}
+.ccard>h2{align-self:flex-start;margin:-16px 0 0 -10px;padding:4px 14px 2px;font-size:24px;font-stretch:75%;color:var(--bg);background:var(--ink);transform:skewX(-10deg) rotate(-2deg);box-shadow:6px 5px 0 var(--r)}
+.cfile{display:flex;flex-direction:column;gap:2px}.cfile b{font:700 18px var(--serial);overflow-wrap:anywhere}.cfile span{font-size:12px;text-transform:uppercase;color:var(--mute)}
+.drop{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:170px;padding:18px;cursor:pointer;text-align:center;border:3px dashed var(--ink);background-image:repeating-linear-gradient(-45deg,transparent 0 14px,var(--grid) 14px 16px)}
+.drop.over,.drop:focus-within{border-color:var(--r);background-color:rgba(229,25,28,.1)}.drop small{font-size:11px;text-transform:uppercase}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.dlab{padding:6px 18px 4px;font:900 26px/1.1 var(--head);font-stretch:75%;text-transform:uppercase;color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;box-shadow:5px 5px 0 #0B0B0B;transform:skewX(-10deg) rotate(-2deg)}
+#ups{font-weight:700;color:var(--ink)}#ups:empty{display:none}
+.chg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.chg div{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:2px solid #0B0B0B;box-shadow:5px 5px 0 #0B0B0B;transform:skewX(-6deg) rotate(-2deg);animation-delay:200ms}
+.chg b{font:900 46px/.95 var(--head);font-stretch:75%}.chg span{font-weight:700;font-size:12px;text-transform:uppercase}
+.chg .add{color:#FFFFFF;background:#2A8443}.chg .rem{color:#FFFFFF;background:var(--r);transform:skewX(-6deg) rotate(1.5deg);animation-delay:290ms}
+.chg .ncm{color:#0B0B0B;background:var(--y);transform:skewX(-6deg) rotate(-1deg);animation-delay:380ms}
+.ncs{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.lbl{font-size:11px;font-weight:700;text-transform:uppercase}
+.nc{padding:4px 10px;font:800 14px/1.2 var(--head);text-decoration:none;color:#0B0B0B !important;background:var(--y);border:2px solid #0B0B0B}
+#coll .clist{font-size:.8rem}#coll .clist>summary{display:inline;padding:0;font-size:12px;text-transform:uppercase;border-bottom:2px solid var(--r)}
+.shead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:22px}
+.shead h2.p5-slab,#unused>h2.p5-slab{margin:0;font-size:clamp(2rem,5vw,3.25rem);font-stretch:62%;line-height:.9}
+.irow{margin:0 0 22px 14px}.irow:nth-of-type(2){animation-delay:90ms}.irow:nth-of-type(3){animation-delay:180ms}.irow:nth-of-type(4){animation-delay:270ms}
+.irow>summary{position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;padding:16px 22px 16px 70px}
+.ino{position:absolute;left:-14px;top:50%;translate:0 -50%;display:grid;place-items:center;width:64px;height:64px;font:900 30px/1 var(--head);color:#FFFFFF;background:#0B0B0B;border:2px solid var(--ink);transform:skewX(-10deg) rotate(-6deg)}.ino.first{background:var(--r)}
+.inm{flex:1 1 260px;display:flex;flex-direction:column;gap:2px;min-width:0}.inm b{font:900 30px/1 var(--head);font-stretch:75%;text-transform:uppercase}.inm span{font-size:12px;text-transform:uppercase;color:var(--mute)}
+.iown{display:flex;align-items:center;gap:12px}.iown>span:last-child{display:flex;flex-direction:column;line-height:1.1}.iown b{font:900 30px/1 var(--head);font-stretch:75%}.iown small{font-size:11px;text-transform:uppercase}
+.icb{padding:3px 10px;font-weight:700;font-size:12px;text-transform:uppercase;color:#0B0B0B;background:var(--m);transform:skewX(-8deg)}
+.iopen{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;font:900 14px/1 var(--head);text-transform:uppercase;color:#FFFFFF;background:var(--r);border:2px solid var(--ink)}
+.iopen::before{content:"Open"}.irow[open] .iopen{color:var(--bg);background:var(--ink)}.irow[open] .iopen::before{content:"Close"}
+#unused{display:flex;flex-direction:column;gap:20px}
+.ulead{margin:0;max-width:80ch;font-size:16px;line-height:1.6}.ulead .big{padding:0 6px;font:900 22px var(--head);color:#FFFFFF;background:var(--r)}.ulead .hy{padding:0 4px;color:#0B0B0B;background:var(--y)}
+.uhs{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.uh{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;font:800 15px var(--head);color:var(--ink);background:transparent;border:2px solid var(--ink);transform:skewX(-8deg);cursor:pointer}
+.uh.first{color:#FFFFFF;background:var(--r);box-shadow:5px 5px 0 var(--ink)}.uh b{padding:0 6px;font-size:18px;color:#0B0B0B;background:var(--y)}.uh.first b{background:#FFFFFF}
+.uh[aria-pressed="true"]{outline:3px solid var(--y);outline-offset:3px}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:24px 20px}
+.ucard{display:flex;gap:16px;padding:16px;color:var(--ink);background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--shadow)}
+.ucard:nth-child(2){animation-delay:80ms}.ucard:nth-child(3){animation-delay:160ms}.ucard:nth-child(4){animation-delay:240ms}
+.ucard .c{display:block;align-self:flex-start;width:86px;height:auto;flex:none;aspect-ratio:488/680;border-radius:6px;border:2px solid var(--ink);background:var(--bar);transform:rotate(-3deg);box-shadow:4px 4px 0 var(--r)}
+:root[data-img="copy"] .ucard img.c{filter:grayscale(1) contrast(1.3)}
+.uinfo{display:flex;flex-direction:column;gap:6px;min-width:0}.uinfo>b{font:900 22px/1 var(--head);font-stretch:75%;text-transform:uppercase}
+.bh{align-self:flex-start;padding:1px 8px;font-weight:700;font-size:10px;text-transform:uppercase;color:#FFFFFF;background:#0B0B0B;transform:skewX(-10deg)}
+.uinfo>a{align-self:flex-start;font:800 15px var(--head);text-decoration:none;border-bottom:3px solid var(--r)}.uinfo small{font-size:12px}
+.umore{align-self:flex-start;padding:8px 14px;font:900 14px var(--head);text-transform:uppercase;color:var(--bg);background:var(--ink);border:0;cursor:pointer}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
 <div id="zt" aria-hidden="true"><svg><filter id="zdust"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"/><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"/></feComponentTransfer></filter><rect width="100%" height="100%" filter="url(#zdust)"/></svg></div>
 <main>
 <header class="zh"><div class="brand">Deck Wizard</div>
+<nav class="vnav" aria-label="Views"><a href="#discover" data-view="discover">Discover</a><a href="#collection" data-view="collection">Collection</a></nav>
+<span class="hfile" id="hfile"></span>
 <div class="modes" role="group" aria-label="Print mode"><button type="button" data-mode="pos">Positive</button><button type="button" data-mode="neg">Negative</button><button type="button" data-mode="sepia">Sepia</button></div></header>
 <div class="cmyk" aria-hidden="true"></div>
 <div class="tickw" aria-hidden="true"><div class="p5-ticker"><div class="p5-track" id="tick"></div></div></div>
+<div id="vdisc">
 <div class="ttl"><div class="p5-slash" aria-hidden="true"></div><h1 class="p5-h1" id="ttl" aria-label="What can I build?"></h1></div>
 <p class="sub">&gt; Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own_</p>
 <ul class="stats" id="stats"></ul>
-<div id="coll"></div>
 <div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span>
 <div class="srcsel" role="group" aria-label="Deck source"><button class="srcb" data-src="">Commander page</button><button class="srcb" data-src="avg">Average deck</button></div></div>
-<div id="imp"></div>
-<div id="unused"></div>
 <div class="cmyk" aria-hidden="true"></div>
 <div class="disc">
 <aside class="filt" aria-label="Filters">
@@ -2328,6 +2379,13 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 <h3 class="fh">More</h3><div class="fb more"><label>archetype<select id="th" aria-label="Archetype"><option value="">Any archetype</option></select></label><label>edhrec decks<select id="dk" aria-label="Min decks"><option value="0">Any deck count</option><option value="20">20+ decks</option><option value="100">100+ decks</option><option value="500">500+ decks</option><option value="1000">1000+ decks</option><option value="5000">5000+ decks</option></select></label><label>combos<select id="cf" aria-label="Combos"><option value="">Any combos</option><option value="own">Owns 1+ combo</option><option value="skel">Combo in deck</option></select></label><label>sort by<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select></label></div>
 </aside>
 <section class="lst" aria-label="Commanders"><div id="count"></div><div id="list"></div></section>
+</div>
+</div>
+<div id="vcoll" hidden>
+<section class="chero"><div class="ttl"><div class="p5-slash" aria-hidden="true"></div><h1 class="p5-h1" id="cttl" aria-label="Your collection"></h1></div><dl class="cstats p5-in" id="cstats"></dl></section>
+<div id="coll"></div>
+<div id="imp"></div>
+<div id="unused"></div>
 </div>
 </main><img id="pv" alt=""><script>
 const DATA=__DATA__, BR=__BR__, ST=__STATS__, DECKS=__DECKS__, CARDS=__CARDS__, COMBOS=__COMBOS__, STRS=__STRS__;
@@ -2367,41 +2425,71 @@ function setMode(m){document.documentElement.dataset.mode=m; try{localStorage.se
   document.querySelectorAll(".modes [data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===m?"true":"false"));}
 setMode(document.documentElement.dataset.mode||"neg");
 document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest(".modes [data-mode]"); if(b)setMode(b.dataset.mode);});
+/* ---------- views: Discover / Collection (URL hash #collection; the last view is kept in "dw:view") ---------- */
+let VIEW="discover", DTICK=[], CTICK=[];
+function showView(v){VIEW=v==="collection"?"collection":"discover";
+  $("vdisc").hidden=VIEW!=="discover"; $("vcoll").hidden=VIEW!=="collection";
+  document.querySelectorAll(".vnav [data-view]").forEach(a=>a.dataset.view===VIEW?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
+  try{localStorage.setItem("dw:view",VIEW);}catch(e){}
+  $("tick").innerHTML=tickHTML(VIEW==="collection"?CTICK:DTICK);}
+addEventListener("hashchange",()=>{if(location.hash==="#collection"||location.hash==="#discover"){showView(location.hash.slice(1)); scrollTo(0,0);}});
+// a commander named on the Collection page: show it in Discover and open its panel
+function openCmdr(nm){if(location.hash!=="#discover")history.pushState(null,"","#discover"); showView("discover");
+  $("q").value=nm; render(); const r=[...document.querySelectorAll("#list details.row[data-i]")].find(x=>DATA[+x.dataset.i].name===nm);
+  if(r){r.open=true; r.scrollIntoView();} else $("list").scrollIntoView();}
 $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>${n(ST.unique)}</strong>unique</li><li><strong>${ST.cands}</strong>commanders</li><li><strong>${DATA.length}</strong>analyzed</li>${ST.unused?`<li class="hl"><strong>${n(ST.unused.n_unused)}</strong>unused cards</li>`:""}`;
 
-/* ---------- collection file + upload (upload works when opened through Deck Wizard App) ---------- */
+/* ---------- Collection page: the file in use + the drop box (the only upload control; app only), what changed ---------- */
 (function(){
   const C=ST.coll||{}, D=C.diff, served=location.protocol.startsWith("http");
   const names=(l,k)=>l.slice(0,40).map(esc).join(", ")+(k>l.length?` … +${k-l.length} more`:"");
-  let h=`<span>Collection: <b>${esc(C.csv||"?")}</b> <small>(${esc(C.at||"")})</small></span>`;
-  if(D) h+=`<span>${[D.added_n?`<b class="add">+${D.added_n} new cards</b>`:"", D.removed_n?`<b class="rem">−${D.removed_n} removed</b>`:"",
-    D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")||"No changes since the previous collection"}</span>`;
-  // uploading lives on the Collection page only (phase 3b adds its drop box, which calls dwUpload); the header shows rebuild progress
-  h+=served?`<span id="ups"></span><small class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>.</small>`
-    :`<small class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>.</small>`;
-  if(D&&(D.added_n||D.removed_n||D.new_cmdrs_n)) h+=`<details><summary>What changed since the previous collection</summary>
+  const chg=D&&(D.added_n||D.removed_n||D.new_cmdrs_n);
+  $("hfile").innerHTML=`${esc(C.csv||"")}${chg?` · <b>${[D.added_n?`+${D.added_n} new cards`:"",D.removed_n?`−${D.removed_n} removed`:"",D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")}</b>`:""}<span id="hups"></span>`;
+  $("cttl").innerHTML=`<span aria-hidden="true">${ransom("Your",3)}</span><span aria-hidden="true">${ransom("collection",6)}</span>`;
+  $("cstats").innerHTML=[["cards",n(ST.cards)],["unique",n(ST.unique)],["commanders",n(ST.cands)]].concat(ST.unused?[["unused",n(ST.unused.n_unused)]]:[])
+    .map(([k,v],i)=>`<div${i===3?' class="u"':""}><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  const top=ST.unused&&ST.unused.by_cmdr[0];
+  CTICK=["Your binder",`${n(ST.cards)} cards`,`${n(ST.unique)} unique`].concat(D&&D.added_n?[`+${n(D.added_n)} new since last file`]:[])
+    .concat(ST.unused?[`${n(ST.unused.n_unused)} cards waiting for a home`]:[]).concat(top?[`${DATA[top[0]].name.split(" // ")[0]} would use ${top[1]} of them`]:[]);
+  const isC=nm=>DATA.some(d=>d.name===nm);
+  const file=`<div class="ccard p5-in p5-card"><h2>Current file</h2><div class="cfile"><b>${esc(C.csv||"?")}</b><span>ManaBox export · ${esc(C.at||"")}</span></div>
+    ${served?`<label class="drop"><span class="dlab">Drop a new CSV ★</span><span>or click to choose a ManaBox export</span><small>only new cards hit Scryfall · the rebuild takes a few minutes</small><input type="file" accept=".csv,text/csv" aria-label="Choose a new ManaBox CSV"></label><span id="ups" role="status"></span>`
+      :`<p class="dim">To update: export from ManaBox into the <b>collection</b> folder and run <b>Update Deck Wizard.bat</b>, or open <b>Deck Wizard App.bat</b> and drop the new CSV here.</p>`}</div>`;
+  const blocks=D?`<div class="chg">${[[`+${n(D.added_n||0)}`,"new cards","add"],[`−${n(D.removed_n||0)}`,"removed","rem"],[n(D.new_cmdrs_n||0),"new commanders","ncm"]]
+    .map(([v,k,c])=>`<div class="p5-in ${c}"><b>${v}</b><span>${k}</span></div>`).join("")}</div>`:"";
+  const ncs=D&&D.new_cmdrs_n?`<div class="ncs"><span class="lbl">New commanders</span>${D.new_cmdrs.slice(0,12).map(nm=>isC(nm)
+    ?`<a href="#discover" class="nc" data-open="${esc(nm)}">${esc(nm)} -&gt;</a>`:`<span class="nc">${esc(nm)}</span>`).join("")}${D.new_cmdrs_n>12?`<small>+${D.new_cmdrs_n-12} more</small>`:""}</div>`:"";
+  const list=chg?`<details class="clist"><summary>See every added &amp; removed card -&gt;</summary>
     ${D.new_cmdrs_n?`<p>New commanders: ${names(D.new_cmdrs,D.new_cmdrs_n)}</p>`:""}
     ${D.added_n?`<p class="add">Added: ${names(D.added,D.added_n)}</p>`:""}
-    ${D.removed_n?`<p class="rem">Removed: ${names(D.removed,D.removed_n)}</p>`:""}</details>`;
-  $("coll").innerHTML=h;
+    ${D.removed_n?`<p class="rem">Removed: ${names(D.removed,D.removed_n)}</p>`:""}</details>`
+    :D?`<p class="dim">No changes since the previous collection.</p>`:`<p class="dim">First import: there's no previous file to compare with yet. The next CSV will show what changed.</p>`;
+  $("coll").innerHTML=file+`<div class="ccard p5-in p5-card"><h2>Since the last file</h2>${blocks}${ncs}${list}</div>`;
   if(!served) return;
-  const ups=$("ups");
+  const ups=$("ups"), hups=$("hups");
+  const say=(t,busy)=>{ups.textContent=t; hups.textContent=busy?" · rebuilding…":"";};
   const poll=()=>fetch("/status").then(r=>r.json()).then(s=>{
-    if(s.running){ups.textContent="Rebuilding… "+(s.line||""); setTimeout(poll,1000);}
-    else if(s.ok===true&&s.started>ST.built){ups.textContent="Done, reloading…"; location.reload();}
-    else if(s.ok===false) ups.textContent="Rebuild failed: "+(s.line||"see the Deck Wizard window");
-  }).catch(()=>{ups.textContent="Lost connection to Deck Wizard App (is its window still open?)";});
-  // the upload itself (POST /upload with the X-Deck-Wizard header); the Collection page's drop box will call it
+    if(s.running){say("Rebuilding… "+(s.line||""),1); setTimeout(poll,1000);}
+    else if(s.ok===true&&s.started>ST.built){say("Done, reloading…"); location.reload();}
+    else if(s.ok===false) say("Rebuild failed: "+(s.line||"see the Deck Wizard window"));
+  }).catch(()=>{say("Lost connection to Deck Wizard App (is its window still open?)");});
+  // the upload itself (POST /upload with the X-Deck-Wizard header), from the drop box
   window.dwUpload=async f=>{
     if(!f) return;
-    ups.textContent="Uploading "+f.name+"…";
+    if(!/\.csv$/i.test(f.name)){say("That's not a .csv file: export your collection from ManaBox as CSV."); return;}
+    say("Uploading "+f.name+"…",1);
     try{
       const r=await fetch("/upload",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"text/csv"},body:f});
       const j=await r.json();
-      if(!r.ok){ups.textContent=j.error||"Upload failed"; return;}
-      poll();
-    }catch(err){ups.textContent="Upload failed: is the Deck Wizard App window still open?";}
+      if(!r.ok){say(j.error||"Upload failed"); return;}
+      say("Received "+f.name+", starting the rebuild…",1); poll();
+    }catch(err){say("Upload failed: is the Deck Wizard App window still open?");}
   };
+  const dz=document.querySelector("#coll .drop"), inp=dz.querySelector("input");
+  inp.addEventListener("change",()=>{dwUpload(inp.files[0]); inp.value="";});
+  ["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault(); dz.classList.add("over");}));
+  dz.addEventListener("dragleave",()=>dz.classList.remove("over"));
+  dz.addEventListener("drop",e=>{e.preventDefault(); dz.classList.remove("over"); dwUpload(e.dataTransfer.files[0]);});
   poll();   // a rebuild may already be running (e.g. started from another tab)
 })();
 const br=$("br"); br.max=BR.length-1;
@@ -2847,10 +2935,11 @@ function render(){
   const rdy=x=>(x.rd||[]).filter(c=>c[3]).length;
   rows.sort(so==="ready"?(a,z)=>rdy(X(z,b))-rdy(X(a,b))||X(z,b).pct-X(a,b).pct:so==="decks"?(a,z)=>X(z,b).decks-X(a,b).decks:so==="combos"?(a,z)=>nc(z)-nc(a)||X(z,b).pct-X(a,b).pct:(a,z)=>X(z,b).pct-X(a,b).pct);
   const C=ST.coll||{}, D=C.diff, top=rows[0], tx=top&&X(top,b);
-  $("tick").innerHTML=tickHTML(["What can you build with what you own?",`${n(DATA.length)} commanders`,`${n(ST.cards)} cards`]
+  DTICK=(["What can you build with what you own?",`${n(DATA.length)} commanders`,`${n(ST.cards)} cards`]
     .concat(ST.unused?[`${n(ST.unused.n_unused)} unused cards`]:[])
     .concat(D&&(D.added_n||D.removed_n||D.new_cmdrs_n)?[[D.added_n?`+${D.added_n} new cards`:"",D.removed_n?`−${D.removed_n} removed`:"",D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")]:[])
     .concat(top?[`${top.name.split(" // ")[0]} tops ${LBL[b]} at ${tx.pct}%`]:[]));
+  if(VIEW==="discover") $("tick").innerHTML=tickHTML(DTICK);
   $("count").textContent=`${rows.length} commanders with ${SRC==="avg"?"an EDHREC average deck for "+LBL[b]:LBL[b]+" data"}`;
   const sel={exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b], RN=["","I","II","III","IV","V"];
   $("list").innerHTML=rows.map((d,k)=>{const x=X(d,b), rd=x.rd||[], ok=rd.filter(c=>c[3]).length, est=(x.bf||{est:2}).est;
@@ -2878,22 +2967,41 @@ function ibody(k){
   <div class="vbar"><h3>Missing cards &amp; substitutes</h3><span class="dim">${k.gaps.length} missing</span></div>
   ${gapsHTML(k.gaps,deckSet)}
   ${comboHTML(k.combos,null,"Combos in this deck","One card away")}`;}
-$("imp").innerHTML=DECKS.length?`<h2>Your imported decks</h2>`+DECKS.map((k,j)=>`<details class="row" data-k="${j}"><summary>
-  <span class="pips">${pips(k.ci)}</span><span class="nm">${esc(k.title)}<span class="mini"><span class="tag">${esc(k.cmdr.join(" + ")||"commander not found")}</span></span></span>
-  <span class="bar"><b style="width:${k.pct}%"></b></span><span class="pct">${k.pct}%</span><span class="dk">${k.own}/${k.total}</span>
-  <span class="cb">${k.combos?k.combos.n_own+"⚡":"–"}</span></summary><div class="body"></div></details>`).join(""):"";
+$("imp").innerHTML=`<div class="shead"><h2 class="p5-slab"><span>Your decks</span></h2><span class="dim">&gt; from the decks_in folder · .txt exports from Moxfield, Archidekt or ManaBox_</span></div>`
+  +(DECKS.length?DECKS.map((k,j)=>`<details class="row irow p5-card${j<24?" p5-in":""}" data-k="${j}"><summary><span class="ino${j?"":" first"}" aria-hidden="true">${String(j+1).padStart(2,"0")}</span>
+  <span class="inm"><b>${esc(k.title)}</b><span>${esc(k.cmdr.join(" + ")||"commander not found")}</span></span>
+  <span class="iown">${bat(k.pct)}<span><b>${k.pct}%</b><small>${k.own} of ${k.total} owned</small></span></span>
+  <span class="icb">${k.combos?k.combos.n_own:0} combos</span><span class="iopen" aria-hidden="true"></span></summary><div class="body"></div></details>`).join("")
+  :`<p class="dim">No decklists yet. Put your decks (.txt exports from Moxfield, Archidekt or ManaBox) in the <b>decks_in</b> folder and rerun: you'll see how much of each you own, and which of your cards sit unused.</p>`);
 
-/* ---------- unused cards ---------- */
+/* ---------- unused cards: the commanders that would use the most (a chip filters the grid), then each card's best home ---------- */
 (function(){
   const U=ST.unused; if(!U) return;
+  const sn=i=>esc(DATA[i].name.split(" // ")[0]);
   const intro=U.src==="decks_in"
-    ?`<p><b>${n(U.n_unused)}</b> cards you own aren't in any of your ${U.n_decks} decks in <b>decks_in</b>. <b>${n(U.n_sugg)}</b> of them make it into the suggested deck of one of your commanders; ${n(U.n_home-U.n_sugg)} more are a weaker fit somewhere; ${n(U.n_unused-U.n_home)} have no real home.</p>`
-    :`<p class="dim">Put your real decklists (.txt exports from Moxfield, Archidekt or ManaBox) in the <b>decks_in</b> folder and rerun to see which of your cards sit unused. For now this shows the <b>${n(U.n_unused)}</b> cards that none of the suggested decks use; ${n(U.n_home)} of them are a weaker fit somewhere.</p>`;
-  const who=U.by_cmdr.map(([i,k])=>`<a href="#" class="tag" data-cmdr="${esc(DATA[i].name)}">${esc(DATA[i].name)} · ${k}</a>`).join(" ");
-  const cards=U.cards.map(([c,H])=>`<div class="alt">${tile(c)}<small>${H.map(([i,r,why,ind])=>`<a href="#" data-cmdr="${esc(DATA[i].name)}">${esc(DATA[i].name.split(" // ")[0])}</a>${r?` ${r}% of decks`:""}${why?` · fits: ${esc(why)}`:""}${ind?" · in its suggested deck":""}`).join("<br>")}</small></div>`).join("");
-  $("unused").innerHTML=`<h2>Unused cards</h2>${intro}
-  ${who?`<h4>Commanders whose suggested deck uses the most of them</h4><div class="tags">${who}</div>`:""}
-  <details class="more"><summary>Best homes for each card (${U.cards.length} shown, best first)</summary><div class="gap">${cards||"<p class='dim'>None.</p>"}</div></details>`;
+    ?`<p class="ulead"><b class="big">${n(U.n_unused)}</b> of your cards aren't in any of your ${U.n_decks} decks in <b>decks_in</b>. <b class="hy">${n(U.n_sugg)}</b> of them make the suggested deck of one of your commanders; ${n(U.n_home-U.n_sugg)} more are a weaker fit somewhere; ${n(U.n_unused-U.n_home)} have no real home.</p>`
+    :`<p class="ulead"><b class="big">${n(U.n_unused)}</b> of your cards aren't in any suggested deck. <b class="hy">${n(U.n_home)}</b> of them are a weaker fit somewhere. <span class="dim">Put your real decklists in the <b>decks_in</b> folder and rerun to check against your own decks.</span></p>`;
+  const who=U.by_cmdr.map(([i,k],r)=>`<button type="button" class="uh${r?"":" first"}" data-uf="${r}" aria-pressed="false"><small>#${r+1}</small> ${sn(i)} <b>${k}</b></button>`).join("");
+  const card=([c,H],j)=>{const h=H[0];
+    return `<div class="ucard p5-card${j<24?" p5-in":""}">${CARDS[c]&&CARDS[c][1]?`<img class="c" src="${IMG(c)}" alt="" loading="lazy">`:'<span class="c"></span>'}<div class="uinfo"><b>${esc(CARDS[c]?CARDS[c][0]:"?")}</b>
+      ${h?`<span class="bh">Best home</span><a href="#discover" data-cmdr="${esc(DATA[h[0]].name)}">${sn(h[0])} -&gt;</a><small>${[h[1]?h[1]+"% of decks":"",h[2]?"fits: "+esc(h[2]):"",h[3]?"in its suggested deck":""].filter(Boolean).join(" · ")}</small>`:""}
+      ${H.length>1?`<small class="dim">also: ${H.slice(1).map(([i])=>`<a href="#discover" data-cmdr="${esc(DATA[i].name)}">${sn(i)}</a>`).join(", ")}</small>`:""}</div></div>`;};
+  let UF=-1, ALL=false;
+  // a chip shows the cards that commander's suggested deck would use, plus those whose best homes include it
+  const shown=()=>{if(UF<0)return U.cards; const [i,,ks]=U.by_cmdr[UF], set=new Set(ks), have=new Set();
+    const L=U.cards.filter(([c,H])=>{const ok=set.has(c)||H.some(h=>h[0]===i); if(ok)have.add(c); return ok;});
+    return L.concat(ks.filter(c=>!have.has(c)).map(c=>[c,[[i,0,"",1]]]));};
+  const grid=()=>{const L=shown(), V=ALL?L:L.slice(0,24);
+    $("unused").querySelector(".ugrid").innerHTML=V.map(card).join("")||"<p class='dim'>None.</p>";
+    const m=$("unused").querySelector(".umore"); m.hidden=V.length>=L.length; m.textContent=`Show all ${L.length} ->`;};
+  $("unused").innerHTML=`<h2 class="p5-slab"><span>Cards sitting unused</span></h2>${intro}
+    ${who?`<div class="uhs"><span class="lbl">Would use the most</span>${who}</div>`:""}<div class="ugrid"></div><button type="button" class="umore"></button>`;
+  grid();
+  document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("#unused [data-uf], #unused .umore"); if(!t)return;
+    if(t.classList.contains("umore")) ALL=true;
+    else{const k=+t.dataset.uf; UF=UF===k?-1:k; ALL=false;
+      $("unused").querySelectorAll("[data-uf]").forEach(x=>x.setAttribute("aria-pressed",+x.dataset.uf===UF?"true":"false"));}
+    grid();});
 })();
 
 /* ---------- events ---------- */
@@ -2952,7 +3060,8 @@ document.addEventListener("click",e=>{const t=e.target;
     if(t.closest(".opt-close")){row.dataset.slot=""; rerow(row); return;}
     if(t.closest(".reset-ch")){setCh(d,b,{},tt); row.dataset.slot=""; rerow(row); return;}
     const cps=t.closest(".cps"); if(cps){navigator.clipboard.writeText(cps.dataset.text); cps.textContent="Copied"; return;}}
-  if(t.dataset&&t.dataset.cmdr){e.preventDefault();$("q").value=t.dataset.cmdr;render();$("list").scrollIntoView();}
+  const oc=t.closest&&t.closest("#vcoll [data-open], #vcoll a[data-cmdr]");
+  if(oc){e.preventDefault(); openCmdr(oc.dataset.open||oc.dataset.cmdr); return;}
   if(t.classList.contains("cp")){navigator.clipboard.writeText(t.closest(".body").querySelector("textarea").value);t.textContent="Copied";}});
 const pv=$("pv");
 if(matchMedia("(hover:hover)").matches){
@@ -2980,6 +3089,7 @@ if(matchMedia("(hover:hover)").matches){
     pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";}}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".flip"))e.preventDefault();},true);
 ["br","q","th","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
+showView(location.hash==="#collection"?"collection":location.hash==="#discover"?"discover":(()=>{try{return localStorage.getItem("dw:view");}catch(e){return "";}})());
 render();
 </script></body></html>"""
 

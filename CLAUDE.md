@@ -48,7 +48,7 @@ commander row gets "Open in Builder"; Auto Build is a button in Build using the 
 ```powershell
 py deck_wizard.py                              # newest ManaBox CSV in collection\ (else in this folder)
 py deck_wizard.py --csv "Collection_ (1).csv"  # a specific file
-py deck_wizard.py --serve                      # local app with an "Upload new collection CSV" button
+py deck_wizard.py --serve                      # local app: drop a new CSV on the Collection page
 ```
 
 Shortcuts: `Update Deck Wizard.bat` (rebuild + open report), `Deck Wizard App.bat` (`--serve`).
@@ -60,7 +60,7 @@ Useful flags:
 | Flag | Purpose |
 |---|---|
 | `--csv FILE` | Collection file (default: newest ManaBox CSV in `collection\`, then this folder) |
-| `--serve` / `--port 8765` | Local app at http://127.0.0.1:8765 with upload button (only reachable from this PC) |
+| `--serve` / `--port 8765` | Local app at http://127.0.0.1:8765; uploads via the Collection page drop box (only reachable from this PC) |
 | `--only "Sephiroth, Fabled SOLDIER;Terra, Herald of Hope"` | Run selected commanders only (fast test) |
 | `--limit 20` | First 20 commanders only (fast test) |
 | `--brackets core,upgraded,optimized,cedh` | EDHREC bracket pages to pull (add `exhibition` for B1) |
@@ -274,7 +274,7 @@ lacks (`nc/ns/nk`), JS `addRows()`; `v` = `ST.built` (mismatch → 409 "reload")
 `lvlHTML()`, row `data-w`/`data-s`; saved substitute choices get `:w<w>s<s>` for non-default levels.
 Weight 3 + $$ through `/deck` reproduces the report's deck exactly (checked on Sephiroth B4).
 
-Report features: collection bar (file, changes, upload button when served), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
+Report features: Collection page (file, changes, drop box when served, your decks, unused cards), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
 combos, power profile bars, imported decks section.
 Theme decks: each top theme gets a deck per bracket: `analyze(theme page, base = theme page, bracket
@@ -305,12 +305,22 @@ deck whose source has fewer decks (bracket page, theme page, average deck) shows
 EDHREC's average deck of that bracket (white line), from `avg_shape()` stored as `av[b].ref`; CardTable rows carry
 mana value as field 4. Table view under "As a table".
 Bracket chips in a commander's panel switch that panel's deck (`rowB`, `rerow`; row `data-b`).
-**Zine × P5 UI** (design/ZINE_UI_SPEC.md; Phases 1, 2, 2b done): print modes (`dw:mode`), Discover cards with P5
+**Zine × P5 UI** (design/ZINE_UI_SPEC.md; Phases 1, 2, 2b, 3, 3b done): print modes (`dw:mode`), Discover cards with P5
 slanted-bar batteries (`bat()`, heights via nth-child), red `--r` active state, ransom-note titles (`ransom()`; page
 title + the open panel's name only), tickers (`#tick`, panel ticker in `body()`), `p5-slab` section titles, `p5-card`
 hover + `p5-in` stagger (first 24) + #1–#3 tags, deck cards slide in via one shared IntersectionObserver
-(`p5watch`, open panel only, `p5-wait`/`p5-shown`; Firefox-safe, no `animation-timeline`). No upload button in the
-header: `window.dwUpload(file)` keeps the upload + `/status` polling for the Collection page (Phase 3b).
+(`p5watch`, open panel only, `p5-wait`/`p5-shown`; Firefox-safe, no `animation-timeline`).
+**Views + Collection page (Phase 3b, P5Collection):** header nav Discover | Collection (`.vnav [data-view]`, current =
+red); `#vdisc` / `#vcoll` switched by URL hash `#collection` / `#discover`, else the last view (`dw:view`); `showView()`
+also swaps the ticker (`DTICK` from `render()`, `CTICK`). Header: file name + yellow change badge (`#hfile`, `#hups` =
+"rebuilding…"); **no upload control in any header**. Collection view: ransom "Your collection" + stat strip (`#cstats`,
+unused red) → `#coll` = "Current file" card (served: `label.drop` with the only `input[type=file]` → `window.dwUpload`
+→ `POST /upload` + `/status` polling into `#ups`; static: file info + how to update) and "Since the last file" (`.chg`
++N / −N / N new commanders, `.nc` chips `data-open` → `openCmdr()` opens the panel in Discover, folded full list,
+"first import" when there's no previous file) → `#imp` "Your decks" (`details.row.irow[data-k]`, number tag, battery,
+N of M owned, combos, Open/Close; `ibody()` unchanged) → `#unused` "Cards sitting unused" (sentence with the real
+counts, "would use the most" chips `.uh[data-uf]` filter the grid (needs `decks_in`), `.ucard` grid 24 first +
+`.umore` "Show all", image via `IMG()`, grayscale under Photocopy `dw:img`, home links `a[data-cmdr]` → `openCmdr()`).
 **Commander panel (Zine × P5 Phase 3, P5Commander):** `body()` = hero (red slash `.cslash` behind the card image,
 Full colour / Photocopy `data-imgm` + `dw:img`, ransom name, meta line, Built around, mix line, settings sheet:
 Bracket / Archetype / Deck from + weight + $) → panel ticker → three tiles (`numsHTML`: Match with `bat(...,"big")` and a
