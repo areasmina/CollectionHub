@@ -332,6 +332,33 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
     if(document.querySelector('[data-col][aria-pressed="true"]')||$('so').value!=='pct'||COLS.size)out.errs.push('Reset filters left a filter on');
     out.clicks=(out.clicks||0)+5;}
   catch(e){out.errs.push('discover fixes: '+e.message);}
+  // panel round 2: pips by the name, top-3 swaps (click swaps + scratch-off, again undoes), top-10 to buy (scratch-off),
+  // pin hint, stand-in buy link, the gap's image is the buy link
+  try{const r=document.querySelector('#list details.row[data-i]'); r.dataset.noscroll='1'; r.open=true; await wait(()=>r.querySelector('.body .hero'),60);
+    const d=DATA[+r.dataset.i], b=rowB(r);
+    if(!r.querySelector('.pname .tpips .pip')&&d.ci.length)out.errs.push('no colour pips next to the commander name');
+    const bs=r.querySelector('.bsw');
+    if(bs){const a=+bs.dataset.bsw, o=+bs.dataset.out; bs.click(); await new Promise(z=>setTimeout(z,50));
+      const on=r.querySelector('.bsw[data-out="'+o+'"]');
+      if(!on||!on.classList.contains('on')||!on.querySelector('.scr.done'))out.errs.push('top swap: not marked / no scratch-off');
+      const ta=r.querySelector('textarea').value;
+      if(!ta.includes('1 '+front(a))||ta.split('\\n').includes('1 '+front(o)))out.errs.push('top swap: deck list did not change');
+      on.click(); await new Promise(z=>setTimeout(z,50));
+      if(!r.querySelector('textarea').value.split('\\n').includes('1 '+front(o)))out.errs.push('top swap: clicking again did not undo');}
+    else out.notes=(out.notes||[]).concat(['no top swap to test for '+d.name]);
+    const tb=r.querySelector('.ptb [data-tbs]');
+    if((X(d,b).gaps||[]).length&&!tb)out.errs.push('no top-10 to buy list');
+    if(tb){if(r.querySelectorAll('.ptb .tbl li').length>10)out.errs.push('to-buy list longer than 10');
+      if(!r.querySelector('.ptb .tbl a.shopl'))out.errs.push('to-buy cards do not link to the shop');
+      tb.click(); await new Promise(z=>setTimeout(z,50));
+      if(!r.querySelector('.ptb .tbl li.done .scr.done'))out.errs.push('to-buy: no scratch-off after marking');
+      r.querySelector('.ptb [data-tbu]').click(); await new Promise(z=>setTimeout(z,50));
+      if(r.querySelector('.ptb .tbl li.done'))out.errs.push('to-buy: undo did not clear');}
+    if(!r.querySelector('.pins .phint'))out.errs.push('no pin hint in the app');
+    const g=r.querySelector('.gslot a.gmiss'); if(r.querySelector('.gslot')&&(!g||!g.querySelector('img.gimg')||!/^https?:/.test(g.href)))out.errs.push('gap card is not an image buy link');
+    const sCw=r.querySelector('.d99 .cw.k-s'); if(sCw&&!sCw.querySelector('a.shopl'))out.errs.push('stand-in has no buy link');
+    delete r.dataset.noscroll; out.clicks=(out.clicks||0)+5;}
+  catch(e){out.errs.push('panel round 2: '+e.message);}
   // Collection view (#collection): opens without errors, the drop box is the only upload control (none in the header),
   // the unused grid starts at 24, "show all" and a commander chip work, a card's home link opens that commander in Discover
   try{if(document.querySelector('header.zh input[type=file], header.zh .up, header.zh button:not([data-mode])'))out.errs.push('header has an upload control');

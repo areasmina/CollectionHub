@@ -1438,13 +1438,13 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         return score(norm(m["name"])) + syn.score(m, inside)
     cands = sorted(((k, m) for k, m, _, kd in pool if kd != "land" and k not in used),
                    key=lambda it: -total(it[1], False))[:SWAP_POOL]
-    def weakest_for(m):
+    def weakest_for(m, skip=()):
         """The weakest card candidate m may replace: (index in chosen, its total) or (None, None).
         A card doing a SWAP_KEEP job is kept while that role is short or near its target (+SWAP_SLACK);
         a surplus (e.g. 16 ramp for a target of 10) can make room for anything."""
         rs, out, ov = roles_of(m), None, None
         for j, (dm, kind, _) in enumerate(chosen):
-            if kind not in "pyf" or (dm["gc"] and not m["gc"]): continue
+            if j in skip or kind not in "pyf" or (dm["gc"] and not m["gc"]): continue
             dk = norm(dm["name"])
             if dk in swapped_in: continue                                        # no churn: swaps stay
             if any(combo_done(c, used) for c in by_card.get(dk, [])): continue    # completes a combo here
@@ -1485,7 +1485,13 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     # next in line: the owned cards that came closest, with why (so a near miss is visible, not silent)
     bench = sorted(((total(m, False), k, m) for k, m in cands if k not in used and not blocked(k)
                     and (not m["gc"] or gc_room())), key=lambda t: (-t[0], t[1]))[:BENCH_SHOW]
-    bench = [[T.add(m["name"], m), T.s(syn.why(m) or fits[k][1] or role_text(m))] for _, k, m in bench]
+    taken_out = set()
+    def swap_out(m):        # the card this one would replace (weakest_for: same protections as the swaps; each a different card), or -1
+        j = weakest_for(m, taken_out)[0]
+        if j is None: return -1
+        taken_out.add(j)
+        return T.add(chosen[j][0]["name"], chosen[j][0])
+    bench = [[T.add(m["name"], m), T.s(syn.why(m) or fits[k][1] or role_text(m)), swap_out(m)] for _, k, m in bench]
 
     # 4) owned dual lands in the commander's colours replace basics (EDHREC lists few of them)
     for m in owned_duals(pool, ci, used, len(lands), sum(1 for m, _, _ in lands if enters_tapped(m))):
@@ -1612,7 +1618,7 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "xt": [m["name"] for m, _, _ in allc if is_xturn(m)],
         "tut": roles.get("tutor", 0),
         "sw": swaps,            # synergy swaps: [card in, card out, why]
-        "bench": bench,         # next in line from your collection: [card, why]
+        "bench": bench,         # next in line from your collection: [card, why, card it would replace or -1]
         # third field: the missing card a substitute stands in for, or why you picked it ("y")
         # substitutes also carry [why the advised card, [[alternative, why] x up to 3]]
         # other entries: [card, kind, why (good fit) / role (filler) / the combo (combo piece) or -1, options]
@@ -2347,7 +2353,7 @@ main{max-width:1400px}
 .tape.g{background:var(--g);color:#141414;border-color:var(--g)}.tape.r{background:var(--r);color:#FFFFFF;border-color:var(--r)}
 .tape.w{background:#F0EBDD;color:#141414;border-color:#141414}.tape.d{border-style:dashed}
 .ct{position:relative}.was{position:absolute;right:-7px;bottom:-7px;z-index:2;width:42%;display:block;transform:rotate(5deg)}
-.was img{display:block;width:100%;aspect-ratio:488/680;object-fit:cover;border:2px solid var(--ink);border-radius:5px;filter:grayscale(1) brightness(.6)}
+.was img{display:block;width:100%;aspect-ratio:488/680;object-fit:cover;border:2px solid var(--ink);border-radius:5px;filter:grayscale(1) contrast(1.15)}
 .was i{position:absolute;left:-4px;top:-8px;padding:0 4px;font:900 .6rem/1.3 var(--head);font-style:normal;text-transform:uppercase;color:#141414;background:#F0EBDD;border:1.5px solid #141414}
 .tlg{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:4px 0 10px;font-size:.7rem;color:var(--mute)}.tlg .tape{cursor:help}
 .cwarn{margin:0 0 6px;padding:2px 6px;font-size:.72rem;font-weight:700;color:#141414;background:var(--m)}
@@ -2583,6 +2589,30 @@ details.row{scroll-margin-top:calc(var(--hh,0px) + 12px)}
 .rstf{width:100%;min-height:40px}.ftog{display:none}
 @media(max-width:760px){.zh{gap:6px 12px}.zh .hfile{display:none}.zh.small .modes{display:none}.zh.small .brand{font-size:1.2rem}}
 @media(max-width:900px){.ftog{display:block;align-self:flex-start;min-height:44px;padding:0 16px}.filt{display:none}.disc.fopen .filt{display:block}}
+/* ---------- commander panel round 2 ---------- */
+.tpips{position:relative;display:flex;gap:6px;margin-top:10px}.tpips .pip{width:30px;height:30px;font-size:15px;box-shadow:3px 3px 0 #0B0B0B}
+.wbtn .pinb{transform:skewX(-8deg);box-shadow:4px 4px 0 var(--ink);font:900 .72rem var(--head);letter-spacing:.04em;transition:transform .14s cubic-bezier(.3,1.7,.5,1),box-shadow .1s}
+.wbtn .pinb:hover{transform:skewX(-8deg) translate(-2px,-2px);box-shadow:6px 6px 0 var(--r)}.wbtn .pinb:active{transform:skewX(-8deg) translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.wsf{padding:2px 8px;font:800 .7rem var(--head);text-transform:uppercase;text-decoration:none;border:2px solid var(--ink);transform:skewX(-8deg)}
+.swh{margin:4px 0 0;font-size:.8rem}.swh small{font-weight:400;color:var(--mute)}
+.bsw{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:6px 8px;text-align:left;text-transform:none;font:400 .78rem/1.35 var(--body);letter-spacing:0;cursor:pointer;border:2px solid var(--ink) !important}
+.bsw .in{padding:0 4px;background:var(--c);color:#141414;font-weight:800}.bsw.on{background:var(--card) !important;color:var(--ink) !important;box-shadow:4px 4px 0 var(--r) !important;transform:rotate(-1deg)}.bsw small{color:var(--mute)}
+.scr{position:relative;display:inline-block}.scr.done{opacity:.75}
+.scr.done::after{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:7px;margin-top:-3px;pointer-events:none;
+  background:repeating-linear-gradient(-58deg,transparent 0 2px,var(--r) 2px 4px);border-top:2px solid var(--r);border-bottom:2px solid var(--r);
+  transform:rotate(-3deg);transform-origin:left;animation:scratch .35s ease-out both}
+@keyframes scratch{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.pnl.ptb{margin-top:14px;border-top:6px solid var(--r);box-shadow:5px 5px 0 var(--r)}.tbl{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:4px}
+.tbl li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}.tbl li small{color:var(--mute)}.tbl .shopl{font-size:.8rem}
+.tbb{margin-left:auto;display:flex;gap:4px}.tbb button{min-width:28px;min-height:26px;padding:0 6px;font-size:.75rem}
+.tbl li.done .shopl{color:var(--mute)}
+.phint{display:block;font-size:.72rem;line-height:1.4;color:var(--mute)}
+.gmiss{text-decoration:none;color:var(--ink);cursor:pointer;transition:transform .15s cubic-bezier(.3,1.7,.5,1),box-shadow .15s}
+.gmiss:hover{transform:rotate(-2deg) translateY(-4px);box-shadow:6px 6px 0 var(--r)}
+.gimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.1)}
+a.gmiss{background:none;padding:8px;border-style:solid}.gmc{width:150px}.gmc .gname{font-size:15px}
+.gmiss>span{position:relative}.gbuy{align-self:flex-start;padding:2px 6px;font:900 11px var(--head);text-transform:uppercase;color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;transform:skewX(-8deg)}
+@media (prefers-reduced-motion:reduce){.scr.done::after{animation:none}}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -2772,7 +2802,8 @@ const tapeSpan=(k,extra,title)=>{const [cls,lab,mean]=TAPE[k]||["","",""];
 function tapeFor(it){const k=it.kind, wn=it.was!=null&&it.was>=0?front(it.was):"";
   const role=k==="f"&&W(it.f), combo=k==="c"&&W(it.f);
   const line=k==="y"?W(it.f):k==="s"?"for "+front(it.f):(k==="y2"||k==="s2"||k==="buy")&&wn?"was: "+wn:"";
-  return tapeSpan(k,role||"",combo?"with "+combo:k==="s"?"for "+front(it.f):line)+(line?`<span class="tapew">${esc(line)}</span>`:"");}
+  const buy=(k==="s"||k==="s2")&&it.f>=0?buyA(it.f,"🛒 buy "+esc(front(it.f))):"";
+  return tapeSpan(k,role||"",combo?"with "+combo:k==="s"?"for "+front(it.f):line)+(line?`<span class="tapew">${esc(line)}</span>`:"")+buy;}
 const legendHTML=()=>`<div class="tlg" aria-label="What the labels mean">${LEG.map(k=>tapeSpan(k)).join("")}<span>· hover any card to swap it</span></div>`;
 const kindOf=it=>it.kind||(it.n?"":"p");
 function grid(cmdrs,items,bub){
@@ -2854,7 +2885,7 @@ if(SERVED) fetch("/pins",{headers:{"X-Deck-Wizard":"1"}}).then(r=>r.ok?r.json():
 function pinHTML(d,x){const p=pinsOf(d);
   const chip=(n,side)=>`<span class="pchip ${side}">${side==="in"?"ALWAYS":"<s>NEVER</s>"} · ${esc(n)}${SERVED?`<button class="pinx" data-unpin="${esc(n)}" data-side="${side}" title="Remove this pin" aria-label="Remove pin">✕</button>`:""}</span>`;
   const miss=(x.pinx||[]).map(([i,w])=>`<li>📌 ${esc(front(i))} isn't in this deck: ${esc(W(w))}</li>`).join("");
-  return `<div class="pnl py pins"><h3 class="ptl">Pins</h3><div class="pchips">${p.in.map(n=>chip(n,"in")).join("")}${p.out.map(n=>chip(n,"out")).join("")}${p.in.length||p.out.length?"":`<span class="dim">none yet</span>`}</div>
+  return `<div class="pnl py pins"><h3 class="ptl">Pins</h3>${SERVED?`<small class="phint">Pins stick to this commander in every bracket and archetype: <b>Always</b> puts a card in (if the bracket allows it), <b>Never</b> keeps it out. Decks rebuild right away.</small>`:""}<div class="pchips">${p.in.map(n=>chip(n,"in")).join("")}${p.out.map(n=>chip(n,"out")).join("")}${p.in.length||p.out.length?"":`<span class="dim">none yet</span>`}</div>
     ${SERVED?`<div class="padd"><input class="pinq" placeholder="card name_" aria-label="Card name to pin" autocomplete="off" data-ac="pin" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acl"><button class="pa" data-pinadd="in" title="Put this card in every deck of this commander (bracket rules permitting)">Always</button><button class="pn" data-pinadd="out" title="Never use this card for this commander">Never</button></div>`
       :`<small class="dim">add pins in Deck Wizard App.bat</small>`}<span class="thinw pinerr"></span>${miss?`<ul class="thinw">${miss}</ul>`:""}</div>`;}
 function postPins(d,next,row){const err=row.querySelector(".pinerr"); if(err)err.textContent="Saving…";
@@ -2870,16 +2901,20 @@ function lvlHTML(L){
     <span class="dim" style="margin-left:10px">Spending:</span>${[1,2,3].map(v=>bt("ssel",v,L.s===v,STIP[v],"$".repeat(v))).join("")}</div>`;}
 /* ---------- synergy swaps and next in line (cards read by what they do with the rest of the deck) ---------- */
 // the aside's synergy panel: the first swaps (in = cyan, out = struck through in magenta), the rest folded
-function swapsHTML(x){const sw=x.sw||[]; if(!sw.length&&!(x.bench||[]).length) return "";
+function swapsHTML(x,d,b,t){const sw=x.sw||[]; if(!sw.length&&!(x.bench||[]).length) return "";
+  const ch=d?getCh(d,b,t):{}, inDeck=new Set(x.deck.map(e=>e[0]));
+  const outs=new Set(), top=(x.bench||[]).filter(e=>e[2]>=0&&inDeck.has(e[2])&&!outs.has(e[2])&&outs.add(e[2])).slice(0,3);   // each replaces a different card
   return `<div class="pnl pc"><h3 class="ptl">⇄ Synergy swaps (${sw.length})</h3>
   ${sw.slice(0,3).map(([a,o,w])=>`<div class="swp"><b class="in">+ ${esc(front(a))}</b><span>out: <s>${esc(front(o))}</s></span><small>${esc(W(w)).toUpperCase()}</small></div>`).join("")}
+  ${top.length&&d?`<h4 class="swh">Top ${top.length} swaps you can make <small>click to swap · again to undo</small></h4>${top.map(([a,w,o])=>{const on=ch["y"+o]===a;
+    return `<button type="button" class="bsw${on?" on":""}" data-bsw="${a}" data-out="${o}" aria-pressed="${on}" title="Put ${esc(front(a))} in this deck instead of ${esc(front(o))}"><b class="in">+ ${esc(front(a))}</b><span>out: <span class="scr${on?" done":""}">${esc(front(o))}</span></span><small>${esc(W(w)||"")}</small></button>`;}).join("")}`:""}
   ${synHTML(x)}</div>`;}
 function synHTML(x){const sw=x.sw||[], bn=x.bench||[]; if(!sw.length&&!bn.length) return "";
   const nm=i=>`<a href="https://scryfall.com/search?q=${encodeURIComponent('!"'+front(i)+'"')}" target="_blank" rel="noopener">${esc(front(i))}</a>`;
   return `<details class="more"><summary>All ${sw.length} swap${sw.length===1?"":"s"} + ${bn.length} next in line</summary>
   <small class="dim">Cards are read by what they do with the cards already in this deck (Oracle and reminder text): outlets and payoffs, tribe, engines. ×N = linked cards (the commander counts 3).</small>
   ${sw.length?`<h4>Swapped in</h4><ul class="cl">${sw.map(([a,o,w])=>`<li>+ ${nm(a)} <small>for ${esc(front(o))} · ${esc(W(w))}</small></li>`).join("")}</ul>`:""}
-  ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w])=>`<li>${nm(a)} <small>${esc(W(w)||"")}</small>${SERVED?` <button class="pinb" data-pinquick="in" data-name="${esc(CARDS[a][0])}" title="Always include this card for this commander">📌 always include</button>`:""}</li>`).join("")}</ul>`:""}</details>`;}
+  ${bn.length?`<h4>Next in line (yours, not in the deck)</h4><ul class="cl">${bn.map(([a,w,o])=>`<li>${nm(a)} <small>${esc(W(w)||"")}${o>=0?` · would replace ${esc(front(o))}`:""}</small>${SERVED?` <button class="pinb" data-pinquick="in" data-name="${esc(CARDS[a][0])}" title="Always include this card for this commander">📌 always include</button>`:""}</li>`).join("")}</ul>`:""}</details>`;}
 /* ---------- deck shape: your deck (bars) against EDHREC's average deck (line) ---------- */
 const TYO=["Creature","Instant","Sorcery","Artifact","Enchantment","Planeswalker","Battle","Other","Land"];
 /* ---------- Deck stats & combos: a pile of post-its (mana curve, card types, power profile, combos); the tab picked last is
@@ -2943,7 +2978,7 @@ document.addEventListener("keydown",e=>{const t=e.target.closest&&e.target.close
 // swapped in, buy = EDHREC's card for that job. "was" = the card the slot had before (EDHREC's card for a stand-in).
 function effDeck(d,b,x,t){const ch=getCh(d,b,t);
   return x.deck.map(e=>{const [i,k,f]=e;
-    if(k!=="s"&&k!=="k"&&e.length>3){const sk="y"+i, c=ch[sk];
+    if(k!=="s"&&k!=="k"&&(e.length>3||ch["y"+i]>=0)){const sk="y"+i, c=ch[sk];
       if(c===undefined)return {i,kind:k,f,slot:sk}; if(c===-1)return {i:OPTS[e[3]][1],kind:"buy",f:i,slot:sk,was:i,ok:k}; return {i:c,kind:"y2",f:i,slot:sk,was:i,ok:k};}
     if(k!=="s"||f<0)return {i,kind:k,f};
     const c=ch[f]; if(c===undefined)return {i,kind:"s",f,slot:f,was:f};
@@ -2983,6 +3018,20 @@ function shopHTML(d,b,items,t){
   <span class="rl"></span><span class="rr"><b>TOTAL CARDS</b><b>${buy.length}</b></span>
   ${buy.length?`<small>each line opens ${esc(STORE.name)}</small>`:""}
   <span class="rbtn">${buy.length?`<button class="cps" data-text="${esc(list)}">Copy</button>`:""}${chosen?`<button class="reset-ch">Reset my choices</button>`:""}</span></div>`;}
+const tbKey=d=>"dw:tb:"+d.slug, TBM={};
+function tbGet(d){try{const v=localStorage.getItem(tbKey(d)); if(v!=null) return JSON.parse(v)||{};}catch(e){} return Object.assign({},TBM[tbKey(d)]);}
+function tbSet(d,o){TBM[tbKey(d)]=o; try{Object.keys(o).length?localStorage.setItem(tbKey(d),JSON.stringify(o)):localStorage.removeItem(tbKey(d));}catch(e){}}
+// the 10 most played cards for this commander you don't own (the deck's gaps, EDHREC order); each opens the store
+function topBuyHTML(d,x){const L=(x.gaps||[]).slice(0,10); if(!L.length) return "";
+  const st=tbGet(d), done=L.filter(g=>st[CARDS[g[0]][0]]).length;
+  return `<div class="pnl ptb"><h3 class="ptl">Top 10 to buy</h3><small class="dim">most played here, not in your collection · ${done}/${L.length} done</small><ol class="tbl">${L.map(([i,r])=>{const nm=CARDS[i][0], s=st[nm];
+    return `<li class="${s?"done "+s:""}">${buyA(i,`<span class="scr${s?" done":""}">${esc(front(i))}</span>`)}<small>${r}%</small>
+      <span class="tbb">${s?`<button type="button" data-tbu="${esc(nm)}" title="Undo">↺</button>`:`<button type="button" data-tbs="${esc(nm)}" data-v="b" title="I bought it">✓</button><button type="button" data-tbs="${esc(nm)}" data-v="x" title="Not interested">✕</button>`}</span></li>`;}).join("")}</ol></div>`;}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-tbs],[data-tbu],[data-bsw]"); if(!t)return;
+  const r=t.closest("details.row[data-i]"); if(!r)return; const d=DATA[+r.dataset.i];
+  if(t.dataset.bsw){const b=rowB(r), tt=rowSel(d,b,r), ch=getCh(d,b,tt), k="y"+t.dataset.out, a=+t.dataset.bsw;
+    if(ch[k]===a) delete ch[k]; else ch[k]=a; setCh(d,b,ch,tt); r.dataset.slot=""; rerow(r); return;}
+  const st=tbGet(d); if(t.dataset.tbu) delete st[t.dataset.tbu]; else st[t.dataset.tbs]=t.dataset.v; tbSet(d,st); rerow(r);});
 function deckSection(title,cmdrs,items,text,link,bub){
   return `<div class="vbar">${title?`<h3>${title}</h3>`:""}<button class="vt on" data-v="cards">Cards</button><button class="vt" data-v="list">List</button><button class="cp">Copy list</button>${link||""}
 </div>
@@ -3061,8 +3110,9 @@ function slotRowsHTML(d,b,x,t){
     const taken=new Set(eff.filter(it=>String(it.slot)!==String(f)).map(it=>it.i));
     const opts=[[-1,"Buy it",f,"keep the original · goes on the receipt"],["adv","Advised",adv,W(why)||"closest match"]]
       .concat((alts||[]).map(([a,w])=>[a,"Or",a,W(w)]));
-    return `<div class="gslot"><div class="gmc"><div class="gmiss"><span class="gname">${esc(front(f))}</span><span class="nib">(NOT IN YOUR BINDER!)</span>
-      <span class="gmeta">${g&&g[1]?g[1]+"% of decks":"—"} · ${esc(g?W(g[4])||"synergy piece":"")}</span></div>${buyA(f,"🛒 "+esc(STORE.name))}</div>
+    const shop=STORE.url?BUY(f):"https://scryfall.com/search?q="+encodeURIComponent('!"'+front(f)+'"');
+    return `<div class="gslot"><div class="gmc"><a class="gmiss" href="${esc(shop)}" target="_blank" rel="noopener" title="${STORE.url?"Buy "+esc(front(f))+" on "+esc(STORE.name):"See "+esc(front(f))+" on Scryfall"}"><img class="gimg" src="${IMG(f)}" alt="${esc(front(f))}" loading="lazy"><span class="nib">(NOT IN YOUR BINDER!)</span><span class="gbuy">🛒 ${STORE.url?"Buy on "+esc(STORE.name):"Scryfall"}</span></a>
+      <span class="gname">${esc(front(f))}</span><span class="gmeta">${g&&g[1]?g[1]+"% of decks":"—"} · ${esc(g?W(g[4])||"synergy piece":"")}</span></div>
       <span class="garr" aria-hidden="true">-&gt;</span>
       <div class="gopts" role="radiogroup" aria-label="Slot for ${esc(front(f))}">${opts.map(([pick,kind,card,w])=>{
         const on=pick==="adv"?c===undefined:pick===-1?c===-1:c===pick, dis=pick!==-1&&pick!=="adv"&&taken.has(card);
@@ -3103,8 +3153,8 @@ function body(d,b,r){
     <div class="srow"><span class="slab">Deck from</span><div class="scell">${srcs}${lvlHTML(L)}</div></div></div>`;
   const pipsH=`<span class="pips">${pips(d.ci)}</span>`;
   const head=`<div class="hero"><div class="hcol"><div class="cslash p5-in" aria-hidden="true"></div><div class="himg">${d.img?`<img class="cimg" src="${esc(d.img)}" alt="${esc(d.name)}" loading="lazy">`:""}</div>${imgModeHTML()}</div>
-    <div class="hmain"><div class="ttl pname"><div class="p5-slash" aria-hidden="true"></div><h2 class="p5-h1c" aria-label="${esc(d.name)}"><span aria-hidden="true">${ransom(d.name.split(" // ")[0],d.i%6)}</span></h2></div>
-    <div class="hmeta">${pipsH}<span>· ${d.tags.slice(0,3).map(t=>esc(t[0].toLowerCase())).join(" · ")||"no EDHREC themes yet"} · ${n(x.decks)} ${b==="all"?"":SH[b]+" "}decks · ${d.combos?d.combos.n_own:0} combos owned</span></div>`;
+    <div class="hmain"><div class="ttl pname"><div class="p5-slash" aria-hidden="true"></div><h2 class="p5-h1c" aria-label="${esc(d.name)}"><span aria-hidden="true">${ransom(d.name.split(" // ")[0],d.i%6)}</span></h2><span class="tpips" aria-label="Colour identity ${d.ci.join("")||"colourless"}">${pips(d.ci)}</span></div>
+    <div class="hmeta"><span>${d.tags.slice(0,3).map(t=>esc(t[0].toLowerCase())).join(" · ")||"no EDHREC themes yet"} · ${n(x.decks)} ${b==="all"?"":SH[b]+" "}decks · ${d.combos?d.combos.n_own:0} combos owned</span></div>`;
   if(lv&&!(lx&&lx.x)) return `${head}${sheet}${pinHTML(d,{})}
     <p class="${lx&&lx.err?"thinw":"tnote"}">${lx&&lx.err?"⚠ "+esc(lx.err)+" Pick a level to try again."
       :`Building the deck at EDHREC weight ${L.w} · ${"$".repeat(L.s)}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
@@ -3134,7 +3184,7 @@ function body(d,b,r){
   <div class="d99"><div class="dmain"><h3 class="p5-slab"><span>The 99</span></h3>
   ${deckSection("",[d.cidx],items,text,`<a href="${link}" target="_blank" rel="noopener">EDHREC</a>`,it=>bubbleHTML(d,b,x,it,sel))}
   <p class="dim whyhint">click any card for "why this card" · Esc or click it again to let go</p></div>
-  <aside class="daside"><div class="pnl why" aria-live="polite">${first?whyHTML(d.i,first.w):""}</div>${shopHTML(d,b,items,sel)}${swapsHTML(x)}${pinHTML(d,x)}</aside></div>
+  <aside class="daside"><div class="pnl why" aria-live="polite">${first?whyHTML(d.i,first.w):""}</div>${shopHTML(d,b,items,sel)}${topBuyHTML(d,x)}${swapsHTML(x,d,b,sel)}${pinHTML(d,x)}</aside></div>
   <div class="cmyk" aria-hidden="true"></div>
   <section class="gsec"><div class="gh"><h3 class="p5-slab"><span>Gaps &amp; stand-ins</span></h3><p class="dim">&gt; ${x.n_miss} ${x.avg?"average-deck":"popular"} cards missing, top ${x.gaps.length} shown_</p></div>
   ${slotRowsHTML(d,b,x,sel)}

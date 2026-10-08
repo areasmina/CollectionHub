@@ -331,6 +331,12 @@ The 99 (`p5-slab`; tape labels `TAPE`/`tapeFor`, coloured offset shadows per kin
 `shopHTML`, cyan `swapsHTML`, yellow `pinHTML`) → Gaps & stand-ins (`slotRowsHTML`: Buy it / Advised / Or… option cards,
 same saved choices; chosen = red, skewed, cream offset shadow + (CHOSEN!) dropping in at the card's foot; one row of options;
 the 🛒 store link sits under the missing-card tile) → Deck stats & combos (Phase 4, below).
+**Commander panel round 2:** colour pips by the name (`.tpips`); "Why this card?" buttons in zine style; **top 3 swaps you can make**
+(`x.bench` [card, why, card it would replace] from `weakest_for(m, skip)`, each a different card; display only, 0 of 1,298 decks
+differ): click = saved choice `"y"+out` (effDeck accepts it for any p/y/f/c card), again = undo, the old card gets a red-pen
+scratch-off (`.scr.done`); **Top 10 to buy** (`topBuyHTML`: the deck's gaps in EDHREC order, each a store link; ✓ bought /
+✕ dismissed = scratch-off, kept per commander in `dw:tb:<slug>`); pin hint (app); stand-in tiles show the WAS card in black and
+white + a 🛒 buy link; Gaps & stand-ins: the missing card's image is the buy link (store, else Scryfall), name below.
 **Discover controls (Oct 2026):** sticky slim header (`.zh`, `.small` after 40 px of scroll; its height in `--hh`, which the
 sticky sidebar and the panel's `.slim` bar sit under); the bracket slider (`#br`, red fill `--p`, marks `.brt`) and the deck
 switch **Popular cards | Typical deck** (`.srcsel`, tooltips; same names in each panel) live in the sticky filter sidebar,
