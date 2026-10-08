@@ -355,10 +355,23 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       r.querySelector('.ptb [data-tbu]').click(); await new Promise(z=>setTimeout(z,50));
       if(r.querySelector('.ptb .tbl li.done'))out.errs.push('to-buy: undo did not clear');}
     if(!r.querySelector('.pins .phint'))out.errs.push('no pin hint in the app');
-    const g=r.querySelector('.gslot a.gmiss'); if(r.querySelector('.gslot')&&(!g||!g.querySelector('img.gimg')||!/^https?:/.test(g.href)))out.errs.push('gap card is not an image buy link');
+    if(r.querySelector('.ptb')&&!r.querySelector('.shop .ptb'))out.errs.push('top to-buy list is not inside the TO BUY receipt');
+    if(/🚫|Never use/.test(r.textContent))out.errs.push('old Never use label still shown (should be Dead to me)');
+    if(!r.querySelector('.bsec .bcard')&&(X(d,b).bench||[]).some(e=>e[2]>=0))out.errs.push('no Best from your binder cards');
+    const fm=document.querySelector('.filt details.fmore'); if(!fm||fm.open)out.errs.push('More filters should be a closed dropdown');
+    else{$('so').value='decks'; render(); if(document.querySelector('.fdot').hidden)out.errs.push('More dropdown shows no dot when a filter inside is on'); $('so').value='pct'; render();}
+    const g=r.querySelector('.gslot .gmiss[data-pick="-1"]'); if(r.querySelector('.gslot')&&(!g||!g.querySelector('img.gimg')||!g.parentNode.querySelector('a.shopl')))out.errs.push('missing staple: image is not the buy choice / no shop link');
+    if(r.querySelector('.gslot .gopt:not(.gmiss)')&&!r.querySelector('.gslot .gopt:not(.gmiss) img.gim'))out.errs.push('stand-in options show no card image');
+    if(r.querySelector('.gslot .gopt:not(.gmiss) .gk')&&[...r.querySelectorAll('.gslot .gk')].some(k=>/buy it/i.test(k.textContent)))out.errs.push('a separate Buy it option card is still shown');
     const sCw=r.querySelector('.d99 .cw.k-s'); if(sCw&&!sCw.querySelector('a.shopl'))out.errs.push('stand-in has no buy link');
     delete r.dataset.noscroll; out.clicks=(out.clicks||0)+5;}
   catch(e){out.errs.push('panel round 2: '+e.message);}
+  // thin data: hazard badge under Full colour / Photocopy on a deck from few EDHREC decks
+  try{const pick=[...document.querySelectorAll('#list details.row[data-i]')].map(r=>[r,DATA[+r.dataset.i]]).map(([r,d])=>[r,d,Object.keys(d.b).find(k=>d.b[k].decks<THIN)]).find(z=>z[2]);
+    if(pick){const [r,d,b]=pick; r.dataset.noscroll='1'; r.dataset.b=b; r.dataset.t=''; r.dataset.a='0'; r.open=true; await wait(()=>r.querySelector('.body .hero'),60); rerow(r);
+      const hz=r.querySelector('.hcol .haz'); if(!hz||!/THIN DATA/.test(hz.textContent))out.errs.push('thin deck has no hazard badge under the image buttons'); delete r.dataset.noscroll;}
+    out.clicks=(out.clicks||0)+1;}
+  catch(e){out.errs.push('thin badge: '+e.message);}
   // Collection view (#collection): opens without errors, the drop box is the only upload control (none in the header),
   // the unused grid starts at 24, "show all" and a commander chip work, a card's home link opens that commander in Discover
   try{if(document.querySelector('header.zh input[type=file], header.zh .up, header.zh button:not([data-mode])'))out.errs.push('header has an upload control');

@@ -331,6 +331,13 @@ The 99 (`p5-slab`; tape labels `TAPE`/`tapeFor`, coloured offset shadows per kin
 `shopHTML`, cyan `swapsHTML`, yellow `pinHTML`) → Gaps & stand-ins (`slotRowsHTML`: Buy it / Advised / Or… option cards,
 same saved choices; chosen = red, skewed, cream offset shadow + (CHOSEN!) dropping in at the card's foot; one row of options;
 the 🛒 store link sits under the missing-card tile) → Deck stats & combos (Phase 4, below).
+**Panel round 3 (punk-industrial P5 look site-wide):** "Never use" = 💀 **Dead to me** everywhere (📌 Always stays); thin data =
+yellow/black hazard badge `.haz` with a wobbling triangle under Full colour / Photocopy (was a text line); one *** TO BUY ***
+receipt (`shopHTML(d,b,items,t,x)`: your picks + "most played here, not in your binder" top 10 with ✓/✕ scratch-offs, one Copy
+list); **Missing staples** (was Gaps & stand-ins: EDHREC cards you don't own; the left image is the "buy it" choice, option cards
+show images, store link under the name) vs **Best from your binder** (`binderHTML`, replaces the swaps box: cards you own that fit
+by Oracle/reminder text, each with "⇄ swap in for X", red-pen scratch-off; builder's swaps as chips); left-panel **More** is a
+closed dropdown (`.fmore`, red dot when a filter inside is on); hover menus open above the card (`.bub`, `.dn` near the top), pop in.
 **Commander panel round 2:** colour pips by the name (`.tpips`); "Why this card?" buttons in zine style; **top 3 swaps you can make**
 (`x.bench` [card, why, card it would replace] from `weakest_for(m, skip)`, each a different card; display only, 0 of 1,298 decks
 differ): click = saved choice `"y"+out` (effDeck accepts it for any p/y/f/c card), again = undo, the old card gets a red-pen
