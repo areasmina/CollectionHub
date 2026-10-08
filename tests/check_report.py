@@ -19,7 +19,7 @@ BROWSERS = [
 ]
 
 # runs before the page's own script: records uncaught errors
-CATCH = "<script>window.__errs=[];window.addEventListener('error',e=>__errs.push('page: '+e.message));</script>"
+CATCH = "<script>window.__dwTest=1;window.__errs=[];window.addEventListener('error',e=>__errs.push('page: '+e.message));</script>"   # __dwTest: instant scrolls (headless virtual time)
 # runs after it: renders every panel the user could open
 PROBE = """<script>setTimeout(()=>{const out={panels:0,errs:window.__errs,rows:document.querySelectorAll('#list details.row').length};
 try{for(const d of DATA)for(const b of BR){if(!d.b[b])continue;try{const h=body(d,b);if(!h||h.includes('undefined'))out.errs.push(d.name+' | '+b+': text contains "undefined"');out.panels++;}
@@ -307,17 +307,31 @@ try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data
       if(!pile.querySelector('.pnote.n-combos .nbest'))out.errs.push('combos note has no best-combo box');
       out.clicks=(out.clicks||0)+4;}}
   catch(e){out.errs.push('stats pile: '+e.message);}
-  // an open panel hides the filter column (full width); closing every panel brings it back
-  try{const rs=[...document.querySelectorAll('#list details.row')]; rs.forEach(x=>x.open=false); await new Promise(z=>setTimeout(z,50));
-    const f=document.querySelector('.disc .filt');
-    if(getComputedStyle(f).display==='none')out.errs.push('filter column hidden with no panel open');
-    rs[0].open=true; await new Promise(z=>setTimeout(z,50));
-    if(getComputedStyle(f).display!=='none')out.errs.push('filter column still shown with a panel open');
-    if(rs[0].getBoundingClientRect().width<document.querySelector('.disc').getBoundingClientRect().width-4)out.errs.push('open panel is not full width');
-    rs[0].open=false; await new Promise(z=>setTimeout(z,50));
-    if(getComputedStyle(f).display==='none')out.errs.push('filter column did not come back after closing the panel');
-    out.clicks=(out.clicks||0)+2;}
-  catch(e){out.errs.push('full width: '+e.message);}
+  // Discover: sticky header + sidebar (bracket and Popular cards / Typical deck inside it), the sidebar stays with a panel open
+  // (narrow screens: a Filters button), one panel at a time, 3 archetypes, Discover / logo / Reset filters reset
+  try{const f=document.querySelector('.disc .filt'), narrow=innerWidth<=900, vis=()=>getComputedStyle(f).display!=='none';
+    if(getComputedStyle(document.querySelector('.zh')).position!=='sticky')out.errs.push('header is not sticky');
+    if(getComputedStyle(f).position!=='sticky'&&!narrow)out.errs.push('filter sidebar is not sticky');
+    if(!f.querySelector('#br')||!f.querySelector('.srcsel'))out.errs.push('bracket slider / deck switch are not in the sidebar');
+    const sw=[...f.querySelectorAll('.srcsel .srcb')].map(x=>x.textContent.trim());
+    if(sw.join('|')!=='Popular cards|Typical deck'||[...f.querySelectorAll('.srcsel .srcb')].some(x=>!x.title))out.errs.push('switch labels / tooltips: '+sw.join('|'));
+    if(narrow){const tg=document.querySelector('.ftog'); if(vis())out.errs.push('narrow screen: sidebar should start hidden');
+      tg.click(); if(!vis()||tg.getAttribute('aria-expanded')!=='true')out.errs.push('Filters button did not open the sidebar'); tg.click();}
+    const rs=[...document.querySelectorAll('#list details.row[data-i]')]; rs.forEach(x=>x.open=false); await new Promise(z=>setTimeout(z,50));
+    rs[0].open=true; await wait(()=>rs[0].querySelector('.body .hero'),40);
+    if(!narrow&&!vis())out.errs.push('sidebar hidden while a panel is open');
+    if(rs[0].querySelectorAll('.srcb.thm').length>3)out.errs.push('more than 3 archetype buttons');
+    if(rs[0].querySelector('[data-asel="0"]')&&!/^Popular cards/.test(rs[0].querySelector('[data-asel="0"]').textContent))out.errs.push('panel switch not renamed');
+    if(rs.length>1){rs[1].dataset.noscroll='1'; rs[1].open=true; await wait(()=>!rs[0].open&&rs[1].querySelector('.body .hero'),60); delete rs[1].dataset.noscroll;
+      if(rs[0].open||!rs[1].open)out.errs.push('opening a commander did not close the other one: open = '+rs.map(r=>r.open?1:0).join(''));}
+    // Discover resets: search cleared, panels closed
+    $('q').value='zz'; render(); document.querySelector('.vnav [data-view="discover"]').click(); await new Promise(z=>setTimeout(z,50));
+    if($('q').value||document.querySelector('#list details.row[open]')||!document.querySelectorAll('#list details.row').length)out.errs.push('Discover did not reset the list');
+    // Reset filters
+    document.querySelector('[data-col="U"]').click(); $('so').value='decks'; document.querySelector('.rstf').click();
+    if(document.querySelector('[data-col][aria-pressed="true"]')||$('so').value!=='pct'||COLS.size)out.errs.push('Reset filters left a filter on');
+    out.clicks=(out.clicks||0)+5;}
+  catch(e){out.errs.push('discover fixes: '+e.message);}
   // Collection view (#collection): opens without errors, the drop box is the only upload control (none in the header),
   // the unused grid starts at 24, "show all" and a commander chip work, a card's home link opens that commander in Discover
   try{if(document.querySelector('header.zh input[type=file], header.zh .up, header.zh button:not([data-mode])'))out.errs.push('header has an upload control');
@@ -409,7 +423,7 @@ def main():
     # bigger reports need more time: every panel is rendered once and each frame of a long page takes longer
     # (15 s up to ~70 commanders, ~47 s for 288); the real-time limit grows with it
     n_cmdrs = html.count('"slug":')
-    budget, limit = max(15000, 4000 + 150 * n_cmdrs), max(180, 60 + n_cmdrs)
+    budget, limit = max(30000, 4000 + 150 * n_cmdrs), max(240, 60 + n_cmdrs)   # the check does more since F1-F4 (decks, counts)
     tmp, srv = tempfile.mkdtemp(prefix="dw_check_"), stub_server(html)
     try:
         cmd = [exe, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={os.path.join(tmp, 'profile')}",

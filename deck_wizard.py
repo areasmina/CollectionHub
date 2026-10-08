@@ -2255,7 +2255,7 @@ main{max-width:1400px}
 .bat.b5{width:40px;height:13px;gap:2px}.bat.b5 i:nth-child(1){height:40%}.bat.b5 i:nth-child(2){height:55%}.bat.b5 i:nth-child(3){height:70%}.bat.b5 i:nth-child(4){height:85%}.bat.b5 i:nth-child(5){height:100%}
 /* two columns: sticky filters + the cards (static on small screens) */
 .disc{display:flex;gap:32px;align-items:flex-start}
-.filt{flex:0 0 260px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto;background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--shadow)}
+.filt{flex:0 0 260px;position:sticky;top:calc(var(--hh,0px) + 14px);max-height:calc(100vh - var(--hh,0px) - 28px);overflow-y:auto;background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--shadow)}
 .fh{margin:0;padding:6px 12px;font-size:1.1rem;font-stretch:75%;font-weight:900;background:var(--ink);color:var(--bg)}
 .fb{padding:14px 12px}.fb input[type=search]{width:100%;min-height:42px;border:0;border-bottom:2px dashed var(--ink);background:transparent}
 .cchips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
@@ -2266,7 +2266,7 @@ main{max-width:1400px}
 .mins button[aria-pressed="true"]{background:var(--r);color:#FFFFFF;border-color:#0B0B0B;box-shadow:inset 0 -4px 0 #0B0B0B}
 .more{display:flex;flex-direction:column;gap:12px}.more label{display:flex;flex-direction:column;gap:4px;font-size:.72rem;text-transform:uppercase;color:var(--mute)}
 .more select{min-height:40px;text-transform:none}
-.lst{flex:1;min-width:0}.disc.wide .filt{display:none}#count{text-transform:uppercase;font-size:.75rem;margin:0 0 12px}
+.lst{flex:1;min-width:0}#count{text-transform:uppercase;font-size:.75rem;margin:0 0 12px}
 /* commander cards; an opened card spans the whole row so its panel keeps the full width */
 #list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:40px 22px;padding-top:22px;grid-auto-flow:dense;align-items:start}
 .row{overflow:visible;margin:0;border-radius:14px;background:var(--bg);box-shadow:6px 6px 0 var(--shadow)}
@@ -2323,7 +2323,7 @@ main{max-width:1400px}
 .bat.big{width:150px;height:31px}.bat.sm{width:100px;height:20px}
 .cap{align-self:flex-start;padding:1px 5px;font:800 .68rem/1.3 var(--head);border:1.5px solid #141414;color:var(--onacc)}.cap.y{background:var(--y)}.cap.c{background:var(--c)}.cap.m{background:var(--m)}
 .stk{align-self:flex-start;padding:1px 6px;font:900 .9rem/1.25 var(--head);color:#FFFFFF;background:var(--r);border:2px solid #0B0B0B;transform:skewX(-10deg) rotate(-3deg)}.stk.m{background:var(--m);color:#141414}
-.slim{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:0 -18px 26px;padding:10px 18px;background:var(--bg);border-top:4px solid var(--r);border-bottom:2px solid var(--ink);box-shadow:0 3px 0 var(--y),0 6px 0 var(--m),0 9px 0 var(--c)}
+.slim{position:sticky;top:var(--hh,0px);z-index:20;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:0 -18px 26px;padding:10px 18px;background:var(--bg);border-top:4px solid var(--r);border-bottom:2px solid var(--ink);box-shadow:0 3px 0 var(--y),0 6px 0 var(--m),0 9px 0 var(--c)}
 .ondeck{padding:3px 14px 1px;font:900 .72rem/1.3 var(--head);font-style:italic;letter-spacing:.08em;color:#FFFFFF;background:var(--r);clip-path:polygon(8% 0,100% 0,92% 100%,0 100%)}
 .mimg{width:34px;border-radius:4px;border:2px solid var(--ink)}
 .sname{font:900 1.7rem/1 var(--head);font-stretch:62%;text-transform:uppercase}
@@ -2561,12 +2561,34 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .an h4{margin:10px 0 4px}.ancols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
 .ancols ul{margin:0;padding-left:18px;font-size:13px;line-height:1.5}.ang li::marker{content:"✓ ";color:#2A8443}.anb li::marker{content:"✗ ";color:var(--r)}.anb li.nm::marker{content:""}
 .anl{display:flex;flex-wrap:wrap;gap:12px}.anl .alt{width:132px}.anl small{display:block;font-size:11px;line-height:1.3}
+/* ---------- sticky slim header, sticky sidebar controls, sliding switch, resets (Discover fixes) ---------- */
+.zh{position:sticky;top:0;z-index:45;margin:0 -16px 4px;padding:10px 16px;background:var(--bg);transition:padding .2s}
+.zh.small{padding-top:5px;padding-bottom:5px;border-bottom:2px solid var(--ink);box-shadow:0 3px 0 var(--y),0 6px 0 var(--m),0 9px 0 var(--c)}
+.zh.small .brand{font-size:1.5rem}.zh.small .hfile{display:none}.zh.small .vnav a{padding-top:6px;padding-bottom:6px}.zh.small .modes button{min-height:28px}
+a.brand{text-decoration:none;color:var(--ink)}
+details.row{scroll-margin-top:calc(var(--hh,0px) + 12px)}
+.filt .slider{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:0;padding:12px;border:0;background:transparent}
+#br{-webkit-appearance:none;appearance:none;flex:none;width:100%;height:10px;margin:6px 0 0;border:2px solid var(--ink);background:linear-gradient(90deg,var(--r) 0 var(--p,0%),transparent var(--p,0%));cursor:pointer}
+#br::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:var(--r);border:2px solid #0B0B0B;box-shadow:3px 3px 0 #0B0B0B;transform:skewX(-12deg);transition:transform .15s cubic-bezier(.3,1.7,.5,1)}
+#br::-moz-range-thumb{width:18px;height:18px;border-radius:0;background:var(--r);border:2px solid #0B0B0B;box-shadow:3px 3px 0 #0B0B0B;transform:skewX(-12deg);transition:transform .15s cubic-bezier(.3,1.7,.5,1)}
+#br:active::-webkit-slider-thumb{transform:skewX(-12deg) scale(1.25)}#br:active::-moz-range-thumb{transform:skewX(-12deg) scale(1.25)}
+.brt{display:flex;justify-content:space-between;align-self:stretch;gap:2px;padding:0 4px;font:800 11px/1 var(--head)}.brt span{flex:0 0 auto}#bv{display:inline-block;align-self:flex-start;min-width:0;font:900 16px var(--head);text-transform:uppercase;color:var(--ink)}
+.seg{position:relative;display:flex;border:2px solid var(--ink)}.seg .srcb{flex:1 1 0;position:relative;z-index:1;border:0;margin:0;background:transparent !important;box-shadow:none !important}
+.seg .srcb.on{color:#FFFFFF}.seg .srcb+.srcb{border-left:2px solid var(--ink)}.seg .srcb:hover{transform:none}
+.seg::before{content:"";position:absolute;top:0;bottom:0;left:var(--sx,0);width:var(--sw,50%);background:var(--r);box-shadow:inset 0 -4px 0 #0B0B0B}
+.seg:not(.ready)::before{opacity:0}.seg.ready::before{transition:left .3s cubic-bezier(.3,1.4,.5,1),width .3s cubic-bezier(.3,1.4,.5,1)}
+.srcs.seg{display:inline-flex}.filt .seg .srcb{padding:8px 6px;font-size:12px}
+@keyframes popk{0%{transform:scale(1)}40%{transform:scale(1.14) rotate(-2deg)}100%{transform:none}}.pop{animation:popk .3s cubic-bezier(.3,1.7,.5,1)}
+.filt .slider,.filt .seg{animation:p5in .5s .15s both}
+.rstf{width:100%;min-height:40px}.ftog{display:none}
+@media(max-width:760px){.zh{gap:6px 12px}.zh .hfile{display:none}.zh.small .modes{display:none}.zh.small .brand{font-size:1.2rem}}
+@media(max-width:900px){.ftog{display:block;align-self:flex-start;min-height:44px;padding:0 16px}.filt{display:none}.disc.fopen .filt{display:block}}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
 <div id="zt" aria-hidden="true"><svg><filter id="zdust"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="5"/><feColorMatrix values="0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0"/><feComponentTransfer><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0.85"/></feComponentTransfer></filter><rect width="100%" height="100%" filter="url(#zdust)"/></svg></div>
 <main>
-<header class="zh"><div class="brand">Deck Wizard</div>
+<header class="zh"><a class="brand" href="#discover" title="Discover: back to the top">Deck Wizard</a>
 <nav class="vnav" aria-label="Views"><a href="#discover" data-view="discover">Discover</a><a href="#collection" data-view="collection">Collection</a></nav>
 <span class="hfile" id="hfile"></span>
 <div class="modes" role="group" aria-label="Print mode"><button type="button" data-mode="pos">Positive</button><button type="button" data-mode="neg">Negative</button><button type="button" data-mode="sepia">Sepia</button></div></header>
@@ -2576,15 +2598,17 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 <div class="ttl"><div class="p5-slash" aria-hidden="true"></div><h1 class="p5-h1" id="ttl" aria-label="What can I build?"></h1></div>
 <p class="sub">&gt; Your collection vs EDHREC, per bracket. Missing cards get filled from cards you own_</p>
 <ul class="stats" id="stats"></ul>
-<div class="slider"><label for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><span id="bv"></span>
-<div class="srcsel" role="group" aria-label="Deck source"><button class="srcb" data-src="">Commander page</button><button class="srcb" data-src="avg">Average deck</button></div></div>
 <div class="cmyk" aria-hidden="true"></div>
 <div class="disc">
-<aside class="filt" aria-label="Filters">
+<button type="button" class="ftog" aria-expanded="false" aria-controls="filt">☰ Filters</button>
+<aside class="filt" id="filt" aria-label="Filters">
+<h3 class="fh">Bracket</h3><div class="fb slider"><label class="sr" for="br">Bracket</label><input id="br" type="range" min="0" step="1" value="0"><div class="brt" aria-hidden="true"></div><span id="bv" aria-live="polite"></span></div>
+<h3 class="fh">Deck from</h3><div class="fb"><div class="srcsel seg" role="group" aria-label="Deck source"><button class="srcb" data-src="" title="Popular cards: decks built from the cards EDHREC sees most often for this commander, filled in with your cards">Popular cards</button><button class="srcb" data-src="avg" title="Typical deck: EDHREC's average deck (one typical 99), rebuilt with your cards">Typical deck</button></div></div>
 <h3 class="fh">Search</h3><div class="fb"><label class="sr" for="q">Commander name</label><input id="q" type="search" placeholder="type a name_" autocomplete="off" data-ac="cmdr" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="acl"></div>
 <h3 class="fh">Colours</h3><div class="fb cchips" role="group" aria-label="Colours"></div>
 <h3 class="fh">You own at least</h3><div class="fb mins" role="group" aria-label="Minimum owned"></div>
 <h3 class="fh">More</h3><div class="fb more"><label>archetype<select id="th" aria-label="Archetype"><option value="">Any archetype</option></select></label><label>edhrec decks<select id="dk" aria-label="Min decks"><option value="0">Any deck count</option><option value="20">20+ decks</option><option value="100">100+ decks</option><option value="500">500+ decks</option><option value="1000">1000+ decks</option><option value="5000">5000+ decks</option></select></label><label>combos<select id="cf" aria-label="Combos"><option value="">Any combos</option><option value="own">Owns 1+ combo</option><option value="skel">Combo in deck</option></select></label><label>sort by<select id="so" aria-label="Sort"><option value="pct">Sort: % owned</option><option value="decks">Sort: deck count</option><option value="combos">Sort: combos owned</option><option value="ready">Sort: build readiness</option></select></label></div>
+<div class="fb"><button type="button" class="rstf" title="Clear search, colours, minimum owned, archetype, deck count, combos and sort">Reset filters</button></div>
 </aside>
 <section class="lst" aria-label="Commanders"><div id="count"></div><div id="list"></div></section>
 </div>
@@ -3027,7 +3051,8 @@ function numsHTML(x,b){
   <div class="tile num p5-card"><span class="t">Bracket Fit</span><b class="tbig">${lbl}</b>${bf.why.length?`<ul>${bf.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:`<span class="tt">No Game Changers, mass land denial, chained extra turns or two-card combos found.</span>`}<small>${x.tut||0} tutors (B1–2 expect few)</small>${sel?`<span class="stk ${fits?"":"m"}">(${fits?"FITS":"ABOVE"} ${BS}!)</span>`:""}</div></div>`;}
 
 /* ---------- commander rows ---------- */
-const THIN=50;   /* fewer EDHREC decks than this behind a deck or archetype: warn */
+const THIN=50;
+const THEME_SHOW=3;   /* archetype buttons shown per commander (the run builds THEME_TOP 4; the 4th stays an EDHREC link) */   /* fewer EDHREC decks than this behind a deck or archetype: warn */
 // gaps: each substitute slot as a row of option cards (Buy it / Advised / Or…), the same saved choices as the bubbles
 function slotRowsHTML(d,b,x,t){
   const ch=getCh(d,b,t), eff=effDeck(d,b,x,t), slots=x.deck.filter(e=>e[1]==="s"&&e[2]>=0);
@@ -3055,15 +3080,15 @@ function body(d,b,r){
   if(lv&&SERVED&&!lx) fetchLive(d,b,st,L);
   const x=lx&&lx.x?lx.x:deckOf(d,b,st), pre=b==="all"?"":"/"+b;
   // archetype (overview + EDHREC's top themes)
-  const ths=Object.entries(d.th||{}), tot=d.b.all.decks||1, tcount=Object.fromEntries(d.tags.map(t=>[t[1],t[2]]));
+  const ths=Object.entries(d.th||{}).slice(0,THEME_SHOW), tot=d.b.all.decks||1, tcount=Object.fromEntries(d.tags.map(t=>[t[1],t[2]]));
   const arch=`<div class="srcs" role="group" aria-label="Archetype"><button class="srcb ${tsel?"":"on"}" data-tsel="" title="The commander's overall deck">Overview</button>`
     +ths.map(([k,t])=>{const thin=t.decks<THIN;return `<button class="srcb thm ${k===tsel?"on":""}${thin?" thin":""}" data-tsel="${k}" title="EDHREC: ${n(tcount[k]||0)} of ${n(tot)} decks are ${esc(t.name)} · you own ${t.own}% of the cards those decks play${thin?` · ⚠ thin data: only ${n(t.decks)} decks (under ${THIN})`:""}">${thin?"⚠ ":""}<b>${esc(t.name)}</b> <span>${Math.round(100*(tcount[k]||0)/tot)}% of decks · own ${t.own}%</span></button>`;}).join("")
     +(ths.length?"":`<span class="dim">no archetype pages</span>`)+`</div>`;
-  const other=d.tags.filter(t=>!(d.th&&d.th[t[1]])).slice(0,5);
+  const shownT=new Set(ths.map(t=>t[0])), other=d.tags.filter(t=>!shownT.has(t[1])).slice(0,5);
   const more=other.length?`<div class="tags"><span class="dim">More on EDHREC:</span>${other.map(t=>`<a class="tag" href="https://edhrec.com/commanders/${d.slug}/${t[1]}" target="_blank" rel="noopener">${esc(t[0])} ↗</a>`).join("")}</div>`:"";
   // source within the archetype
   const avOK=tsel?hasTAvg(d,b,tsel):hasAvg(d,b), cmdX=tsel?themed(d,b,tsel):d.b[b], avX=avOK?(tsel?tavgd(d,b,tsel):avgd(d,b)):null;
-  const srcs=`<div class="srcs"><button class="srcb ${asel?"":"on"}" data-asel="0" title="Built from how often each card is played in these decks (EDHREC commander page) and your collection">Commander page · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="EDHREC's average deck, rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Average deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
+  const srcs=`<div class="srcs seg" role="group" aria-label="Deck source"><button class="srcb ${asel?"":"on"}" data-asel="0" title="Popular cards: decks built from the cards EDHREC sees most often for this commander, filled in with your cards">Popular cards · ${cmdX.pct}%</button><button class="srcb ${asel?"on":""}" data-asel="1" ${avOK?`title="Typical deck: EDHREC's average deck (one typical 99), rebuilt with your cards"`:`disabled title="EDHREC has no average deck for this"`}>Typical deck${avOK?" · "+avX.pct+"%":""}</button></div>`;
   const srcN=asel||!tsel?x.decks:x.tdecks;
   const what=(tsel?`<b>${esc(x.theme)}</b> `:"")+(asel?"average deck":"commander page");
   const link=asel?`https://edhrec.com/average-decks/${d.slug}${tsel?"/"+tsel:pre}${suf}`:`https://edhrec.com/commanders/${d.slug}${tsel?"/"+tsel:pre}${suf}`;
@@ -3180,10 +3205,10 @@ function whyShow(row,wi){const di=+row.dataset.i, W_=WHY[di]; if(!W_||wi==null)r
     .finally(()=>{if(WHY[di]&&WHY[di].cur===wi){const b2=row.querySelector(".why"); if(b2)b2.innerHTML=whyHTML(di,wi);}});},150);}
 
 function render(){
-  const b=bk(); $("bv").textContent=LBL[b];
+  const b=bk(); $("bv").textContent=LBL[b]; $("br").style.setProperty("--p",(100*br.value/Math.max(1,br.max))+"%");
   const q=$("q").value.toLowerCase(), p=MINP, dk=+$("dk").value, th=$("th").value, cf=$("cf").value;
   const nc=d=>d.combos?d.combos.n_own:0;
-  document.querySelectorAll(".srcsel .srcb").forEach(x=>x.classList.toggle("on",x.dataset.src===SRC));
+  document.querySelectorAll(".srcsel .srcb").forEach(x=>x.classList.toggle("on",x.dataset.src===SRC)); segAll(document.querySelector(".filt"));
   const rows=DATA.filter(d=>{const x=X(d,b); return x&&d.name.toLowerCase().includes(q)&&[...COLS].every(k=>d.ci.includes(k))
     &&x.pct>=p&&x.decks>=dk&&(!th||d.tags.slice(0,3).some(t=>t[0]===th))
     &&(!cf||(cf==="own"?nc(d)>0:(x.cin||[]).length>0));});
@@ -3376,14 +3401,25 @@ addEventListener("scroll",()=>{if(!P5ON.length)return; if(Date.now()-P5T>60)p5sc
 function p5watch(r){if(!P5IO)return;
   P5ON.forEach(c=>{P5IO.unobserve(c); c.classList.remove("p5-wait");}); P5ON=[];
   r.querySelectorAll(".body .grid .ct").forEach(c=>{c.classList.add("p5-wait"); P5IO.observe(c); P5ON.push(c);});}
-// an open commander panel takes the full page width (like P5Commander): the filter column hides until every panel is closed
-const discWide=()=>document.querySelector(".disc").classList.toggle("wide",!!document.querySelector("#list details.row[open]"));
-document.addEventListener("toggle",e=>{if(e.target.matches&&e.target.matches("#list details.row"))discWide();},true);
+// one commander panel at a time: opening one closes the others, renders it fresh (so its opening animation plays) and
+// scrolls it under the sticky header; the filter sidebar stays
+const RM=matchMedia("(prefers-reduced-motion: reduce)");
+const SMOOTH=()=>RM.matches||window.__dwTest?"auto":"smooth";   // the browser check sets __dwTest: instant scrolls there
+// the newest opened row wins: "toggle" events arrive late, so an older one's event mustn't close a newer panel. A mutation
+// observer sees each "open" change at once, in order (before any toggle event).
+let LASTOPEN=null;
+new MutationObserver(ms=>ms.forEach(m=>{const r=m.target; if(r.open&&r.matches("details.row[data-i]")) LASTOPEN=r;}))
+  .observe($("list"),{subtree:true,attributes:true,attributeFilter:["open"]});
 document.addEventListener("toggle",e=>{const r=e.target; if(!r.matches||!r.matches("details.row")||!r.open)return;
-  if(!r.dataset.f){r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;}
-  p5watch(r);},true);
+  const cmd=r.matches("#list details.row");
+  if(cmd){const keep=LASTOPEN&&LASTOPEN.open&&LASTOPEN.isConnected?LASTOPEN:r;
+    document.querySelectorAll("#list details.row[open]").forEach(o=>{if(o!==keep) o.open=false;});
+    if(r!==keep) return;}
+  if(!r.dataset.f||cmd){r.querySelector(".body").innerHTML=r.dataset.k!=null?ibody(DECKS[+r.dataset.k]):body(DATA[+r.dataset.i],rowB(r),r); r.dataset.f=1;}
+  p5watch(r); segAll(r);
+  if(cmd&&r.dataset.noscroll!=="1") r.scrollIntoView({block:"start",behavior:SMOOTH()});},true);
 const rowB=r=>(r.dataset.b&&DATA[+r.dataset.i].b[r.dataset.b])?r.dataset.b:bk();   // a bracket chosen in this row wins
-function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r),r); if(r.open)p5watch(r);}
+function rerow(r){r.querySelector(".body").innerHTML=body(DATA[+r.dataset.i],rowB(r),r); if(r.open){p5watch(r); segAll(r);}}
 document.addEventListener("click",e=>{const t=e.target;
   if(t.classList.contains("vt")){const bd=t.closest(".body");
     bd.querySelectorAll(".vt").forEach(x=>x.classList.toggle("on",x===t));
@@ -3445,6 +3481,29 @@ if(matchMedia("(hover:hover)").matches){
     pv.style.left=Math.max(8,x)+"px"; pv.style.top=Math.max(8,Math.min(innerHeight-h-8,y))+"px";}}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".flip"))e.preventDefault();},true);
 ["br","q","th","dk","cf","so"].forEach(id=>$(id).addEventListener("input",render));
+/* ---------- livelier controls: the switch's red highlight slides to the chosen option, values pop on change ---------- */
+function segAll(root){(root||document).querySelectorAll(".seg").forEach(g=>{const on=g.querySelector(".srcb.on"); if(!on) return;
+  g.style.setProperty("--sx",on.offsetLeft+"px"); g.style.setProperty("--sw",on.offsetWidth+"px"); g.classList.add("ready");});}
+const pop=el=>{if(!el||RM.matches) return; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");};
+$("br").addEventListener("input",()=>pop($("bv")));
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest(".seg .srcb"); if(t) requestAnimationFrame(()=>{segAll(); pop(t.closest(".seg"));});});
+document.querySelector(".brt").innerHTML=BR.map(b=>`<span>${b==="all"?"ALL":["","I","II","III","IV","V"][{exhibition:1,core:2,upgraded:3,optimized:4,cedh:5}[b]]}</span>`).join("");
+/* ---------- sticky header: slims once you scroll; everything else that sticks sits under it (--hh) ---------- */
+const ZH=document.querySelector(".zh");
+const hh=()=>document.documentElement.style.setProperty("--hh",ZH.offsetHeight+"px");
+addEventListener("scroll",()=>{const sm=scrollY>40; if(ZH.classList.contains("small")!==sm){ZH.classList.toggle("small",sm); hh();}},{passive:true});
+if("ResizeObserver" in window) new ResizeObserver(hh).observe(ZH); addEventListener("resize",()=>{hh(); segAll();}); hh();
+/* ---------- resets: Discover / the logo go back to the top of a clean list; Reset filters clears every filter ---------- */
+function resetFilters(){$("q").value=""; COLS.clear(); MINP=0;
+  document.querySelectorAll("[data-col]").forEach(x=>x.setAttribute("aria-pressed","false"));
+  document.querySelectorAll(".mins [data-minp]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.minp==="0"?"true":"false"));
+  $("th").value=""; $("dk").value="0"; $("cf").value=""; $("so").value="pct";}
+function resetDiscover(){document.querySelectorAll("#list details.row[open]").forEach(o=>o.open=false);
+  $("q").value=""; render(); scrollTo({top:0,behavior:SMOOTH()});}
+document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest('.vnav [data-view="discover"], a.brand, .rstf, .ftog'); if(!t) return;
+  if(t.classList.contains("rstf")){resetFilters(); render(); pop(t); return;}
+  if(t.classList.contains("ftog")){const d=document.querySelector(".disc"), o=!d.classList.contains("fopen"); d.classList.toggle("fopen",o); t.setAttribute("aria-expanded",o?"true":"false"); if(o) requestAnimationFrame(()=>segAll(d)); return;}
+  e.preventDefault(); if(location.hash!=="#discover") history.pushState(null,"","#discover"); showView("discover"); resetDiscover();});
 /* ---------- autocomplete for every search box ([data-ac]): up to 8 matches anywhere in the name, ignoring case and
    accents, names starting with the text first, matched letters marked; arrows move, Enter / click / tap picks, Esc or a
    click outside closes. role=combobox + listbox. Sources: AC[kind](input) -> {items(q), pick(item)}; no server calls. ---------- */

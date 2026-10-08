@@ -331,8 +331,14 @@ The 99 (`p5-slab`; tape labels `TAPE`/`tapeFor`, coloured offset shadows per kin
 `shopHTML`, cyan `swapsHTML`, yellow `pinHTML`) → Gaps & stand-ins (`slotRowsHTML`: Buy it / Advised / Or… option cards,
 same saved choices; chosen = red, skewed, cream offset shadow + (CHOSEN!) dropping in at the card's foot; one row of options;
 the 🛒 store link sits under the missing-card tile) → Deck stats & combos (Phase 4, below).
-**Full-width panel:** while any commander panel is open, `.disc` gets class `wide` (`discWide()` on the toggle event) and the
-filter column hides, so the panel uses the page width like P5Commander; closing the last panel brings it back.
+**Discover controls (Oct 2026):** sticky slim header (`.zh`, `.small` after 40 px of scroll; its height in `--hh`, which the
+sticky sidebar and the panel's `.slim` bar sit under); the bracket slider (`#br`, red fill `--p`, marks `.brt`) and the deck
+switch **Popular cards | Typical deck** (`.srcsel`, tooltips; same names in each panel) live in the sticky filter sidebar,
+which stays while a panel is open (the old "wide" hide is gone); ≤900 px a **☰ Filters** button (`.ftog`) opens it. Switches
+(`.seg`) slide a red highlight (`segAll()`), values pop (`pop()`), reduced motion respected. One panel at a time: opening a
+commander closes the others (newest open wins, `LASTOPEN` via MutationObserver), re-renders it so its opening animation
+plays, and scrolls it under the header (`SMOOTH()`, instant in the check via `__dwTest`). Discover / the logo reset the view
+(`resetDiscover`); **Reset filters** (`.rstf`, `resetFilters`). `THEME_SHOW` 3 archetype buttons (4 still built).
 **Deck stats pile (Phase 4):** `pileHTML()` = one pile of post-its with tabs (`.ptab[data-stat]`, `role=tab`, `aria-selected`,
 arrow keys; last tab in `dw:stat`, `setStat()`; the two other notes peek out behind as `.pback`): Mana curve (yellow: solid
 bars yours, hatched = EDHREC average deck `ref`, verdict SAME / N MORE / N FEWER, ±2 printed red; facts row; "As a table"),
