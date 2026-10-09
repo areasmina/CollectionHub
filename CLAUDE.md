@@ -80,7 +80,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
 `baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
-damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = strength tiebreaker 0.15, weight 1 = 0.4, job-card swap rule)
+damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = weight 1 = 0.4, job-card swap rule)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -225,14 +225,17 @@ Key functions:
   Effect vs `baseline_engine2` (weight 3): substitutes −1.8, popular +5.5, picks −3.7 (still above
   `baseline_gems`), draw −3.6 (loot links no longer stack), combos in deck +0.2 (B4/B5), no rule violations
   (`baseline_engine3.json`; `baseline_engine4.json` = + $$ price nudge). Trostani weight 1: Craterhoof, Adeline, Elspeth in; weight 3: Craterhoof at B4+.
-- **Strength as tiebreaker + job-card swap rule** (commit "a2", Oct 2026; test case: Sol Ring swapped out of 119 decks at
-  weight 1): `STRENGTH_W` 0.15 (tiebreaker, was 0.6), `EDH_WEIGHT[1]` 0.4 (was 0.15). In `weakest_for()` a card doing a
-  `SWAP_KEEP` job (land fetchers: ramp only) can be swapped out only if it's the lowest-scoring card of that job in the deck,
-  so a ramp surplus loses its weakest rock, never Sol Ring. Rejected: "a swap can't evict a stronger card" (swaps fell to 0.2
-  per deck: synergy cards score lower on their own by nature) and "synergy only adds" (rewarded staples a commander's
-  players skip on purpose, e.g. Swiftfoot Boots on 35 commanders). Scratch test: Sol Ring lost to swaps 119 → 0 decks (w1),
-  swaps 14 → 7.5 per deck (w1), engine cards w1 31 vs w3 24, finishers ≥ 3.8, 0 rule violations. Still out on score:
-  Craterhoof for Trostani (win plans will fix it); 11 decks without Sol Ring at w3, all commanders whose page rarely plays it.
+- **Job-card swap rule (a2) + weight 1 = 0.4** (Oct 2026; test case: Sol Ring swapped out of 119 decks at weight 1):
+  `EDH_WEIGHT[1]` 0.4 (was 0.15). In `weakest_for()` a card doing a `SWAP_KEEP` job (land fetchers: ramp only) can be
+  swapped out only if it's the lowest-scoring card of that job in the deck, so a ramp surplus loses its weakest rock, never
+  Sol Ring. `STRENGTH_W` stays 0.6: commit 2 lowered it to 0.15 (a "tiebreaker") and a scratch test (weight 3 vs
+  `baseline_spellbook_combos`) showed 0.15 caused stand-ins 3.9 → 8.1 and combos in deck B4 2.81 → 2.08 (also with (a2) off);
+  0.3 still left stand-ins at 6.3; 0.6 restores both exactly. Rejected: 0.15, 0.3. (a2) itself lowers own picks
+  13.7 → 11.0 (swapped-in cards count as picks; swaps per deck halve), the price of never losing Sol Ring to a swap.
+  Also rejected: "a swap can't evict a stronger card" (swaps fell to 0.2 per deck: synergy cards score lower on their own
+  by nature) and "synergy only adds" (rewarded staples a commander's players skip on purpose, e.g. Swiftfoot Boots on 35
+  commanders). Result (`baseline_a2.json`): no Sol Ring swapped out anywhere; missing on score in 5 decks at w3 and 2 at w1;
+  engine cards w1 25.3 vs w3 21.9; Trostani w1: Craterhoof in 3 of 5 decks (out at w3, score 0.58); 0 rule violations.
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you

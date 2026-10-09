@@ -624,7 +624,7 @@ FIT_TRIBE = 0.12        # has a type the commander (or its main theme) names, e.
 FIT_MECH = 0.05         # per shared mechanic (tokens, sacrifice, +1/+1 counters...), up to 3
 FIT_ROLE = (0, 0.03, 0.05)   # ramp/draw/removal/... : one role, two or more
 FIT_THEME_ROLE = 0.03   # the role is the theme itself (e.g. ramp for a Big Mana commander)
-STRENGTH_W = 0.15       # tiebreaker: card strength across all Commander decks (Scryfall's EDHREC rank), see strength()
+STRENGTH_W = 0.6        # card strength across all Commander decks (Scryfall's EDHREC rank), a real signal; see strength()
 FIT_GC = 0.05           # Game Changers, only in brackets without a cap
 FIT_MV = 0.02           # minus this per mana value above 4
 # EDHREC weight (app slider 1-4): multiplies the EDHREC part of a non-land card's score (play rate + synergy);
