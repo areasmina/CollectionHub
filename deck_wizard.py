@@ -624,15 +624,13 @@ FIT_TRIBE = 0.12        # has a type the commander (or its main theme) names, e.
 FIT_MECH = 0.05         # per shared mechanic (tokens, sacrifice, +1/+1 counters...), up to 3
 FIT_ROLE = (0, 0.03, 0.05)   # ramp/draw/removal/... : one role, two or more
 FIT_THEME_ROLE = 0.03   # the role is the theme itself (e.g. ramp for a Big Mana commander)
-STRENGTH_W = 0.6        # card strength across all Commander decks (Scryfall's EDHREC rank), see strength()
+STRENGTH_W = 0.15       # tiebreaker: card strength across all Commander decks (Scryfall's EDHREC rank), see strength()
 FIT_GC = 0.05           # Game Changers, only in brackets without a cap
 FIT_MV = 0.02           # minus this per mana value above 4
 # EDHREC weight (app slider 1-4): multiplies the EDHREC part of a non-land card's score (play rate + synergy);
 # fit, theme focus and card-to-card synergy keep their weight. 1 = your collection decides, 4 = closest to
 # EDHREC's list. The static report is level 3 (x1.0).
-EDH_WEIGHT = {1: 0.15, 2: 0.5, 3: 1.0, 4: 1.4}
-# Spending level (app slider $/$$/$$$): EDHREC's budget / normal / expensive version of every page
-# (commander, bracket, theme, average deck: "<path>/budget", "<path>/expensive"). The report is $$.
+EDH_WEIGHT = {1: 0.4, 2: 0.5, 3: 1.0, 4: 1.4}
 SPEND_SUFFIX = {2: ""}   # price is information only: decks always use EDHREC's normal pages (the $/$$$ dial is gone)
 PICK_ALTS = 3           # owned cards offered to swap in for each of "your picks" (report: the options chooser)
 PICK_CLOSE = 0.15       # ...ranked by the builder's value + deck synergy, + this x closeness for a similar job
@@ -1451,6 +1449,9 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             kept = {r for r in drs & SWAP_KEEP if r not in ROLE_TARGETS or rcount[r] <= ROLE_TARGETS[r] + SWAP_SLACK}
             if "ramp" in drs: kept.discard("tutor")      # land fetchers (Cultivate) are ramp, not tutors
             if kept and not kept & rs: continue
+            jobs = drs & SWAP_KEEP - ({"tutor"} if "ramp" in drs else set())
+            # a job card goes only if it's the weakest of its job in the deck (a ramp surplus loses its weakest rock, never Sol Ring)
+            if any(score(dk) > min(score(norm(c["name"])) for c, _, _ in chosen if r in roles_of(c)) for r in jobs): continue
             if any(rcount[r] <= ROLE_TARGETS[r] and r not in rs for r in drs if r in rcount): continue
             v = total(dm, True)
             if ov is None or v < ov: out, ov = j, v

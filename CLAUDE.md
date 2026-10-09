@@ -80,12 +80,12 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
 `baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
-damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed)
+damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = strength tiebreaker 0.15, weight 1 = 0.4, job-card swap rule)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
 substitute chooser (pick an alternative, buy, reset) and checks the results. The page is served by a local stub server, so it also
-tests the EDHREC weight / spending buttons (`/deck` stub adds a "Test Card Live"; $$$ returns an error). Run it after any change to the HTML template.
+tests the EDHREC weight buttons (`/deck` stub adds a "Test Card Live"; weight 4 returns an error) and that no spending dial is shown. Run it after any change to the HTML template.
 
 Output: `report.html` (single self-contained page), `decks/<commander>_<bracket>.txt` (Arena/Moxfield lists).
 
@@ -225,6 +225,14 @@ Key functions:
   Effect vs `baseline_engine2` (weight 3): substitutes −1.8, popular +5.5, picks −3.7 (still above
   `baseline_gems`), draw −3.6 (loot links no longer stack), combos in deck +0.2 (B4/B5), no rule violations
   (`baseline_engine3.json`; `baseline_engine4.json` = + $$ price nudge). Trostani weight 1: Craterhoof, Adeline, Elspeth in; weight 3: Craterhoof at B4+.
+- **Strength as tiebreaker + job-card swap rule** (commit "a2", Oct 2026; test case: Sol Ring swapped out of 119 decks at
+  weight 1): `STRENGTH_W` 0.15 (tiebreaker, was 0.6), `EDH_WEIGHT[1]` 0.4 (was 0.15). In `weakest_for()` a card doing a
+  `SWAP_KEEP` job (land fetchers: ramp only) can be swapped out only if it's the lowest-scoring card of that job in the deck,
+  so a ramp surplus loses its weakest rock, never Sol Ring. Rejected: "a swap can't evict a stronger card" (swaps fell to 0.2
+  per deck: synergy cards score lower on their own by nature) and "synergy only adds" (rewarded staples a commander's
+  players skip on purpose, e.g. Swiftfoot Boots on 35 commanders). Scratch test: Sol Ring lost to swaps 119 → 0 decks (w1),
+  swaps 14 → 7.5 per deck (w1), engine cards w1 31 vs w3 24, finishers ≥ 3.8, 0 rule violations. Still out on score:
+  Craterhoof for Trostani (win plans will fix it); 11 decks without Sol Ring at w3, all commanders whose page rarely plays it.
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you
@@ -270,15 +278,13 @@ child process with the same options. `collection_changes()` keeps the added/remo
 **EDHREC weight 1–4** (per commander panel, app only; the static report is weight 3 and
 shows the buttons disabled; the old $/$$/$$$ spending dial was removed, price is information only): `GET /deck` (same header rule) → `LiveDecks.deck()` builds one deck with the full run's
 builder and rules (`analyze(..., ew=EDH_WEIGHT[w])`, `finish_deck()`). Weight multiplies the EDHREC part of a non-land
-card's score (play rate + synergy: 0.4 / 0.7 / 1.0 / 1.4); fit, theme focus and synergy swaps keep theirs.
-Spending = EDHREC's `<path>/budget` / `<path>/expensive` pages (cheapest / priciest 10% of decks; exist for commander,
-bracket, theme and average-deck pages; fetched on first use, then cached, refreshed after `EDH_MAX_DAYS`).
+card's score (play rate + synergy: `EDH_WEIGHT` 0.4 / 0.5 / 1.0 / 1.4); fit, theme focus and synergy swaps keep theirs.
 Bracket rules still decide combos. Index continuity: the full run writes `report_tables.json` (build time, CSV path,
 CardTable rows/strings, ComboTable rows); `LiveDecks` seeds its tables from it and replies with only the rows the page
 lacks (`nc/ns/nk`), JS `addRows()`; `v` = `ST.built` (mismatch → 409 "reload"). Context loads on first request
 (~2 s), then ~0.1 s per deck; caches are saved only when something new was fetched. JS: `LIVE`, `fetchLive()`,
-`lvlHTML()`, row `data-w`/`data-s`; saved substitute choices get `:w<w>s<s>` for non-default levels.
-Weight 3 + $$ through `/deck` reproduces the report's deck exactly (checked on Sephiroth B4).
+`lvlHTML()`, row `data-w`/`data-s` (`s` is always 2 now); saved substitute choices get `:w<w>s<s>` for non-default levels.
+Weight 3 through `/deck` reproduces the report's deck exactly (checked on Sephiroth B4).
 
 Report features: Collection page (file, changes, drop box when served, your decks, unused cards), bracket slider (switches EDHREC bracket data), filters (search, archetype, color,
 min %, min decks, combos), sorts, Scryfall card-image grid with hover preview, gaps & substitutes,
@@ -407,9 +413,9 @@ other owned cards, ranked by `total()` + `PICK_CLOSE` × closeness, within GC ca
 missing EDHREC card sharing a role (no roles: same type + engine; lands: makes the same colours). `optc` (per
 commander + bracket in `main()`) reuses the overview deck's options in its theme / average decks (run time, size).
 Display only: `tests/measure.py --compare tests/baseline_ui.json` (card lists, saved before this change) = 0 of 1,298
-decks differ. COMBO menus warn "breaks combo: A + B". `/deck` replies with new `opts` rows (`no`); weight 3 + $$
+decks differ. COMBO menus warn "breaks combo: A + B". `/deck` replies with new `opts` rows (`no`); weight 3
 reproduces deck and options. JS slot key `"y"+card`, chosen kinds `y2` / `buy`. `deck_diff` compares whole entries. Saved choices: `rowSel()`
-is the one key for reading (body) and writing (clicks), incl. the weight/$ level; `MEM` keeps them for the visit
+is the one key for reading (body) and writing (clicks), incl. the weight level; `MEM` keeps them for the visit
 when localStorage is blocked (bug: picks didn't apply at non-default levels). Full report ~41 MB (Oct 2026; 31 min offline).
 Combos per commander (report): **Danger zone** (red box, `danger_zone()`): every two-card infinite you can
 assemble in its colours (commander + 1 card, or card + a card meeting its condition), earliest first, with
