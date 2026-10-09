@@ -14,8 +14,9 @@ import deck_wizard as dw
 GC_CAP = {"exhibition": 0, "core": 0, "upgraded": 3}
 ROLES = ["ramp", "draw", "removal", "wipe", "counter", "tutor"]
 NUM = ["size", "popular", "picks", "combo_pieces", "subs", "fill", "basics", "nonbasic_lands",
-       "owned_lands", "avg_mv", "gc", "pct", "on_list", "low_rate", "avg_syn", "combos_in", "ready", "bracket_est"] + ROLES
+       "owned_lands", "avg_mv", "gc", "pct", "on_list", "low_rate", "avg_syn", "combos_in", "ready", "bracket_est", "win_plan", "plan_fill"] + ROLES
 CHECKS = ["bad_size", "dupes", "off_color", "illegal", "gc_over_cap", "over_bracket"]
+JOBS = {"ramp", "removal", "draw", "wipe"}   # plan fill should (almost) never cut a card doing one of these
 
 def setup(csv_path):
     dw.OFFLINE = True
@@ -62,6 +63,11 @@ def measure_deck(m, page, bracket, owned, name_meta, pool_info, base=None, combo
     x["c2"] = sum(1 for c in inside if dw.two_card_infinite(c))
     bf = dw.bracket_fit(x, inside, maybe)
     r["ready"] = sum(1 for c in x["rd"] if c[3])
+    pl = x.get("plan") or {}
+    r["plan"] = pl.get("n")
+    r["win_plan"] = next((c[1] for c in x["rd"] if c[0] == "win"), 0)      # plan finishers + winning combos
+    r["plan_fill"] = len(pl.get("fill") or [])
+    r["fill_cut_job"] = sum(1 for _, o in pl.get("fill") or [] if dw.roles_of(owned[dw.norm(T.rows[o][0])]) & JOBS)
     r["bracket_est"] = bf["est"]
     sel = dw.BRACKET_NUM.get(bracket)
     r["over_bracket"] = int(sel is not None and sel < 5 and bf["est"] > max(sel, 2))
@@ -132,6 +138,11 @@ def main():
         with open(a.compare, encoding="utf-8") as f: base = json.load(f)["summary"]
     print("\nDeck metrics (averages; checks = number of decks failing)")
     table(summ, base)
+    plans = {}
+    for r in res.values(): plans[r.get("plan")] = plans.get(r.get("plan"), 0) + 1
+    print("\nWin plans: " + ", ".join(f"{k} {v}" for k, v in sorted(plans.items(), key=lambda kv: -kv[1]))
+          + f"\nPlan-fill swaps: {sum(r.get('plan_fill', 0) for r in res.values())}, of which cut a ramp/removal/draw/wipe card: "
+          + f"{sum(r.get('fill_cut_job', 0) for r in res.values())}")
     if a.compare:
         with open(a.compare, encoding="utf-8") as f: bd = json.load(f).get("decks", {})
         have = [k for k in res if k in bd and "cards" in bd[k]]

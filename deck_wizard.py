@@ -51,7 +51,7 @@ VALID_BRACKETS = ["exhibition", "core", "upgraded", "optimized", "cedh"]
 OFFLINE = False         # --offline: never touch the network, use caches only
 GC_CAP = {"exhibition": 0, "core": 0, "upgraded": 3}   # Game Changers per bracket; others: no cap
 EDH_CACHE, EDH_VERSION = "edhrec_v4.json", 4           # v4 pages add synergy, lift, list tags
-SF_VERSION = 3          # bump when compact_card() gains fields; older cache entries are refetched
+SF_VERSION = 4          # bump when compact_card() gains fields; older cache entries are refetched
 
 # ----------------------------------------------------------------- helpers
 def norm(name):
@@ -169,6 +169,8 @@ def compact_card(c):
         "mana_cost": cost, "edhrec_rank": c.get("edhrec_rank"), "keywords": c.get("keywords", []) or [],
         # v3: this printing's price in USD (normal, else foil, else etched): shown as information only, never scored
         "usd": next((float(v) for v in (pr.get("usd"), pr.get("usd_foil"), pr.get("usd_etched")) if v), None),
+        # v4: power of the (front) face, a string ("*" possible); None for non-creatures
+        "power": c.get("power", faces[0].get("power") if faces else None),
         "v": SF_VERSION,
     }
 
@@ -708,7 +710,7 @@ def fetch_theme_page(path, cache, refresh=False, avg=False, max_days=None):
     return p
 
 DIFF_KEYS = ("pin", "pinx", "decks", "pct", "own_n", "tmpl_n", "n_miss", "rec", "subs", "fill", "pick", "cpc", "gc", "gcn",
-             "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl", "sw", "bench")
+             "cmc", "pw", "rd", "core", "mld", "xt", "tut", "basics", "cin", "c2", "bf", "cl", "sw", "bench", "plan")
 
 def page_match(page, owned, me):
     """Collection Match of an EDHREC page, as analyze() computes it: the play-rate weighted share
@@ -1063,8 +1065,83 @@ MLD_RX = re.compile(r"destroy all [^.]*\blands\b|exile all [^.]*\blands\b|sacrif
 XTURN_RX = re.compile(r"takes? an extra turn")
 BRACKET_NUM = {"exhibition": 1, "core": 2, "upgraded": 3, "optimized": 4, "cedh": 5}
 
-def readiness(roles, avg_cmc, odd, sources):
-    """[[check, value, target, passed]]; sources = {colour: lands making it} (empty for colourless)."""
+# Win plans (Phase C): how a deck means to win, read from the commander's mechanics; each plan has its own finisher test
+# (Oracle text). Plan fill makes sure a deck holds READY_WIN of its plan's finishers (complete winning combos count too).
+PLAN_MECHS = {"overrun": {"tokens", "+1/+1", "attacking"},          # go wide, then a team pump
+              "drain": {"drain", "lifegain", "sacrifice"},  # repeatable life loss / damage to each opponent (spells: burn cards pass the test themselves)
+              "voltron": {"equipment"}}                               # one big (commander) threat
+# Tight tests: a team pump is one-shot ("until end of turn", Overrun, Craterhoof, Moonshaker), not a static anthem;
+# drain/burn hits each opponent for 5+ or scales (X, "for each"/"equal to the number", or repeats: whenever / each upkeep);
+# indestructible is not evasion; an evasive creature is a threat only with power 6+.
+PLAN_RX = {
+    "overrun": re.compile(r"creatures you control (gain [^.]{0,40}? and )?get \+(x|\d+)/\+(x|\d+)[^.]{0,60}until end of turn|"
+                          r"until end of turn, creatures you control (gain [^.]{0,40}? and )?get \+(x|\d+)/\+(x|\d+)|"
+                          r"creatures you control gain [^.]{0,40}double strike[^.]{0,40}until end of turn"),
+    "drain": re.compile(r"(whenever|at the beginning of) [^.]{0,80}(each opponent loses (x|\d+) life|deals? (x|\d+) damage to each opponent)|"
+                        r"each opponent loses (x|[5-9]|\d\d) life|deals? (x|[5-9]|\d\d) damage to each opponent|"
+                        r"(each opponent loses life|damage to each opponent) equal to|"
+                        r"each opponent loses \w+ life for each|deals? \w+ damage to each opponent for each|"
+                        r"repeat the following process x times[^.]*\. each opponent loses"),
+    "voltron": re.compile(r"(equipped|enchanted) creature (gets \+([2-9x]|\d\d)/\+|has double strike|has [^.]{0,30}can't be blocked)|"
+                          r"(equipped|enchanted) creature gets [^.]{0,20}and has [^.]{0,30}(double strike|can't be blocked)|"
+                          r"target creature gains double strike"),
+    "alt": re.compile(r"\byou win the game\b|(each opponent|target player|that player) loses the game|"
+                      r"additional combat phase|double strike and trample"),
+}
+EVASION_RX = re.compile(r"\b(flying|trample|menace|shadow|horsemanship|fear|intimidate)\b|can't be blocked")
+PLAN_KEEP = {"ramp", "removal", "draw", "wipe", "counter", "tutor"}   # plan fill never cuts these
+COMBO_MAX_CREATURES = 0.42  # a deck whose non-land cards are more than this share creatures plays combo as backup only
+PLAN_NAME = {"overrun": "overrun", "drain": "drain/burn", "voltron": "voltron", "threats": "big threats", "combo": "combo"}
+_PLAN_MEMO = {}
+
+def big_threat(m):
+    """An evasive creature with power 6+ (indestructible alone isn't evasion)."""
+    try: pw = int(m.get("power") or 0)
+    except ValueError: return False                 # "*": depends on the game
+    return pw >= 6 and "Creature" in m["type_line"].split(" // ")[0] and bool(EVASION_RX.search(rules_text(m)))
+
+def plan_test(plan, m):
+    """Is card m a finisher for this plan? "threats" (fallback, also the combo plan's backup) = any plan's finisher,
+    an alternate win / extra combat, or a big evasive creature."""
+    k = (plan, norm(m["name"]))
+    if k not in _PLAN_MEMO:
+        if plan in ("threats", "combo"):
+            _PLAN_MEMO[k] = big_threat(m) or any(plan_test(p, m) for p in PLAN_RX)
+        else:
+            _PLAN_MEMO[k] = bool(PLAN_RX[plan].search(rules_text(m)))
+    return _PLAN_MEMO[k]
+
+def combo_counts(c, bnum):
+    """A complete combo counts as one finisher when it wins by itself (Spellbook "rel": a standalone result;
+    entries cached before rel count, as in early_combo) and the bracket allows it."""
+    return bool(c.get("rel", 1)) and combo_ok(c, bnum)
+
+def win_plan(cmdr, profile, focus, pool, deck, combo_win, combo_in):
+    """(plan, backup). Evidence in order: the archetype's theme (a theme deck plays its theme's plan, whatever the
+    commander's top theme says), the commander's own text, its top EDHREC themes; a plan needs READY_WIN owned
+    finishers in the pool, ties go to the plan the pool supports best. Then a plan the deck already holds READY_WIN
+    finishers for. No such plan: "combo" if a winning combo is complete in the deck and creatures are at most
+    COMBO_MAX_CREATURES of its non-land cards, else "big threats".
+    Backup = the next plan, else "combo" (if one is allowed here), else big threats."""
+    support = {p: sum(1 for _, m, _, kd in pool if kd != "land" and plan_test(p, m)) for p in PLAN_MECHS}
+    levels = [theme_profile(focus)[1] if focus else set(), profile[1] & card_mechanics(cmdr), profile[1]]
+    order = []
+    for lv in levels:
+        for p in sorted((p for p in PLAN_MECHS if PLAN_MECHS[p] & lv and support[p] >= READY_WIN),
+                        key=lambda p: -support[p]):
+            if p not in order: order.append(p)
+    held = {p: sum(1 for m in deck if plan_test(p, m)) for p in PLAN_MECHS}
+    for p in sorted((p for p in PLAN_MECHS if held[p] >= READY_WIN), key=lambda p: -held[p]):
+        if p not in order: order.append(p)
+    if not order:
+        crs = sum(1 for m in deck if "Creature" in m["type_line"].split(" // ")[0]) / max(1, len(deck))
+        if combo_in and crs <= COMBO_MAX_CREATURES: return "combo", "threats"
+        return "threats", ("combo" if combo_win else None)
+    return order[0], order[1] if len(order) > 1 else ("combo" if combo_win else "threats")
+
+def readiness(roles, avg_cmc, odd, sources, win=None):
+    """[[check, value, target, passed]]; sources = {colour: lands making it} (empty for colourless).
+    `win` = the win plan's finishers + complete winning combos (else every card with role "win")."""
     out = [[r, roles.get(r, 0), t, roles.get(r, 0) >= t] for r, t in ROLE_TARGETS.items()]
     out.append(["mv", avg_cmc, READY_MV, avg_cmc <= READY_MV])
     if len(sources) >= 2:
@@ -1072,7 +1149,8 @@ def readiness(roles, avg_cmc, odd, sources):
         c, v = min(sources.items(), key=lambda kv: (kv[1], kv[0]))
         out.append(["src", f"{c} {v}", need, v >= need])
     out.append(["odd", odd, READY_ODD, odd <= READY_ODD])
-    out.append(["win", roles.get("win", 0), READY_WIN, roles.get("win", 0) >= READY_WIN])
+    w = roles.get("win", 0) if win is None else win
+    out.append(["win", w, READY_WIN, w >= READY_WIN])
     return out
 
 # Official Commander Brackets rules on combos (Wizards, Feb 2025; unchanged by the Feb 2026 update):
@@ -1457,6 +1535,20 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             if ov is None or v < ov: out, ov = j, v
         return out, ov
     skip, swapped_in = set(), set()     # skip: no room or breaks the rules; also cards swapped out (no return)
+    def do_swap(out, k, m, why):
+        """Put owned card k in place of chosen[out]; (card out, why) or None if k then breaks the bracket rules."""
+        dm = chosen[out][0]
+        dk = norm(dm["name"])
+        used.discard(dk); syn.add(dm, -1)
+        if bnum is not None: state["xt"] -= is_xturn(dm)
+        if blocked(k):                               # without dm the rules still hold for k?
+            used.add(dk); syn.add(dm); state["xt"] += is_xturn(dm) if bnum is not None else 0
+            skip.add(k); return None
+        rs, w = roles_of(m), why()
+        chosen[out] = (m, "y", w); used.add(k); note(k); syn.add(m)
+        for r in rcount: rcount[r] += (r in rs) - (r in roles_of(dm))
+        swapped_in.add(k); skip.add(dk)
+        return dm, w
     for _ in range(SWAP_MAX):
         # best candidates first; one that finds no room doesn't stop the others from trying
         order = sorted(((total(m, False), k, m) for k, m in cands if k not in used and k not in skip
@@ -1467,25 +1559,57 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
             if rk not in room: room[rk] = weakest_for(m)
             out, ov = room[rk]
             if out is None or bv < ov + SWAP_MARGIN: continue
-            dm = chosen[out][0]
-            dk = norm(dm["name"])
-            used.discard(dk); syn.add(dm, -1)
-            if bnum is not None: state["xt"] -= is_xturn(dm)
-            if blocked(k):                               # without dm the rules still hold for k?
-                used.add(dk); syn.add(dm); state["xt"] += is_xturn(dm) if bnum is not None else 0
-                skip.add(k); continue
-            rs, why = roles_of(m), syn.why(m)
-            chosen[out] = (m, "y", why); used.add(k); note(k); syn.add(m)
-            for r in rcount: rcount[r] += (r in rs) - (r in roles_of(dm))
-            swaps.append([T.add(m["name"], m), T.add(dm["name"], dm), T.s(why)])
-            swapped_in.add(k); skip.add(dk)
+            done = do_swap(out, k, m, lambda: syn.why(m))
+            if not done: continue
+            swaps.append([T.add(m["name"], m), T.add(done[0]["name"], done[0]), T.s(done[1])])
             swapped = True
             break
         if not swapped: break
+
+    # 3c) win plan: the deck needs READY_WIN finishers for its plan (complete winning combos count). Short: the best
+    # plan finishers (score + deck synergy) replace the weakest unprotected card, like the swaps (same rules, (a2) too).
+    plan, backup = win_plan(cmdr, profile, focus, pool, [m for m, _, _ in chosen], any(combo_counts(c, bnum) for c in live),
+                            any(combo_counts(c, bnum) and combo_done(c, used) for c in live))
+    is_fin = lambda m: plan_test(plan, m)
+    def win_count():        # (plan finishers, total incl. complete winning combos)
+        n = sum(1 for m, _, _ in chosen if is_fin(m))
+        return n, n + sum(1 for c in live if combo_counts(c, bnum) and combo_done(c, used))
+    def combo_partner(dk):  # dk is a piece of an allowed combo and another named piece is already in the deck
+        return any(combo_ok(c, bnum) and any(norm(x) in used and norm(x) != dk for x in c["cards"])
+                   for c in by_card.get(dk, []))
+    plan_fill = []
+    nf, have = win_count()
+    if have < READY_WIN or nf < 1:        # also: at least one finisher that isn't a combo, as the backup
+        for _, k, m in sorted(((total(m, False), k, m) for k, m, _, kd in pool
+                               if kd != "land" and k not in used and is_fin(m)), key=lambda t: (-t[0], t[1])):
+            if have >= READY_WIN and nf >= 1: break
+            if k in used or blocked(k) or (m["gc"] and not gc_room()): continue
+            # it must belong here, like an unlisted pick: EDHREC plays it here, it shares a type / mechanic / engine with
+            # the commander, or it links to cards in the deck (a colourless drain artifact alone doesn't qualify)
+            score(k)
+            if play_of(k) < OFF_LIST and not fits[k][1] and not syn.why(m): continue
+            # never a finisher, a card doing a core job (a finisher doesn't replace interaction or mana), a piece of a
+            # combo this bracket allows whose other piece is already here (complete or not), or in a theme deck a card
+            # matching the theme
+            out = weakest_for(m, {j for j, (dm, _, _) in enumerate(chosen)
+                                  if is_fin(dm) or roles_of(dm) & PLAN_KEEP or combo_partner(norm(dm["name"]))
+                                  or (tprof and hits_theme(dm, tprof))})[0]
+            if out is None: continue
+            done = do_swap(out, k, m, lambda: "finisher: " + PLAN_NAME[plan])
+            if not done: continue
+            plan_fill.append([T.add(m["name"], m), T.add(done[0]["name"], done[0])])
+            nf, have = win_count()
+    # still short (no owned finisher fits): never a stand-in; the most played missing finishers are named as upgrades
+    plan_up = []
+    if have < READY_WIN:
+        plan_up = [T.add(name_meta[k]["name"], name_meta[k]) for k, _, _ in sorted(
+            ((k, v, play_of(k)) for k, v in cards.items() if k not in owned and name_meta.get(k)
+             and set(name_meta[k]["ci"]) <= ci and card_kind(name_meta[k]) != "land" and is_fin(name_meta[k])),
+            key=lambda t: (-t[2], t[0]))[:3]]
     # next in line: the owned cards that came closest, with why (so a near miss is visible, not silent)
     bench = sorted(((total(m, False), k, m) for k, m in cands if k not in used and not blocked(k)
                     and (not m["gc"] or gc_room())), key=lambda t: (-t[0], t[1]))[:BENCH_SHOW]
-    taken_out = set()
+    taken_out = {j for j, (dm, _, _) in enumerate(chosen) if is_fin(dm)}
     def swap_out(m):        # the card this one would replace (weakest_for: same protections as the swaps; each a different card), or -1
         j = weakest_for(m, taken_out)[0]
         if j is None: return -1
@@ -1596,6 +1720,8 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
                   + sum(1 for m, _, _ in lands if c in (m.get("produced") or [])) for c in colors}
     odd = sum(1 for c in chosen if c[1] in "sf")
     fin = {me} | {norm(m["name"]) for m, _, _ in allc}
+    n_fin = sum(1 for m, _, _ in chosen if is_fin(m))
+    win_combos = [c for c in live if combo_counts(c, bnum) and combo_done(c, fin)]
     cname = {}
     for m, kind, _ in allc:
         if kind != "c": continue
@@ -1612,7 +1738,11 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
         "cpc": sum(1 for c in allc if c[1] == "c"),
         "gc": len(gc_names), "gcn": gc_names, "cmc": avg_cmc,
         "pw": power_profile(roles, len(gc_names), avg_cmc),
-        "rd": readiness(roles, avg_cmc, odd, sources),
+        "rd": readiness(roles, avg_cmc, odd, sources, n_fin + len(win_combos)),
+        # win plan: name, backup, finishers in the deck, complete winning combos, plan fill [[card in, card out]],
+        # missing finishers worth getting when the plan is still short (most played first; never priced)
+        "plan": {"n": plan, "b": backup, "f": [T.add(m["name"], m) for m, _, _ in chosen if is_fin(m)],
+                 "k": len(win_combos), "fill": plan_fill, "up": plan_up},
         "core": built_around(profile, [m for m, _, _ in chosen]),
         "mld": [m["name"] for m, _, _ in allc if is_mld(m)],
         "xt": [m["name"] for m, _, _ in allc if is_xturn(m)],

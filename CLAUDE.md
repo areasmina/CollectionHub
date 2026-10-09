@@ -80,7 +80,7 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
 `baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
-damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = weight 1 = 0.4, job-card swap rule)
+damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = weight 1 = 0.4, job-card swap rule; `baseline_c1.json` = + win plans, adds win_plan, plan_fill)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -236,6 +236,18 @@ Key functions:
   by nature) and "synergy only adds" (rewarded staples a commander's players skip on purpose, e.g. Swiftfoot Boots on 35
   commanders). Result (`baseline_a2.json`): no Sol Ring swapped out anywhere; missing on score in 5 decks at w3 and 2 at w1;
   engine cards w1 25.3 vs w3 21.9; Trostani w1: Craterhoof in 3 of 5 decks (out at w3, score 0.58); 0 rule violations.
+- **Win plans (Phase C1, Oct 2026)** (`win_plan()`, `plan_test()`, `PLAN_RX`, step 3c of `analyze()`):
+  plan = overrun / drain/burn / voltron (from `PLAN_MECHS`: theme of an archetype deck first, then the commander's own text, its
+  top themes, then a plan the deck already holds `READY_WIN` finishers for), else combo (only if a winning combo is complete and
+  creatures ≤ `COMBO_MAX_CREATURES` 42% of non-lands), else big threats. Tight tests: one-shot team pumps (Overrun, Craterhoof,
+  Moonshaker; no static anthems), drain/burn to each opponent for 5+ or scaling/repeatable, voltron gear, alt wins, evasive
+  creatures with power 6+ (Scryfall `power`, `SF_VERSION` 4); indestructible isn't evasion. A complete combo counts as 1 finisher
+  only if Spellbook `rel` and `combo_ok` (`combo_counts`). Plan fill: owned cards only, with evidence (EDHREC ≥ `OFF_LIST` here,
+  a `card_fit` reason, or deck links), never cuts a finisher, a `PLAN_KEEP` card, a piece of a combo the bracket allows when
+  another named piece is already in the deck (complete or not; `combo_partner`, Talrand's Dramatic Reversal) or, in a theme deck, a card matching the theme; keeps ≥1 non-combo finisher; still short →
+  `x.plan.up` = most played missing finishers (no price). `READY_WIN` stays 3; later step: mtg-skills' per-style ranges
+  (aggro 4–6, midrange 3–6, control 2–4, combo 2–3). Spells don't map to drain (burn cards pass the test themselves).
+  Craterhoof stays out of Trostani at w3 (4 overrun finishers already; no force-in rule, revisit with C2). `baseline_c1.json`.
 - **Commander engine + hidden gems** (`cmdr_fit()`, `hidden_gems()`): EDHREC's part of a score (up to ~1.0) dwarfs
   everything read from text (~0.3), so a card nobody plays could never get in. `commander_link()` = engines where a
   card consumes what the commander provides or provides what it consumes (Doom connives every turn → "whenever you
@@ -444,7 +456,7 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
 - EDHREC cardviews include a `synergy` field (how much more a card is played with this commander than
   in general). Stored since v4 cache (`cards[key] = [name, rate, synergy, lift, list_tags]`; v3 pages
   only have `[name, rate]`). Used in scoring since step 2 (`SYN_W`); `lift` and list tags are not.
-- Scryfall card meta (`SF_VERSION` 2) also stores `mana_cost`, `edhrec_rank`, `keywords`; `edhrec_rank` and
+- Scryfall card meta (`SF_VERSION` 4: + `usd` v3, `power` v4) also stores `mana_cost`, `edhrec_rank`, `keywords`; `edhrec_rank` and
   `keywords` are used by `card_fit()`, `mana_cost` not yet.
 - EDHREC answers missing pages with HTTP 403. Misses are never cached (a 403 can also be a block).
 - Commander Spellbook rate-limits (HTTP 429) and rejects decks over 600 cards (HTTP 400). `http_json`
