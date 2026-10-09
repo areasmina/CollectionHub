@@ -146,9 +146,15 @@ Key functions:
     ≥ `COMBO_PIECE_MIN` on its own (synergy/fit, not just colour); ≤`COMBO_MAX` 2 packages adding ≤2 cards.
   - Bracket rules are enforced while building (`blocked()`/`note()` in `analyze()`), for every way a card
     gets in (popular, pick, stand-in, combo, role fill, duals): a card that would complete a combo the
-    **official rules** forbid is skipped (`combo_ok()`): B1–B2 no two-card infinite combos, B3 none in the
-    early game (`tmv` = Scryfall mana value of the pieces + Spellbook mana needed ≤ `EARLY_MV` 6, i.e.
-    before turn ~6; the rules give no number, this is our measure). Three-card combos aren't restricted.
+    **official rules** forbid is skipped (`combo_ok()`): B1–B2 no two-card infinite combos (any kind), B3 none in
+    the early game. "Early" uses **Commander Spellbook's rule** (user decision, Oct 2026; `early_combo()`, from
+    `estimate_bracket` in commander-spellbook-backend, MIT): relevant (a produced feature with status "S" =
+    standalone, e.g. win the game / infinite damage; `rel`), definitely two cards (no notable prerequisite, `np`),
+    and Spellbook's `manaValueNeeded` (`mv`) ≤ `EARLY_MV` 4 (speed ≥ 4) → B4 only; other two-card infinites
+    (e.g. infinite mana with no outlet, 5–6 mana, battlefield setups) are fine in B3. `rel`/`np` are stored by
+    `compact_combos`; cache entries without them are refetched when online (`combos_current`), and count as
+    relevant offline. Not modelled: Spellbook's +1 speed when its mana figure isn't an accurate minimum (not in
+    the API; 1 of 76 owned two-card infinites differs from Spellbook's own tag). Three-card combos aren't restricted.
     B1–B3 also no mass land denial and ≤`XTURN_CAP` 1 extra-turn card ("low quantities, not chained").
     "All decks" has no bracket, so no rules. Spellbook's `bracketTag` is shown as information only.
     Combos with an extra condition (`req`, e.g. Stella Lee + "an instant that untaps a creature") count the
@@ -166,7 +172,7 @@ Key functions:
   fill ≤ `READY_ODD`), stored as `rd` = [[check, value, target, ok]]; **Bracket Fit** = `bracket_fit()`
   (set in `main()` after combos-in-deck): lowest bracket the 99 fits (2 = "B1–2", 4 = "B4+"), from Game
   Changers (>3 → B4), mass land denial (→ B4), 2+ extra-turn cards (→ B4), two-card infinite combos
-  complete in the deck (late → B3, early → B4; `combo_need()`), "possible" ones listed without raising it.
+  complete in the deck (late or not relevant → B3, early → B4 by Spellbook's rule above; `combo_need()`), "possible" ones listed without raising it.
   Rules source: Wizards "Introducing Commander Brackets Beta" (Feb 2025); Feb 2026 update changed only
   the Game Changers list (53 cards). Stick to these rules; don't add house caps. Tutors shown as info only (rules say "few"). MLD / extra turns use
   Spellbook's flags (`is_mld`, `is_xturn`; `MLD_RX`/`XTURN_RX` only for cards Spellbook doesn't know).
@@ -446,7 +452,10 @@ Combos live in one shared table (`ComboTable` → `COMBOS` in the page; commande
   needing extra requirements (`req`, e.g. "a sac outlet") are listed but not added as packages. A commander
   that is itself a combo (Stella Lee, Wild Card: Spicy) can't be fixed by the builder and stays flagged
   (now shown as "possible", since her combo needs an untap spell the list can't confirm).
-  `EARLY_MV` and `XTURN_CAP` are our measurable readings of "early game" and "not chained".
+  `EARLY_MV` (Spellbook's speed rule) and `XTURN_CAP` are the measurable readings of "early game" and "not chained".
+  Effect of the Spellbook rule vs the old `tmv` ≤ 6 (`baseline_spellbook_combos.json`): 7 of 1,298 decks change (all B3:
+  e.g. Kitsa + Dramatic Reversal, Gev + Murderous Redcap now allowed), Bracket Fit B4→B3 for 25 decks, B3→B4 for 4
+  (Fear of Missing Out + Helm of the Host, 0 mana needed: Spellbook "Ruthless"), no rule violations.
 - `power_profile()` is a rough composition summary, not a power rating. Don't build bracket logic on it.
 - Imported deck commander detection: `Commander` header, `*CMDR*` tag, or a guess from color identity.
 

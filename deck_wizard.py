@@ -1079,10 +1079,12 @@ def readiness(roles, avg_cmc, odd, sources):
 
 # Official Commander Brackets rules on combos (Wizards, Feb 2025; unchanged by the Feb 2026 update):
 #   B1-B2: no intentional two-card infinite combos.  B3: none in the early game.  B4-B5: anything.
-# Three-card combos aren't restricted. "Early game" has no number in the rules: a two-card infinite
-# counts as early when its pieces' mana values (Scryfall) plus the mana it needs (Spellbook) total
-# EARLY_MV or less, i.e. it can come together before turn ~6.
-EARLY_MV = 6
+# Three-card combos aren't restricted. "Early game" has no number in the rules; for B3/B4 we use
+# Commander Spellbook's reading (estimate_bracket in commander-spellbook-backend, MIT): a two-card
+# combo forces B4 when it is relevant (a standalone result, e.g. win the game / infinite damage), has
+# no notable prerequisite, and its mana value needed (Spellbook's manaValueNeeded) is EARLY_MV or less
+# (speed >= 4). B1-B2 still ban every two-card infinite.
+EARLY_MV = 4
 XTURN_CAP = 1          # B1-B3: extra turns "in low quantities, not chained": one extra-turn card can't chain
 TAG_NAME = {"E": "Exhibition", "C": "Core", "O": "Oddball", "P": "Powerful", "S": "Spicy", "R": "Ruthless", "B": "Banned"}
 
@@ -1091,23 +1093,30 @@ def two_card_infinite(c):
     creature") counts as a card too."""
     return bool(c.get("inf")) and len(c["cards"]) + len(c.get("req") or []) <= 2
 
+def early_combo(c):
+    """Spellbook's B4 combo: relevant, definitely two cards (a notable prerequisite counts as one more),
+    speed >= 4. Entries cached before "rel"/"np" were stored count as relevant (the old, stricter rule).
+    shortcut: Spellbook also adds 1 speed when its mana figure isn't an accurate minimum; the API doesn't expose that flag."""
+    return (two_card_infinite(c) and c.get("rel", 1) and not c.get("np")
+            and (c.get("mv") or 0) <= EARLY_MV)
+
 def combo_ok(c, bnum):
     """May this combo be complete in a deck for bracket `bnum` (None = all decks: no rule)?
     Only called for combos known to be complete (conditions resolved via combo_done)."""
     if bnum is None or bnum >= 4 or not two_card_infinite(c): return True
-    return bnum == 3 and c.get("tmv", 0) > EARLY_MV
+    return bnum == 3 and not early_combo(c)
 
 def combo_need(c):
-    """Lowest bracket that allows this combo, by the official rules."""
+    """Lowest bracket that allows this combo: B1-B2 official ban, B3/B4 by Spellbook's speed rule."""
     if not two_card_infinite(c): return 2
-    return 3 if c.get("tmv", 0) > EARLY_MV else 4
+    return 4 if early_combo(c) else 3
 
 def combo_text(c):
     sat = c.get("sat") or {}
     s = " + ".join(c["cards"] + [f"{r} ({', '.join(sat[r][:2])}{'…' if len(sat[r]) > 2 else ''})"
                                  if sat.get(r) else f"({r})" for r in c.get("req") or []])
     if two_card_infinite(c):
-        s += f": two-card infinite, {c.get('tmv', 0)} mana total ({'late game, B3' if combo_need(c) == 3 else 'early game, B4'})"
+        s += f": two-card infinite, {c.get('mv') or 0} mana needed ({'B3: late or not game-winning' if combo_need(c) == 3 else 'early game, B4'})"
     if c.get("bt"): s += f" · Spellbook: {TAG_NAME.get(c['bt'], c['bt'])}"
     return s
 
@@ -1793,9 +1802,15 @@ def compact_combos(variants, have, keep):
                     "miss": [c for c in cards if norm(c) not in have],
                     "bt": v.get("bracketTag") or "",                       # Spellbook's bracket tag
                     "inf": int(any(f.get("uncountable") for f in feats)),  # infinite (uncountable) result
+                    "rel": int(any(f.get("status") == "S" for f in feats)),  # standalone result (Spellbook "relevant")
+                    "np": int(bool(v.get("notablePrerequisites"))),
                     "mv": v.get("manaValueNeeded") or 0})
     out.sort(key=lambda c: -c["pop"])
     return {"n": len(out), "list": out[:keep]}
+
+def combos_current(entry):
+    """Cached before "rel" (Spellbook feature status) was stored? Then refetch when online."""
+    return entry is None or all("rel" in c for c in entry["own"] + entry["near"])
 
 def combos_for_commander(m, owned, cache, combo_cards):
     """Combos among your cards in this commander's colours (the commander included). The answer
@@ -1805,7 +1820,8 @@ def combos_for_commander(m, owned, cache, combo_cards):
     if len(pool) > CSB_MAX_MAIN: return None   # no combo-card list to trim with
     key = "ci2:" + ("".join(c for c in "WUBRG" if c in ci) or "C") + ":" \
           + hashlib.md5("\n".join(pool + extra).encode()).hexdigest()[:10]
-    if key in cache: return cache[key]        # (--refresh starts from an empty cache)
+    if key in cache and (combos_current(cache[key]) or OFFLINE or CSB_DOWN[0]):
+        return cache[key]                     # (--refresh starts from an empty cache)
     if OFFLINE or CSB_DOWN[0]: return None
     res = csb_find([], pool)
     if res is None:                           # don't cache failures; stop asking for this run
@@ -1843,7 +1859,8 @@ class ComboTable:
             self.rows.append({"id": c["id"], "cards": c["cards"], "req": c.get("req") or [],
                               "sat": [(sat.get(r) or [])[:3] for r in c.get("req") or []],
                               "prod": c.get("prod") or [], "miss": c.get("miss") or [], "bt": c.get("bt", ""),
-                              "inf": c.get("inf", 0), "tmv": c.get("tmv", 0), "two": int(two_card_infinite(c)),
+                              "inf": c.get("inf", 0), "tmv": c.get("tmv", 0), "mv": c.get("mv") or 0,
+                              "two": int(two_card_infinite(c)),
                               "need": combo_need(c), "win": int(combo_wins(c))})
             self.idx[c["id"]] = len(self.rows) - 1
         return self.idx[c["id"]]
@@ -2063,7 +2080,8 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T, combo_cach
         gaps.append([T.add(mm["name"] if mm else n, mm), round(rate_of(norm(n)) * 100),
                      [[T.add(sm["name"], sm), T.s(why)] for _, _, sm, why in subs], -1, T.s(role_text(mm))])
     combos, ck = None, deck_combo_key(cmdrs, main)
-    if combo_cache is not None and ck in combo_cache:
+    if combo_cache is not None and ck in combo_cache and (
+            combos_current(combo_cache[ck]) or OFFLINE or CSB_DOWN[0] or not do_combos):
         combos = combo_cache[ck]
     elif do_combos and not OFFLINE and not CSB_DOWN[0]:
         res = csb_find([n for _, n in cmdrs], [n for _, n in main])
@@ -3103,12 +3121,12 @@ function combosNote(d,b,x){
       <span class="ntags"><span class="${best[1]===2?"inv":""}">${best[1]===2?"In this deck":"You own every piece"}</span>${bc.win?"<span>Wins</span>":""}</span></div>`
     :`<div class="nbest"><span class="lbl">Best combo</span><b>None you can assemble in these colours${b==="all"?"":" that "+BS+" allows"}.</b></div>`;
   const row=i=>{const c=COMBOS[i], late=c.need===3, ok=!sel||sel>=4||(sel===3&&late);
-    const rule=[late?"late":"early",c.tmv+" mana"].concat(c.win?["wins"]:[],inS.has(c.id)?["in this deck"]:[],
+    const rule=[late?"late or no standalone win":"early win",(c.mv??c.tmv)+" mana needed"].concat(c.win?["wins"]:[],inS.has(c.id)?["in this deck"]:[],
       [sel?(ok?"OK in "+BS:"not allowed in "+BS+": left out"):late?"allowed from B3":"B4+ only"]).join(" · ");
     return `<div class="dzr"><b>${comboName(c)}</b><span${ok?"":' class="bad"'}>${rule}</span></div>`;};
   const dz=d.dz||[], C={own:(d.co||[]).map(i=>COMBOS[i]),near:(d.cn||[]).map(i=>COMBOS[i]),n_own:d.combos.n_own,n_near:d.combos.n_near};
   return `<div class="nh"><h4>Combos</h4><span class="ncount">${d.combos.n_own} in your collection · ${(x.cin||[]).length} in this deck</span></div>${bestBox}
-  <div class="ndz"><div class="dzh"><b>Danger zone (${dz.length})</b><span title="A card that meets a combo's condition counts as its second card.">two-card infinites you can assemble · none in B1–B2, late-game only in B3, anything in B4–B5</span></div>
+  <div class="ndz"><div class="dzh"><b>Danger zone (${dz.length})</b><span title="A card that meets a combo's condition counts as its second card.">two-card infinites you can assemble · none in B1–B2; in B3 no early win (Commander Spellbook: 4 mana or less, standalone result); anything in B4–B5</span></div>
   ${dz.slice(0,6).map(row).join("")||'<div class="dzr"><b>No two-card infinites you can assemble in these colours.</b></div>'}</div>
   <details class="more nmore"><summary>${dz.length>6?`+ ${dz.length-6} more · `:""}all ${C.n_own} combos -&gt;</summary>
   ${dz.length>6?`<div class="ndz">${dz.slice(6).map(row).join("")}</div>`:""}${bestHTML(d,b,x)}${comboHTML(C,x.cin,"In your collection","One card away",true)}</details>`;}
