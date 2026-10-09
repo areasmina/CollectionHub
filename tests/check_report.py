@@ -3,7 +3,7 @@
 Runs report.html in a headless browser (Edge or Chrome, already on Windows; no Node needed) and
 renders every commander x bracket panel, catching JavaScript errors. The page is served from a small
 local server, as in the app, whose /deck stub answers the EDHREC weight / spending buttons with a known
-deck plus one new card (s=3 answers "not found"), so the live-deck path is tested without EDHREC.
+deck plus one new card (w=4 answers "not found"), so the live-deck path is tested without EDHREC.
 
 Usage:  py tests/check_report.py [report.html]
 Exit code 0 = no errors.
@@ -152,7 +152,7 @@ try{const O=e=>e.length>3?OPTS[e[3]]:[[],-1], b=bk(), d=DATA.find(d=>d.b[b]&&d.b
   else out.errs.push('no "your pick" with options found to test');}
 catch(e){out.errs.push('pick chooser: '+e.message);}
 // EDHREC weight / spending: weight 1 builds through /deck (stub), the new card is added and shown;
-// $$$ shows the app's error; weight 3 + $$ goes back to the report's own deck
+// weight 4 shows the app's error (stub); weight 3 goes back to the report's own deck; no spending dial
 const wait=(c,max=100)=>new Promise(res=>{let n=0;const f=()=>c()||++n>max?res():setTimeout(f,50);f();});
 (async()=>{try{const d=DATA.find(d=>d.b.all), r=d&&document.querySelector('details.row[data-i="'+d.i+'"]');
   if(!r)out.errs.push('no row for the level test');
@@ -163,11 +163,12 @@ const wait=(c,max=100)=>new Promise(res=>{let n=0;const f=()=>c()||++n>max?res()
     const ta=r.querySelector('textarea');
     if(!ta||!ta.value.includes('Test Card Live'))out.errs.push('live deck: new card not in the deck list');
     if(!r.querySelector('.tnote')||!r.querySelector('.tnote').textContent.includes('EDHREC weight 1'))out.errs.push('live deck: level not in the note');
-    r.querySelector('[data-ssel="3"]').click();
+    if(r.querySelector('[data-ssel]'))out.errs.push('the $ / $$ / $$$ spending dial is still shown');
+    r.querySelector('[data-wsel="4"]').click();
     await wait(()=>!r.querySelector('.body').textContent.includes('Building the deck'));
-    if(!r.querySelector('p.thinw')||!r.querySelector('p.thinw').textContent.includes('Stub: no expensive page'))out.errs.push('live deck: error not shown');
-    r.querySelector('[data-wsel="3"]').click();r.querySelector('[data-ssel="2"]').click();
-    if(r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('weight 3 + $$ did not go back to the report deck');
+    if(!r.querySelector('p.thinw')||!r.querySelector('p.thinw').textContent.includes('Stub: weight 4 failed'))out.errs.push('live deck: error not shown');
+    r.querySelector('[data-wsel="3"]').click();
+    if(r.querySelector('textarea').value.includes('Test Card Live'))out.errs.push('weight 3 did not go back to the report deck');
     out.clicks=(out.clicks||0)+4;}}
   catch(e){out.errs.push('levels: '+e.message);}
 // pins: "always include" a typed card (stub /pins answers, then the deck is rebuilt through /deck), a bad
@@ -415,7 +416,7 @@ def stub_server(html):
                 return self.send(200, json.dumps({"decks": list(SAVED.values()), "saved": None, "cards": [], "strs": [], "combos": [], "opts": []}))
             if path != "/deck": return self.send(404, "{}")
             if self.headers.get("X-Deck-Wizard") != "1": return self.send(403, json.dumps({"error": "no header"}))
-            if q.get("s") == "3": return self.send(404, json.dumps({"error": "Stub: no expensive page."}))
+            if q.get("w") == "4": return self.send(404, json.dumps({"error": "Stub: weight 4 failed."}))
             d = next(d for d in data if d["name"] == q["c"])
             x = dict(d["b"][q.get("b", "all")])
             x["deck"] = x["deck"] + [[int(q["nc"]), "y", int(q["ns"])]]

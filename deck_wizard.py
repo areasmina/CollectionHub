@@ -167,7 +167,7 @@ def compact_card(c):
         "layout": c.get("layout", ""), "img": iu.get("normal") or iu.get("small") or "",
         # v2 fields: colored pips for basics, overall EDHREC popularity, keyword abilities
         "mana_cost": cost, "edhrec_rank": c.get("edhrec_rank"), "keywords": c.get("keywords", []) or [],
-        # v3: this printing's price in USD (normal, else foil, else etched), for the $$$ spending level
+        # v3: this printing's price in USD (normal, else foil, else etched): shown as information only, never scored
         "usd": next((float(v) for v in (pr.get("usd"), pr.get("usd_foil"), pr.get("usd_etched")) if v), None),
         "v": SF_VERSION,
     }
@@ -339,7 +339,8 @@ class CardTable:
             return i
         if meta: row = [meta["name"], img, type_group(meta["type_line"]), 1 if meta.get("gc") else 0,
                         int(meta.get("cmc") or 0), 1 if meta.get("layout") in TWO_FACED and "front/" in img else 0,
-                        sum(1 << i for i, r in enumerate(ROLE_NAMES) if r in roles_of(meta))]   # roles bitmask
+                        sum(1 << i for i, r in enumerate(ROLE_NAMES) if r in roles_of(meta)),   # roles bitmask
+                        round(meta["usd"], 2) if meta.get("usd") else 0]                         # USD, shown as info only
         else: row = [name, "", "Land" if name in BASIC_NAMES else "Other", 0, 0]
         self.rows.append(row); self.idx[k] = len(self.rows) - 1
         return self.idx[k]
@@ -632,7 +633,7 @@ FIT_MV = 0.02           # minus this per mana value above 4
 EDH_WEIGHT = {1: 0.15, 2: 0.5, 3: 1.0, 4: 1.4}
 # Spending level (app slider $/$$/$$$): EDHREC's budget / normal / expensive version of every page
 # (commander, bracket, theme, average deck: "<path>/budget", "<path>/expensive"). The report is $$.
-SPEND_SUFFIX = {1: "budget", 2: "", 3: "expensive"}
+SPEND_SUFFIX = {2: ""}   # price is information only: decks always use EDHREC's normal pages (the $/$$$ dial is gone)
 PICK_ALTS = 3           # owned cards offered to swap in for each of "your picks" (report: the options chooser)
 PICK_CLOSE = 0.15       # ...ranked by the builder's value + deck synergy, + this x closeness for a similar job
 OFF_LIST = 0.05         # cards below this play rate count as "your pick" rather than "popular"
@@ -1157,13 +1158,7 @@ def owned_duals(pool, ci, used, n_lands, n_tapped):
         out.append(m); n_tapped += tapped
     return out
 
-PRICE_W = {1: 0.0, 2: 0.03, 3: 0.2}   # $ / $$ / $$$: boost for an owned card that fits, x price_scale()
 UNLISTED = 0.5          # an owned card EDHREC doesn't list: valued at this x the page's lowest listed rate
-
-def price_scale(m):
-    """0-1 from the printing's USD price on a log curve: $1 0.15, $10 0.52, $30 0.75, $99+ 1.0 (None: 0)."""
-    usd = m.get("usd")
-    return min(1.0, math.log10(1 + usd) / 2) if usd else 0.0
 
 def card_values(edh, base, owned, name_meta, ew=1.0):
     """(rate_of, play_of, value_of) for one EDHREC page: the play rate as EDHREC shows it, the rate
@@ -1231,7 +1226,7 @@ def power_profile(roles, gc, avg_cmc):
             "tutor": clamp(roles.get("tutor", 0) * 3), "gc": clamp(gc * 3), "combo": 0}
 
 def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combos=None, focus=None,
-            want_gaps=True, profile=None, show=None, ew=1.0, pins=None, spend=2, optc=None):
+            want_gaps=True, profile=None, show=None, ew=1.0, pins=None, optc=None):
     """`base` = the commander's all-decks page, used to steady small bracket pages.
     `combos` = combos you own in these colours (combos_for_commander()["own"]).
     `focus` = a theme name ("Discard"): cards matching it score FOCUS_W more (theme decks).
@@ -1239,8 +1234,6 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     commander's profile (computed once per commander by the caller; else from the page's themes).
     `show` = real play rates (average decks): order and label the gaps instead of the page's rates.
     `ew` = EDHREC weight (EDH_WEIGHT[level]): how much EDHREC's numbers count against fit and synergy.
-    `spend` = spending level 1-3 ($/$$/$$$): PRICE_W[spend] x price_scale for owned cards that fit (reason, EDHREC
-    listing or a useful role); price never helps a card that does nothing here and never beats a bracket rule.
     `pins` = (keys always included, keys never used) for this commander (pins.json): excluded cards leave the
     pool (no pick, substitute, option or combo uses them); included ones go in first, kind "k", unless a bracket
     rule forbids them (then listed in x["pinx"] with the reason) and synergy swaps never take them out.
@@ -1274,9 +1267,6 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
                 fits[k] = (fits[k][0] + FOCUS_W, ("theme: " + focus.lower() + (" · " + fits[k][1] if fits[k][1] else "")))
             if k in gems:
                 fits[k] = (fits[k][0], "hidden gem: " + " + ".join(gems[k][1]) + " · " + fits[k][1])
-            pb = PRICE_W.get(spend, 0) * price_scale(m)
-            if pb and card_kind(m) != "land" and (fits[k][1] or rate_of(k) > 0 or roles_of(m) & (USEFUL_ROLES | {"win"})):
-                fits[k] = (fits[k][0] + pb, fits[k][1] + (f" · ${m['usd']:.0f}" if spend == 3 else ""))
         return (max(value_of(k), gems[k][0]) if k in gems else value_of(k)) + fits[k][0]
     rec = [(k, v[0], v[1]) for k, v in cards.items() if k != me and v[0] not in BASIC_NAMES]
     rec.sort(key=lambda x: -x[2])
@@ -2646,6 +2636,7 @@ a.gmiss{background:none;padding:8px;border-style:solid}.gmc{width:150px}.gmc .gn
 .cw:hover .bub,.cw:focus-within .bub{animation:bubin .2s cubic-bezier(.3,1.6,.5,1)}
 @keyframes bubin{from{opacity:0;transform:translateY(12px) scale(.94) skewX(-4deg)}}
 .bub.dn{animation-name:bubdn}@keyframes bubdn{from{opacity:0;transform:translateY(-12px) scale(.94) skewX(-4deg)}}
+.usd{margin-left:6px;padding:0 4px;font:700 10px/1.4 var(--serial);font-style:normal;color:#141414;background:#F0EBDD;border:1px solid #141414}
 .p5-wait{opacity:0}.p5-shown{animation:p5in .6s cubic-bezier(.2,.9,.25,1) both}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.p5-wait{opacity:1}}
 </style></head><body>
@@ -2888,12 +2879,11 @@ function rowState(d,b,r){
 // (body() reads and the click handler writes through this one function, so they always agree)
 const rowSel=(d,b,r)=>{const L=lvlOf(r); return rowState(d,b,r).key+(L.w!==3||L.s!==2?`:w${L.w}s${L.s}`:"");};
 function deckOf(d,b,st){return st.t?(st.a?tavgd(d,b,st.t):themed(d,b,st.t)):(st.a?avgd(d,b):d.b[b]);}
-/* ---------- EDHREC weight (1-4) and spending ($/$$/$$$): other levels are built by the app on request ---------- */
+/* ---------- EDHREC weight (1-4): other levels are built by the app on request (price is information only) ---------- */
 const SERVED=location.protocol.startsWith("http"), LIVE={};
 const WTIP={1:"Your collection decides: EDHREC popularity counts 15%; card strength, fit and synergy with your cards lead",2:"Collection first: EDHREC popularity counts 50%",
   3:"Balanced (the report's decks): EDHREC popularity counts 100%",4:"Closest to EDHREC's list: popularity counts 140%"};
-const STIP={1:"$ Budget: built from EDHREC's cheapest 10% of decks; your cards' prices don't matter",2:"$$ Normal: all EDHREC decks (your pricier cards get a tiny nudge)",3:"$$$ Expensive: EDHREC's priciest 10% of decks, and your most valuable cards that fit get a boost (up to +0.20 at $99+); bracket rules still decide which combos are allowed"};
-const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:+(r&&r.dataset.s||2)});
+const lvlOf=r=>({w:+(r&&r.dataset.w||3),s:2});   // spending dial removed: price is information only
 const liveKey=(d,b,st,L)=>[d.slug,b,st.t,st.a?1:0,L.w,L.s,pinKey(pinsOf(d))].join("|");
 function addRows(arr,rows,from){rows.forEach((x,j)=>{if(from+j===arr.length)arr.push(x);});}
 function fetchLive(d,b,st,L){const k=liveKey(d,b,st,L); LIVE[k]={busy:1};
@@ -2931,7 +2921,7 @@ function lvlHTML(L){
   const off=SERVED?"":` disabled title="Open Deck Wizard App.bat to build decks at other levels"`;
   const bt=(a,v,on,tip,lab)=>`<button class="srcb ${on?"on":""}" data-${a}="${v}"${off||` title="${esc(tip)}"`}>${lab}</button>`;
   return `<div class="srcs"><span class="dim">EDHREC weight:</span>${[1,2,3,4].map(v=>bt("wsel",v,L.w===v,WTIP[v],v)).join("")}
-    <span class="dim" style="margin-left:10px">Spending:</span>${[1,2,3].map(v=>bt("ssel",v,L.s===v,STIP[v],"$".repeat(v))).join("")}</div>`;}
+</div>`;}
 /* ---------- synergy swaps and next in line (cards read by what they do with the rest of the deck) ---------- */
 // the aside's synergy panel: the first swaps (in = cyan, out = struck through in magenta), the rest folded
 // Best from your binder: cards you own that work with this commander by what they do (Oracle + reminder text: engines, tribe,
@@ -3048,6 +3038,8 @@ function bubbleHTML(d,b,x,it,t){
 const STORE=ST.store||{url:"https://shop.com/search/results?query={card}",name:"shop.com"};
 const BUY=i=>STORE.url.replace("{card}",encodeURIComponent(front(i)));
 const buyA=(i,lab)=>`<a class="shopl" href="${esc(BUY(i))}" target="_blank" rel="noopener" title="Search ${esc(STORE.name)} for ${esc(front(i))}">${lab||"🛒 "+esc(front(i))}</a>`;
+const USD=i=>(CARDS[i]&&CARDS[i][7])||0;   // price of the printing (missing cards: Scryfall), information only
+const usd=i=>USD(i)?`<i class="usd">$${USD(i)<10?USD(i).toFixed(2):Math.round(USD(i))}</i>`:"";
 function shopHTML(d,b,items,t,x){
   const buy=items.filter(it=>it.kind==="buy"), chosen=Object.keys(getCh(d,b,t)).length;
   const mine=new Set(buy.map(it=>it.i)), L=x?(x.gaps||[]).filter(g=>!mine.has(g[0])).slice(0,10):[], st=d?tbGet(d):{};
@@ -3055,12 +3047,14 @@ function shopHTML(d,b,items,t,x){
   const list=buy.map(it=>"1 "+front(it.i)).concat(L.filter(g=>!st[CARDS[g[0]][0]]).map(g=>"1 "+front(g[0]))).join("\n");
   return `<div class="shop rcpt"><b class="rh">*** TO BUY ***</b><span class="rl"></span>
   <span class="rsub">YOUR PICKS</span>
-  ${buy.length?buy.map(it=>`<span class="rr">${buyA(it.i,"1 "+esc(front(it.i)))}<span>🛒</span></span>`).join(""):`<span class="rr dim">none yet: "buy" on a missing card adds it here</span>`}
+  ${buy.length?buy.map(it=>`<span class="rr">${buyA(it.i,"1 "+esc(front(it.i)))}<span>${usd(it.i)} 🛒</span></span>`).join(""):`<span class="rr dim">none yet: "buy" on a missing card adds it here</span>`}
   ${L.length?`<span class="rl"></span><div class="ptb"><span class="rsub">MOST PLAYED HERE, NOT IN YOUR BINDER</span><ol class="tbl">${L.map(([i,r])=>{const nm=CARDS[i][0], s_=st[nm];
-    return `<li class="${s_?"done "+s_:""}">${buyA(i,`<span class="scr${s_?" done":""}">${esc(front(i))}</span>`)}<small>${r}%</small>
+    return `<li class="${s_?"done "+s_:""}">${buyA(i,`<span class="scr${s_?" done":""}">${esc(front(i))}</span>`)}<small>${r}%</small>${usd(i)}
       <span class="tbb">${s_?`<button type="button" data-tbu="${esc(nm)}" title="Undo">↺</button>`:`<button type="button" data-tbs="${esc(nm)}" data-v="b" title="Got it">✓</button><button type="button" data-tbs="${esc(nm)}" data-v="x" title="Not interested">✕</button>`}</span></li>`;}).join("")}</ol></div>`:""}
   <span class="rl"></span><span class="rr"><b>TOTAL TO BUY</b><b>${buy.length+L.length-L.filter(g=>st[CARDS[g[0]][0]]).length}</b></span>
-  ${bought.length?`<small>${bought.length} bought ✓</small>`:""}<small>each line opens ${esc(STORE.name)}</small>
+  ${(()=>{const L2=buy.map(it=>it.i).concat(L.filter(g=>!st[CARDS[g[0]][0]]).map(g=>g[0])), tot=L2.reduce((a,i)=>a+USD(i),0), nop=L2.filter(i=>!USD(i)).length;
+    return tot?`<span class="rr"><span>ESTIMATED</span><span>~$${Math.round(tot)}${nop?` <small>(${nop} without a price)</small>`:""}</span></span>`:"";})()}
+  ${bought.length?`<small>${bought.length} bought ✓</small>`:""}<small>each line opens ${esc(STORE.name)} · prices are Scryfall's, for information only</small>
   <span class="rbtn">${list?`<button class="cps" data-text="${esc(list)}">Copy list</button>`:""}${chosen?`<button class="reset-ch">Reset my choices</button>`:""}</span></div>`;}
 const tbKey=d=>"dw:tb:"+d.slug, TBM={};
 function tbGet(d){try{const v=localStorage.getItem(tbKey(d)); if(v!=null) return JSON.parse(v)||{};}catch(e){} return Object.assign({},TBM[tbKey(d)]);}
@@ -3150,7 +3144,7 @@ function slotRowsHTML(d,b,x,t){
     const bon=c===-1;
     const shop=STORE.url?BUY(f):"https://scryfall.com/search?q="+encodeURIComponent('!"'+front(f)+'"');
     return `<div class="gslot"><div class="gmc"><button type="button" role="radio" aria-checked="${bon}" class="gopt gmiss${bon?" on":""}" data-pick="-1" data-slot="${f}" title="Buy ${esc(front(f))}: it goes on the receipt (again: keep your stand-in)"><img class="gimg" src="${IMG(f)}" alt="${esc(front(f))}" loading="lazy"><span class="nib">(NOT IN YOUR BINDER!)</span>${bon?`<span class="stk">(CHOSEN!)</span>`:`<span class="gbuy">BUY IT</span>`}</button>
-      <span class="gname">${esc(front(f))}</span><span class="gmeta">${g&&g[1]?g[1]+"% of decks":"—"} · ${esc(g?W(g[4])||"synergy piece":"")}</span><a class="shopl" href="${esc(shop)}" target="_blank" rel="noopener">🛒 ${STORE.url?esc(STORE.name):"Scryfall"}</a></div>
+      <span class="gname">${esc(front(f))} ${usd(f)}</span><span class="gmeta">${g&&g[1]?g[1]+"% of decks":"—"} · ${esc(g?W(g[4])||"synergy piece":"")}</span><a class="shopl" href="${esc(shop)}" target="_blank" rel="noopener">🛒 ${STORE.url?esc(STORE.name):"Scryfall"}</a></div>
       <span class="garr" aria-hidden="true">-&gt;</span>
       <div class="gopts" role="radiogroup" aria-label="Slot for ${esc(front(f))}">${opts.map(([pick,kind,card,w])=>{
         const on=pick==="adv"?c===undefined:pick===-1?c===-1:c===pick, dis=pick!==-1&&pick!=="adv"&&taken.has(card);
@@ -3162,7 +3156,7 @@ function imgModeHTML(){const m=document.documentElement.dataset.img||"full";
 const WHY={};   // per commander row: what its "Why this card?" panel needs (filled by body(), read by the events)
 function body(d,b,r){
   const st=rowState(d,b,r), asel=st.a, tsel=st.t, L=lvlOf(r), lv=L.w!==3||L.s!==2||pinsChanged(d);
-  // another EDHREC weight / spending level: the app builds it (saved choices are kept per level)
+  // another EDHREC weight: the app builds it (saved choices are kept per level)
   const sel=rowSel(d,b,r), suf=L.s===1?"/budget":L.s===3?"/expensive":"";
   const lx=lv?LIVE[liveKey(d,b,st,L)]:null;
   if(lv&&SERVED&&!lx) fetchLive(d,b,st,L);
@@ -3195,7 +3189,7 @@ function body(d,b,r){
     <div class="hmeta"><span>${d.tags.slice(0,3).map(t=>esc(t[0].toLowerCase())).join(" · ")||"no EDHREC themes yet"} · ${n(x.decks)} ${b==="all"?"":SH[b]+" "}decks · ${d.combos?d.combos.n_own:0} combos owned</span></div>`;
   if(lv&&!(lx&&lx.x)) return `${head}${sheet}${pinHTML(d,{})}
     <p class="${lx&&lx.err?"thinw":"tnote"}">${lx&&lx.err?"⚠ "+esc(lx.err)+" Pick a level to try again."
-      :`Building the deck at EDHREC weight ${L.w} · ${"$".repeat(L.s)}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
+      :`Building the deck at EDHREC weight ${L.w}… (new EDHREC pages are downloaded once, then cached)`}</p></div></div>`;
   const eff=effDeck(d,b,x,sel), deckSet=new Set(eff.map(it=>it.i));
   const items=eff.concat(x.basics.map(([i,c])=>({i,kind:"",n:c}))); items.forEach((it,j)=>it.w=j);
   const text=["Commander","1 "+front(d.cidx),"","Deck",...eff.map(it=>"1 "+front(it.i)),...x.basics.map(([i,c])=>c+" "+front(i))].join("\n")+"\n";
@@ -3395,7 +3389,7 @@ function anHTML(k,use){const A=k.an; if(!A) return "";
       ${A.eng.length?`<li>Engines: ${A.eng.map(([l,c])=>`${esc(l)} ×${c}`).join(" · ")}</li>`:""}
       <li>Combos in the deck: ${k.combos?k.combos.n_own:"–"} · one card away: ${k.combos?k.combos.n_near:"–"}</li></ul></div></div>
   <h4>Add from your collection</h4>${list(A.add,freeTxt)}
-  <h4>Worth buying <small>(most played for this commander, not in the deck)</small></h4>${list(A.buy)}${A.buy.length?`<p>${A.buy.map(([c])=>buyA(c,"🛒 "+esc(front(c)))).join(" · ")}</p>`:""}
+  <h4>Worth buying <small>(most played for this commander, not in the deck · prices for information)</small></h4>${list(A.buy,c=>USD(c)?"$"+USD(c).toFixed(2):"")}${A.buy.length?`<p>${A.buy.map(([c])=>buyA(c,"🛒 "+esc(front(c)))).join(" · ")}</p>`:""}
   <h4>Cuts to consider <small>(lowest by the builder's own measures; combo pieces, Game Changers, hidden gems and short roles kept)</small></h4>${list(A.cut)}</section>`;}
 function ibody(k){
   const use=usage(), items=k.cards.map(([i,o,q])=>({i,kind:o?"":"m",n:q,note:cnote(k,i,o,use)}));
@@ -3526,9 +3520,9 @@ document.addEventListener("click",e=>{const t=e.target;
     else{const side=pq.dataset.pinadd||pq.dataset.pinquick, nm=pq.dataset.pinadd?(r.querySelector(".pinq")||{}).value||"":pq.dataset.name;
       if(!nm.trim())return; const o=side==="in"?"out":"in"; next[o]=next[o].filter(x=>x!==nm.trim()); if(!next[side].includes(nm.trim()))next[side].push(nm.trim());}
     postPins(d,next,r); return;}
-  const lsel=t.closest&&t.closest("[data-wsel],[data-ssel]");
+  const lsel=t.closest&&t.closest("[data-wsel]");
   if(lsel&&!lsel.disabled){const r=lsel.closest("details.row");
-    if(lsel.dataset.wsel) r.dataset.w=lsel.dataset.wsel; else r.dataset.s=lsel.dataset.ssel;
+    r.dataset.w=lsel.dataset.wsel;
     const d=DATA[+r.dataset.i], b=rowB(r), k=liveKey(d,b,rowState(d,b,r),lvlOf(r));
     if(LIVE[k]&&LIVE[k].err) delete LIVE[k];        // a failed build is tried again
     r.dataset.slot=""; rerow(r); return;}
@@ -3735,7 +3729,7 @@ DECK_COMBOS = "spellbook_decks.json"   # combos of your saved decklists, by card
 TABLES_FILE = "report_tables.json"   # the report's card/string/combo tables and collection file, for LiveDecks
 
 class LiveDecks:
-    """App mode: builds one deck on request at another EDHREC weight or spending level, with the same
+    """App mode: builds one deck on request at another EDHREC weight, with the same
     builder and bracket rules as the report. Loads the collection and caches on first use (a few seconds)
     and again after a rebuild. Its card, string and combo tables continue the report's, so the page only
     appends the new rows and keeps using its own indices."""
@@ -3835,7 +3829,7 @@ class LiveDecks:
                          "combos": c["CT"].rows[have[2]:], "opts": T.opts[have[3]:]}
 
     def deck(self, q):
-        """q = query: c commander, b bracket, t theme slug, a "1" average deck, w weight 1-4, s spending 1-3,
+        """q = query: c commander, b bracket, t theme slug, a "1" average deck, w weight 1-4, s (ignored: price is information only),
         v the page's build time, nc/ns/nk how many cards/strings/combos the page has.
         Returns (HTTP code, reply)."""
         with self.lock:
@@ -3898,7 +3892,8 @@ class LiveDecks:
             print(f"Pins for {m['name']}: +{len(new['in'])} always, -{len(new['out'])} never")
             return 200, {"pins": new}
 
-    def _build(self, name, b, t, avg, w, s):
+    def _build(self, name, b, t, avg, w, s=2):
+        s = 2                 # price is information only: no budget / expensive pages
         c, a = self.ctx, self.a
         owned, cache = c["owned"], c["cache"]
         m = c["cands"].get(norm(name))
@@ -3955,12 +3950,11 @@ class LiveDecks:
         if avg:
             apage, show = avg_as_page(ap, tp, tp, "all") if t else avg_as_page(ap, pg, base, b)
             x = analyze(m, apage, owned, name_meta, pool_info, b, T, apage, own, focus=tname, profile=prof,
-                        show=show, ew=ew, pins=pn, spend=s)
+                        show=show, ew=ew, pins=pn)
             x["ref"], x["avg"] = avg_shape(ap, owned, name_meta), 1
         else:
             src, bs = (tp, tp) if t else (pg, base)
-            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew, pins=pn,
-                        spend=s)
+            x = analyze(m, src, owned, name_meta, pool_info, b, T, bs, own, focus=tname, profile=prof, ew=ew, pins=pn)
         if t: x["theme"], x["tdecks"] = tname, x["decks"]
         # for /why: the page the deck was built from (the theme page for an archetype; the commander page otherwise,
         # also for average decks, whose own page rates every card 1.0) and the cards it ended up with

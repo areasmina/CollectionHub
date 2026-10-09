@@ -35,12 +35,11 @@ commander row gets "Open in Builder"; Auto Build is a button in Build using the 
   user's strategy wins; EDHREC is evidence, not a requirement. A low-EDHREC owned card can score high when it
   fits (today: commander-engine bonus + hidden gems). Success test: a less popular strategy gives a
   meaningfully different deck and surfaces owned cards the EDHREC-style build misses.
-- **Price (user decision, Oct 2026, replaces "price is never a score"):** spending level is a power dial. $ / $$ / $$$
-  use EDHREC's budget / normal / expensive pages, and at $$$ owned cards that *fit* get a bounded boost by price
-  (`PRICE_W` {1: 0, 2: 0.03, 3: 0.2} × `price_scale()`: log curve, $1 0.15 … $99+ 1.0; Scryfall `usd` of your printing,
-  `SF_VERSION` 3). Price never helps a card with no fit / EDHREC listing / useful role and never overrides bracket
-  rules; owned cards are never excluded by price. Still planned: a CAD budget filter on *missing-card suggestions*.
-  Trostani weight 3: $$ deck $378 of your cards → $$$ $454, Craterhoof in.
+- **Price is information only (user decision, Oct 2026):** price never scores a card (a cheap or underplayed card can be a
+  real gem). The $ / $$ / $$$ spending dial and `PRICE_W` / `price_scale()` are gone; decks always use EDHREC's normal pages
+  (`/deck` ignores `s`). Prices (Scryfall `usd` of your printing / the missing card, `SF_VERSION` 3, CardTable field 7, JS
+  `USD()`/`usd()`) show on the TO BUY receipt (with an estimated total), missing staples and F4 "worth buying".
+  Collection and creativity first: the engine optimises the deck from your binder's synergies toward a win plan.
 - Other planned: "What if I buy this?" (which commanders gain the most from a card).
 
 ## How to run (Windows)
@@ -262,8 +261,8 @@ report.html, `GET /status` reports rebuild progress, `POST /upload` (needs heade
 cross-site posts) checks the CSV header, saves it to `collection/`, and reruns the normal pipeline as a
 child process with the same options. `collection_changes()` keeps the added/removed diff in
 `cache/last_collection.json`. `save_json` and the report write are atomic (temp file + `os.replace`).
-**EDHREC weight 1–4 and spending $/$$/$$$** (per commander panel, app only; the static report is weight 3, $$ and
-shows the buttons disabled): `GET /deck` (same header rule) → `LiveDecks.deck()` builds one deck with the full run's
+**EDHREC weight 1–4** (per commander panel, app only; the static report is weight 3 and
+shows the buttons disabled; the old $/$$/$$$ spending dial was removed, price is information only): `GET /deck` (same header rule) → `LiveDecks.deck()` builds one deck with the full run's
 builder and rules (`analyze(..., ew=EDH_WEIGHT[w])`, `finish_deck()`). Weight multiplies the EDHREC part of a non-land
 card's score (play rate + synergy: 0.4 / 0.7 / 1.0 / 1.4); fit, theme focus and synergy swaps keep theirs.
 Spending = EDHREC's `<path>/budget` / `<path>/expensive` pages (cheapest / priciest 10% of decks; exist for commander,
