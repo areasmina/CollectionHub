@@ -638,11 +638,26 @@ Every decision we both agree on goes here in the same session, with the numbers 
   Elesh Norn 33 → 54 decks, Drivnod 28 → 49, Krang 14 → 22. Elesh Norn still misses Trostani: 0.691 vs bar 0.768 (EDHREC part
   0.025 because EDHREC doesn't list her for Trostani; fit 0.127 + commander link 0.20 + deck synergy 0.339). Not read: doublers
   granted by equipment (The Masamune), type-specific doublers (Echoes of Eternity, Roaming Throne). Patch: `patch_doubler.py`.
-- **Separate UI proposal (open, product decision for the user):** a Deck Wizard view (the engine's deck) next to an EDHREC view
-  (EDHREC's average deck rebuilt with your cards, today's "Typical deck"), plus an optional budget limit on missing cards only
-  (Scryfall prices; owned cards never filtered). Staple protection must not settle this.
-- **Next steps (agreed order):** C1 committed (`5a6b757`, unpushed); card relations landed (`508da06`); port decisions on
-  off-colour + live text and doublers wait for the user; then **5c mana base**: weight basics by coloured pip demand (idea:
+- **Two views + budget (decided; build after the engine work below).** Two switches per commander panel, for the same
+  commander, bracket and archetype: **View = Deck Wizard | EDHREC** and **Source = Commander page | Average deck** (the
+  existing "Popular cards | Typical deck" selector becomes Source, shared by both views; page-wide default + per-panel override
+  as today). Deck Wizard = today's collection-first deck built from that source. EDHREC view shows EDHREC's data as is:
+  - Source **Commander page**: a popularity list ranked by play rate, not a deck: rows in EDHREC order with their play %, owned
+    cards normal, cards you don't own greyed with their price.
+  - Source **Average deck**: EDHREC's real average 99, shown as a deck grid like The 99, owned cards normal, missing cards
+    greyed with their price.
+  Weight 1–4 belongs to the Deck Wizard view only (hidden in the EDHREC view). The leftover spending plumbing
+  (`SPEND_SUFFIX`, `/deck`'s `s`, row `data-s`, `:w…s…` saved-choice suffix) gets removed then (old saved choices still read).
+  **Budget** = an optional per-card price ceiling only: it limits buy suggestions (card popup "buy", Missing staples "buy it",
+  Top 10 to buy, TO BUY receipt) and never changes the 99 or any score. Over-budget cards stay visible and marked ("over
+  budget · $N"), never hidden; the next in-budget card is offered to buy instead. Owned cards are never filtered at any price,
+  and the substitute popup keeps offering owned cards. The estimated total is still shown. A hard total-spend cap is deferred
+  as a separate constraint. Cards without a Scryfall price show "price unknown". **Prices**: USD from Scryfall (`usd`, else
+  foil / etched; your printing for owned cards, by name for missing ones; cached, so the page states the date), CAD conversion
+  later. EDHREC staple protection stays out of this design (separate engine experiment).
+- **Next steps (agreed order):** C1 committed (`5a6b757`, unpushed); card relations landed (`508da06`); 1) review and decide
+  whether to port the trigger-doubler and off-colour (+ live text) changes; 2) complete **5c mana base**; 3) then build the
+  two-view + budget UI above. 5c: weight basics by coloured pip demand (idea:
   mtg-skills `mana_audit` deficit allocation, 0BSD), land count from the curve (Karsten: verify the 31.42 + 3.13 × avg MV −
   0.28 × cheap ramp/draw coefficients against his own article first; mtg-skills' "Karsten" is a different heuristic,
   `max(36, 42 − ramp/2.5)`), owned duals first, report land counts + the weakest-colour readiness check, spot-check a 5-colour
