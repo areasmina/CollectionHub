@@ -778,6 +778,8 @@ def card_relations(m):
         p, c = card_engines(m)
         for i in p:
             out.setdefault((i, "enable"), (None, None))        # only by its card type (an artifact, a creature, a land)
+        for i, repeats in doubler_rep(m).items():
+            out[(i, "reward")] = (repeats, None)
         for i in c:
             out.setdefault((i, "reward"), (True, None))
         _REL_MEMO[k] = out
@@ -963,6 +965,21 @@ ENGINES = [
     ("land discard",
      r"land cards? in your hand (have|has) [^.]{0,30}cycling|(?<!whenever you )discard (a|one or more|any number of|x|two) land cards?",
      (), r"whenever you discard (one or more )?land cards?|whenever you discard (one or more )?lands?\b"),
+    # Trigger doublers are providers for the same event / permanent scope as their Oracle wording.
+    ("doubles enter triggers (any permanent)", r"\bif a permanent entering( the battlefield)? causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles enter triggers (artifact or creature)", r"\bif an artifact or creature entering( the battlefield)? causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles enter triggers (land)", r"\bif a land( or bird you control)? entering( the battlefield)? causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles enter triggers (Bird)", r"\bif a land or bird you control entering( the battlefield)? causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles enter triggers (Wizard)", r"\bif a wizard you control entering( the battlefield)? causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles enter/leave triggers (legendary or artifact)", r"\bif a legendary permanent or an artifact entering or leaving the battlefield causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles death triggers", r"\bif a creature dying causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles attack triggers", r"\bif a creature attacking causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles draw triggers", r"\bif a player drawing a card causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles spell triggers", r"\bif you casting or copying an instant or sorcery spell causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles lifegain triggers", r"\bif you gaining life causes? a triggered ability of (a permanent|this creature|a creature|an? \w+) you (control|own) to trigger, that ability triggers an additional time", (), r"$^"),
+    ("doubles Shaman triggers", r"if a triggered ability of a shaman or another wizard you control triggers", (), r"$^"),
+    ("doubles Wizard triggers", r"if a triggered ability of a shaman or another wizard you control triggers", (), r"$^"),
+    ("doubles Elemental triggers", r"if a triggered ability of another elemental you control triggers", (), r"$^"),
     ("lands in hand",
      r"$^", (), r"discard (one or more )?land cards?|whenever you discard (one or more )?lands?"),
 ]
@@ -981,6 +998,75 @@ SWAP_POOL = 60          # candidates re-checked per swap (best by score + synerg
 _ENG_MEMO = {}
 # a clause where an opponent gets the thing ("Its controller creates a 2/2 Bird"): not something you provide
 OPP_GETS = re.compile(r"\b(its controller|its owner|that player|target opponent|each opponent|an opponent|defending player)( then)? (creates?|draws?|gains?|puts?)\b[^.]*")
+_DBL_MEMO, _DBL_REP = {}, {}
+_TRIG_LINE = re.compile(r"^(when|whenever|at the beginning)\b|\b(when|whenever)\b")
+
+def _repeat_trigger_line(line, m):
+    """Own ETB/death triggers are one-time links; repeated events and other abilities can repeat."""
+    first = m["name"].split(" // ")[0].split(",")[0].split()[0].lower()
+    for match in re.finditer(r"\bwhen(ever)?\b([^.]{0,70}?)\b(enters?|leaves the battlefield|dies)\b", line):
+        obj = match.group(2)
+        self_ = (re.search(r"(^|\s)(~|this (creature|artifact|enchantment|land|permanent|planeswalker))($|\s)", obj)
+                 or re.search(r"(^|\s)" + re.escape(first) + r"($|\s)", obj))
+        if self_ and not re.search(r"\b(another|other)\b", obj):
+            return False
+    return True
+
+def doubler_cons(m):
+    """Trigger scopes this card consumes, once per scope; colourless scope awaits 5c mana checks."""
+    k = norm(m["name"])
+    if k in _DBL_MEMO: return _DBL_MEMO[k]
+    idx = {e[0]: i for i, e in enumerate(_ENG_RX)}
+    out, reps, tw = set(), {}, type_words(m)
+    lines = [l.strip() for l in re.sub(r"\([^)]*\)", "", rules_text(m)).split("\n") if l.strip()]
+    trig = [l for l in lines if _TRIG_LINE.search(l)]
+    def add(name, repeats):
+        i = idx[name]
+        out.add(i)
+        reps[i] = reps.get(i, False) or repeats
+    for line in trig:
+        repeats = _repeat_trigger_line(line, m)
+        for match in re.finditer(r"\bwhen(ever)?\b([^.]{0,70}?)\b(enters?|leaves the battlefield)\b", line):
+            obj = match.group(2)
+            first = m["name"].split(" // ")[0].split(",")[0].split()[0].lower()
+            self_ = (re.search(r"(^|\s)(~|this (creature|artifact|enchantment|land|permanent|planeswalker))($|\s)", obj)
+                     or re.search(r"(^|\s)" + re.escape(first) + r"($|\s)", obj))
+            types = tw if self_ else set(re.findall(r"[a-z]+", obj))
+            if match.group(3) in ("enter", "enters"):
+                add("doubles enter triggers (any permanent)", repeats)
+                if types & {"artifact", "creature"}:
+                    add("doubles enter triggers (artifact or creature)", repeats)
+                if "land" in types: add("doubles enter triggers (land)", repeats)
+                if "bird" in types: add("doubles enter triggers (Bird)", repeats)
+                if "wizard" in types: add("doubles enter triggers (Wizard)", repeats)
+            if types & {"artifact", "legendary"}:
+                add("doubles enter/leave triggers (legendary or artifact)", repeats)
+        if re.search(r"\blandfall\b", line):
+            add("doubles enter triggers (any permanent)", repeats)
+            add("doubles enter triggers (land)", repeats)
+        if re.search(r"\bwhen(ever)?\b[^.]{0,70}\bdies\b", line):
+            add("doubles death triggers", repeats)
+        if re.search(r"\bwhen(ever)?\b[^.]{0,70}\battacks?\b", line):
+            add("doubles attack triggers", repeats)
+        if re.search(r"\bwhen(ever)?\s+(you|a player|any player|each player|an opponent|opponents?|each opponent|target (player|opponent)|that player)\s+draws?\b", line):
+            add("doubles draw triggers", repeats)
+        if re.search(r"\bmagecraft\b|whenever you cast or copy an instant or sorcery|"
+                     r"whenever you cast (a|an|your first) (instant|sorcery|instant or sorcery|noncreature spell|spell)\b", line):
+            add("doubles spell triggers", repeats)
+        if re.search(r"\bwhen(ever)? you gain life\b", line):
+            add("doubles lifegain triggers", repeats)
+    if trig:
+        repeats = any(_repeat_trigger_line(line, m) for line in trig)
+        if "shaman" in tw: add("doubles Shaman triggers", repeats)
+        if "wizard" in tw: add("doubles Wizard triggers", repeats)
+        if "elemental" in tw: add("doubles Elemental triggers", repeats)
+    _DBL_MEMO[k] = frozenset(out)
+    _DBL_REP[k] = reps
+    return _DBL_MEMO[k]
+
+def doubler_rep(m):
+    doubler_cons(m)
+    return _DBL_REP[norm(m["name"])]
 
 def card_engines(m):
     """(engines the card provides, engines it consumes), as sets of engine indices."""
@@ -991,6 +1077,7 @@ def card_engines(m):
         for i, (lab, pr, ty, co) in enumerate(_ENG_RX):
             if pr.search(text if lab.startswith("opponents") else ptext) or ty & tw: prov.add(i)
             if co.search(text): cons.add(i)
+        cons |= doubler_cons(m)
         if "land" in tw: prov.add(len(_ENG_RX) - 1)          # land cards feed "discard a land card"
         _ENG_MEMO[k] = (frozenset(prov), frozenset(cons))
     return _ENG_MEMO[k]
