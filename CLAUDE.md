@@ -595,8 +595,62 @@ A new user starts empty and uploads a collection first. Order (one phase per com
 7. Later: missing-card prices (Scryfall USD/EUR → CAD), Archidekt real-deck matching,
    wizard UI, challenges, achievements.
 
+## Decisions log (agreed with the user, Oct 2026)
+
+Every decision we both agree on goes here in the same session, with the numbers behind it. Status: **decided** (follow it),
+**measured, not ported** (scratch experiment, waiting for the user), **rejected** (don't propose again without new evidence).
+
+- **Named cards are test cases, never targets (decided).** No card added by hand, no per-card exception, no weight tuned
+  until a named card gets in (Brallin, Bontu's Monument, Elesh Norn, Craterhoof). Find the general rule, measure it on all
+  commanders (`tests/measure.py` + theme decks), show the numbers, let the user decide.
+- **Experiments run in scratch copies (decided).** Engine ideas are measured in a copy outside the repo (`%TEMP%\dw_tmp\...`)
+  against the latest baseline (overview decks via `measure.py`, theme decks via a theme comparison) before anything is ported.
+  Report: rule violations (must be 0), changed lists, own picks, stand-ins, finishers, short decks, side effects. No commit or
+  port without the user's OK; one change per commit; baselines go in the commit of their step.
+- **Strict theme-finisher rule (rejected).** "In a theme deck, plan fill may add only finishers matching the theme": +221 short
+  theme decks (37 → 258), upgrade lists mostly empty. C1 keeps only "plan fill never cuts a card matching the theme".
+- **Craterhoof at weight 3 (decided):** no force-in rule; revisit when C2 shows the chosen plan and finishers.
+- **Off-colour abilities (measured, not ported; re-measured on `508da06`).** Don't exclude a whole card for one dead
+  ability. `colour_status(m, ci)`: a sentence tied to *your* spells/permanents of a colour (or basic land type) outside the
+  identity is dead. All sentences dead = **inactive** (Jet Medallion outside black, God-Pharaoh's Faithful in mono-W): leaves
+  that commander's pool, a pin still wins. Dead + live = **partial** (Bontu's Monument): kept, but read from its live text
+  only (roles, mechanics, engines, keywords, fit, card relations, stand-in likeness), memo keys = name|identity
+  (`live_view`, `mkey`), F4 and `find_homes` too, full text for display. Result: Jet Medallion 169 → 0 non-black decks,
+  Bontu's Monument 85 → 55 non-black decks (as stand-in 36 → 1), 0 rule violations, no memo leaks (order test). Audit: 3 owned
+  cards flagged, no false positives; basic-land conditions detected. Limits: sentence-level reading, "spells you cast that are
+  black" not covered, role tags whole-card (partial cards use regex roles), EDHREC rank (strength) whole-card.
+  Scratch patches: `patch_offc.py`, `patch_live.py`, `patch_live_rel.py`.
+- **Trigger density for weak drain payoffs (measured, rejected as is).** "Drain 1–2 per event counts as a finisher only with as
+  many event enablers as the average deck": 3,515 of 8,412 verdicts fail, 901 of them by 1–2 cards (knife edge); our builder runs
+  fewer creatures than EDHREC's average decks, so enter / creature-cast payoffs fail most; theme decks short 33 → 50. Doesn't
+  remove Bontu's Monument from Trostani Lifegain (32 creatures vs average 29). Open options: a tolerance, re-check after each
+  fill swap, or a mana-per-trigger rule (the user's real concern: 3 mana for 1 life per creature).
+- **EDHREC staple protection (experiment only, not a product decision).** Staple = owned card in the top third of the deck's
+  source page, tested two ways: top third alone, and top third plus a minimum 30% play rate. Recall today: non-land 92–94% (96–98% with the floor), lands 86–93% (93–98% with the
+  floor); misses (first recall run, overview decks, w3, top third): synergy swaps 1,166, land cap 992, outscored 703, combo
+  packages 554, stand-ins 352, plan fill 167. Protection with
+  evidence (commander, theme, card-to-card, legal combo, win plan) changed almost nothing (39 overview lists): "card-to-card"
+  evidence is present in 2,557 of 2,612 overrides, since synergy swaps have it by nature. Next if wanted: a stricter evidence bar
+  (card-to-card alone not enough: ~389 staple cuts blocked). The 992 land-cap misses belong to 5c (mana base).
+- **Trigger doublers (measured, not ported).** New card relations "doubles enter / death / attack / draw / spell / lifegain
+  triggers" from the wording "if <event> causes a triggered ability of a permanent you control to trigger, that ability triggers
+  an additional time" ↔ cards whose own triggers fire on that event. Newest collection: 88 lists changed, 0 rule violations;
+  Elesh Norn 33 → 54 decks, Drivnod 28 → 49, Krang 14 → 22. Elesh Norn still misses Trostani: 0.691 vs bar 0.768 (EDHREC part
+  0.025 because EDHREC doesn't list her for Trostani; fit 0.127 + commander link 0.20 + deck synergy 0.339). Not read: doublers
+  granted by equipment (The Masamune), type-specific doublers (Echoes of Eternity, Roaming Throne). Patch: `patch_doubler.py`.
+- **Separate UI proposal (open, product decision for the user):** a Deck Wizard view (the engine's deck) next to an EDHREC view
+  (EDHREC's average deck rebuilt with your cards, today's "Typical deck"), plus an optional budget limit on missing cards only
+  (Scryfall prices; owned cards never filtered). Staple protection must not settle this.
+- **Next steps (agreed order):** C1 committed (`5a6b757`, unpushed); card relations landed (`508da06`); port decisions on
+  off-colour + live text and doublers wait for the user; then **5c mana base**: weight basics by coloured pip demand (idea:
+  mtg-skills `mana_audit` deficit allocation, 0BSD), land count from the curve (Karsten: verify the 31.42 + 3.13 × avg MV −
+  0.28 × cheap ramp/draw coefficients against his own article first; mtg-skills' "Karsten" is a different heuristic,
+  `max(36, 42 − ramp/2.5)`), owned duals first, report land counts + the weakest-colour readiness check, spot-check a 5-colour
+  and a 2-colour deck. `/ultrareview` can't take a commit with a full baseline JSON (148k lines; limit 8k).
+
 ## Working rules for Claude Code
 
+- Record every decision we agree on in the **Decisions log** above, in the same session, with its numbers.
 - Commit with git before any non-trivial change. One phase per change; don't jump ahead.
 - Preserve existing features and CLI flags unless asked. Don't rewrite the whole file.
 - Test fast first: `py deck_wizard.py --csv "Collection_ (1).csv" --only "Sephiroth, Fabled SOLDIER" --no-open`,
