@@ -283,7 +283,7 @@ WIN_RX_CARD = re.compile(
     r"creatures you control (gain [^.]{0,40}? and )?get \+(x|\d+)/\+(x|\d+) until end of turn|"
     r"where x is the number of creatures you control|"
     r"\byou win the game\b|(each opponent|target player|that player) loses the game|"
-    r"whenever [^.]{0,80}(each opponent loses \w+ life|deals? \w+ damage to each opponent)|"
+    r"whenever [^.]{0,80}(\. if you do, )?(each opponent loses \w+ life|deals? \w+ damage to each opponent)|"
     r"additional combat phase|double strike and trample")
 
 def roles_of(m):
@@ -593,7 +593,9 @@ MECHANICS = {
     "lifegain":   (r"\byou gain [^.]{0,12}life|\bgains? \d+ life|whenever you gain life|\blifelink\b",
                    ("lifegain", "lifedrain"), ()),
     # losing life and being dealt damage both end the same plan (Doom drains 2; Brallin deals 1 to each opponent)
-    "drain":      (r"\b(each opponent|target opponent|each player) loses? \w+ life|deals? \w+ damage to each opponent",
+    "drain":      (r"\b(each opponent|target opponent|each player) loses? \w+ life|deals? \w+ damage to each opponent|"
+                   r"whenever an opponent [^.]{0,60}(that player|they) loses? \w+ life|"     # punishers (Painful Quandary)
+                   r"whenever an opponent [^.]{0,60}deals? \w+ damage to (that player|them)",
                    ("lifedrain", "burn", "group slug"), ()),
     "spells":     (r"instant (or|and) sorcery|noncreature spell|whenever you cast (a|an|your) (instant|sorcery|noncreature)",
                    ("spellslinger", "storm", "spell copy", "cantrips"), ("instant", "sorcery")),
@@ -736,6 +738,76 @@ _FIT_MEMO = {"who": None}
 FIT_CMDR = 0.12        # the card works with what the commander does by itself (Doom connives every turn ->
                         # "whenever you discard" cards trigger every turn); once per card, Oracle text via ENGINES
 
+FIT_ENGINE = 0.2        # ...the link repeats on both sides at no extra cost: a real engine (Doom connives every turn ->
+                        # Feast of Sanity fires every turn for free; Doom drains on land discards <- Tectonic Reformation)
+FIT_ONCE = 0.06         # ...one side happens once (a sorcery, an enters/dies trigger, cycling the card itself)
+                        # (a link only by card type, e.g. the commander is a creature and the card pumps creatures, keeps FIT_CMDR)
+# One ability line of a card: does it happen again and again (static, trigger, activated ability) or once?
+ONCE_RX = re.compile(r"^when\b|^(\w+)?cycling\b|^(flashback|madness|escape|unearth|jump-start|retrace|embalm|eternalize|"
+                     r"disturb|encore|blitz|dash|evoke)\b")
+COST_RX = re.compile(r"you may pay [^.]{0,25}\. if you do|\bpay \{[^}]*\}[^.]{0,15}\. if you do|you may pay \d+ life")
+# cost to set the interaction up or repeat it (not per trigger): an activated ability whose cost has mana in it, a granted
+# ability with a mana cost ("each land card in your hand has cycling {R}"), equip / reconfigure to each new creature
+ACT_COST_RX = re.compile(r"^[^:\"(]*\{(?!t\})[^}]*\}[^:\"(]*:|\b(has|have|gains?) [\w ]{0,15}cycling \{")
+EQUIP_RX = re.compile(r"^(equip|reconfigure)\b[^\n(]*?((\{[^}]*\})+)")
+_REL_MEMO = {}
+
+def card_relations(m):
+    """Per engine, what the card does with it, read ability line by line: {(engine, side): (repeats, cost)}, sides
+    "enable" (makes it happen: an outlet, a token maker, a wheel) and "reward" (triggers on it: a payoff).
+    repeats = a static, triggered or activated ability (not a one-shot spell, enters/dies trigger or the card's own
+    cycling). cost = None (free) or what you pay, kept apart: per trigger ("pays each trigger": "you may pay {1}. If you
+    do") or to set it up / repeat it ("{2}, {T}: ...", "has cycling {R}", "equip {1} per creature" for an "equipped
+    creature" trigger). A free trigger on an equipment is still a free trigger; moving the equipment is the setup cost."""
+    k = norm(m["name"])
+    if k not in _REL_MEMO:
+        spell = bool({"instant", "sorcery"} & type_words(m))
+        lines = [l.strip() for l in rules_text(m).split("\n")]
+        eq = next((EQUIP_RX.search(l) for l in lines if EQUIP_RX.search(l)), None)
+        out = {}
+        for line in lines:
+            rep = not spell and not ONCE_RX.search(line)
+            setup = ("equip " + eq.group(2) + " per creature" if eq and re.search(r"\b(equipped|attached) creature", line)
+                     else "costs mana each time" if ACT_COST_RX.search(line) else None)
+            for i, (_, pr, _, co) in enumerate(_ENG_RX):
+                for side, rx in (("enable", pr), ("reward", co)):
+                    if rx.search(OPP_GETS.sub("", line) if side == "enable" and not _ENG_RX[i][0].startswith("opponents") else line):
+                        old = out.get((i, side))
+                        new = (rep, "pays each trigger" if side == "reward" and COST_RX.search(line) else setup)
+                        if old is None or (bool(new[0]), new[1] is None) > (bool(old[0]), old[1] is None): out[(i, side)] = new
+        p, c = card_engines(m)
+        for i in p:
+            out.setdefault((i, "enable"), (None, None))        # only by its card type (an artifact, a creature, a land)
+        for i in c:
+            out.setdefault((i, "reward"), (True, None))
+        _REL_MEMO[k] = out
+    return _REL_MEMO[k]
+
+def commander_relation(cmdr, m):
+    """How card m works with what the commander does by itself: (fit bonus, label) or (0, "").
+    Two directions: m rewards what the commander does (Doom connives -> "whenever you discard"), or m enables what the
+    commander rewards (Doom drains when you discard a land <- lands with cycling). The bonus is FIT_ENGINE when both
+    sides repeat for free, FIT_CMDR when it repeats but someone pays each time (per trigger, or to set it up again:
+    an activation, granted cycling, equip), FIT_ONCE when one side happens once. The best link counts; the label says
+    which and why, with the cost in words (the numbers stay internal)."""
+    if card_kind(m) == "land": return 0.0, ""
+    rc, rm = card_relations(cmdr), card_relations(m)
+    best = (0.0, "")
+    for (i, side), (rep, cost) in rm.items():
+        other = ("enable" if side == "reward" else "reward")
+        if (i, other) not in rc: continue
+        crep, ccost = rc[(i, other)]
+        cost = cost or ccost
+        lab = _ENG_RX[i][0]
+        if rep is None or crep is None: v, how = FIT_CMDR, "by card type"
+        elif rep and crep and not cost: v, how = FIT_ENGINE, "repeats"
+        elif rep and crep: v, how = FIT_CMDR, "repeats, " + cost
+        else: v, how = FIT_ONCE, "once"
+        txt = f"{lab} ({'pays off' if side == 'reward' else 'feeds'} the commander, {how})"
+        if v > best[0] or (v == best[0] and v and lab not in best[1]):
+            best = (v, txt if v > best[0] else best[1] + ", " + txt)
+    return best
+
 def commander_link(cmdr, m):
     """Engines where card m consumes what the commander provides, or provides what it consumes
     (e.g. Doom: connive = discard -> Captain Howler, Brallin), as labels; [] when none."""
@@ -744,12 +816,12 @@ def commander_link(cmdr, m):
     return sorted({_ENG_RX[i][0] for i in (cp & c) | (cc & p) if i < len(_ENG_RX)})
 
 def cmdr_fit(cmdr, m, profile, bracket):
-    """card_fit + FIT_CMDR when the card works with the commander's own engine (commander_link)."""
+    """card_fit + the commander_relation bonus when the card works with the commander's own engine."""
     f, why = card_fit(m, profile, bracket)
-    link = commander_link(cmdr, m) if card_kind(m) != "land" else []
-    if link:
-        f += FIT_CMDR
-        why = "with commander: " + ", ".join(link[:2]) + (" · " + why if why else "")
+    v, lab = commander_relation(cmdr, m)
+    if v:
+        f += v
+        why = "with commander: " + lab + (" · " + why if why else "")
     return f, why
 
 GEM_FLOOR = 0.35       # hidden gem hitting all the commander's mechanics: valued like a card in 35% of decks
@@ -824,13 +896,14 @@ def card_fit(m, profile, bracket):
 ENGINES = [
     ("discard",
      r"(?<!they )(?<!that player )(?<!opponent )(?<!target player )(?<!each opponent )(?<!whenever you )(?<!if you )"
-     r"(?<!causes you to )\bdiscards? (a|an|one|two|three|x|that|those|this|any number of|up to \w+|your hand|cards?)\b|"
-     r"\bthen discards?\b|\bconnives?\b|\bcycling\b|by discarding|as an additional cost to cast this spell, discard",
-     (), r"whenever you discard|whenever (a player|one or more players) discards|\bmadness\b|"
+     r"(?<!causes you to )(?<!cycle or )\bdiscards? (a|an|one|two|three|x|that|those|this|any number of|up to \w+|your hand|cards?)\b|"
+     r"\bthen discards?\b|\bconnives?\b|\bcycling\b|by discarding|as an additional cost to cast this spell, discard|"
+     r"\beach player discards\b",                                     # wheels: you discard too
+     (), r"whenever you (cycle or )?discard|whenever (a player|one or more players) discards|\bmadness\b|"
          r"if you discarded|for each card discarded|causes you to discard|discarded this way"),
     ("graveyard",
      r"\bmills?\b|\bsurveil\b|\bdiscard|\bconnives?\b|put [^.]{0,40}into your graveyard|\bdredge\b",
-     (), r"from your graveyard|\bflashback\b|\bescape\b|\bunearth\b|\bdelve\b|\bthreshold\b|\bjump-start\b|"
+     (), r"from your graveyard|(put|return)s? [^.]{0,40}from a graveyard (onto|to)|creature card in a graveyard|\bflashback\b|\bescape\b|\bunearth\b|\bdelve\b|\bthreshold\b|\bjump-start\b|"
          r"\bretrace\b|\bembalm\b|\beternalize\b|\bdisturb\b|cards? in your graveyard|\bdescend\b"),
     ("sacrifice",
      r"sacrifice (a|an|another|one or more|any number of|x) [^.:]{0,30}:|, sacrifice (a|an|another) (creature|artifact|permanent)",
@@ -839,7 +912,7 @@ ENGINES = [
     ("fodder",
      r"creates? [^.]{0,60}creature tokens?|when [^.]{0,15}~ dies|\bpersist\b|\bundying\b|return ~ from your graveyard",
      (), r"sacrifice (a|an|another|one or more|any number of|x) (creature|nontoken creature|permanent)s?[^.:]{0,20}:|"
-         r", sacrifice (a|an|another) creature"),
+         r", sacrifice (a|an|another) creature|whenever (equipped|enchanted) creature dies"),
     ("go wide",
      r"creates? [^.]{0,60}creature tokens?|creates? [^.]{0,30}\b(x|two|three|four|five|that many)\b[^.]{0,30}tokens?|\bpopulate\b",
      ("creature",), r"creatures you control (gain [^.]{0,40}? and )?get \+|for each creature you control|number of creatures you control|"
@@ -852,7 +925,7 @@ ENGINES = [
      r"put (a|an|one|two|three|x|that many|\w+) \+1/\+1 counters?|\bconnives?\b|\bproliferate\b|\bbolster\b|\badapt\b|"
      r"\bsupport\b|\bmodular\b|\boutlast\b|\bevolve\b|\bmentor\b|\btraining\b|enters with [^.]{0,20}\+1/\+1 counter",
      (), r"with (a|one or more) \+1/\+1 counters? on (it|them)|for each \+1/\+1 counter|whenever one or more \+1/\+1 counters|"
-         r"\bproliferate\b|double the number of [^.]{0,20}counters|counters? on it, put|moves? [^.]{0,20}counters"),
+         r"\bproliferate\b|double the number of [^.]{0,20}counters|counters? on it, put|\bmoves? [^.]{0,20}counters"),
     ("lifegain",
      r"\byou gain \w+ life|\bgain \w+ life|\blifelink\b|you gain life equal",
      (), r"whenever you gain life|if you('ve| have) gained|whenever you gain one or more life"),
@@ -877,7 +950,19 @@ ENGINES = [
      (), r"\blandfall\b|whenever a land (you control )?enters|whenever one or more lands (you control )?enter"),
     ("card draw",
      r"\bdraws? (a|an|one|two|three|x|that many|\w+) cards?\b", (),
-     r"whenever you draw|draw your second card|whenever a player draws|whenever an opponent draws"),
+     r"whenever you draw|draw your second card"),
+    # opponents drawing is its own engine: your draw spells don't feed "whenever an opponent draws" punishers
+    ("opponents draw",
+     r"\beach (other )?(player|opponent) draws|\bthat player draws|\btarget (player|opponent) draws|\bdraws? (an|\w+) additional cards?", (),
+     r"whenever (a player|an opponent) draws"),
+    # opponents discarding is its own engine: your outlets don't feed "whenever an opponent discards"
+    ("opponents discard",
+     r"\b(each opponent|target opponent|each player|target player|that player) discards?\b|\bunless they discard\b", (),
+     r"whenever (an opponent|a player|one or more players) discards"),
+    # discarding land cards is an event of its own (Doom drains on it); land cards themselves feed "lands in hand"
+    ("land discard",
+     r"land cards? in your hand (have|has) [^.]{0,30}cycling|(?<!whenever you )discard (a|one or more|any number of|x|two) land cards?",
+     (), r"whenever you discard (one or more )?land cards?|whenever you discard (one or more )?lands?\b"),
     ("lands in hand",
      r"$^", (), r"discard (one or more )?land cards?|whenever you discard (one or more )?lands?"),
 ]
@@ -894,15 +979,17 @@ SWAP_SLACK = 2          # ...but only while that role is at most this many above
 BENCH_SHOW = 8          # "next in line" cards listed per deck
 SWAP_POOL = 60          # candidates re-checked per swap (best by score + synergy at the start)
 _ENG_MEMO = {}
+# a clause where an opponent gets the thing ("Its controller creates a 2/2 Bird"): not something you provide
+OPP_GETS = re.compile(r"\b(its controller|its owner|that player|target opponent|each opponent|an opponent|defending player)( then)? (creates?|draws?|gains?|puts?)\b[^.]*")
 
 def card_engines(m):
     """(engines the card provides, engines it consumes), as sets of engine indices."""
     k = norm(m["name"])
     if k not in _ENG_MEMO:
         text, tw = rules_text(m), type_words(m)
-        prov, cons = set(), set()
-        for i, (_, pr, ty, co) in enumerate(_ENG_RX):
-            if pr.search(text) or ty & tw: prov.add(i)
+        prov, cons, ptext = set(), set(), OPP_GETS.sub("", text)
+        for i, (lab, pr, ty, co) in enumerate(_ENG_RX):
+            if pr.search(text if lab.startswith("opponents") else ptext) or ty & tw: prov.add(i)
             if co.search(text): cons.add(i)
         if "land" in tw: prov.add(len(_ENG_RX) - 1)          # land cards feed "discard a land card"
         _ENG_MEMO[k] = (frozenset(prov), frozenset(cons))
@@ -1077,7 +1164,7 @@ PLAN_RX = {
     "overrun": re.compile(r"creatures you control (gain [^.]{0,40}? and )?get \+(x|\d+)/\+(x|\d+)[^.]{0,60}until end of turn|"
                           r"until end of turn, creatures you control (gain [^.]{0,40}? and )?get \+(x|\d+)/\+(x|\d+)|"
                           r"creatures you control gain [^.]{0,40}double strike[^.]{0,40}until end of turn"),
-    "drain": re.compile(r"(whenever|at the beginning of) [^.]{0,80}(each opponent loses (x|\d+) life|deals? (x|\d+) damage to each opponent)|"
+    "drain": re.compile(r"(whenever|at the beginning of) [^.]{0,80}(\. if you do, )?(each opponent loses (x|\d+) life|deals? (x|\d+) damage to each opponent)|"
                         r"each opponent loses (x|[5-9]|\d\d) life|deals? (x|[5-9]|\d\d) damage to each opponent|"
                         r"(each opponent loses life|damage to each opponent) equal to|"
                         r"each opponent loses \w+ life for each|deals? \w+ damage to each opponent for each|"

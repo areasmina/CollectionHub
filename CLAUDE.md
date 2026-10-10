@@ -80,7 +80,8 @@ Deck metrics for comparing builder versions (offline, ~30 s):
 `baseline_lands.json` = + owned dual lands; `baseline_step3.json` = + ready, bracket_est, over_bracket;
 `baseline_combos.json` = bracket rules enforced in the builder; `baseline_rules.json` = official rules only; `baseline_keywords.json` = + keyword mechanics; `baseline_text.json` = + Oracle-text likeness in substitutes; `baseline_themes.json` = after theme decks/speed-ups; `baseline_avg.json` = + average decks;
 `baseline_synergy.json` = + card-to-card synergy swaps; `baseline_gems.json` = + commander-engine bonus, hidden gems,
-damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = weight 1 = 0.4, job-card swap rule; `baseline_c1.json` = + win plans, adds win_plan, plan_fill)
+damage to each opponent = drain; `baseline_engine1.json` = + win role, go-wide engine, swap surplus rule; `baseline_ui.json` = engine4 + per-deck card lists: `--compare` reports decks whose cards changed; `baseline_spellbook_combos.json` = Spellbook combo speed rule; `baseline_a2.json` = weight 1 = 0.4, job-card swap rule; `baseline_c1.json` = + win plans, adds win_plan, plan_fill; `baseline_relations.json` = + card relations: enabler/payoff,
+who, repeat, cost)
 
 Report check (headless Edge/Chrome, no Node needed, ~5 s): `py tests/check_report.py` renders every
 commander × bracket panel and fails on any JavaScript error; it also clicks bracket chips and runs the
@@ -259,6 +260,30 @@ Key functions:
   matches "deals N damage to each opponent". Effect vs `baseline_synergy`: own picks +2.6, substitutes −1.7,
   removal −0.6, draw +0.8, no rule violations. Test case (user): Brallin, Skyshark Rider is in every Doctor Doom
   deck; Captain Howler (14.5% on EDHREC, one mechanic) is in the Discard archetype and offered as a swap.
+- **Card relations** (Oct 2026; test case Doom Discard B4: Faith of the Devoted, Feast of Sanity, Tectonic Reformation):
+  `card_relations()` reads each ability line of the Oracle text (reminder text included) per `ENGINES` engine: side
+  *enable* (outlet, wheel, token maker) or *reward* (payoff trigger); repeats (static / triggered / activated) or once
+  (instant/sorcery, "when ~ enters/dies", the card's own cycling, flashback-style one-offs, `ONCE_RX`); cost kept apart:
+  per trigger ("you may pay {1}. If you do", `COST_RX`) vs to set up / repeat (mana in an activation cost, granted
+  "has cycling {R}", `ACT_COST_RX`; "equipped creature" triggers + equip {N} = "equip {N} per creature", `EQUIP_RX`).
+  `commander_relation()` pairs the commander's own lines with the card's, both directions (card pays off what the
+  commander does / feeds what it rewards): both repeat for free → `FIT_ENGINE` 0.20; repeats but costs each time, or
+  linked only by card type → `FIT_CMDR` 0.12; one side once → `FIT_ONCE` 0.06. Reason text in words only ("with commander:
+  discard (pays off the commander, repeats, pays each trigger)"); the numbers stay internal. Who: engines "opponents draw"
+  (Font of Mythos, Howling Mine ↔ Razorkin) and "opponents discard" (Painful Quandary) are separate from yours; "land
+  discard" (Doom's drain ↔ cycling lands, Seismic Assault); wheels ("each player discards") enable your discard; what an
+  opponent gets ("its controller creates a 2/2 Bird", `OPP_GETS`) isn't something you provide. Text fixes: "whenever you
+  cycle or discard" is a payoff; drain/win read through "pay {1}. If you do," (`WIN_RX_CARD`, `PLAN_RX` drain);
+  opponent-punisher drain ("that player loses N life"); "removes counters" no longer a +1/+1 payoff; "equipped creature
+  dies" is a fodder payoff (Skullclamp); "return … from a graveyard" / "creature card in a graveyard" are graveyard payoffs
+  (Reanimate, Animate Dead). Effect vs `baseline_c1` (`baseline_relations.json`): own picks +0.35–0.5, stand-ins −0.1,
+  staples (rank ≤100) +0.1/deck, finishers +0.2, plan fills −0.07, removal −0.15–0.3, ~3.6 cards/deck changed, 0 rule
+  violations; archetype decks: Skullclamp 77→88% of token/sacrifice decks, Reanimate 93→100% of reanimator decks; out:
+  Scrawling Crawler / Faerie Mastermind (opponent-draw payoffs had been linked to your own draws), Primal Amulet (the
+  counters bug), one-shot spells (Unearth, Syphon Mind). Doom Discard B4: Captain Howler + Brallin in; Feast (free
+  repeating payoff) and Faith (pays {1}) still just under the bar; Tectonic Reformation 0.014 short (cycling {R} each time),
+  Reanimate holds that slot. Limits: "once per turn" and trigger frequency not modelled; cost is yes/no, not size; the
+  tiers are hand-set; theme focus still counts both players' discard; some engine patterns stay loose.
 - `find_subs()` – closeness 0–1 of owned stand-ins: share of the missing card's roles × card kind
   (creature/spell/land; ×0.75 for a different card type, instant = sorcery) × mana value distance ×
   `OFF_TYPE` (0.4) if the missing card has a type the commander names (`commander_types()`, e.g. Dragon
