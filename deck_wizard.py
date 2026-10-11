@@ -22,7 +22,7 @@ Options:
   --port 8765       port for --serve
 """
 import argparse, csv, glob, hashlib, json, math, os, re, sys, time, unicodedata
-import heapq, http.server, subprocess, threading
+import heapq, html, http.server, subprocess, threading
 import urllib.error, urllib.parse, urllib.request, webbrowser
 
 UA = "DeckWizard/0.5 (personal collection tool)"
@@ -110,16 +110,34 @@ def save_json(path, obj):
 
 # ------------------------------------------------------------ collection
 COLLECTION_DIR = "collection"   # drop new ManaBox exports here; the newest one is used
+# Collections (F2): "main" is this folder (report.html, pins.json, decks_in/, collection/ as always); up to SLOT_MAX - 1
+# more live in collections/<id>/, each fully separate (its own CSVs, report, decks, pins, change history), all sharing
+# cache/ (card data). collections.json = {"active": id, "names": {id: display name}}.
+SLOTS_DIR, SLOTS_FILE, SLOT_MAX, MAIN = "collections", "collections.json", 3, "main"
 
-def manabox_error(head):
-    """None if `head` (the CSV's first line) looks like a ManaBox export, else a message."""
-    cols = next(csv.reader([head]), [])
-    if "Name" in cols and "Scryfall ID" in cols: return None
-    return "Not a ManaBox collection export (needs 'Name' and 'Scryfall ID' columns)."
+def slots_read(base):
+    reg = load_json(os.path.join(base, SLOTS_FILE))
+    names = {MAIN: "My collection"}
+    names.update({k: v for k, v in (reg.get("names") or {}).items()
+                  if k == MAIN or os.path.isdir(os.path.join(base, SLOTS_DIR, k))})
+    active = reg.get("active") if reg.get("active") in names else MAIN
+    return {"active": active, "names": names}
 
-def find_collection():
-    """Newest ManaBox CSV: the collection folder first, then the current folder."""
-    for folder in (COLLECTION_DIR, "."):
+def slot_dir(base, sid):
+    return base if sid == MAIN else os.path.join(base, SLOTS_DIR, sid)
+
+def slot_args(a, sid):
+    """A copy of the command-line options pointed at collection `sid` (paths only; a.base = the main folder)."""
+    b = argparse.Namespace(**vars(a))
+    b.collection, b.out = sid, slot_dir(a.base, sid)
+    b.cache = os.path.join(a.base, "cache")
+    b.coll_dir = os.path.join(b.out, COLLECTION_DIR) if sid != MAIN else None
+    if sid != MAIN: b.decks_in = os.path.join(b.out, "decks_in")
+    return b
+
+def find_collection(folder=None):
+    """Newest ManaBox CSV: the collection folder first, then the current folder (a named collection: its folder only)."""
+    for folder in ((folder,) if folder else (COLLECTION_DIR, ".")):
         found = []
         for p in glob.glob(os.path.join(folder, "*.csv")):
             try:
@@ -129,10 +147,17 @@ def find_collection():
         if found: return max(found, key=os.path.getmtime)
     return None
 
-def collection_changes(csv_path, owned, cmdr_names, cache_dir):
+def manabox_error(head):
+    """None if `head` (the CSV's first line) looks like a ManaBox export, else a message."""
+    cols = next(csv.reader([head]), [])
+    if "Name" in cols and "Scryfall ID" in cols: return None
+    return "Not a ManaBox collection export (needs 'Name' and 'Scryfall ID' columns)."
+
+def collection_changes(csv_path, owned, cmdr_names, state_dir):
     """Cards and commanders added/removed since the previous collection file. Kept until the
-    CSV changes again, so rerunning the same file still shows what it added."""
-    path = os.path.join(cache_dir, "last_collection.json")
+    CSV changes again, so rerunning the same file still shows what it added. `state_dir`: cache/ for the main
+    collection, the collection's own folder for the others."""
+    path = os.path.join(state_dir, "last_collection.json")
     with open(csv_path, "rb") as f: h = hashlib.md5(f.read()).hexdigest()
     prev = load_json(path)
     if prev.get("hash") == h: return prev.get("diff")
@@ -2892,6 +2917,11 @@ h3.p5-slab{margin:22px 0 14px;font:900 clamp(1.6rem,3.4vw,2.6rem)/1 var(--head);
 .chg .ncm{color:#0B0B0B;background:var(--y);transform:skewX(-6deg) rotate(-1deg);animation-delay:380ms}
 .ncs{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.lbl{font-size:11px;font-weight:700;text-transform:uppercase}
 .nc{padding:4px 10px;font:800 14px/1.2 var(--head);text-decoration:none;color:#0B0B0B !important;background:var(--y);border:2px solid #0B0B0B}
+#slots .slist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+#slots li{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}#slots .sacts{margin-left:auto;display:flex;gap:6px}
+#slots button{padding:2px 10px;font:700 12px var(--head);text-transform:uppercase;border:2px solid var(--ink);background:var(--card);color:var(--ink);cursor:pointer}
+#slots button:hover,#slots button:focus-visible{background:var(--r);color:#FFFFFF}#slots button:disabled{opacity:.4;cursor:not-allowed}
+#slots .sst{font-weight:700}#slots .sst:empty{display:none}
 #coll .clist{font-size:.8rem}#coll .clist>summary{display:inline;padding:0;font-size:12px;text-transform:uppercase;border-bottom:2px solid var(--r)}
 .shead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:22px}
 .shead h2.p5-slab,#unused>h2.p5-slab{margin:0;font-size:clamp(2rem,5vw,3.25rem);font-stretch:62%;line-height:.9}
@@ -3155,12 +3185,13 @@ function openCmdr(nm){if(location.hash!=="#discover")history.pushState(null,"","
   if(r){r.open=true; r.scrollIntoView();} else $("list").scrollIntoView();}
 $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>${n(ST.unique)}</strong>unique</li><li><strong>${ST.cands}</strong>commanders</li><li><strong>${DATA.length}</strong>analyzed</li>${ST.unused?`<li class="hl"><strong>${n(ST.unused.n_unused)}</strong>unused cards</li>`:""}`;
 
+const SLOT=(ST.slot&&ST.slot.id)||"main", SNS=SLOT==="main"?"":SLOT+"/";   // collections keep separate choices
 /* ---------- Collection page: the file in use + the drop box (the only upload control; app only), what changed ---------- */
 (function(){
   const C=ST.coll||{}, D=C.diff, served=location.protocol.startsWith("http");
   const names=(l,k)=>l.slice(0,40).map(esc).join(", ")+(k>l.length?` … +${k-l.length} more`:"");
   const chg=D&&(D.added_n||D.removed_n||D.new_cmdrs_n);
-  $("hfile").innerHTML=`${esc(C.csv||"")}${chg?` · <b>${[D.added_n?`+${D.added_n} new cards`:"",D.removed_n?`−${D.removed_n} removed`:"",D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")}</b>`:""}<span id="hups"></span>`;
+  $("hfile").innerHTML=`${ST.slot&&ST.slot.id!=="main"?`${esc(ST.slot.name)} · `:""}${esc(C.csv||"")}${chg?` · <b>${[D.added_n?`+${D.added_n} new cards`:"",D.removed_n?`−${D.removed_n} removed`:"",D.new_cmdrs_n?`${D.new_cmdrs_n} new commanders`:""].filter(Boolean).join(" · ")}</b>`:""}<span id="hups"></span>`;
   $("cttl").innerHTML=`<span aria-hidden="true">${ransom("Your",3)}</span><span aria-hidden="true">${ransom("collection",6)}</span>`;
   $("cstats").innerHTML=[["cards",n(ST.cards)],["unique",n(ST.unique)],["commanders",n(ST.cands)]].concat(ST.unused?[["unused",n(ST.unused.n_unused)]]:[])
     .map(([k,v],i)=>`<div${i===3?' class="u"':""}><dt>${k}</dt><dd>${v}</dd></div>`).join("");
@@ -3179,8 +3210,34 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
     ${D.added_n?`<p class="add">Added: ${names(D.added,D.added_n)}</p>`:""}
     ${D.removed_n?`<p class="rem">Removed: ${names(D.removed,D.removed_n)}</p>`:""}</details>`
     :D?`<p class="dim">No changes since the previous collection.</p>`:`<p class="dim">First import: there's no previous file to compare with yet. The next CSV will show what changed.</p>`;
-  $("coll").innerHTML=file+`<div class="ccard p5-in p5-card"><h2>Since the last file</h2>${blocks}${ncs}${list}</div>`;
+  $("coll").innerHTML=file+`<div class="ccard p5-in p5-card"><h2>Since the last file</h2>${blocks}${ncs}${list}</div>`
+    +(served?`<div class="ccard p5-in p5-card" id="slots"><h2>Your collections</h2><ul class="slist"></ul>
+      <p class="sbtn"><button type="button" data-cnew>+ New collection</button></p><span class="sst" role="status"></span>
+      <small class="dim">Each collection has its own report, decks, pins and history; card data is shared. A new one starts empty: drop its CSV.</small></div>`:"");
   if(!served) return;
+  // collections (app only): open / rename / delete / new, through POST /collections; the page reloads into the chosen one
+  const SH={"X-Deck-Wizard":"1"}, sst=document.querySelector("#slots .sst");
+  const cpost=b=>fetch("/collections",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},SH),body:JSON.stringify(b)})
+    .then(r=>r.json().then(j=>{if(!r.ok) throw new Error(j.error||"failed"); return j;}));
+  const cfail=e=>{sst.textContent=e.message||"Is the Deck Wizard App window still open?";};
+  const slist=()=>fetch("/collections",{headers:SH}).then(r=>r.json()).then(j=>{
+    document.querySelector("#slots .slist").innerHTML=j.slots.map(c=>`<li data-cid="${esc(c.id)}"><b>${esc(c.name)}</b>${c.id===SLOT?" <span class=\"tag\">open</span>":""}
+      <small class="dim">${esc(c.file||"no file yet")}${c.built?" · built "+new Date(c.built*1000).toLocaleDateString():""}${j.building===c.id?" · building…":""}</small>
+      <span class="sacts">${c.id===SLOT?"":`<button type="button" data-cact="switch">Open</button>`}<button type="button" data-cact="rename">Rename</button>${c.id==="main"?"":`<button type="button" data-cact="delete">Delete</button>`}</span></li>`).join("");
+    document.querySelector("#slots [data-cnew]").disabled=j.slots.length>=j.max;
+    document.querySelector("#slots [data-cnew]").title=j.slots.length>=j.max?`Up to ${j.max} collections: delete one first`:"";
+  }).catch(cfail);
+  $("slots").addEventListener("click",e=>{
+    if(e.target.closest("[data-cnew]")){const nm=prompt("Name of the new collection (e.g. a friend's name):");
+      if(nm) cpost({action:"new",name:nm}).then(()=>location.reload(),cfail); return;}
+    const b=e.target.closest("[data-cact]"); if(!b) return;
+    const id=b.closest("[data-cid]").dataset.cid, act=b.dataset.cact;
+    if(act==="switch") cpost({action:"switch",id}).then(()=>location.reload(),cfail);
+    else if(act==="rename"){const nm=prompt("New name:"); if(nm) cpost({action:"rename",id,name:nm}).then(slist,cfail);}
+    else if(act==="delete"&&confirm("Delete this collection? It's moved to collections/.trash, not erased."))
+      cpost({action:"delete",id}).then(()=>id===SLOT?location.reload():slist(),cfail);
+  });
+  slist();
   const ups=$("ups"), hups=$("hups");
   const say=(t,busy)=>{ups.textContent=t; hups.textContent=busy?" · rebuilding…":"";};
   const poll=()=>fetch("/status").then(r=>r.json()).then(s=>{
@@ -3194,7 +3251,7 @@ $("stats").innerHTML=`<li><strong>${n(ST.cards)}</strong>cards</li><li><strong>$
     if(!/\.csv$/i.test(f.name)){say("That's not a .csv file: export your collection from ManaBox as CSV."); return;}
     say("Uploading "+f.name+"…",1);
     try{
-      const r=await fetch("/upload",{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"text/csv"},body:f});
+      const r=await fetch("/upload?c="+encodeURIComponent(SLOT),{method:"POST",headers:{"X-Deck-Wizard":"1","Content-Type":"text/csv"},body:f});
       const j=await r.json();
       if(!r.ok){say(j.error||"Upload failed"); return;}
       say("Received "+f.name+", starting the rebuild…",1); poll();
@@ -3278,7 +3335,7 @@ function gapsHTML(gaps,deckSet,slots){
     const adv=subs.length?"":`<p class="adv">No close match in your collection for this ${esc(roles||"synergy")} slot.${r>=25?" It's a core card for this commander, worth picking up.":" The deck fills this slot with other cards you own."}</p>`;
     return `<div class="gap"><div class="alt">${tile(i,{cls:"nown",note:r?r+"% of decks":"missing"})}${buyA(i,"🛒 "+esc(STORE.name))}<small>${esc(roles||"synergy piece")}</small></div><span class="arrow" aria-hidden="true">→</span>${alts}${adv}</div>`;}).join("");}
 /* ---------- your choices for substitute slots (saved in this browser) ---------- */
-const chKey=(d,b,t)=>"dw:"+d.slug+":"+b+(t?":"+t:"");
+const chKey=(d,b,t)=>"dw:"+SNS+d.slug+":"+b+(t?":"+t:"");
 // choices live in localStorage; MEM keeps them for this visit when the browser blocks storage
 const MEM={};
 function getCh(d,b,t){const k=chKey(d,b,t);
@@ -3486,7 +3543,7 @@ function shopHTML(d,b,items,t,x){
     return tot?`<span class="rr"><span>ESTIMATED</span><span>~$${Math.round(tot)}${nop?` <small>(${nop} without a price)</small>`:""}</span></span>`:"";})()}
   ${bought.length?`<small>${bought.length} bought ✓</small>`:""}<small>each line opens ${esc(STORE.name)} · prices are Scryfall's, for information only</small>
   <span class="rbtn">${list?`<button class="cps" data-text="${esc(list)}">Copy list</button>`:""}${chosen?`<button class="reset-ch">Reset my choices</button>`:""}</span></div>`;}
-const tbKey=d=>"dw:tb:"+d.slug, TBM={};
+const tbKey=d=>"dw:tb:"+SNS+d.slug, TBM={};
 function tbGet(d){try{const v=localStorage.getItem(tbKey(d)); if(v!=null) return JSON.parse(v)||{};}catch(e){} return Object.assign({},TBM[tbKey(d)]);}
 function tbSet(d,o){TBM[tbKey(d)]=o; try{Object.keys(o).length?localStorage.setItem(tbKey(d),JSON.stringify(o)):localStorage.removeItem(tbKey(d));}catch(e){}}
 document.addEventListener("click",e=>{const t=e.target.closest&&e.target.closest("[data-tbs],[data-tbu],[data-bsw]"); if(!t)return;
@@ -4112,19 +4169,67 @@ WAIT_PAGE = """<!doctype html><meta charset="utf-8"><title>Deck Wizard</title>
  if(s.running)setTimeout(p,1000);else if(s.ok)location.reload();else document.getElementById("l").textContent+="\\nFailed - see the Deck Wizard window.";});})();
 </script>"""
 
+# A collection with no report yet (new, or its first build failed): upload its ManaBox CSV, or switch collections.
+EMPTY_PAGE = r"""<!doctype html><meta charset="utf-8"><title>Deck Wizard</title><meta name="viewport" content="width=device-width">
+<body style="background:#111827;color:#e5e7eb;font:15px system-ui;padding:40px;max-width:760px">
+<h1 style="font-family:Georgia">Deck Wizard</h1>
+<h2 style="font-family:Georgia;font-weight:400">__NAME__</h2>
+<p>This collection is empty. Export it from ManaBox as CSV and drop it here; the first build takes a while (every
+commander is analysed), later updates are faster.</p>
+<label id="dz" style="display:block;padding:36px;text-align:center;border:3px dashed #9ca3af;cursor:pointer">
+<b>Drop a ManaBox CSV here</b><br><small>or click to choose a file</small>
+<input type="file" accept=".csv,text/csv" style="position:absolute;opacity:0;width:1px;height:1px" aria-label="Choose a ManaBox CSV"></label>
+<pre id="l" role="status" style="color:#9ca3af;white-space:pre-wrap"></pre>
+<h3>Your collections</h3><ul id="cl" style="line-height:2"></ul>
+<p><button id="nw">+ New collection</button> <button id="del">Delete this collection</button></p>
+<script>
+const H={"X-Deck-Wizard":"1"}, ID="__ID__", say=t=>document.getElementById("l").textContent=t;
+const post=b=>fetch("/collections",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},H),body:JSON.stringify(b)})
+  .then(r=>r.json().then(j=>{if(!r.ok) throw new Error(j.error||"failed"); return j;}));
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function list(){fetch("/collections",{headers:H}).then(r=>r.json()).then(j=>{
+  document.getElementById("cl").innerHTML=j.slots.map(c=>"<li>"+(c.active?"<b>"+esc(c.name)+"</b> (open)"
+    :"<button data-sw='"+c.id+"'>Open</button> "+esc(c.name))+" <small style='color:#9ca3af'>"+esc(c.file||"no file yet")+"</small></li>").join("");
+  document.getElementById("nw").disabled=j.slots.length>=j.max;
+  document.getElementById("del").hidden=ID==="main";});}
+document.getElementById("cl").addEventListener("click",e=>{const b=e.target.closest("[data-sw]");
+  if(b) post({action:"switch",id:b.dataset.sw}).then(()=>location.reload(),e=>say(e.message));});
+document.getElementById("nw").onclick=()=>{const n=prompt("Name of the new collection (e.g. a friend's name):");
+  if(n) post({action:"new",name:n}).then(()=>location.reload(),e=>say(e.message));};
+document.getElementById("del").onclick=()=>{if(confirm("Delete this collection? It's moved to collections/.trash, not erased."))
+  post({action:"delete",id:ID}).then(()=>location.reload(),e=>say(e.message));};
+function poll(){fetch("/status").then(r=>r.json()).then(s=>{
+  if(s.running){say("Building… "+(s.line||"")); setTimeout(poll,1000);}
+  else if(s.ok&&s.slot===ID) location.reload();
+  else if(s.ok===false&&s.slot===ID) say("The build failed: "+(s.line||"see the Deck Wizard window"));});}
+async function up(f){if(!f) return;
+  if(!/[.]csv$/i.test(f.name)){say("That's not a .csv file: export your collection from ManaBox as CSV."); return;}
+  say("Uploading "+f.name+"…");
+  const r=await fetch("/upload?c="+encodeURIComponent(ID),{method:"POST",headers:Object.assign({"Content-Type":"text/csv"},H),body:f});
+  const j=await r.json(); if(!r.ok){say(j.error||"Upload failed"); return;} poll();}
+const dz=document.getElementById("dz"), inp=dz.querySelector("input");
+inp.onchange=()=>{up(inp.files[0]); inp.value="";};
+["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault(); dz.style.borderColor="#ef4444";}));
+dz.addEventListener("dragleave",()=>dz.style.borderColor="");
+dz.addEventListener("drop",e=>{e.preventDefault(); dz.style.borderColor=""; up(e.dataTransfer.files[0]);});
+list(); poll();
+</script>"""
+
 class Rebuild:
-    """Runs the normal pipeline as a child process (fresh state each time) and keeps its output."""
-    def __init__(self, args):
-        self.args, self.proc, self.lines, self.ok, self.started = args, None, [], None, 0
+    """Runs the normal pipeline as a child process (fresh state each time) and keeps its output. One rebuild at a
+    time, for one collection (`slot`)."""
+    def __init__(self):
+        self.proc, self.lines, self.ok, self.started, self.slot = None, [], None, 0, None
         self.lock = threading.Lock()
 
     def running(self):
         return self.proc is not None and self.ok is None
 
-    def start(self, csv_path):
+    def start(self, csv_path, args, slot=MAIN):
         with self.lock:
             if self.running(): return False
-            cmd = [sys.executable, "-u", os.path.abspath(__file__), "--csv", csv_path, "--no-open"] + self.args
+            self.slot = slot
+            cmd = [sys.executable, "-u", os.path.abspath(__file__), "--csv", csv_path, "--no-open"] + args
             env = dict(os.environ, PYTHONIOENCODING="utf-8")   # card names aren't all cp1252
             self.lines, self.ok, self.started = [], None, time.time()
             self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -4141,7 +4246,7 @@ class Rebuild:
         print("Rebuild " + ("finished." if self.ok else "FAILED.") + " Waiting for uploads (Ctrl+C to quit).")
 
     def status(self):
-        return {"running": self.running(), "ok": self.ok, "started": self.started,
+        return {"running": self.running(), "ok": self.ok, "started": self.started, "slot": self.slot,
                 "line": self.lines[-1] if self.lines else ""}
 
 PINS_FILE = "pins.json"   # your pins per commander: {"<commander>": {"in": [card names], "out": [card names]}}
@@ -4174,7 +4279,7 @@ class LiveDecks:
         global OFFLINE
         OFFLINE = a.offline
         if a.no_combos: CSB_DOWN[0] = True
-        cache_dir = os.path.join(a.out, "cache")
+        cache_dir = a.cache
         _, owned, _ = load_owned(tab["csv"], cache_dir)
         names_path = os.path.join(cache_dir, "scryfall_names.json")
         name_meta = resolve_names(set(), names_path)
@@ -4243,7 +4348,7 @@ class LiveDecks:
                 c_, m_ = parse_decklist(fp)
                 extra |= {n_ for _, n_ in c_ + m_ if norm(n_) not in c["owned"] and norm(n_) not in c["name_meta"]}
             if extra: c["name_meta"] = resolve_names(extra, c["names_path"])
-            dc_path = os.path.join(self.a.out, "cache", DECK_COMBOS)
+            dc_path = os.path.join(self.a.cache, DECK_COMBOS)
             if "dcombos" not in c: c["dcombos"] = load_json(dc_path)
             memo, n_dc, out = c.setdefault("imp", {}), len(c["dcombos"]), []
             for fp in files:
@@ -4440,11 +4545,63 @@ class LiveDecks:
                          "combos": [[c["cards"], bool(combo_done(c, L["names"]))] for c in L["own"]
                                     if any(norm(x) == k for x in c["cards"])][:6]}
 
-def serve(a, csv_path, child_args):
-    """Local-only web app: serves report.html, accepts collection uploads and builds decks at other
-    EDHREC weights / spending levels on request (LiveDecks)."""
-    out_html = os.path.join(a.out, "report.html")
-    rb, live = Rebuild(child_args), LiveDecks(a)
+def serve(a, child_args):
+    """Local-only web app: serves the active collection's report.html, accepts collection uploads, switches between
+    collections (up to SLOT_MAX, /collections) and builds decks at other EDHREC weights on request (LiveDecks)."""
+    base, rb, lives, slock = a.base, Rebuild(), {}, threading.RLock()
+    def active(): return slots_read(base)["active"]
+    def live_for(sid):
+        with slock:
+            if sid not in lives: lives[sid] = LiveDecks(slot_args(a, sid))
+            return lives[sid]
+    def html_of(sid): return os.path.join(slot_dir(base, sid), "report.html")
+    def csv_of(sid): return find_collection(os.path.join(slot_dir(base, sid), COLLECTION_DIR) if sid != MAIN else None)
+    def rebuild(sid, path): return rb.start(path, child_args + ["--collection", sid], sid)
+    def coll_list():
+        reg, out = slots_read(base), []
+        for sid, nm in reg["names"].items():
+            tab = load_json(os.path.join(slot_dir(base, sid), TABLES_FILE))
+            path = csv_of(sid)
+            out.append({"id": sid, "name": nm, "file": os.path.basename(path) if path else "", "built": tab.get("built"),
+                        "report": os.path.exists(html_of(sid)), "active": sid == reg["active"]})
+        return {"active": reg["active"], "slots": out, "max": SLOT_MAX, "building": rb.slot if rb.running() else None}
+    def coll_post(body):
+        """{"action": "new" | "switch" | "rename" | "delete", "id", "name"} -> (HTTP code, reply)."""
+        act, sid, name = body.get("action"), str(body.get("id", "")), " ".join(str(body.get("name", "")).split())
+        with slock:
+            reg = slots_read(base)
+            if act in ("new", "rename") and not 1 <= len(name) <= 40:
+                return 400, {"error": "Give the collection a name (1 to 40 characters)."}
+            if act == "new":
+                if len(reg["names"]) >= SLOT_MAX:
+                    return 400, {"error": f"You already have {SLOT_MAX} collections: delete one first."}
+                root = slugify(name)[:30].strip("-") or "collection"
+                sid, i = root, 2
+                while sid == MAIN or sid in reg["names"] or os.path.exists(os.path.join(base, SLOTS_DIR, sid)):
+                    sid, i = f"{root}-{i}", i + 1
+                os.makedirs(os.path.join(base, SLOTS_DIR, sid, COLLECTION_DIR))
+                reg["names"][sid], reg["active"] = name, sid
+                print(f"New collection: {name} ({SLOTS_DIR}/{sid})")
+            elif sid not in reg["names"]:
+                return 404, {"error": "No such collection."}
+            elif act == "switch":
+                reg["active"] = sid
+            elif act == "rename":
+                reg["names"][sid] = name
+            elif act == "delete":
+                if sid == MAIN: return 400, {"error": "Your main collection can't be deleted."}
+                if rb.running() and rb.slot == sid:
+                    return 409, {"error": "That collection is being rebuilt. Try again when it's done."}
+                trash = os.path.join(base, SLOTS_DIR, ".trash")
+                os.makedirs(trash, exist_ok=True)       # kept, not erased: move it back to collections/ to restore
+                os.replace(os.path.join(base, SLOTS_DIR, sid), os.path.join(trash, sid + time.strftime("-%Y%m%d-%H%M%S")))
+                reg["names"].pop(sid); lives.pop(sid, None)
+                if reg["active"] == sid: reg["active"] = MAIN
+                print(f"Collection deleted (moved to {SLOTS_DIR}/.trash): {sid}")
+            else:
+                return 400, {"error": "Unknown action."}
+            save_json(os.path.join(base, SLOTS_FILE), reg)
+            return 200, coll_list()
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *args): pass
@@ -4462,32 +4619,39 @@ def serve(a, csv_path, child_args):
         def do_GET(self):
             path = self.path.split("?")[0]
             if path in ("/", "/report.html"):
-                if os.path.exists(out_html):
-                    with open(out_html, "rb") as f: self.reply(200, f.read(), "text/html; charset=utf-8")
-                else:
+                sid = active()
+                if os.path.exists(html_of(sid)):
+                    with open(html_of(sid), "rb") as f: self.reply(200, f.read(), "text/html; charset=utf-8")
+                elif rb.running() and rb.slot == sid:
                     self.reply(200, WAIT_PAGE, "text/html; charset=utf-8")
+                else:       # a new, empty collection (or one whose first build failed): upload its CSV here
+                    nm = html.escape(slots_read(base)["names"][sid])
+                    self.reply(200, EMPTY_PAGE.replace("__NAME__", nm).replace("__ID__", sid), "text/html; charset=utf-8")
             elif path == "/status":
                 self.reply(200, rb.status())
+            elif path == "/collections":
+                if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
+                self.reply(200, coll_list())
             elif path == "/decks":
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
                 if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
                 q = {k: v[0] for k, v in urllib.parse.parse_qs(self.path.partition("?")[2]).items()}
                 try:
-                    code, out = live.decks(q)
+                    code, out = live_for(active()).decks(q)
                 except Exception as e:
                     import traceback; traceback.print_exc()
                     code, out = 500, {"error": f"Reading your decks failed: {e}"}
                 self.reply(code, json.dumps(out))
             elif path == "/pins":
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
-                code, out = live.pins()
+                code, out = live_for(active()).pins()
                 self.reply(code, out)
             elif path == "/why":
                 if self.headers.get("X-Deck-Wizard") != "1": return self.reply(403, {"error": "forbidden"})
                 if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
                 q = {k: v[0] for k, v in urllib.parse.parse_qs(self.path.partition("?")[2]).items()}
                 try:
-                    code, out = live.why(q)
+                    code, out = live_for(active()).why(q)
                 except Exception as e:
                     import traceback; traceback.print_exc()
                     code, out = 500, {"error": f"Why failed: {e}"}
@@ -4498,7 +4662,7 @@ def serve(a, csv_path, child_args):
                 if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
                 q = {k: v[0] for k, v in urllib.parse.parse_qs(self.path.partition("?")[2]).items()}
                 try:
-                    code, out = live.deck(q)
+                    code, out = live_for(active()).deck(q)
                 except Exception as e:      # keep the app up; show the reason in the page and the window
                     import traceback; traceback.print_exc()
                     code, out = 500, {"error": f"Building failed: {e}"}
@@ -4521,7 +4685,7 @@ def serve(a, csv_path, child_args):
                 except ValueError:
                     return self.reply(400, {"error": "Bad pins request."})
                 if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
-                code, out = live.pins(body)
+                code, out = live_for(active()).pins(body)
                 return self.reply(code, out)
             if self.path == "/decks" and self.headers.get("X-Deck-Wizard") == "1":
                 try:
@@ -4531,12 +4695,21 @@ def serve(a, csv_path, child_args):
                     return self.reply(400, {"error": "Bad deck request."})
                 if rb.running(): return self.reply(409, {"error": "A rebuild is running. Try again when it's done."})
                 try:
-                    code, out = live.decks({k: str(body.get(k, "")) for k in ("v", "nc", "ns", "nk", "no")}, body)
+                    code, out = live_for(active()).decks({k: str(body.get(k, "")) for k in ("v", "nc", "ns", "nk", "no")}, body)
                 except Exception as e:
                     import traceback; traceback.print_exc()
                     code, out = 500, {"error": f"Saving the deck failed: {e}"}
                 return self.reply(code, json.dumps(out))
-            if self.path != "/upload" or self.headers.get("X-Deck-Wizard") != "1":
+            if self.path == "/collections" and self.headers.get("X-Deck-Wizard") == "1":
+                try:
+                    body = json.loads(data.decode("utf-8"))
+                    if not isinstance(body, dict): raise ValueError
+                except ValueError:
+                    return self.reply(400, {"error": "Bad collections request."})
+                code, out = coll_post(body)
+                return self.reply(code, out)
+            upath, _, uq = self.path.partition("?")
+            if upath != "/upload" or self.headers.get("X-Deck-Wizard") != "1":
                 return self.reply(403, {"error": "forbidden"})
             if not data: return self.reply(400, {"error": "The file is empty."})
             try:
@@ -4546,19 +4719,23 @@ def serve(a, csv_path, child_args):
             err = manabox_error(text.split("\n", 1)[0].strip("\r"))
             if err: return self.reply(400, {"error": err})
             if rb.running(): return self.reply(409, {"error": "A rebuild is already running. Try again when it's done."})
-            os.makedirs(COLLECTION_DIR, exist_ok=True)
-            path = os.path.join(COLLECTION_DIR, time.strftime("ManaBox %Y-%m-%d %H%M%S.csv"))
+            sid = (urllib.parse.parse_qs(uq).get("c") or [""])[0]    # the collection the page showed
+            if sid not in slots_read(base)["names"]: sid = active()
+            folder = os.path.join(slot_dir(base, sid), COLLECTION_DIR) if sid != MAIN else COLLECTION_DIR
+            os.makedirs(folder, exist_ok=True)
+            path = os.path.join(folder, time.strftime("ManaBox %Y-%m-%d %H%M%S.csv"))
             with open(path, "wb") as f: f.write(data)
-            print(f"\nNew collection uploaded -> {path}")
-            if not rb.start(path): return self.reply(409, {"error": "A rebuild is already running."})
-            self.reply(202, {"ok": True, "saved": path})
+            print(f"\nNew collection file uploaded ({slots_read(base)['names'][sid]}) -> {path}")
+            if not rebuild(sid, path): return self.reply(409, {"error": "A rebuild is already running."})
+            self.reply(202, {"ok": True, "saved": path, "slot": sid})
 
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", a.port), Handler)
     url = f"http://127.0.0.1:{a.port}/"
     print(f"Deck Wizard App running at {url}  (only reachable from this PC; Ctrl+C to quit)")
-    if not os.path.exists(out_html):   # the browser shows WAIT_PAGE until this first build is done
-        print(f"No report yet: building one from {csv_path}")
-        rb.start(csv_path)
+    sid = active()
+    if not os.path.exists(html_of(sid)) and csv_of(sid):   # the browser shows WAIT_PAGE until this first build is done
+        print(f"No report yet: building one from {csv_of(sid)}")
+        rebuild(sid, csv_of(sid))
     if not a.no_open: webbrowser.open(url)
     try:
         srv.serve_forever()
@@ -4614,34 +4791,42 @@ def main():
                     help="only re-render report.html with the current page code (seconds; keeps its decks and data)")
     ap.add_argument("--store-url", default=STORE_URL,
                     help="where 'buy' links search for a card; {card} = the card name (default: shop.com)")
+    ap.add_argument("--collection", default="",
+                    help="which collection to build: an id from collections.json (default: main, this folder)")
     a = ap.parse_args()
     if a.offline and a.refresh: ap.error("--offline and --refresh can't be combined")
     if a.serve and a.refresh: ap.error("--serve and --refresh can't be combined")
+    a.base = a.out
+    reg = slots_read(a.base)
+    if a.collection and a.collection not in reg["names"]:
+        ap.error(f"no collection '{a.collection}' (have: {', '.join(reg['names'])})")
+    if a.serve:   # rebuilds after an upload use the same options, pointed at the collection being rebuilt
+        child = ["--out", a.base, "--brackets", a.brackets, "--decks-in", a.decks_in, "--store-url", a.store_url]
+        child += ["--only", a.only] if a.only else []
+        child += ["--limit", str(a.limit)] if a.limit else []
+        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline), ("--no-themes", a.no_themes),
+                                         ("--no-avg", a.no_avg)) if on]
+        return serve(a, child)
+    a = slot_args(a, a.collection or MAIN)
+    if a.collection != MAIN: print(f"Collection: {reg['names'][a.collection]} ({a.out})")
     if a.restyle:
         out_html = os.path.join(a.out, "report.html")
         err = restyle_report(out_html)
         if err: sys.exit(err)
         print(f"Restyled {out_html} with the current page code ({os.path.getsize(out_html) / 1e6:.1f} MB); reload it in the browser.")
         return
-    csv_path = a.csv or find_collection()
+    csv_path = a.csv or find_collection(a.coll_dir)
     if not csv_path:
-        ap.error(f"no ManaBox CSV found: put your export in the '{COLLECTION_DIR}' folder or pass --csv")
-    if a.serve:   # rebuilds after an upload use the same options
-        child = ["--out", a.out, "--brackets", a.brackets, "--decks-in", a.decks_in, "--store-url", a.store_url]
-        child += ["--only", a.only] if a.only else []
-        child += ["--limit", str(a.limit)] if a.limit else []
-        child += [f for f, on in (("--no-combos", a.no_combos), ("--offline", a.offline), ("--no-themes", a.no_themes),
-                                         ("--no-avg", a.no_avg)) if on]
-        return serve(a, csv_path, child)
+        ap.error(f"no ManaBox CSV found: put your export in the '{a.coll_dir or COLLECTION_DIR}' folder or pass --csv")
     global OFFLINE
     OFFLINE = a.offline
     brackets = [b for b in VALID_BRACKETS if b in {x.strip().lower() for x in a.brackets.split(",")}]
 
-    cache_dir = os.path.join(a.out, "cache")
+    cache_dir = a.cache                         # shared by every collection
     if a.no_combos: CSB_DOWN[0] = True          # --no-combos: no Spellbook requests, cached flags only
     coll, owned, qty = load_owned(csv_path, cache_dir, a.refresh)
     cands = commander_candidates(owned)
-    diff = collection_changes(csv_path, owned, [m["name"] for m in cands], cache_dir)
+    diff = collection_changes(csv_path, owned, [m["name"] for m in cands], cache_dir if a.collection == MAIN else a.out)
     if diff:
         print(f"Since the previous collection: +{len(diff['added'])} cards, -{len(diff['removed'])} cards, "
               f"{len(diff['new_cmdrs'])} new commanders")
@@ -4820,6 +5005,7 @@ def main():
     stats = {"cards": sum(q for _, q in coll.values()), "unique": len(owned), "cands": len(cands),
              "built": time.time(), "unused": unused,
              "store": {"url": a.store_url, "name": urllib.parse.urlparse(a.store_url).netloc.replace("www.", "")},
+             "slot": {"id": a.collection, "name": slots_read(a.base)["names"].get(a.collection, "")},
              "coll": {"csv": os.path.basename(csv_path),
                       "at": time.strftime("saved %Y-%m-%d %H:%M", time.localtime(os.path.getmtime(csv_path))),
                       "diff": {k2: v for k, l in (diff or {}).items()

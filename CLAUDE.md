@@ -72,6 +72,7 @@ Useful flags:
 | `--offline` | No network; cached data only (tests, quick reruns) |
 | `--restyle` | Only re-render `report.html` with the current page code, reusing its data (seconds; after page-only changes) |
 | `--store-url URL` | Where "buy" links search; `{card}` = card name (default `https://shop.com/search/results?query={card}`, the user's store) |
+| `--collection ID` | Build another collection (an id from `collections.json`, e.g. a friend's; default `main` = this folder) |
 
 Deck metrics for comparing builder versions (offline, ~30 s):
 `py tests/measure.py --csv "Collection_ (1).csv" --compare tests/baseline_step2.json`
@@ -315,6 +316,19 @@ report.html, `GET /status` reports rebuild progress, `POST /upload` (needs heade
 cross-site posts) checks the CSV header, saves it to `collection/`, and reruns the normal pipeline as a
 child process with the same options. `collection_changes()` keeps the added/removed diff in
 `cache/last_collection.json`. `save_json` and the report write are atomic (temp file + `os.replace`).
+**Collections (F2, Oct 11 2026; user decision: fully separate, up to 3):** `main` = this folder as always; others live in
+`collections/<id>/` with their own `collection/` CSVs, `report.html`, `report_tables.json`, `pins.json`, `decks/`,
+`decks_in/` and `last_collection.json`; all share `cache/` (card data). `collections.json` = {active, names} (`slots_read`,
+`slot_dir`, `slot_args` sets out / cache / decks_in / coll_dir; `SLOT_MAX` 3). CLI: `--collection ID` (default main, so
+`Update Deck Wizard.bat` always builds yours). App: `GET`/`POST /collections` (header rule; actions new / switch / rename /
+delete; delete moves the folder to `collections/.trash/`, main can't be deleted, nor a collection being rebuilt); `GET /`,
+`/deck`, `/why`, `/pins`, `/decks` use the active collection (`LiveDecks` per collection); `POST /upload?c=<id>` saves into
+that collection and rebuilds it (`Rebuild.slot`, one rebuild at a time, `/status` has `slot`); an empty collection shows
+`EMPTY_PAGE` (drop box + switcher). Page: `STATS.slot` {id, name}; Collection page card "Your collections" (`#slots`: open,
+rename, delete, + new, app only); header shows the collection's name (not for main); saved choices and Top-10 ticks are keyed
+per collection (`SLOT`/`SNS` in `chKey`/`tbKey`; main keeps its old keys). Tested: 21 app checks (new / upload / build /
+own files / pins separate / switch / rename / limit / delete / trash) + `/deck` from each collection (Aerith: 21% vs 41%
+match, 35 vs 41 different cards), `check_report.py` 0 errors on the full report restyled with the new page code.
 **EDHREC weight 1–4** (per commander panel, app only; the static report is weight 3 and
 shows the buttons disabled; the old $/$$/$$$ spending dial was removed, price is information only): `GET /deck` (same header rule) → `LiveDecks.deck()` builds one deck with the full run's
 builder and rules (`analyze(..., ew=EDH_WEIGHT[w])`, `finish_deck()`). Weight multiplies the EDHREC part of a non-land
@@ -529,8 +543,8 @@ A new user starts empty and uploads a collection first. Order (one phase per com
   buying (`ANALYSIS_BUY`), cuts (`ANALYSIS_CUT`, lowest score; combo pieces, Game Changers, hidden gems and roles at/below
   target kept). Rule-based only, no invented scores. Test case: Brallin (Doom's hidden gem) is never a suggested cut.
 - **Step 1** on-demand app (commander list ranks fast from Collection Match; a commander's decks are built when opened;
-  small page instead of the 41 MB report). **F2** collection slots (up to 3 per user: choose, restart = erase, start
-  empty; share by link or .txt). **Step 2** Phase 5 mobile layout. **Step 3** deck editing (add from collection, cuts,
+  small page instead of the 41 MB report). ✅ **F2** collection slots (up to 3: choose, start empty, delete to trash; see
+  App mode; sharing by link or .txt comes with step 4). **Step 2** Phase 5 mobile layout. **Step 3** deck editing (add from collection, cuts,
   export) — the start of Build mode.
 - Then ask: **step 4** users (invite links, per-user space, shared EDHREC/Scryfall/Spellbook caches, one rate limiter);
   **step 5** online (PC + tunnel first, cloud server later) + installable app (PWA) with an offline copy.
