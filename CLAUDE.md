@@ -610,16 +610,28 @@ Every decision we both agree on goes here in the same session, with the numbers 
 - **Strict theme-finisher rule (rejected).** "In a theme deck, plan fill may add only finishers matching the theme": +221 short
   theme decks (37 → 258), upgrade lists mostly empty. C1 keeps only "plan fill never cuts a card matching the theme".
 - **Craterhoof at weight 3 (decided):** no force-in rule; revisit when C2 shows the chosen plan and finishers.
-- **Off-colour abilities (measured, not ported; re-measured on `508da06`).** Don't exclude a whole card for one dead
-  ability. `colour_status(m, ci)`: a sentence tied to *your* spells/permanents of a colour (or basic land type) outside the
-  identity is dead. All sentences dead = **inactive** (Jet Medallion outside black, God-Pharaoh's Faithful in mono-W): leaves
-  that commander's pool, a pin still wins. Dead + live = **partial** (Bontu's Monument): kept, but read from its live text
-  only (roles, mechanics, engines, keywords, fit, card relations, stand-in likeness), memo keys = name|identity
-  (`live_view`, `mkey`), F4 and `find_homes` too, full text for display. Result: Jet Medallion 169 → 0 non-black decks,
-  Bontu's Monument 85 → 55 non-black decks (as stand-in 36 → 1), 0 rule violations, no memo leaks (order test). Audit: 3 owned
-  cards flagged, no false positives; basic-land conditions detected. Limits: sentence-level reading, "spells you cast that are
-  black" not covered, role tags whole-card (partial cards use regex roles), EDHREC rank (strength) whole-card.
-  Scratch patches: `patch_offc.py`, `patch_live.py`, `patch_live_rel.py`.
+- **Off-colour abilities (decided, ported Oct 11 2026; rebuilt on the new PC, the scratch patches stayed on the old one).**
+  Don't exclude a whole card for one dead ability. `dead_sentence()` / `colour_status(m, ci)`: a sentence tied to *your*
+  spells/permanents of a colour word or basic land type outside the identity (`OWN_COLOUR_RX`, no card names) is dead; a
+  line whose first sentence is dead is dead whole. A colour clause that gates the effect (inside a whenever / when / if /
+  as long as / at the beginning clause, `_GATE`) is dead even with a target elsewhere ("Whenever you cast a black spell,
+  target opponent loses 1 life"). Stay live: a target outside a non-gating colour clause (Word of Undoing), a
+  second trigger (Shrine: "at the beginning of your upkeep and whenever you cast a blue spell"), "unless" (tapped lands),
+  other players' colours ("countered by blue spells", "hexproof from black"). All lines dead = **inactive**: leaves
+  that commander's pool (`build_pool`), a pin puts it back (`analyze`). Dead + live = **partial**: read from its live text
+  only (`live_view`: oracle, keywords; `owned_view` in `analyze`, `analyze_imported`/F4, `find_homes`, `/why`), memo keys
+  `mkey` = name|identity; roles = the whole card's minus those only the dead text has; CardTable shows the whole card.
+  Checks (user's four conditions): removals across 296 commander pools 206, all fully dead; a partial card scores exactly
+  like a twin printed with only its live text (338 comparisons, 0 differ); invented cards classified from colour words
+  alone; Jet Medallion / God-Pharaoh's Faithful pinned into Trostani → in as kind k. Newest collection, every bracket:
+  Jet Medallion 369 → 197 decks (172 off-colour → 0), Bontu's Monument 191 → 159 (92 off-colour → 60; stays e.g. in Aerith
+  Gainsborough as a hidden gem: its drain feeds lifegain). `measure.py` vs HEAD (`Collection_ (1).csv`): 207 of 1,298
+  lists changed, picks +0.05–0.1, stand-ins −0.05–0.13, 0 rule violations (re-measured after the gating fix: identical;
+  vs `baseline_gems` 0 violations; `check_report.py` 0 errors). Audit: 3 owned cards (Jet Medallion, Bontu's
+  Monument, God-Pharaoh's Faithful), 30 of 16,687 cached cards, no false positives found (Vedalken Shackles and Word of
+  Undoing stay live: their target still works). Limits: sentence-level reading,
+  "spells you cast that are black" not covered, EDHREC rank (strength) whole-card, a partial card whose only live line is
+  an equip/affinity cost (Nightmare Lash) stays in the pool but scores near zero.
 - **Trigger density for weak drain payoffs (measured, rejected as is).** "Drain 1–2 per event counts as a finisher only with as
   many event enablers as the average deck": 3,515 of 8,412 verdicts fail, 901 of them by 1–2 cards (knife edge); our builder runs
   fewer creatures than EDHREC's average decks, so enter / creature-cast payoffs fail most; theme decks short 33 → 50. Doesn't
@@ -632,7 +644,8 @@ Every decision we both agree on goes here in the same session, with the numbers 
   evidence (commander, theme, card-to-card, legal combo, win plan) changed almost nothing (39 overview lists): "card-to-card"
   evidence is present in 2,557 of 2,612 overrides, since synergy swaps have it by nature. Next if wanted: a stricter evidence bar
   (card-to-card alone not enough: ~389 staple cuts blocked). The 992 land-cap misses belong to 5c (mana base).
-- **Trigger doublers (measured, not ported).** New card relations "doubles enter / death / attack / draw / spell / lifegain
+- **Trigger doublers (decided, committed `89b1c08`, scoped: event, permanent type, creature type; Echoes of Eternity's
+  colourless scope held back until 5c).** New card relations "doubles enter / death / attack / draw / spell / lifegain
   triggers" from the wording "if <event> causes a triggered ability of a permanent you control to trigger, that ability triggers
   an additional time" ↔ cards whose own triggers fire on that event. Newest collection: 88 lists changed, 0 rule violations;
   Elesh Norn 33 → 54 decks, Drivnod 28 → 49, Krang 14 → 22. Elesh Norn still misses Trostani: 0.691 vs bar 0.768 (EDHREC part
@@ -655,8 +668,8 @@ Every decision we both agree on goes here in the same session, with the numbers 
   as a separate constraint. Cards without a Scryfall price show "price unknown". **Prices**: USD from Scryfall (`usd`, else
   foil / etched; your printing for owned cards, by name for missing ones; cached, so the page states the date), CAD conversion
   later. EDHREC staple protection stays out of this design (separate engine experiment).
-- **Next steps (agreed order):** C1 committed (`5a6b757`, unpushed); card relations landed (`508da06`); 1) review and decide
-  whether to port the trigger-doubler and off-colour (+ live text) changes; 2) complete **5c mana base**; 3) then build the
+- **Next steps (agreed order):** C1 committed (`5a6b757`); card relations landed (`508da06`); trigger doublers
+  landed (`89b1c08`); off-colour abilities ported (Oct 11 2026); 1) (done); 2) complete **5c mana base**; 3) then build the
   two-view + budget UI above. 5c: weight basics by coloured pip demand (idea:
   mtg-skills `mana_audit` deficit allocation, 0BSD), land count from the curve (Karsten: verify the 31.42 + 3.13 × avg MV −
   0.28 × cheap ramp/draw coefficients against his own article first; mtg-skills' "Karsten" is a different heuristic,

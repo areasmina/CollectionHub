@@ -287,8 +287,13 @@ WIN_RX_CARD = re.compile(
     r"additional combat phase|double strike and trample")
 
 def roles_of(m):
+    mk = mkey(m)
+    if mk in _ROLE_MEMO: return _ROLE_MEMO[mk]
+    if "_full" in m:        # partly off-colour (live_view): the whole card's roles minus those only its dead text has
+        dead = regex_roles({**m, "oracle": m["_dead"]}) - regex_roles(m)
+        _ROLE_MEMO[mk] = roles_of(m["_full"]) - dead
+        return _ROLE_MEMO[mk]
     k = norm(m["name"])
-    if k in _ROLE_MEMO: return _ROLE_MEMO[k]
     if "Land" in m["type_line"].split(" // ")[0]:
         r = {"land"}
     else:
@@ -299,7 +304,7 @@ def roles_of(m):
             else:
                 rx = rx if rx is not None else regex_roles(m)
                 if role in rx: r.add(role)
-    _ROLE_MEMO[k] = r
+    _ROLE_MEMO[mk] = r
     return r
 
 def card_kind(m):
@@ -339,6 +344,7 @@ class CardTable:
             i = self.idx[k]
             if img and not self.rows[i][1]: self.rows[i][1] = img
             return i
+        meta = (meta or {}).get("_full", meta)          # a partly off-colour view: show the whole card
         if meta: row = [meta["name"], img, type_group(meta["type_line"]), 1 if meta.get("gc") else 0,
                         int(meta.get("cmc") or 0), 1 if meta.get("layout") in TWO_FACED and "front/" in img else 0,
                         sum(1 << i for i, r in enumerate(ROLE_NAMES) if r in roles_of(meta)),   # roles bitmask
@@ -456,7 +462,7 @@ _SIG_MEMO = {}
 
 def text_sig(m):
     """Word pairs of the full Oracle text, reminder text included (card name -> ~, numbers -> #)."""
-    k = norm(m["name"])
+    k = mkey(m)
     if k not in _SIG_MEMO:
         words = [w for w in re.findall(r"[a-z~+/#'-]+", re.sub(r"\d+", "#", rules_text(m))) if w not in STOP]
         _SIG_MEMO[k] = frozenset(zip(words, words[1:]))
@@ -473,11 +479,15 @@ def text_index(pool):
 
 def build_pool(ci, owned, exclude=""):
     """Owned cards a commander with color identity `ci` could play, indexed by role
-    (and by_role["_text"] = text_index of the pool, for finding cards that read alike)."""
+    (and by_role["_text"] = text_index of the pool, for finding cards that read alike). Each card as that colour
+    identity sees it (live_view): cards with no ability working in these colours are left out (pins add them back in
+    analyze()), partly off-colour cards are read from their live text only."""
     pool, by_role = [], {}
     for k, m in owned.items():
         if k == exclude or not m["commander_legal"] or not set(m["ci"]) <= ci: continue
         if m["layout"] in ("token", "emblem"): continue
+        m = live_view(m, ci)
+        if m is None: continue
         it = (k, m, roles_of(m), card_kind(m))
         pool.append(it)
         for r in it[2]: by_role.setdefault(r, []).append(it)
@@ -551,7 +561,7 @@ def kw_rx(k):
 
 def has_keyword(m, k):
     """Card has mechanic k (Scryfall keyword list) or its rules text mentions it ("whenever ... connives")."""
-    key = (norm(m["name"]), k)
+    key = (mkey(m), k)
     if key not in _KW_MEMO:
         _KW_MEMO[key] = k in {x.lower() for x in m.get("keywords") or []} or bool(kw_rx(k).search(rules_text(m)))
     return _KW_MEMO[key]
@@ -657,8 +667,97 @@ def rules_text(m, drop_keyword_lines=False):
                          if not (kw and set(x.strip() for x in l.lower().split(",")) <= kw))
     return text.lower()
 
+# ---- Off-colour abilities: a sentence tied to YOUR spells or permanents of a colour (or basic land type) outside the
+# commander's colour identity does nothing there ("Black spells you cast cost {1} less", "as long as you control an
+# Island"). Read from colour words in the Oracle text, never card names. A card whose every ability line is dead leaves
+# that commander's pool (a pin still wins); a card with dead and live lines stays and is read from its live text only.
+# Mana symbols need no check: {B} in a cost already puts black in the card's own colour identity.
+COLOUR_OF = {"white": "W", "blue": "U", "black": "B", "red": "R", "green": "G",
+             "plains": "W", "island": "U", "swamp": "B", "mountain": "R", "forest": "G"}
+_CL = r"(?:(?<!non-)\b(?:white|blue|black|red|green)\b|\b(?:plains|islands?|swamps?|mountains?|forests?)\b)"
+_CLS = _CL + r"(?:,? (?:and/or|or|and) " + _CL + r"|, " + _CL + r")*"
+_CW = r"(?: (?!and\b|or\b|but\b|then\b)[a-z-]+)"
+OWN_COLOUR_RX = re.compile(       # "black creature spells you cast", "you control a blue creature", "devotion to red"
+    _CLS + _CW + r"{0,4}? (?:that )?you (?:cast|control|own)\b|"
+    r"\byou (?:cast|control) (?:a |an |another |two or more )?(?:(?!and\b|or\b)[a-z-]+ )?" + _CLS + r"|"
+    r"\bdevotion to " + _CLS + r"|\byour " + _CLS)
+_COL_WORD = re.compile(r"(?<!non-)\b(white|blue|black|red|green|plains|island|swamp|mountain|forest)s?\b")
+_TRIGS = re.compile(r"\b(?:whenever|when|at the beginning)\b")
+_COL_MEMO, _VIEW_MEMO = {}, {}
+
+_GATE = re.compile(r"\b(?:whenever|when|if|as long as|at the beginning)\b")
+
+def dead_sentence(s, ci):
+    """Does this (lower-case) sentence only work with your cards of a colour / basic land type outside `ci`?
+    Dead whenever the colour clause gates the effect: it sits in a trigger or condition clause ("whenever you cast a
+    black spell, target opponent loses 1 life", "as long as you control an island"), targets or not. Otherwise a target
+    outside the colour clause keeps it live (Word of Undoing still bounces the creature). Also live: a second trigger
+    ("at the beginning of your upkeep and whenever you cast a blue spell"), "unless" (a land entering tapped is a
+    drawback, not an ability), and other players' colours ("protection from black", "an opponent's red")."""
+    if " unless " in s or len(_TRIGS.findall(s)) > 1: return False
+    for mt in OWN_COLOUR_RX.finditer(s):
+        st = max(s.rfind(c, 0, mt.start()) for c in ",;:") + 1      # "blue spells and red spells you cast": both
+        cols = {COLOUR_OF[w] for w in _COL_WORD.findall(s[st:mt.end()])}   # the group is singular ("islands" -> island)
+        if not cols or cols & ci: continue
+        if _GATE.search(s[st:mt.start()]) or "target" not in s[:mt.start()] + s[mt.end():]: return True
+    return False
+
+def colour_status(m, ci):
+    """("active" | "partial" | "inactive", live Oracle text, dead Oracle text) of card m in colour identity ci.
+    An ability line whose first sentence is dead is dead whole (its condition or trigger never happens); a later dead
+    sentence drops alone ("Target creature gets +2/+2. If you control a Forest, it also gains trample.")."""
+    key = (norm(m["name"]), "".join(sorted(ci)))
+    if key not in _COL_MEMO:
+        live_f, dead_f, any_live, any_dead = [], [], False, False
+        for face in (m.get("oracle") or "").split(" // "):
+            live_l, dead_l = [], []
+            for line in face.split("\n"):
+                sents = re.split(r"(?<=\.)\s+(?![^(]*\))", line)          # not inside reminder text
+                dead = [dead_sentence(s.lower(), ci) for s in sents]
+                if dead and dead[0]: dead_l.append(line); continue
+                keep = [s for s, d in zip(sents, dead) if not d]
+                if len(keep) < len(sents): dead_l.append(" ".join(s for s, d in zip(sents, dead) if d))
+                if keep: live_l.append(" ".join(keep))
+            any_live |= bool(live_l); any_dead |= bool(dead_l)
+            live_f.append("\n".join(live_l)); dead_f.append("\n".join(dead_l))
+        st = "active" if not any_dead else "partial" if any_live else "inactive"
+        _COL_MEMO[key] = (st, " // ".join(live_f), "\n".join(d for d in dead_f if d))
+    return _COL_MEMO[key]
+
+def mkey(m):
+    """Memo key for anything read from a card's text: its name, or name|colours for a partly off-colour view."""
+    return m.get("_mk") or norm(m["name"])
+
+def live_view(m, ci):
+    """The card as a commander with colour identity ci sees it: m itself, a copy holding only its live text
+    (partly off-colour: "_full" = the whole card, "_dead" = the dead text), or None (no ability works there)."""
+    st, live, dead = colour_status(m, ci)
+    if st == "active": return m
+    if st == "inactive": return None
+    key = (norm(m["name"]), "".join(sorted(ci)))
+    if key not in _VIEW_MEMO:
+        low = live.lower()
+        _VIEW_MEMO[key] = {**m, "oracle": live, "_full": m, "_dead": dead, "_mk": key[0] + "|" + key[1],
+                           "keywords": [k for k in m.get("keywords") or [] if k.lower() in low]}
+    return _VIEW_MEMO[key]
+
+_OV_MEMO = {}
+def owned_view(owned, ci):
+    """`owned` for one colour identity: partly off-colour cards replaced by their live view (inactive cards stay as
+    they are: still yours, so never offered to buy; build_pool keeps them out of the deck)."""
+    key = (id(owned), len(owned), "".join(sorted(ci)))
+    if key in _OV_MEMO and _OV_MEMO[key][0] is owned: return _OV_MEMO[key][1]
+    out = owned
+    for k, m in owned.items():
+        v = live_view(m, ci) if m["commander_legal"] and set(m["ci"]) <= ci else m
+        if v is not None and v is not m:
+            if out is owned: out = dict(owned)
+            out[k] = v
+    _OV_MEMO[key] = (owned, out)
+    return out
+
 def card_mechanics(m):
-    k = norm(m["name"])
+    k = mkey(m)
     if k not in _MECH_MEMO:
         text, tw = rules_text(m), type_words(m)
         _MECH_MEMO[k] = {name for name, (rx, _, types) in MECHANICS.items()
@@ -759,7 +858,7 @@ def card_relations(m):
     cycling). cost = None (free) or what you pay, kept apart: per trigger ("pays each trigger": "you may pay {1}. If you
     do") or to set it up / repeat it ("{2}, {T}: ...", "has cycling {R}", "equip {1} per creature" for an "equipped
     creature" trigger). A free trigger on an equipment is still a free trigger; moving the equipment is the setup cost."""
-    k = norm(m["name"])
+    k = mkey(m)
     if k not in _REL_MEMO:
         spell = bool({"instant", "sorcery"} & type_words(m))
         lines = [l.strip() for l in rules_text(m).split("\n")]
@@ -849,7 +948,7 @@ def fit_cached(cmdr, m, profile, bracket):
     """cmdr_fit, remembered per commander (it only depends on the bracket through Game Changers)."""
     if _FIT_MEMO["who"] != (cmdr["name"], id(profile)):
         _FIT_MEMO.clear(); _FIT_MEMO["who"] = (cmdr["name"], id(profile))
-    key = (norm(m["name"]), bracket in ("optimized", "cedh"))
+    key = (mkey(m), bracket in ("optimized", "cedh"))
     if key not in _FIT_MEMO: _FIT_MEMO[key] = cmdr_fit(cmdr, m, profile, bracket)
     return _FIT_MEMO[key]
 
@@ -1014,7 +1113,7 @@ def _repeat_trigger_line(line, m):
 
 def doubler_cons(m):
     """Trigger scopes this card consumes, once per scope; colourless scope awaits 5c mana checks."""
-    k = norm(m["name"])
+    k = mkey(m)
     if k in _DBL_MEMO: return _DBL_MEMO[k]
     idx = {e[0]: i for i, e in enumerate(_ENG_RX)}
     out, reps, tw = set(), {}, type_words(m)
@@ -1066,11 +1165,11 @@ def doubler_cons(m):
 
 def doubler_rep(m):
     doubler_cons(m)
-    return _DBL_REP[norm(m["name"])]
+    return _DBL_REP[mkey(m)]
 
 def card_engines(m):
     """(engines the card provides, engines it consumes), as sets of engine indices."""
-    k = norm(m["name"])
+    k = mkey(m)
     if k not in _ENG_MEMO:
         text, tw = rules_text(m), type_words(m)
         prov, cons, ptext = set(), set(), OPP_GETS.sub("", text)
@@ -1098,7 +1197,7 @@ class DeckSynergy:
         for i in c | {n - 1} if self.tribe else c: self.cons[i] += SYN_CMDR
         for m in cards: self.add(m)
     def engines(self, m):
-        k = norm(m["name"])
+        k = mkey(m)
         if k not in self.memo:
             p, c = card_engines(m)
             if self.tribe:
@@ -1277,7 +1376,7 @@ def big_threat(m):
 def plan_test(plan, m):
     """Is card m a finisher for this plan? "threats" (fallback, also the combo plan's backup) = any plan's finisher,
     an alternate win / extra combat, or a big evasive creature."""
-    k = (plan, norm(m["name"]))
+    k = (plan, mkey(m))
     if k not in _PLAN_MEMO:
         if plan in ("threats", "combo"):
             _PLAN_MEMO[k] = big_threat(m) or any(plan_test(p, m) for p in PLAN_RX)
@@ -1462,6 +1561,8 @@ def find_homes(cmdrs, owned, name_meta, used, T):
         rate_of, _, value_of = card_values(page, page, owned, name_meta)
         for k, c in cand.items():
             if k == me or not set(c["ci"]) <= ci: continue
+            c = live_view(c, ci)
+            if c is None: continue          # no ability works in these colours
             f, why = (0.0, "") if card_kind(c) == "land" else cmdr_fit(m, c, prof, "all")
             sc = value_of(k) + f
             if sc >= HOME_MIN: homes[k].append((sc, i, rate_of(k), why, k in names))
@@ -1499,12 +1600,17 @@ def analyze(cmdr, edh, owned, name_meta, pool_info, bracket, T, base=None, combo
     `optc` = a dict shared by the decks of one commander + bracket: each card's swap options are built once (by the
     overview deck, built first) and reused by its theme / average decks (display only; the 99 never depends on it)."""
     ci, me = set(cmdr["ci"]), norm(cmdr["name"])
+    owned = owned_view(owned, ci)       # partly off-colour cards: their live text only
     _SUB_MEMO.clear()
     tribe = commander_types(cmdr)
     profile = profile or commander_profile(cmdr, (base or edh).get("tags") or [])
     tprof = theme_profile(focus) if focus else None
     pool, by_role = pool_info
     pin_in, pin_out = pins or ((), ())
+    back = [(k, owned[k]) for k in sorted(pin_in) if k in owned and k != me and owned[k]["commander_legal"]
+            and set(owned[k]["ci"]) <= ci and k not in {it[0] for it in pool}]
+    if back:                            # "always include" beats "no ability works in these colours"
+        pool = pool + [(k, m, roles_of(m), card_kind(m)) for k, m in back]
     if pin_out:                         # "never use": out of this deck's pool everywhere
         keep = lambda L: [it for it in L if it[0] not in pin_out]
         pool = keep(pool)
@@ -2364,6 +2470,7 @@ def analyze_imported(path, owned, name_meta, do_combos, edh_cache, T, combo_cach
     allc = cmdrs + main
     ci = set()
     for _, n in allc: ci |= set((meta(n) or {}).get("ci", []))
+    owned = owned_view(owned, ci)       # partly off-colour cards: their live text only (meta() reads this too)
     nonbasic = [(q, n) for q, n in allc if n.split(" // ")[0] not in BASIC_NAMES]
     own_n = sum(q for q, n in nonbasic if norm(n) in owned)
     tot_n = sum(q for q, _ in nonbasic) or 1
@@ -4303,7 +4410,8 @@ class LiveDecks:
                     self._build(q.get("c", ""), q.get("b", "all"), q.get("t", ""), q.get("a") == "1",
                                 int(q.get("w") or 3), int(q.get("s") or 2))
                     L = self.last
-                    deck = [self.ctx["owned"][k] for k in L["names"] if k in self.ctx["owned"] and k != norm(L["m"]["name"])]
+                    ov = owned_view(self.ctx["owned"], set(L["m"]["ci"]))
+                    deck = [ov[k] for k in L["names"] if k in ov and k != norm(L["m"]["name"])]
                     L["syn"] = DeckSynergy(L["m"], [m for m in deck if card_kind(m) != "land"], L["prof"][0])
                     if len(cache) >= 24: cache.pop(next(iter(cache)))
                     cache[key] = L
@@ -4311,7 +4419,8 @@ class LiveDecks:
                 return 404, {"error": str(e)}
             except ValueError as e:
                 return 400, {"error": str(e) or "Bad request."}
-            L, owned = cache[key], self.ctx["owned"]
+            L = cache[key]
+            owned = owned_view(self.ctx["owned"], set(L["m"]["ci"]))
             k = norm(q.get("card", ""))
             m = owned.get(k) or L["name_meta"].get(k)
             if not m: return 404, {"error": "Unknown card."}
