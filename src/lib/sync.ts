@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { db } from './db';
+import { db, type Deck, type Entry, type Profile } from './db';
 import { resolveRows } from './scryfall';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -77,14 +77,37 @@ async function insertAll(table: string, rows: object[]) {
   }
 }
 
+/** Why a sync would destroy data, or null when it's safe. Counts are card entries + decks. */
+export function syncRisk(dir: 'push' | 'pull', local: number, cloud: number): string | null {
+  if (dir === 'push' && local === 0 && cloud > 0) return 'This device has no cards or decks, so Push would erase the cloud copy. Pull first (nothing was changed).';
+  if (dir === 'pull' && cloud === 0 && local > 0) return 'The cloud copy is empty, so Pull would erase this device. Push from this device first (nothing was changed).';
+  return null;
+}
+
+const count = async (table: string, uid: string) => {
+  const { count: n, error } = await supabase!.from(table).select('id', { count: 'exact', head: true }).eq('user_id', uid);
+  if (error) throw error;
+  return n ?? 0;
+};
+// Rows get increasing ids: everything at or below this id belongs to the previous push.
+const maxId = async (table: string, uid: string) => {
+  const { data, error } = await supabase!.from(table).select('id').eq('user_id', uid).order('id', { ascending: false }).limit(1);
+  if (error) throw error;
+  return (data?.[0]?.id as number | undefined) ?? 0;
+};
+const dropRows = async (table: string, uid: string, op: 'lte' | 'gt', id: number) => {
+  const { error } = await supabase!.from(table).delete().eq('user_id', uid)[op]('id', id);
+  if (error) throw error;
+};
+
 // shortcut: whole snapshot per account, last push wins; upgrade to per-row merging if two devices edit offline at once.
 export async function push() {
   const uid = await userId();
   const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
-  for (const t of ['cards', 'decks']) {
-    const { error } = await supabase!.from(t).delete().eq('user_id', uid);
-    if (error) throw error;
-  }
+  const risk = syncRisk('push', entries.length + decks.length, (await count('cards', uid)) + (await count('decks', uid)));
+  if (risk) throw new Error(risk);
+  // New rows go in first; the old ones are removed only once everything arrived, so a failed push never empties the cloud.
+  const old = { cards: await maxId('cards', uid), decks: await maxId('decks', uid) };
   // `extras` (swaps, shopping-list checks) and `added` need supabase/migrations/002_extras.sql; without it they stay on this device.
   const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, updated_at: new Date().toISOString(), extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [] } }));
   let migrated = true;
@@ -94,6 +117,7 @@ export async function push() {
     ({ error } = await supabase!.from('profiles').upsert(profileRows.map(({ extras: _, ...r }) => r)));
   }
   if (error) throw error;
+  try {
   await insertAll(
     'cards',
     entries.map((e) => ({
@@ -117,12 +141,39 @@ export async function push() {
     migrated = false;
     await insertAll('decks', deckRows.map(({ extras: _, ...r }) => r));
   }
+  } catch (e) {
+    // Undo the half-finished push: the previous copy is still complete.
+    await dropRows('cards', uid, 'gt', old.cards).catch(() => {});
+    await dropRows('decks', uid, 'gt', old.decks).catch(() => {});
+    throw e;
+  }
+  if (old.cards) await dropRows('cards', uid, 'lte', old.cards);
+  if (old.decks) await dropRows('decks', uid, 'lte', old.decks);
   return { cards: entries.length, decks: decks.length, migrated };
+}
+
+/** This device's binders and decks as they were before the last Pull. */
+const BACKUP = 'backup:before-pull';
+export const lastBackup = async () => (await db.edhrec.get(BACKUP))?.at ?? null;
+export async function undoPull() {
+  const b = (await db.edhrec.get(BACKUP))?.data as { profiles: Profile[]; entries: Entry[]; decks: Deck[] } | undefined;
+  if (!b) throw new Error('No backup on this device.');
+  await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
+    await Promise.all([db.profiles.clear(), db.entries.clear(), db.decks.clear()]);
+    await db.profiles.bulkAdd(b.profiles);
+    await db.entries.bulkAdd(b.entries);
+    await db.decks.bulkAdd(b.decks);
+  });
+  return { cards: b.entries.length, decks: b.decks.length };
 }
 
 export async function pull() {
   await userId();
   const [profiles, cards, decks] = await Promise.all([selectAll('profiles'), selectAll('cards'), selectAll('decks')]);
+  const local = { profiles: await db.profiles.toArray(), entries: await db.entries.toArray(), decks: await db.decks.toArray() };
+  const risk = syncRisk('pull', local.entries.length + local.decks.length, cards.length + decks.length);
+  if (risk) throw new Error(risk);
+  await db.edhrec.put({ path: BACKUP, data: local, at: Date.now() });
   await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
     for (const p of profiles) {
       const local = await db.profiles.get(p.slot);

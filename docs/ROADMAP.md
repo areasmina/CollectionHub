@@ -45,9 +45,11 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 - ⛔ **Leaked Google OAuth client secret** in `google sc.png` (committed 50fb302, private repo). File removed from the
   branch tip; it stays in history and in `v1-save-point`. Needs Guillermo: rotate the secret in Google Cloud and paste
   the new one into Supabase › Authentication › Google. Rewriting history (force push) only if he asks.
-- ⬜ Sync safety: Push deletes all cloud rows, then inserts (not atomic). A failure in between leaves the cloud empty,
-  and a later Pull on another device would replace that device's data with nothing. Fix: refuse to Pull an empty cloud
-  over a non-empty device, keep a local backup before Pull, and insert-then-delete on Push.
+- ✅ Sync safety (phase 3a.1): Push refuses to send an empty device over a full cloud and Pull refuses an empty cloud
+  over a full device (`syncRisk`, tested). Push now inserts the new copy first and deletes the old rows (ids up to the
+  previous maximum) only after everything arrived; a failure removes the half-sent rows instead. Pull keeps a backup of
+  this device first, and the sync panel offers UNDO LAST PULL. Not tested end-to-end against Supabase from here (needs
+  a signed-in account); the guard logic is unit-tested.
 
 ## Priority 1: core collection and deck building
 

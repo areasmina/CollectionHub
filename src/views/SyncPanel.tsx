@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { authReturn, currentUser, providerEnabled, pull, push, signIn, supabase } from '../lib/sync';
+import { authReturn, currentUser, lastBackup, providerEnabled, pull, push, signIn, supabase, undoPull } from '../lib/sync';
 
 export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
@@ -7,6 +7,8 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [user, setUser] = useState<string | null>(null);
   const [msg, setMsg] = useState(authReturn?.error ? `Sign-in failed: ${authReturn.error}` : '');
   const [busy, setBusy] = useState(false);
+  const [backupAt, setBackupAt] = useState<number | null>(null);
+  useEffect(() => void lastBackup().then(setBackupAt), [busy]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -77,6 +79,13 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
             </button>
             <button className="btn secondary" onClick={() => supabase!.auth.signOut()}>SIGN OUT</button>
           </div>
+          {backupAt && (
+            <div className="row">
+              <button className="btn secondary" disabled={busy} onClick={() => confirm(`Put back this device's binders and decks from before the last Pull (${new Date(backupAt).toLocaleString()})?`) && act(undoPull, 'Restored')}>
+                UNDO LAST PULL
+              </button>
+            </div>
+          )}
           <form
             className="row"
             onSubmit={async (e) => {
