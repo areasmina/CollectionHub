@@ -159,7 +159,8 @@ export function Decks(s: Shared) {
     useLiveQuery(async () => {
       const [cs, ch] = await Promise.all([db.cards.where('key').anyOf(allNames).toArray(), db.cheap.bulkGet(allNames)]);
       const cheap = new Map(ch.filter(Boolean).map((c) => [c!.key, c!]));
-      return new Map(cs.map((c) => [c.key, withCheapest(c, cheap)!]));
+      // Same printing choice as the deck page (newest fetched wins).
+      return new Map(cs.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, withCheapest(c, cheap)!]));
     }, [decks]) ?? new Map<string, Card>();
   const [open, setOpen] = useState<number | null>(null);
   const [name, setName] = useState('');
