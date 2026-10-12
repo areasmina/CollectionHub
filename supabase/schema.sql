@@ -42,3 +42,6 @@ create policy "own decks" on decks for all using (user_id = auth.uid()) with che
 -- Swaps + shopping-list checks per binder, first-seen date per card (same as migrations/002_extras.sql).
 alter table profiles add column if not exists extras jsonb;
 alter table cards add column if not exists added timestamptz;
+
+-- Deck note + tags (same as migrations/003_deck_extras.sql).
+alter table decks add column if not exists extras jsonb;

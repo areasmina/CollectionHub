@@ -8,8 +8,36 @@ import { norm } from '../lib/names';
 import { cad } from '../lib/prices';
 import { cheapest, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
-import { CardLine, priceSum, Progress, type Shared } from './shared';
+import { CardLine, priceSum, Progress, SaltCell, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Tape, Title, Xgrain } from './zine';
+
+/** A deck's own note and tags (saved on this device, synced on Push). */
+function DeckNotes({ deck }: { deck: Deck }) {
+  const [tag, setTag] = useState('');
+  const tags = deck.tags ?? [];
+  const addTag = () => {
+    const t = tag.trim().toLowerCase().slice(0, 30);
+    if (t && !tags.includes(t)) db.decks.update(deck.id!, { tags: [...tags, t] });
+    setTag('');
+  };
+  return (
+    <section className="decknotes gbox" aria-label="Deck note and tags">
+      <Tape style={{ top: -10, left: 24, width: 70, height: 22, transform: 'rotate(-5deg)' }} />
+      <label className="notebook">
+        <span>note</span>
+        <textarea className="ruled" rows={3} placeholder="game plan, who it's for, what to swap next_" defaultValue={deck.note ?? ''} key={deck.id} onBlur={(e) => e.target.value !== (deck.note ?? '') && db.decks.update(deck.id!, { note: e.target.value })} />
+      </label>
+      <div className="tagrow">
+        {tags.map((t) => (
+          <button key={t} className="dtag" aria-label={`Remove tag ${t}`} onClick={() => db.decks.update(deck.id!, { tags: tags.filter((x) => x !== t) })}>
+            #{t} <span aria-hidden="true">×</span>
+          </button>
+        ))}
+        <input aria-label="New tag" placeholder="+ tag_" value={tag} onChange={(e) => setTag(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTag()} onBlur={addTag} />
+      </div>
+    </section>
+  );
+}
 
 function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => void }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
@@ -25,6 +53,7 @@ function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => vo
       .catch(() => {});
   }, [deck.id]);
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
+  const deckCost = priceSum(deck.cards.map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const cards = [...deck.cards].sort((a, b) => Number(b.name === deck.commander) - Number(a.name === deck.commander));
   return (
@@ -73,6 +102,11 @@ function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => vo
             </div>
           </div>
           <div className="cell">
+            <span className="lbl">DECK PRICE</span>
+            <span className="price tapey y1 t2 big">{byKey.size ? `≈${cad(deckCost)}` : 'CA$—'}</span>
+          </div>
+          <SaltCell names={deck.cards.map((c) => c.name)} />
+          <div className="cell">
             <span className="lbl">EXPORT</span>
             <div className="btnrow">
               <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
@@ -98,6 +132,7 @@ function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => vo
             </button>
           </div>
         </section>
+        <DeckNotes deck={deck} />
         <div className="deckgrid">
           <div className="lists">
             <div className="cat">
@@ -118,6 +153,14 @@ export function Decks(s: Shared) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
   const cmdrs =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? '')).filter(Boolean)).toArray()).map((c) => [c.key, c])), [decks]) ?? new Map<string, Card>();
+  // Deck prices from cards already cached here (a deck opened once has them all).
+  const allNames = decks.flatMap((d) => d.cards.map((c) => norm(c.name)));
+  const priced =
+    useLiveQuery(async () => {
+      const [cs, ch] = await Promise.all([db.cards.where('key').anyOf(allNames).toArray(), db.cheap.bulkGet(allNames)]);
+      const cheap = new Map(ch.filter(Boolean).map((c) => [c!.key, c!]));
+      return new Map(cs.map((c) => [c.key, withCheapest(c, cheap)!]));
+    }, [decks]) ?? new Map<string, Card>();
   const [open, setOpen] = useState<number | null>(null);
   const [name, setName] = useState('');
   const [text, setText] = useState('');
@@ -172,6 +215,8 @@ export function Decks(s: Shared) {
                     <span>
                       {d.cards.reduce((n, x) => n + x.qty, 0)} cards · {sum.pct}% owned
                     </span>
+                    {priced.size > 0 && <span className={`price tapey y${i % 5} t${(i * 3) % 4}`}>≈{cad(priceSum(d.cards.map((x) => ({ card: priced.get(norm(x.name)), qty: x.qty }))))}</span>}
+                    {d.tags?.length ? <span className="dtags">{d.tags.map((t) => `#${t}`).join(' ')}</span> : null}
                     {c && <Pips ci={c.ci} size={24} />}
                   </span>
                   {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}

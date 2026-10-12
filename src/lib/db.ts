@@ -40,6 +40,8 @@ export interface Deck {
   commander?: string;
   cards: DeckCard[];
   updated: number;
+  note?: string;
+  tags?: string[];
 }
 export interface Profile {
   id: number;

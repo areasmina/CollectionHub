@@ -7,7 +7,7 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, money, priceSum, scryfallUrl, Segs, usd, type Shared } from './shared';
+import { CardLine, CardTile, money, priceSum, SaltCell, scryfallUrl, Segs, usd, type Shared } from './shared';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -82,6 +82,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
   const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
   const missingCost = priceSum(missing.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
+  const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
 
   // Replacement candidates: owned cards EDHREC recommends for this commander that the deck doesn't already use.
   const inDeck = new Set([...names, ...Object.values(swaps)].map(norm));
@@ -316,6 +317,13 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
               <Tape style={{ right: -14, top: -12, width: 46, height: 18, transform: 'rotate(32deg)' }} />
             </div>
           </div>
+          <div className="cell">
+            <span className="lbl">DECK PRICE</span>
+            <span className="price tapey y1 t2 big" aria-label={`Whole deck costs about ${pricesIn ? money(deckCost) : 'an unknown amount'}`}>
+              {pricesIn ? `≈${cad(deckCost)}` : 'CA$—'}
+            </span>
+          </div>
+          {page && <SaltCell names={names} />}
           <div className="cell">
             <span className="lbl">DECK</span>
             <button className="btn" onClick={saveDeck} disabled={!!saved || !page || kind !== 'average'}>

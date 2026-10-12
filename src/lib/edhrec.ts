@@ -1,4 +1,5 @@
 import { db } from './db';
+import { norm } from './names';
 
 export const BRACKETS: [string, string][] = [['', 'All'], ['exhibition', '1'], ['core', '2'], ['upgraded', '3'], ['optimized', '4'], ['cedh', '5']];
 export const BUDGETS: [string, string][] = [['', 'Any'], ['budget', '$'], ['expensive', '$$$']];
@@ -72,3 +73,34 @@ export function parsePage(j: any): EdhPage {
 
 /** Scryfall image by card id without an API call. */
 export const imgOf = (id?: string, size: 'small' | 'normal' | 'art_crop' = 'small') => (id ? `https://cards.scryfall.io/${size}/front/${id[0]}/${id[1]}/${id}.jpg` : undefined);
+
+/** EDHREC's salt scores (0-4, players' votes) for its top 1,000 saltiest cards, keyed by norm(name); cached a week. */
+let saltLoad: Promise<Map<string, number>> | null = null;
+export function saltMap(): Promise<Map<string, number>> {
+  return (saltLoad ??= (async () => {
+    const hit = await db.edhrec.get('salt:top1000');
+    if (hit && Date.now() - hit.at < 7 * DAY) return new Map(hit.data as [string, number][]);
+    const rows: [string, number][] = [];
+    // shortcut: top 1,000 only (salt >= ~0.85); cards below count as 0. Fetch more pages if low-salt totals matter.
+    for (let i = 0; i < 10; i++) {
+      if (i) await new Promise((r) => setTimeout(r, 350));
+      const j = await fetch(`https://json.edhrec.com/pages/top/salt${i ? `--${i}` : ''}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      const views: any[] = j?.cardviews ?? j?.container?.json_dict?.cardlists?.[0]?.cardviews ?? [];
+      if (!views.length) break;
+      for (const v of views) if (typeof v.salt === 'number') rows.push([norm(v.name), v.salt]);
+    }
+    if (!rows.length) {
+      saltLoad = null; // offline: try again next time
+      return new Map(hit ? (hit.data as [string, number][]) : []);
+    }
+    await db.edhrec.put({ path: 'salt:top1000', data: rows, at: Date.now() });
+    return new Map(rows);
+  })());
+}
+
+/** A deck's salt: EDHREC-style sum of card salt scores, plus the saltiest cards. */
+export function deckSalt(names: string[], salt: Map<string, number>) {
+  const hits = [...new Map(names.map((n) => [norm(n), n])).entries()].map(([k, name]) => ({ name, salt: salt.get(k) ?? 0 })).filter((c) => c.salt > 0);
+  hits.sort((a, b) => b.salt - a.salt);
+  return { total: hits.reduce((n, c) => n + c.salt, 0), top: hits.slice(0, 5) };
+}

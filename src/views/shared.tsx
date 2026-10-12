@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
+import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, rateNote, toCad } from '../lib/prices';
 
 export interface Shared {
@@ -182,3 +183,35 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
     <progress value={done} max={total || 1} /> <span>{total ? `${what}: ${done} / ${total}` : 'Reading…'}</span>
   </div>
 );
+
+/** Strip cell: the deck's salt (sum of EDHREC salt scores); tap/hover shows the saltiest cards. */
+export function SaltCell({ names }: { names: string[] }) {
+  const [salt, setSalt] = useState<Map<string, number> | null>(null);
+  useEffect(() => void saltMap().then(setSalt), []);
+  const s = salt && deckSalt(names, salt);
+  return (
+    <div className="cell salt">
+      <span className="lbl">SALT</span>
+      {!s ? (
+        <span className="amt">…</span>
+      ) : (
+        <details>
+          <summary aria-label={`Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards`}>
+            <span className="amt">{s.total.toFixed(1)}</span>
+            <small>{s.top.length ? 'saltiest ▾' : 'no salty cards'}</small>
+          </summary>
+          {s.top.length > 0 && (
+            <ol>
+              {s.top.map((c) => (
+                <li key={c.name}>
+                  {c.name} <b>{c.salt.toFixed(2)}</b>
+                </li>
+              ))}
+              <li className="small">sum of EDHREC salt (0–4 per card, player votes) over its top 1,000 saltiest cards</li>
+            </ol>
+          )}
+        </details>
+      )}
+    </div>
+  );
+}
