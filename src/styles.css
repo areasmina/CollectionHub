@@ -2387,3 +2387,135 @@ button.logo {
   cursor: pointer;
 }
 
+
+/* ---------- commander header (refs-3 target: card left, tilted red banner with the name) ---------- */
+.ransom.loose .rword {
+  display: contents;
+}
+.ransom.loose .rword > span:last-child {
+  margin-right: var(--wg) !important;
+}
+.chero {
+  position: relative;
+  margin-top: 10px;
+  padding: 18px 20px 20px;
+  display: grid;
+  grid-template-columns: minmax(180px, 250px) minmax(0, 1fr);
+  gap: 10px 28px;
+  align-items: start;
+}
+.chero > .worn {
+  border-color: var(--text);
+}
+.chero .cimg {
+  width: 100%;
+  margin-top: 6px;
+}
+.cright {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ctitle .banner {
+  position: absolute;
+  left: -110px;
+  right: -20px;
+  top: 0;
+  bottom: 0;
+  background-color: var(--accent);
+  clip-path: polygon(0 18%, 100% 0, 96% 100%, 2% 94%);
+  pointer-events: none;
+  animation: slashIn 0.7s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.ctitle {
+  position: relative;
+  z-index: 1;
+  padding: 30px 8px 26px 24px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.ctitle .pips {
+  gap: 6px;
+}
+.cmeta {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+.cmeta .typed {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  min-width: 0;
+}
+.cmeta .typed a {
+  color: var(--text);
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+}
+.cmeta .score {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-left: auto;
+}
+.cmeta .mono {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.cmeta .pct {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.cmeta .bigpct {
+  font-family: 'Archivo', sans-serif;
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 1;
+}
+.chero .builtaround {
+  margin-top: 0;
+}
+.chero .builtaround > span {
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+@media (max-width: 700px) {
+  .chero {
+    grid-template-columns: 1fr;
+    padding: 14px 12px 16px;
+  }
+  .chero .cimg {
+    width: min(170px, 50vw);
+    justify-self: center;
+  }
+  .ctitle .banner {
+    left: -12px;
+    right: -12px;
+  }
+  .ctitle {
+    padding: 22px 6px 20px 12px;
+  }
+}
+
+.ctitle > h1,
+.ctitle > .pips {
+  position: relative;
+}
+

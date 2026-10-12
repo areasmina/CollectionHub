@@ -8,7 +8,7 @@ import { cad, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
 import { CardLine, CardTile, money, priceSum, Segs, usd, type Shared } from './shared';
-import { Doodles, ownColour, PageDecor, Pips, RiseBars, Tape, Title, Xgrain } from './zine';
+import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 const SHOW_AS_COMMANDER = false;
@@ -17,7 +17,7 @@ const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III', '4': 'I
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => p?.lists.flatMap((l) => l.cards.map((c) => c.id).filter(Boolean) as string[]) ?? [];
 
-export function CommanderView({ name, s, onBack }: { name: string; s: Shared; onBack: () => void }) {
+export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const slug = toSlug(name);
   const [kind, setKind] = useState<'commander' | 'average'>(SHOW_AS_COMMANDER ? 'commander' : 'average');
   const [bracket, setBracket] = useState('');
@@ -205,48 +205,58 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
 
         <section className="chero">
           <span className="worn" aria-hidden="true" />
-          <div className="chead">
-            <Pips ci={ci} size={24} />
-            <span className="right">
-              <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-                open on EDHREC ↗
-                <br />
-                <span className="muted">{page?.numDecks ? `${page.numDecks.toLocaleString()} decks` : '— decks'}</span>
-              </a>
+          <div className="cimg gbox">
+            <span className="xart">
+              <Tape style={{ top: -13, left: 70, width: 86, height: 24, transform: 'rotate(-6deg)' }} />
+              {bigImg && <img src={bigImg} alt={label} />}
+              <Xgrain />
+            </span>
+            <Doodles n={301} count={1} spots={[[60, 62], [-20, 4]]} />
+          </div>
+          <div className="cright">
+            {/* Clicking the commander's name goes back to Discover (the COMMANDERS link does the same for keyboards). */}
+            <div className="ctitle" onClick={onBack} title="Back to Discover">
+              <div className="banner ht" aria-hidden="true" />
+              <h1 aria-label={label}>
+                <Ransom text={label.toUpperCase()} size={label.length > 28 ? 44 : 54} seed={11} breakWords />
+              </h1>
+              <Pips ci={ci} size={30} />
+            </div>
+            <div className="cmeta">
+              <span className="typed">
+                {[...tags.slice(0, 3).map((t) => t.value.toUpperCase()), page?.numDecks ? `${page.numDecks.toLocaleString()} DECKS` : ''].filter(Boolean).join(' · ')}
+                {' · '}
+                <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+                  EDHREC ↗
+                </a>
+              </span>
               {page && (
-                <span className="pct" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                  <span className="bigpct">{sum.pct}%</span>
-                  <RiseBars pct={sum.pct} />
+                <span className="score">
+                  <span className="mono">
+                    NO. {no ? String(no).padStart(3, '0') : '—'}
+                    <br />
+                    {page.numDecks ? page.numDecks.toLocaleString() : '—'} EDHREC DECKS
+                  </span>
+                  <span className="pct">
+                    <span className="bigpct">{sum.pct}%</span>
+                    <RiseBars pct={sum.pct} />
+                  </span>
                 </span>
               )}
-            </span>
-          </div>
-          <div className="cbody">
-            <div className="cimg gbox">
-              <span className="xart">
-                <Tape style={{ top: -13, left: 80, width: 86, height: 24, transform: 'rotate(-6deg)' }} />
-                {bigImg && <img src={bigImg} alt={label} />}
-                <Xgrain />
-              </span>
-              <Doodles n={301} count={2} spots={[[60, 62], [-20, 4], [70, 0]]} />
             </div>
-            {/* Clicking the commander's name goes back to Discover (the COMMANDERS link does the same for keyboards). */}
-            <div className="titleclick" onClick={onBack} title="Back to Discover">
-              <Title text={label.toUpperCase()} label={label} size={label.length > 22 ? 40 : 52} seed={11} />
-            </div>
-          </div>
-          {tags.length > 0 && (
-            <div className="builtaround">
-              <span>built around</span>
-              <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more">
-                {tags.slice(0, 24).map((t) => (
-                  <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-                    {t.value.toUpperCase()} {t.count.toLocaleString()}
-                  </button>
-                ))}
+            {tags.length > 0 && (
+              <div className="builtaround">
+                <span>built around</span>
+                <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more">
+                  {tags.slice(0, 24).map((t) => (
+                    <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
+                      {t.value.toUpperCase()} {t.count.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </section>
 
         <section className="strip" aria-label="Filters and totals">

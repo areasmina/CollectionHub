@@ -37,6 +37,7 @@ type Stat = { pct: number; missing: number; decks?: number } | null;
 
 export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
+  const [openNo, setOpenNo] = useState<number>();
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('name');
   const [colours, setColours] = useState<string[]>([]);
@@ -81,7 +82,7 @@ export function Discover(s: Shared) {
     };
   }, [commanders.length, s.mine, open]);
 
-  if (open) return <CommanderView name={open} s={s} onBack={() => setOpen(null)} />;
+  if (open) return <CommanderView name={open} s={s} no={openNo} onBack={() => setOpen(null)} />;
 
   // Numeric sort with unknown values (no EDHREC deck, no price) always last.
   const byNum = (get: (c: Cmdr) => number | null | undefined, dir: 1 | -1) => (a: Cmdr, b: Cmdr) => {
@@ -137,7 +138,7 @@ export function Discover(s: Shared) {
               aria-label="Find a commander"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (q.trim()) setOpen(shown[0]?.name ?? q.trim());
+                if (q.trim()) (setOpenNo(shown[0] ? 1 : undefined), setOpen(shown[0]?.name ?? q.trim()));
               }}
             >
               <span className="worn" aria-hidden="true" style={{ inset: -2 }} />
@@ -191,7 +192,7 @@ export function Discover(s: Shared) {
             const ready = st && st.pct >= 90;
             return (
               <li key={c.id}>
-                <button className="ccard" style={{ transform: `rotate(${ROTS[i % ROTS.length]}deg)` }} onClick={() => setOpen(c.name)} aria-label={`${c.name}${st ? `, ${st.pct}% owned, ${st.missing} cards missing` : ''}`}>
+                <button className="ccard" style={{ transform: `rotate(${ROTS[i % ROTS.length]}deg)` }} onClick={() => (setOpenNo(i + 1), setOpen(c.name))} aria-label={`${c.name}${st ? `, ${st.pct}% owned, ${st.missing} cards missing` : ''}`}>
                   <span className="worn" aria-hidden="true" />
                   <span className="hair" aria-hidden="true" />
                   {i % 3 !== 2 && <Tape style={TAPES[i % 3]} />}

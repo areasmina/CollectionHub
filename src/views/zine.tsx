@@ -5,9 +5,9 @@ const frac = (x: number) => x - Math.floor(x);
 
 /** Ransom-note title ("What can I build?" reference): seeded cut-out letters, cream ~62% / black ~38%, never two black in a row,
  * halftone dots fading in from one edge of each tile. */
-export function Ransom({ text, size: wanted, seed }: { text: string; size: number; seed: number }) {
-  // Words never break, so shrink until the longest word fits the screen (each tile is ~1× size wide).
-  const longest = Math.max(...text.split(' ').map((w) => w.length));
+export function Ransom({ text, size: wanted, seed, breakWords }: { text: string; size: number; seed: number; breakWords?: boolean }) {
+  // Unless words may break (commander banner), shrink until the longest word fits the screen (each tile is ~1× size wide).
+  const longest = breakWords ? 9 : Math.max(...text.split(' ').map((w) => w.length));
   const size = Math.max(18, Math.min(wanted, Math.floor((window.innerWidth - 64) / (longest * 1.02))));
   const words = useMemo(() => {
     const rnd = (n: number) => frac(Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453);
@@ -58,7 +58,7 @@ export function Ransom({ text, size: wanted, seed }: { text: string; size: numbe
     );
   }, [text, size, seed]);
   return (
-    <div className="ransom" aria-hidden="true" style={{ rowGap: Math.round(size * 0.16), columnGap: Math.round(size * 0.4) }}>
+    <div className={`ransom${breakWords ? ' loose' : ''}`} aria-hidden="true" style={{ rowGap: Math.round(size * 0.16), columnGap: breakWords ? 0 : Math.round(size * 0.4), '--wg': `${Math.round(size * 0.32)}px` } as React.CSSProperties}>
       {words.map((w, i) => (
         <span key={i} className="rword">
           {w.map((l, j) => (
