@@ -4,14 +4,16 @@ import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, BUDGETS, fetchPage, imgOf, pagePath, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
-import { rateNote, shopUrl } from '../lib/prices';
+import { cad, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, money, priceSum, Seg, Thumb, usd, type Shared } from './shared';
+import { CardLine, money, priceSum, Segs, usd, type Shared } from './shared';
+import { Doodles, PageDecor, Pips, RiseBars, Tape, Title, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 const SHOW_AS_COMMANDER = false;
 
+const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V' };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => p?.lists.flatMap((l) => l.cards.map((c) => c.id).filter(Boolean) as string[]) ?? [];
 
@@ -90,7 +92,8 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
     for (const c of l.cards) {
       const sc = cardOf(c);
       const prev = recInfo.get(norm(c.name));
-      if (!prev || (META.test(prev.category ?? '') && !META.test(l.header))) recInfo.set(norm(c.name), { name: c.name, category: l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
+      // Highlight lists aren't a role: such a card is matched on type and mana value instead.
+      if (!prev || (!prev.category && !META.test(l.header))) recInfo.set(norm(c.name), { name: c.name, category: META.test(l.header) ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
     }
   const candidates = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !inDeck.has(norm(c.name)));
   const recCard = new Map((recs?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
@@ -125,98 +128,201 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
   }
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
-  const shopping = kind === 'average' && missing.length > 0 && (
-    <aside className="shop" id="shop" aria-label="Shopping list">
-      <h2>Shopping list</h2>
-      <p className="muted small">
-        {toBuy.length} to buy · <strong>{money(priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 }))))}</strong>
-        <br />
-        <span title={rateNote()}>Prices are estimates in CAD ({rateNote()}).</span>
-      </p>
+  const toBuyCost = priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
+  const pricesIn = cards.size > 0;
+  const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
+  const ci = cmdr?.ci ?? page?.card?.ci ?? [];
+  const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
+  const label = name.split(' // ')[0];
+
+  const receipt = kind === 'average' && missing.length > 0 && (
+    <aside className="receipt gbox" id="shop" aria-label="Shopping list">
+      <Doodles n={377} count={1} spots={[[64, 2]]} paper />
+      <h2>*** TO BUY ***</h2>
+      <hr />
+      <div className="sub">your picks · ≈CA$ at your shop</div>
       <ul>
-        {missing.map((c) => (
-          <li key={c.name} className={bought.has(norm(c.name)) ? 'done' : ''}>
-            <label>
-              <input type="checkbox" checked={bought.has(norm(c.name))} onChange={() => toggleBought(c.name)} />
-              <span>
-                {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
-                {c.name}
-                {swaps[c.name] && <small className="muted"> · using {swaps[c.name]} for now</small>}
+        {missing.map((c) => {
+          const done = bought.has(norm(c.name));
+          return (
+            <li key={c.name} className={done ? 'done' : ''}>
+              <label>
+                <input type="checkbox" checked={done} onChange={() => toggleBought(c.name)} aria-label={`Got ${c.name}`} />
+                <span className="nm">
+                  {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
+                  {c.name}
+                  {swaps[c.name] && <small> · using {swaps[c.name]} for now</small>}
+                </span>
+              </label>
+              <span className="pr">
+                <span title={rateNote()}>{usd(cardOf(c))}</span>
+                <a href={shopUrl(c.name)} target="_blank" rel="noreferrer" aria-label={`Search ${c.name} on shop.com`}>
+                  shop ↗
+                </a>
               </span>
-            </label>
-            <span className="right">
-              <small title={rateNote()}>{usd(cardOf(c)) || 'no price'}</small>
-              <a href={shopUrl(c.name)} target="_blank" rel="noreferrer" aria-label={`Search ${c.name} on shop.com`}>
-                shop ↗
-              </a>
-            </span>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
+      <hr />
+      <div className="total">
+        <span>TO BUY ({toBuy.length})</span>
+        <span>{pricesIn ? money(toBuyCost) : '≈CA$—'}</span>
+      </div>
+      <p className="small">{rateNote()}</p>
+      <hr />
+      <div className="thanks">thank you for building with what you own</div>
     </aside>
   );
 
   return (
-    <section>
-      <button className="link" onClick={onBack}>
-        ← Commanders
-      </button>
-      <h1>{name}</h1>
-      <div className="controls">
-        {SHOW_AS_COMMANDER && <Seg label="View" value={kind} options={[['commander', 'As Commander'], ['average', 'Average Deck']]} onChange={(v) => setKind(v as typeof kind)} />}
-        <Seg label="Bracket" value={bracket} options={BRACKETS} onChange={setBracket} />
-        <Seg label="Budget" value={budget} options={BUDGETS} onChange={setBudget} />
-      </div>
-      {tags.length > 0 && (
-        <div className="chips" aria-label="Tags">
-          {tags.slice(0, 24).map((t) => (
-            <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-              {t.value} <small>{t.count.toLocaleString()}</small>
+    <>
+      <PageDecor seed={711} rays="70% 26%" sheet={{ side: 'right', top: 900, rot: -6 }} />
+      <main>
+        <button className="backlink" onClick={onBack}>
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M11 2 L4 8 L11 14" fill="none" stroke="#E60012" strokeWidth="3" />
+          </svg>
+          COMMANDERS
+        </button>
+
+        <section className="chero">
+          <span className="worn" aria-hidden="true" />
+          <div className="chead">
+            <span className="cn">{label.toUpperCase()}</span>
+            <Pips ci={ci} size={24} />
+            <span className="right">
+              <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+                open on EDHREC ↗
+                <br />
+                <span className="muted">{page?.numDecks ? `${page.numDecks.toLocaleString()} decks` : '— decks'}</span>
+              </a>
+              {page && (
+                <span className="pct" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <span className="bigpct">{sum.pct}%</span>
+                  <RiseBars pct={sum.pct} />
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="cbody">
+            <div className="cimg gbox">
+              <span className="xart">
+                <Tape style={{ top: -13, left: 80, width: 86, height: 24, transform: 'rotate(-6deg)' }} />
+                {bigImg && <img src={bigImg} alt={label} />}
+                <Xgrain />
+              </span>
+              <Doodles n={301} count={2} spots={[[60, 62], [-20, 4], [70, 0]]} />
+            </div>
+            <Title text={label.toUpperCase()} label={label} size={label.length > 22 ? 40 : 52} seed={11} />
+          </div>
+          {tags.length > 0 && (
+            <div className="builtaround">
+              <span>built around</span>
+              <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more">
+                {tags.slice(0, 24).map((t) => (
+                  <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
+                    {t.value.toUpperCase()} {t.count.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="strip" aria-label="Filters and totals">
+          <Tape style={{ top: -12, left: -14, width: 84, height: 24, transform: 'rotate(-24deg)' }} />
+          <Tape style={{ top: -10, right: 60, width: 84, height: 24, transform: 'rotate(5deg)' }} />
+          {SHOW_AS_COMMANDER && (
+            <div className="cell">
+              <span className="lbl">VIEW</span>
+              <Segs label="View" value={kind} options={[['commander', 'AS CMDR'], ['average', 'AVERAGE']]} onChange={(v) => setKind(v as typeof kind)} />
+            </div>
+          )}
+          <div className="cell">
+            <span className="lbl">BRACKET</span>
+            <Segs label="Bracket" value={bracket} options={BRACKETS.map(([v, t]) => [v, ROMAN[t] ?? t.toUpperCase()])} onChange={setBracket} roman />
+          </div>
+          <div className="cell">
+            <span className="lbl">BUDGET</span>
+            <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
+          </div>
+          <div className="cell wide">
+            <span className="lbl">COLLECTION MATCH</span>
+            <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
+              <span className="burst" aria-hidden="true" />
+              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
+              <span className="meter">
+                <span className="cells10" aria-hidden="true">
+                  {Array.from({ length: 10 }, (_, i) => (
+                    <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
+                  ))}
+                </span>
+                <small>
+                  You own {sum.owned} of {sum.total}
+                  {page?.numDecks ? ` · ${page.numDecks.toLocaleString()} EDHREC decks` : ''}
+                  {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
+                </small>
+              </span>
+            </div>
+          </div>
+          <div className="cell">
+            <span className="lbl">MISSING</span>
+            <div className="plate" role="img" aria-label={`Warning: missing cards cost about ${pricesIn ? money(missingCost) : 'an unknown amount'}`}>
+              <span className="wedge" aria-hidden="true">
+                <svg width="24" height="22" viewBox="0 0 24 22">
+                  <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
+                  <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
+                </svg>
+              </span>
+              <span className="amt">
+                <small>≈</small>
+                {pricesIn ? cad(missingCost) : 'CA$—'}
+              </span>
+              <Tape style={{ right: -14, top: -12, width: 46, height: 18, transform: 'rotate(32deg)' }} />
+            </div>
+          </div>
+          <div className="cell">
+            <span className="lbl">DECK</span>
+            <button className="btn" onClick={saveDeck} disabled={!!saved || !page || kind !== 'average'}>
+              {saved ? 'SAVED ✓' : 'SAVE AS DECK'}
             </button>
-          ))}
-        </div>
-      )}
-      <p className="muted">
-        <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-          Open on EDHREC ↗
-        </a>
-        {page?.numDecks ? ` · ${page.numDecks.toLocaleString()} decks` : ''}
-        {kind === 'average' && missing.length > 0 && ' · hover or tap a greyed card to swap in one of yours'}
-      </p>
-      {error && <p className="error">{error}</p>}
-      {!page && !error && <p className="muted">Loading EDHREC data…</p>}
-      {page && (
-        <>
-          <div className="summary">
-            <strong>{sum.pct}%</strong> owned · {sum.owned} of {sum.total} cards in this binder
-            {sum.other > 0 && ` · ${sum.other} more in ${s.otherName}`}
-            {cards.size > 0 && ` · missing cards ≈ ${money(missingCost)}`}
-            {shopping && (
-              <a className="shopjump" href="#shop">
-                Shopping list ({toBuy.length}) ↓
+          </div>
+          <span className="hint">
+            {kind === 'average' && missing.length > 0 ? 'hover or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
+            <span className="cur">_</span>
+            {receipt && (
+              <a className="jump" href="#shop">
+                {' '}
+                · shopping list ({toBuy.length}) ↓
               </a>
             )}
-            {kind === 'average' && (
-              <button onClick={saveDeck} disabled={!!saved}>
-                {saved || 'Save as deck'}
-              </button>
-            )}
-          </div>
-          <div className={shopping ? 'deckgrid' : ''}>
-            <div>
+          </span>
+        </section>
+
+        {error && <p className="error">{error}</p>}
+        {!page && !error && <p className="count">Loading EDHREC data…</p>}
+        {page && (
+          <div className="deckgrid">
+            <div className="lists">
               {page.lists.map((l) => {
                 const ls = summarize(l.cards.map((c) => c.name), s.mine, s.other);
                 return (
-                  <details key={l.header} open>
+                  <details key={l.header} className="cat" open>
                     <summary>
-                      {l.header} <small className="muted">{ls.owned}/{ls.total} owned</small>
+                      <span className="pm" aria-hidden="true" />
+                      <span className="h">{l.header}</span>
+                      <span className="dots" aria-hidden="true" />
+                      <span className="n">
+                        {ls.owned}/{ls.total} owned
+                      </span>
                     </summary>
-                    <ul className="cards">
+                    <ul className="zlist">
                       {l.cards.map((c) => {
                         const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned';
                         const repl = swaps[c.name];
                         const rc = repl ? recCard.get(norm(repl)) : undefined;
-                        const open = swappable ? () => setMenuFor(c.name) : undefined;
+                        const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
                         return (
                           <CardLine
                             key={c.name}
@@ -224,46 +330,55 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
                             img={imgOf(rc?.id ?? c.id)}
                             card={rc ? cardOf(rc) : repl ? undefined : cardOf(c)}
                             s={s}
+                            note={stat}
                             marker={repl ? c.name : undefined}
-                            onOpen={open}
+                            onOpen={swappable ? () => setMenuFor(c.name) : undefined}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
-                            right={
-                              c.potential ? (
-                                <span title={`${(c.decks ?? 0).toLocaleString()} of ${c.potential.toLocaleString()} decks · synergy ${pct(c.synergy ?? 0)}`}>
-                                  {pct((c.decks ?? 0) / c.potential)} <small>{c.lift ? `${c.lift.toFixed(1)}x lift` : `syn ${pct(c.synergy ?? 0)}`}</small>
-                                </span>
-                              ) : c.qty && c.qty > 1 ? (
-                                `×${c.qty}`
-                              ) : undefined
-                            }
                           >
                             {menuFor === c.name && (
-                              <div className="submenu" role="menu" aria-label={`Replace ${c.name}`} onClick={(e) => e.stopPropagation()}>
-                                <div className="subhead">
-                                  {repl ? `Swapped for ${c.name}` : `Replace ${c.name} with one of yours`}
-                                  <button className="icon" aria-label="Close" onClick={() => setMenuFor(null)}>
-                                    ✕
+                              <div className="note-pop" role="dialog" aria-label={`Replace ${c.name}`} onClick={(e) => e.stopPropagation()}>
+                                <Tape style={{ top: -12, left: '40%', width: 90, height: 24, transform: 'rotate(4deg)' }} />
+                                <div className="nh">
+                                  <span>
+                                    {repl ? 'SWAPPED FOR ' : 'REPLACE '}
+                                    <mark>{c.name.toUpperCase()}</mark>
+                                    {repl ? '' : ' WITH ONE OF YOURS'}
+                                  </span>
+                                  <button className="close" aria-label="Close" onClick={() => setMenuFor(null)}>
+                                    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                                      <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="3" />
+                                    </svg>
                                   </button>
                                 </div>
-                                {repl && (
-                                  <button role="menuitem" onClick={() => setSwap(c.name, null)}>
-                                    Undo swap (back to {c.name})
-                                  </button>
-                                )}
-                                {!repl &&
-                                  suggest(c).map((sub) => {
-                                    const sc = recCard.get(norm(sub.name));
-                                    return (
-                                      <button key={sub.name} role="menuitem" onClick={() => setSwap(c.name, sub.name)}>
-                                        <Thumb src={(sc && cardOf(sc)?.img) ?? imgOf(sc?.id)} size={28} />
+                                <ul>
+                                  {repl && (
+                                    <li>
+                                      <button onClick={() => setSwap(c.name, null)}>
                                         <span>
-                                          {sub.name}
-                                          <small className="muted"> {sub.category}</small>
+                                          <b>UNDO SWAP</b>
+                                          <small>back to {c.name}</small>
                                         </span>
                                       </button>
-                                    );
-                                  })}
-                                {!repl && suggest(c).length === 0 && <p className="muted small">{recs ? 'No owned card fits this slot.' : 'Loading suggestions…'}</p>}
+                                    </li>
+                                  )}
+                                  {!repl &&
+                                    suggest(c).map((sub) => {
+                                      const sc = recCard.get(norm(sub.name));
+                                      const src = (sc && cardOf(sc)?.img) ?? imgOf(sc?.id);
+                                      return (
+                                        <li key={sub.name}>
+                                          <button onClick={() => setSwap(c.name, sub.name)}>
+                                            {src && <img src={src} alt="" loading="lazy" />}
+                                            <span>
+                                              <b>{sub.name}</b>
+                                              <small>{sub.category}</small>
+                                            </span>
+                                          </button>
+                                        </li>
+                                      );
+                                    })}
+                                </ul>
+                                {!repl && suggest(c).length === 0 && <p className="small">{recs ? 'No owned card fits this slot.' : 'Loading suggestions…'}</p>}
                               </div>
                             )}
                           </CardLine>
@@ -274,10 +389,10 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
                 );
               })}
             </div>
-            {shopping}
+            {receipt}
           </div>
-        </>
-      )}
-    </section>
+        )}
+      </main>
+    </>
   );
 }

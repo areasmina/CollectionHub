@@ -29,10 +29,10 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="panel" role="region" aria-label="Sync">
-      <button className="icon close" onClick={onClose} aria-label="Close">
+      <button className="close" onClick={onClose} aria-label="Close">
         ✕
       </button>
-      <h2>Sync between devices</h2>
+      <h2>SYNC BETWEEN DEVICES</h2>
       {!supabase ? (
         <p className="muted">Sync isn't set up. Everything is saved on this device. See README → "Device sync" to turn it on.</p>
       ) : !user ? (
@@ -58,20 +58,20 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
         >
           <input type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
           <input type="password" autoComplete="current-password" placeholder="Password (if you set one)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
-          <button type="submit">{password ? 'Sign in' : 'Send link'}</button>
+          <button className="btn" type="submit">{password ? 'Sign in' : 'Send link'}</button>
         </form>
         </>
       ) : (
         <>
           <p className="muted">Signed in as {user}. Push replaces the cloud copy with this device; Pull replaces this device with the cloud copy.</p>
           <div className="row">
-            <button disabled={busy} onClick={() => act(push, 'Pushed')}>
+            <button className="btn" disabled={busy} onClick={() => act(push, 'Pushed')}>
               Push to cloud
             </button>
-            <button disabled={busy} onClick={() => confirm('Replace both binders and decks on this device with the cloud copy?') && act(pull, 'Pulled')}>
+            <button className="btn secondary" disabled={busy} onClick={() => confirm('Replace both binders and decks on this device with the cloud copy?') && act(pull, 'Pulled')}>
               Pull from cloud
             </button>
-            <button onClick={() => supabase!.auth.signOut()}>Sign out</button>
+            <button className="btn secondary" onClick={() => supabase!.auth.signOut()}>SIGN OUT</button>
           </div>
           <form
             className="row"
@@ -83,7 +83,7 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
             }}
           >
             <input type="password" autoComplete="new-password" minLength={6} required placeholder="Set a password (sign in without email)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="New password" />
-            <button type="submit">Set password</button>
+            <button className="btn secondary" type="submit">SET PASSWORD</button>
           </form>
         </>
       )}

@@ -18,6 +18,7 @@ export interface EdhList {
 }
 export interface EdhPage {
   header: string;
+  card?: { id?: string; ci: string[] }; // the commander itself
   numDecks?: number;
   tags: { slug: string; value: string; count: number }[];
   lists: EdhList[];
@@ -66,8 +67,8 @@ export function parsePage(j: any): EdhPage {
         header: l.header,
         cards: (l.cardviews ?? []).map((v: any) => ({ name: v.name, id: v.id, decks: v.num_decks, potential: v.potential_decks, synergy: v.synergy, lift: v.lift })),
       }));
-  return { header: j?.header ?? '', numDecks: jd.card?.num_decks ?? j?.num_decks_avg, tags: j?.panels?.taglinks ?? [], lists };
+  return { header: j?.header ?? '', card: jd.card ? { id: jd.card.id, ci: jd.card.color_identity ?? [] } : undefined, numDecks: jd.card?.num_decks ?? j?.num_decks_avg, tags: j?.panels?.taglinks ?? [], lists };
 }
 
 /** Scryfall image by card id without an API call. */
-export const imgOf = (id?: string) => (id ? `https://cards.scryfall.io/small/front/${id[0]}/${id[1]}/${id}.jpg` : undefined);
+export const imgOf = (id?: string, size: 'small' | 'normal' | 'art_crop' = 'small') => (id ? `https://cards.scryfall.io/${size}/front/${id[0]}/${id[1]}/${id}.jpg` : undefined);

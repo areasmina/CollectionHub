@@ -7,6 +7,7 @@ import { Decks } from './views/Decks';
 import { Discover } from './views/Discover';
 import { SyncPanel } from './views/SyncPanel';
 import { PreviewLayer } from './views/shared';
+import { ZineDefs } from './views/zine';
 
 type Tab = 'discover' | 'collection' | 'decks';
 const store = {
@@ -25,11 +26,12 @@ const store = {
     }
   },
 };
+const systemDark = () => typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
 
 export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
-  const [theme, setTheme] = useState(store.get('ch:theme') || 'system');
+  const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
   const [sync, setSync] = useState(false);
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
@@ -37,6 +39,7 @@ export default function App() {
   const mine = useMemo(() => ownedMap(entries.filter((e) => e.profile === profile)), [entries, profile]);
   const theirs = useMemo(() => ownedMap(entries.filter((e) => e.profile === other)), [entries, other]);
   const nameOf = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Binder ${id}`;
+  const dark = theme === 'system' ? systemDark() : theme === 'dark';
 
   useEffect(() => {
     if (theme === 'system') delete document.documentElement.dataset.theme;
@@ -46,45 +49,59 @@ export default function App() {
   useEffect(() => store.set('ch:tab', tab), [tab]);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
-  const nextTheme = { system: 'light', light: 'dark', dark: 'system' }[theme] ?? 'system';
-  const shared = { profile, mine, other: theirs, otherName: nameOf(other) };
+  const shared = { profile, mine, other: theirs, otherName: nameOf(other), binderName: nameOf(profile) };
 
   return (
-    <div className="app">
+    <div className="stage">
+      <ZineDefs />
       <header className="top">
-        <strong className="logo">CollectionHub</strong>
-        <select aria-label="Binder" value={profile} onChange={(e) => setProfile(Number(e.target.value))}>
-          {[1, 2].map((id) => (
-            <option key={id} value={id}>
-              {nameOf(id)}
-            </option>
-          ))}
-        </select>
-        <button className="icon" onClick={() => setTheme(nextTheme)} aria-label={`Theme: ${theme}. Switch to ${nextTheme}`} title={`Theme: ${theme}`}>
-          {theme === 'dark' ? '☾' : theme === 'light' ? '☀' : '◐'}
-        </button>
-        <button className="icon" onClick={() => setSync(!sync)} aria-label="Sync between devices" aria-expanded={sync}>
-          ⇅
-        </button>
+        <div className="lefthead">
+          <strong className="logo">COLLECTIONHUB</strong>
+          <nav className="tabs" aria-label="Sections">
+            {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
+              <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>
+                {t.toUpperCase()}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div className="righthead">
+          <select className="binder" aria-label="Binder" value={profile} onChange={(e) => setProfile(Number(e.target.value))}>
+            {[1, 2].map((id) => (
+              <option key={id} value={id}>
+                {nameOf(id)}
+              </option>
+            ))}
+          </select>
+          <div className="themes" role="group" aria-label="Theme">
+            <button aria-label="Dark theme" aria-pressed={dark} onClick={() => setTheme('dark')}>
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M14 13.5A7 7 0 0 1 7.5 3 7 7 0 1 0 17 12.5a7 7 0 0 1-3 1z" fill="currentColor" />
+              </svg>
+            </button>
+            <button aria-label="Light theme" aria-pressed={!dark} onClick={() => setTheme('light')}>
+              <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="10" cy="10" r="4" fill="currentColor" />
+                <path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.6 3.6l2.1 2.1M14.3 14.3l2.1 2.1M3.6 16.4l2.1-2.1M14.3 5.7l2.1-2.1" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </button>
+          </div>
+          <button className="iconbtn" onClick={() => setSync(!sync)} aria-label="Sync between devices" aria-expanded={sync}>
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path d="M5 15 V3 M2 6 L5 3 L8 6 M13 3 V15 M10 12 L13 15 L16 12" fill="none" stroke="currentColor" strokeWidth="2" />
+            </svg>
+          </button>
+        </div>
       </header>
       {sync && <SyncPanel onClose={() => setSync(false)} />}
       <PreviewLayer />
-      <main>
-        {tab === 'discover' && <Discover {...shared} />}
-        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
-        {tab === 'decks' && <Decks {...shared} />}
-        <footer className="credits">
-          Card data and images from <a href="https://scryfall.com">Scryfall</a>. Commander data from <a href="https://edhrec.com">EDHREC</a>. Not affiliated with
-          Wizards of the Coast, Scryfall or EDHREC.
-        </footer>
-      </main>
-      <nav className="tabs">
-        {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
-          <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>
-            {t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </nav>
+      {tab === 'discover' && <Discover {...shared} />}
+      {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
+      {tab === 'decks' && <Decks {...shared} />}
+      <footer className="credits">
+        card data and images from <a href="https://scryfall.com">Scryfall</a> · deck data from <a href="https://edhrec.com">EDHREC</a> · not affiliated with Wizards of
+        the Coast, Scryfall or EDHREC · ≈CA$ estimates
+      </footer>
     </div>
   );
 }

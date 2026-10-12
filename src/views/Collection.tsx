@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
 import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
-import { money, priceSum, Progress, Thumb, usd } from './shared';
+import { cad } from '../lib/prices';
+import { isCommander } from './Discover';
+import { PriceLink, priceSum, Progress, Thumb } from './shared';
+import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
 
 export function ImportReport({ r }: { r: ImportResult }) {
   return (
@@ -69,76 +72,155 @@ export function Collection({ profile, name }: { profile: number; name: string })
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
+  const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
+  const upload = (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path d="M3 12 V15 H15 V12 M9 3 V11 M5 7 L9 3 L13 7" fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+
   return (
-    <section>
-      <h1>Collection</h1>
-      <div className="row">
-        <label className="grow">
-          Binder name{' '}
-          <input defaultValue={name} key={name} onBlur={(e) => e.target.value.trim() && db.profiles.put({ id: profile, name: e.target.value.trim() })} />
-        </label>
-      </div>
-      <p className="muted">
-        {total.toLocaleString()} cards ({entries.length.toLocaleString()} entries){value > 0 && ` · worth about ${money(value)} (Scryfall prices of your printings)`}.
-      </p>
+    <>
+      <PageDecor seed={821} rays="18% 18%" sheet={{ side: 'right', top: 120, rot: 7 }} />
+      <main>
+        <section className="chead2">
+          <Title text="COLLECTION" label="Collection" size={60} seed={21} />
+          <label className="kraft">
+            binder name
+            <input defaultValue={name} key={name} onBlur={(e) => e.target.value.trim() && db.profiles.update(profile, { name: e.target.value.trim() })} />
+          </label>
+        </section>
 
-      <h2>Import</h2>
-      <p className="muted">ManaBox CSV, a CSV with name/quantity columns, or a text list (Moxfield, Archidekt, "1 Sol Ring").</p>
-      <label className="file">
-        Choose a file
-        <input
-          type="file"
-          accept=".csv,.txt,text/csv,text/plain"
-          disabled={!!busy}
-          onChange={async (e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (f) setText(await f.text());
-          }}
-        />
-      </label>
-      <textarea rows={5} placeholder={'…or paste here\n1 Sol Ring\n1x Arcane Signet (CMM) 375'} value={text} onChange={(e) => setText(e.target.value)} aria-label="Cards to import" />
-      <div className="row">
-        <button disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
-          Add to binder
-        </button>
-        <button disabled={!text.trim() || !!busy} onClick={() => run(text, true)}>
-          Replace binder
-        </button>
-      </div>
-      {busy && <Progress {...busy} />}
-      {error && <p className="error">{error}</p>}
-      {result && <ImportReport r={result} />}
+        <section className="stats">
+          <div className="stat" style={{ transform: 'rotate(-1deg)' }}>
+            <span className="worn" aria-hidden="true" />
+            <b>{total.toLocaleString()}</b>
+            <span>cards</span>
+          </div>
+          <div className="stat" style={{ transform: 'rotate(.8deg)' }}>
+            <span className="worn" aria-hidden="true" />
+            <b>{entries.length.toLocaleString()}</b>
+            <span>entries</span>
+          </div>
+          <div className="stat red gbox" style={{ transform: 'rotate(-1.4deg)' }}>
+            <span className="worn" aria-hidden="true" />
+            <b>{commanders.toLocaleString()}</b>
+            <span>commanders</span>
+            <Doodles n={377} count={1} spots={[[70, -20]]} />
+          </div>
+          <div className="slip">
+            <span className="se">worth about</span>
+            <b>{value > 0 ? cad(value) : 'CA$—'}</b>
+            <span className="se small">est. · Scryfall prices of your printings</span>
+            <span className="warn">warning</span>
+            {value > 0 && <span className="stamp">APPRAISED</span>}
+          </div>
+        </section>
 
-      <h2>Cards</h2>
-      <div className="row">
-        <button disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
-          Export CSV
-        </button>
-        <button disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
-          Export text
-        </button>
-        <button className="danger" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
-          Reset binder
-        </button>
-      </div>
-      <input type="search" placeholder="Search cards" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards" />
-      <ul className="cards">
-        {shown.slice(0, limit).map((e) => (
-          <li key={e.id} className="card owned">
-            <span className="qty">{e.qty}</span>
-            <Thumb src={cards.get(e.cardId)?.img} />
-            <span className="cname">
-              {e.name} <small className="muted">{[e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ')}</small>
-            </span>
-            <small className="right">{usd(cards.get(e.cardId))}</small>
-            <button className="icon" aria-label={`Remove ${e.name}`} onClick={() => db.entries.delete(e.id!)}>
-              ✕
+        <section className="importrow">
+          <div className="flyer gbox">
+            <Doodles n={433} count={1} spots={[[70, 60]]} paper />
+            <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
+            <div className="hd">
+              <div className="stripe" aria-hidden="true" />
+              <h2>IMPORT</h2>
+            </div>
+            <p>ManaBox CSV, a CSV with name/quantity columns, or a text list (Moxfield, Archidekt, "1 Sol Ring").</p>
+            <label className="btn ink file">
+              {upload}
+              CHOOSE A FILE
+              <input
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+                disabled={!!busy}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (f) setText(await f.text());
+                }}
+              />
+            </label>
+          </div>
+          <div className="pastecol">
+            <label className="notebook">
+              <span>…or paste here</span>
+              <textarea className="ruled" rows={6} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
+            </label>
+            <div className="btnrow">
+              <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
+                ADD TO BINDER
+              </button>
+              <button className="btn secondary" disabled={!text.trim() || !!busy} onClick={() => run(text, true)}>
+                REPLACE BINDER
+              </button>
+            </div>
+            {busy && <Progress {...busy} />}
+            {error && <p className="error">{error}</p>}
+            {result && <ImportReport r={result} />}
+          </div>
+        </section>
+
+        <section>
+          <div className="cardshead">
+            <h2 aria-label="Cards">
+              <Ransom text="CARDS" size={40} seed={5} />
+            </h2>
+            <div className="rule" aria-hidden="true" />
+            <button className="sticker" style={{ transform: 'rotate(-2deg)' }} disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
+              EXPORT CSV
             </button>
-          </li>
-        ))}
-      </ul>
-      {shown.length > limit && <button onClick={() => setLimit(limit + 200)}>Show more ({shown.length - limit} left)</button>}
-    </section>
+            <button className="sticker" style={{ transform: 'rotate(1.5deg)' }} disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
+              EXPORT TEXT
+            </button>
+            <button className="stencil" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 1 L15 14 H1 Z M8 6 V9.5 M8 11.5 V12" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              RESET BINDER
+            </button>
+          </div>
+
+          <label className="sbox dark" style={{ marginTop: 18 }}>
+            <span className="tab">SEARCH</span>
+            <input type="search" placeholder="card name_" value={q} onChange={(e) => setQ(e.target.value)} />
+            <span aria-hidden="true" className="fade" />
+          </label>
+
+          <div className="colhead" aria-hidden="true">
+            <span>qty</span>
+            <span />
+            <span>card · set</span>
+            <span>each</span>
+            <span />
+          </div>
+          <ul className="crows">
+            {shown.slice(0, limit).map((e) => (
+              <li key={e.id} className="crow">
+                <span className="qty" aria-label={`Quantity ${e.qty}`}>
+                  <b>{e.qty}</b>
+                  <i>×</i>
+                </span>
+                <Thumb src={cards.get(e.cardId)?.img} />
+                <span className="cn">
+                  <b>{e.name}</b>
+                  <span>{[e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ')}</span>
+                </span>
+                <PriceLink card={cards.get(e.cardId)} />
+                <button className="xbtn" aria-label={`Remove ${e.name}`} onClick={() => db.entries.delete(e.id!)}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+                    <path d="M2 2 L12 12 M12 2 L2 12" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {shown.length > limit && (
+            <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
+              SHOW MORE ({shown.length - limit} LEFT)
+            </button>
+          )}
+        </section>
+      </main>
+    </>
   );
 }
