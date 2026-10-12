@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { currentUser, pull, push, signIn, supabase } from '../lib/sync';
+import { currentUser, providerEnabled, pull, push, signIn, supabase } from '../lib/sync';
 
 export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
@@ -37,15 +37,19 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
         <p className="muted">Sync isn't set up. Everything is saved on this device. See README → "Device sync" to turn it on.</p>
       ) : !user ? (
         <>
-        <button
-          className="github"
-          onClick={async () => {
-            const { error } = await supabase!.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: location.origin + location.pathname } });
-            if (error) setMsg(error.message);
-          }}
-        >
-          Sign in with GitHub
-        </button>
+        {(['google', 'github'] as const).map((provider) => (
+          <button
+            key={provider}
+            className={`oauth ${provider}`}
+            onClick={async () => {
+              if (!(await providerEnabled(provider))) return setMsg(`Sign in with ${provider === 'google' ? 'Google' : 'GitHub'} isn't switched on in Supabase yet.`);
+              const { error } = await supabase!.auth.signInWithOAuth({ provider, options: { redirectTo: location.origin + location.pathname } });
+              if (error) setMsg(error.message.includes('not enabled') ? `Sign in with ${provider === 'google' ? 'Google' : 'GitHub'} isn't switched on in Supabase yet.` : error.message);
+            }}
+          >
+            Sign in with {provider === 'google' ? 'Google' : 'GitHub'}
+          </button>
+        ))}
         <p className="muted">Or with your email:</p>
         <form
           className="row"

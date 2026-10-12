@@ -24,6 +24,16 @@ export async function currentUser() {
   return data.session?.user ?? null;
 }
 
+/** Whether a sign-in provider (google, github) is switched on in Supabase (public settings endpoint). */
+export async function providerEnabled(provider: string) {
+  try {
+    const r = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key! } });
+    return !!(await r.json()).external?.[provider];
+  } catch {
+    return true; // can't tell: let Supabase answer
+  }
+}
+
 export const signIn = (email: string) =>
   supabase!.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
 

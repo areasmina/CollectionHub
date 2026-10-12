@@ -2890,3 +2890,22 @@ button.logo {
     width: 36px;
   }
 }
+
+.panel .oauth {
+  width: 100%;
+  margin: 8px 0 0;
+  min-height: 48px;
+  border: 0;
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+.panel .oauth.github {
+  background: #24292f;
+  color: #fff;
+}
+.panel .oauth.google {
+  background: #fff;
+  color: #1f1f1f;
+  border: 3px solid var(--ink);
+}
