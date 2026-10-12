@@ -96,8 +96,7 @@ export function Discover(s: Shared) {
           if (q.trim()) setOpen(shown[0]?.name ?? q.trim());
         }}
       >
-        <input type="search" placeholder="Filter your commanders or type any commander" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Commander" />
-        <button type="submit">Open</button>
+        <input type="search" placeholder="Filter your commanders, or type any commander + Enter" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Commander" />
       </form>
       <div className="row">
         <label className="grow">
