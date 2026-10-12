@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
-import { resolveRows } from '../lib/scryfall';
+import { cheapest, resolveRows, withCheapest } from '../lib/scryfall';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { statusOf, summarize } from '../lib/compare';
-import { db, type Card, type Deck } from '../lib/db';
+import { db, type Card, type Cheap, type Deck } from '../lib/db';
 import { norm } from '../lib/names';
 import { deckCsv, deckText, download } from '../lib/export';
 import { ImportReport } from './Collection';
@@ -11,11 +11,14 @@ import { CardLine, money, priceSum, Progress, type Shared } from './shared';
 
 function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => void }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
-  const byKey = useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).toArray()).map((c) => [c.key, c])), [deck]) ?? new Map<string, Card>();
-  const cardOf = (name: string) => byKey.get(norm(name));
-  // Decks saved from EDHREC hold names only: look up any card not cached yet (images, prices).
+  const byKey = useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ?? new Map<string, Card>();
+  const cheap = useLiveQuery(async () => new Map((await db.cheap.bulkGet(deck.cards.map((c) => norm(c.name)))).filter(Boolean).map((c) => [c!.key, c!])), [deck]) ?? new Map<string, Cheap>();
+  const cardOf = (name: string) => withCheapest(byKey.get(norm(name)), cheap);
+  // Decks saved from EDHREC hold names only: look up any card not cached yet (images), then cheapest prices.
   useEffect(() => {
-    resolveRows(deck.cards.map((c) => ({ name: c.name, qty: c.qty })), () => {}).catch(() => {});
+    resolveRows(deck.cards.map((c) => ({ name: c.name, qty: c.qty })), () => {})
+      .then(() => cheapest(deck.cards.map((c) => c.name)))
+      .catch(() => {});
   }, [deck.id]);
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { cardsByIds } from '../lib/scryfall';
+import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { BRACKETS, BUDGETS, fetchPage, imgOf, pagePath, type EdhPage } from '../lib/edhrec';
 import { slug as toSlug } from '../lib/names';
 import { CardLine, money, priceSum, Seg, type Shared } from './shared';
@@ -42,7 +42,14 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
   useEffect(() => {
     const ids = page?.lists.flatMap((l) => l.cards.map((c) => c.id).filter(Boolean) as string[]) ?? [];
     let live = true;
-    if (ids.length) cardsByIds(ids).then((m) => live && setCards(m)).catch(() => {});
+    if (ids.length)
+      cardsByIds(ids)
+        .then(async (m) => {
+          if (live) setCards(m);
+          const cheap = await cheapest(page!.lists.flatMap((l) => l.cards.map((c) => c.name)));
+          if (live) setCards(new Map([...m].map(([id, c]) => [id, withCheapest(c, cheap)!])));
+        })
+        .catch(() => {});
     return () => {
       live = false;
     };

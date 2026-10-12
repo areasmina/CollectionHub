@@ -1,4 +1,4 @@
-import { db, type Card } from './db';
+import { db, type Card, type Cheap } from './db';
 import type { Row } from './importers';
 import { norm } from './names';
 
@@ -8,19 +8,51 @@ let last = 0;
 
 // Scryfall allows /cards/collection twice a second. Browsers don't let pages set User-Agent;
 // Scryfall accepts the browser's own one with an Accept header.
-async function post(path: string, body: unknown, tries = 4): Promise<any> {
+async function req(url: string, init: RequestInit, tries = 4): Promise<any> {
   const wait = last + 600 - Date.now();
   if (wait > 0) await sleep(wait);
   last = Date.now();
   // A 429 comes without CORS headers, so the browser reports it as a network error: back off either way.
-  const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) }).catch(
-    () => null,
-  );
-  if ((!r || r.status === 429) && tries > 1) return sleep(20000 * (5 - tries)).then(() => post(path, body, tries - 1));
+  const r = await fetch(url, { ...init, headers: { ...init.headers, Accept: 'application/json' } }).catch(() => null);
+  if ((!r || r.status === 429) && tries > 1) return sleep(20000 * (5 - tries)).then(() => req(url, init, tries - 1));
   if (!r) throw new Error('Could not reach Scryfall (offline, or rate-limited: wait a minute)');
+  if (r.status === 404) return { data: [] }; // search with no results
   if (!r.ok) throw new Error(`Scryfall answered ${r.status}`);
   return r.json();
 }
+const post = (path: string, body: unknown) => req(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+/** Cheapest paper printing (USD, non-foil first) per card name, cached a week. */
+export async function cheapest(names: string[]): Promise<Map<string, Cheap>> {
+  const keys = [...new Map(names.map((n) => [norm(n), n.split(/\s\/\/?\s/)[0]])).entries()];
+  const out = new Map<string, Cheap>();
+  (await db.cheap.bulkGet(keys.map(([k]) => k))).forEach((c) => c && Date.now() - c.at < WEEK && out.set(c.key, c));
+  const need = keys.filter(([k]) => !out.has(k));
+  for (let i = 0; i < need.length; i += 40) {
+    const batch = need.slice(i, i + 40);
+    const q = `(${batch.map(([, n]) => `!"${n.replace(/"/g, '')}"`).join(' or ')}) game:paper`;
+    const best = new Map<string, Cheap>(batch.map(([k]) => [k, { key: k, at: Date.now() }]));
+    let url: string | undefined = `${API}/cards/search?unique=prints&q=${encodeURIComponent(q)}`;
+    while (url) {
+      const page: any = await req(url, {});
+      for (const c of page.data) {
+        const price = c.prices?.usd ?? c.prices?.usd_foil;
+        const b = best.get(norm(c.name));
+        if (b && price && (!b.usd || Number(price) < Number(b.usd))) Object.assign(b, { usd: price, buy: c.purchase_uris?.tcgplayer });
+      }
+      url = page.has_more ? page.next_page : undefined;
+    }
+    await db.cheap.bulkPut([...best.values()]);
+    best.forEach((v, k) => out.set(k, v));
+  }
+  return out;
+}
+
+/** Card with its price swapped for the cheapest printing's, when known. */
+export const withCheapest = (c: Card | undefined, cheap: Map<string, Cheap>) => {
+  const p = c && cheap.get(c.key);
+  return c && p?.usd ? { ...c, usd: p.usd, buy: p.buy ?? c.buy } : c;
+};
 
 export function toCard(c: any): Card {
   const face = c.card_faces?.[0];

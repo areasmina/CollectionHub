@@ -49,8 +49,17 @@ export interface CachedPage {
   at: number;
 }
 
+/** Cheapest paper printing's USD price per card name (key = norm(name)). */
+export interface Cheap {
+  key: string;
+  usd?: string;
+  buy?: string;
+  at: number;
+}
+
 class DB extends Dexie {
   cards!: Table<Card, string>;
+  cheap!: Table<Cheap, string>;
   entries!: Table<Entry, number>;
   decks!: Table<Deck, number>;
   profiles!: Table<Profile, number>;
@@ -58,6 +67,7 @@ class DB extends Dexie {
   constructor() {
     super('collectionhub');
     this.version(1).stores({ cards: 'id,key', entries: '++id,profile', decks: '++id,profile', profiles: 'id', edhrec: 'path' });
+    this.version(2).stores({ cheap: 'key' });
   }
 }
 
