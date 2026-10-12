@@ -9,7 +9,6 @@ import { CommanderView } from './Commander';
 import { Progress, type Shared } from './shared';
 
 const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
-const DAY = 864e5;
 const SORTS: [string, string][] = [
   ['name', 'Name A→Z'],
   ['name-desc', 'Name Z→A'],
@@ -26,7 +25,6 @@ export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('name');
-  const [recent, setRecent] = useState(false);
   const [match, setMatch] = useState<Map<string, number | null>>(new Map());
   const data = useLiveQuery(async () => {
     const entries = await db.entries.where('profile').equals(s.profile).toArray();
@@ -85,7 +83,6 @@ export function Discover(s: Shared) {
   };
   const shown = commanders
     .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()))
-    .filter((c) => !recent || (c.added && Date.now() - c.added < 30 * DAY))
     .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name));
   const done = commanders.length - pending.length;
 
@@ -113,13 +110,10 @@ export function Discover(s: Shared) {
             ))}
           </select>
         </label>
-        <label className="check">
-          <input type="checkbox" checked={recent} onChange={(e) => setRecent(e.target.checked)} /> Added in the last 30 days
-        </label>
       </div>
       {needMatch && pending.length > 0 && <Progress done={done} total={commanders.length} what="Checking EDHREC average decks" />}
-      {(sort === 'added' || recent) && data?.undated && (
-        <p className="muted small">Cards imported before dates were recorded have no date, so they're left out of this. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
+      {sort === 'added' && data?.undated && (
+        <p className="muted small">Cards imported before dates were recorded have no date, so they're listed last. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
       )}
       <p className="muted">
         {commanders.length
