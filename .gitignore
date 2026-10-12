@@ -11,3 +11,6 @@ android/
 ios/
 screenshots/
 *.tsbuildinfo
+.vercel
+.env*
+!.env.example
