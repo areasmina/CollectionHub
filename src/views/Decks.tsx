@@ -163,9 +163,9 @@ export function Decks(s: Shared) {
                   {i === 0 && <Doodles n={433} count={2} spots={[[64, 50], [70, -8]]} paper />}
                   <span className="rule" aria-hidden="true" />
                   <span className="ytape" aria-hidden="true" />
-                  <span className="xart" aria-hidden="true">
+                  <span className={statusOf(d.commander ?? '', s.mine) === 'owned' ? 'xart owned' : 'xart'} aria-hidden="true">
                     {c?.img && <img src={c.img.replace('/small/', '/normal/')} alt="" loading="lazy" />}
-                    <Xgrain />
+                    {statusOf(d.commander ?? '', s.mine) !== 'owned' && <Xgrain />}
                   </span>
                   <span className="t">
                     <b>{d.name}</b>

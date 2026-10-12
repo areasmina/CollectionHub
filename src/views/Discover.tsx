@@ -6,7 +6,7 @@ import { fetchPage, pagePath } from '../lib/edhrec';
 import { slug } from '../lib/names';
 import { CommanderView } from './Commander';
 import { Progress, usd, type Shared } from './shared';
-import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, Xgrain } from './zine';
+import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title } from './zine';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
 const SORTS: [string, string][] = [
@@ -203,8 +203,8 @@ export function Discover(s: Shared) {
                   </span>
                   <span className="mat">
                     <span className="frame">
-                      {c.img && <img className="xerox" src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}
-                      <Xgrain />
+                      {/* Commanders listed here are in the binder: full colour. */}
+                      {c.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}
                     </span>
                   </span>
                   <span className="own">{st ? `Own ${st.pct}% of the deck. ${st.missing} cards missing.` : st === null ? 'No EDHREC deck yet.' : 'Checking EDHREC…'}</span>

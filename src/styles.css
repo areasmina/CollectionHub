@@ -2519,3 +2519,11 @@ button.logo {
   position: relative;
 }
 
+
+/* Owned cards in full colour, cards you don't own in black-and-white (colour on hover). */
+.xart.owned,
+.zrow.owned .xart,
+.ztile.owned .xart,
+.crow .xart {
+  filter: none;
+}

@@ -206,10 +206,11 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         <section className="chero">
           <span className="worn" aria-hidden="true" />
           <div className="cimg gbox">
-            <span className="xart">
+            {/* Full colour when the commander is in the binder, black-and-white xerox when it isn't. */}
+            <span className={statusOf(name, s.mine) === 'owned' ? 'xart owned' : 'xart'}>
               <Tape style={{ top: -13, left: 70, width: 86, height: 24, transform: 'rotate(-6deg)' }} />
               {bigImg && <img src={bigImg} alt={label} />}
-              <Xgrain />
+              {statusOf(name, s.mine) !== 'owned' && <Xgrain />}
             </span>
             <Doodles n={301} count={1} spots={[[60, 62], [-20, 4]]} />
           </div>
