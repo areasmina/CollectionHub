@@ -73,7 +73,7 @@ export default function App() {
         <div className="hubstrip" aria-hidden="true" />
         <div className={`hubslide${hubOpen ? ' open' : ''}`}>
           <button className="hubtab" aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => setHubOpen(!hubOpen)}>
-            {hubOpen ? '× HUB' : '≡ HUB'}
+            {hubOpen ? '×' : '≡'}
           </button>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
             <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="CollectionHub, go to Discover">

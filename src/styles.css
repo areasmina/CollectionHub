@@ -2666,13 +2666,14 @@ button.logo {
   top: 100%;
   right: 16px;
   min-height: 44px;
-  min-width: 96px;
-  padding: 4px 16px 10px;
+  min-width: 64px;
+  padding: 0 16px 8px;
   border: 0;
   background: var(--accent);
   color: var(--white);
   font-family: var(--an);
-  font-size: 18px;
+  font-size: 28px;
+  line-height: 1;
   letter-spacing: 1px;
   clip-path: polygon(0 0, 100% 0, 97% 70%, 100% 100%, 64% 88%, 40% 100%, 6% 90%, 3% 60%);
   transform: rotate(-1.5deg);
