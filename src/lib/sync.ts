@@ -4,6 +4,16 @@ import { resolveRows } from './scryfall';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Read the sign-in return before Supabase consumes the URL: errors come back here and were silently dropped.
+const ret = new URLSearchParams((typeof location !== 'undefined' && (location.hash.slice(1) || location.search.slice(1))) || '');
+/** Set when the page was opened by a sign-in redirect: success (session in the URL) or Supabase's error text. */
+export const authReturn: { error?: string; ok?: boolean } | null = ret.get('error_description') || ret.get('error')
+  ? { error: (ret.get('error_description') || ret.get('error') || '').replace(/\+/g, ' ') }
+  : ret.get('access_token') || ret.get('code')
+    ? { ok: true }
+    : null;
+if (authReturn?.error && typeof history !== 'undefined') history.replaceState(null, '', location.pathname);
+
 /** null when sync isn't configured; the app works fully without it. */
 export const supabase = url && key
   ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })

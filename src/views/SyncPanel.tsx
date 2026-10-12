@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { currentUser, providerEnabled, pull, push, signIn, supabase } from '../lib/sync';
+import { authReturn, currentUser, providerEnabled, pull, push, signIn, supabase } from '../lib/sync';
 
 export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState<string | null>(null);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(authReturn?.error ? `Sign-in failed: ${authReturn.error}` : '');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {

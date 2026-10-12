@@ -6,6 +6,7 @@ import { Collection } from './views/Collection';
 import { Decks } from './views/Decks';
 import { Discover } from './views/Discover';
 import { SyncPanel } from './views/SyncPanel';
+import { authReturn } from './lib/sync';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs } from './views/zine';
 
@@ -32,7 +33,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
-  const [sync, setSync] = useState(false);
+  const [sync, setSync] = useState(!!authReturn); // back from a sign-in redirect: show the result
   const [hubOpen, setHubOpen] = useState(false);
   const hubRef = useRef<HTMLDivElement>(null);
   const hubTimer = useRef<number>(undefined);
