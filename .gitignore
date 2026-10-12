@@ -14,3 +14,7 @@ screenshots/
 .vercel
 .env*
 !.env.example
+
+# screenshots with credentials
+*.png
+!public/**/*.png
