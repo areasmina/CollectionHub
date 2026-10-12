@@ -12,6 +12,7 @@ export interface Card {
   usd?: string;
   eur?: string;
   mana?: string;
+  cmc?: number;
   buy?: string; // TCGplayer link from Scryfall
   legal: boolean;
   at?: number; // fetched at (ms)
@@ -26,6 +27,7 @@ export interface Entry {
   set?: string;
   cn?: string;
   foil?: boolean;
+  added?: number; // first seen (ManaBox 'Added', else import time), ms
 }
 export interface DeckCard {
   name: string;
@@ -42,6 +44,8 @@ export interface Deck {
 export interface Profile {
   id: number;
   name: string;
+  swaps?: Record<string, Record<string, string>>; // deck path -> missing card -> owned replacement
+  bought?: string[]; // shopping list: card keys checked off
 }
 export interface CachedPage {
   path: string;

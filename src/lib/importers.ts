@@ -5,6 +5,7 @@ export interface Row {
   cn?: string;
   id?: string;
   foil?: boolean;
+  added?: string; // date the card entered the collection (ManaBox 'Added')
   section?: string;
 }
 export interface ParseError {
@@ -47,6 +48,7 @@ const COLS = {
   cn: ['collector number', 'card number', 'number', 'collector_number', 'cn'],
   id: ['scryfall id', 'scryfall_id', 'scryfallid'],
   foil: ['foil', 'printing'],
+  added: ['added', 'date added', 'added at'],
 };
 const col = (header: string[], names: string[]) => header.findIndex((h) => names.includes(h.trim().toLowerCase()));
 const NOT_FOIL = ['', 'false', 'normal', '0', 'no', 'nonfoil'];
@@ -66,7 +68,7 @@ function parseCsvImport(text: string, delim: string): Parsed | null {
     if (!name) return errors.push({ line, text: r.join(delim), reason: 'No card name' });
     if (!Number.isInteger(qty) || qty < 1) return errors.push({ line, text: r.join(delim), reason: `Bad quantity "${qtyText}"` });
     const get = (k: number) => (k >= 0 && r[k]?.trim()) || undefined;
-    rows.push({ name, qty, set: get(c.set), cn: get(c.cn), id: get(c.id), foil: c.foil >= 0 && !NOT_FOIL.includes((r[c.foil] ?? '').trim().toLowerCase()) });
+    rows.push({ name, qty, set: get(c.set), cn: get(c.cn), id: get(c.id), foil: c.foil >= 0 && !NOT_FOIL.includes((r[c.foil] ?? '').trim().toLowerCase()), added: get(c.added) });
   });
   const manabox = header.some((h) => h.trim().toLowerCase() === 'manabox id');
   return { format: manabox ? 'manabox' : 'csv', rows, errors };

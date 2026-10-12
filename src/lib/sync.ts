@@ -41,21 +41,47 @@ export async function push() {
     const { error } = await supabase!.from(t).delete().eq('user_id', uid);
     if (error) throw error;
   }
-  const { error } = await supabase!.from('profiles').upsert(profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, updated_at: new Date().toISOString() })));
+  // `extras` (swaps, shopping-list checks) and `added` need supabase/migrations/002_extras.sql; without it they stay on this device.
+  const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, updated_at: new Date().toISOString(), extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [] } }));
+  let migrated = true;
+  let { error } = await supabase!.from('profiles').upsert(profileRows);
+  if (error?.code === 'PGRST204') {
+    migrated = false;
+    ({ error } = await supabase!.from('profiles').upsert(profileRows.map(({ extras: _, ...r }) => r)));
+  }
   if (error) throw error;
-  await insertAll('cards', entries.map((e) => ({ user_id: uid, slot: e.profile, card_id: e.cardId, name: e.name, qty: e.qty, set_code: e.set ?? null, collector_number: e.cn ?? null, foil: !!e.foil })));
+  await insertAll(
+    'cards',
+    entries.map((e) => ({
+      user_id: uid,
+      slot: e.profile,
+      card_id: e.cardId,
+      name: e.name,
+      qty: e.qty,
+      set_code: e.set ?? null,
+      collector_number: e.cn ?? null,
+      foil: !!e.foil,
+      ...(migrated && e.added ? { added: new Date(e.added).toISOString() } : {}),
+    })),
+  );
   await insertAll('decks', decks.map((d) => ({ user_id: uid, slot: d.profile, name: d.name, commander: d.commander ?? null, cards: d.cards, updated_at: new Date(d.updated).toISOString() })));
-  return { cards: entries.length, decks: decks.length };
+  return { cards: entries.length, decks: decks.length, migrated };
 }
 
 export async function pull() {
   await userId();
   const [profiles, cards, decks] = await Promise.all([selectAll('profiles'), selectAll('cards'), selectAll('decks')]);
   await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
-    for (const p of profiles) await db.profiles.put({ id: p.slot, name: p.name });
+    for (const p of profiles) {
+      const local = await db.profiles.get(p.slot);
+      // Without the extras column, keep this device's swaps and checks.
+      await db.profiles.put({ id: p.slot, name: p.name, swaps: p.extras?.swaps ?? local?.swaps, bought: p.extras?.bought ?? local?.bought });
+    }
     await db.entries.clear();
     await db.decks.clear();
-    await db.entries.bulkAdd(cards.map((c) => ({ profile: c.slot, cardId: c.card_id, name: c.name, qty: c.qty, set: c.set_code ?? undefined, cn: c.collector_number ?? undefined, foil: c.foil })));
+    await db.entries.bulkAdd(
+      cards.map((c) => ({ profile: c.slot, cardId: c.card_id, name: c.name, qty: c.qty, set: c.set_code ?? undefined, cn: c.collector_number ?? undefined, foil: c.foil, added: c.added ? Date.parse(c.added) : undefined })),
+    );
     await db.decks.bulkAdd(decks.map((d) => ({ profile: d.slot, name: d.name, commander: d.commander ?? undefined, cards: d.cards, updated: Date.parse(d.updated_at) })));
   });
   // Card details (type, colours, image) come from Scryfall's cache on this device.

@@ -18,10 +18,12 @@ export async function importCollection(profile: number, text: string, replace: b
   await db.transaction('rw', db.entries, async () => {
     if (replace) await db.entries.where('profile').equals(profile).delete();
     const existing = new Map((await db.entries.where('profile').equals(profile).toArray()).map((e) => [entryKey(e), e]));
+    const now = Date.now();
     for (const { row, card } of matched) {
-      const e: Entry = { profile, cardId: card.id, name: card.name, qty: row.qty, set: row.set?.toLowerCase(), cn: row.cn, foil: row.foil };
+      const added = (row.added && Date.parse(row.added)) || now;
+      const e: Entry = { profile, cardId: card.id, name: card.name, qty: row.qty, set: row.set?.toLowerCase(), cn: row.cn, foil: row.foil, added };
       const prev = existing.get(entryKey(e));
-      if (prev) prev.qty += row.qty;
+      if (prev) (prev.qty += row.qty), (prev.added = Math.min(prev.added ?? added, added));
       else existing.set(entryKey(e), e);
     }
     await db.entries.bulkPut([...existing.values()]);

@@ -29,12 +29,21 @@ export const pagePath = (kind: 'commander' | 'average', slug: string, bracket = 
 
 const DAY = 864e5;
 export class NoPage extends Error {}
+let nextSlot = 0;
 
 export async function fetchPage(path: string): Promise<EdhPage> {
   const hit = await db.edhrec.get(path);
   if (hit && Date.now() - hit.at < DAY) return parsePage(hit.data);
+  // Be polite: at most ~3 page requests a second (e.g. when ranking every commander).
+  const start = Math.max(nextSlot, Date.now());
+  nextSlot = start + 350;
+  if (start > Date.now()) await new Promise((r) => setTimeout(r, start - Date.now()));
   // json.edhrec.com sends Access-Control-Allow-Origin: *, so no proxy is needed.
-  const r = await fetch(`https://json.edhrec.com/pages/${path}.json`);
+  const r = await fetch(`https://json.edhrec.com/pages/${path}.json`).catch(() => null);
+  if (!r) {
+    if (hit) return parsePage(hit.data);
+    throw new Error('Could not reach EDHREC (offline?)');
+  }
   if (r.status === 403 || r.status === 404) throw new NoPage('EDHREC has no page for this combination.');
   if (!r.ok) {
     if (hit) return parsePage(hit.data); // stale beats nothing

@@ -67,6 +67,7 @@ export function toCard(c: any): Card {
     usd: c.prices?.usd ?? c.prices?.usd_foil ?? undefined,
     eur: c.prices?.eur ?? c.prices?.eur_foil ?? undefined,
     mana: c.mana_cost ?? (c.card_faces ?? []).map((f: any) => f.mana_cost).filter(Boolean).join(' // '),
+    cmc: c.cmc,
     buy: c.purchase_uris?.tcgplayer,
     legal: c.legalities?.commander === 'legal',
     at: Date.now(),
@@ -79,7 +80,7 @@ const WEEK = 7 * 864e5;
 export async function cardsByIds(ids: string[]): Promise<Map<string, Card>> {
   const uniq = [...new Set(ids)];
   const out = new Map<string, Card>();
-  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && Date.now() - c.at < WEEK && out.set(c.id, c));
+  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.cmc != null && Date.now() - c.at < WEEK && out.set(c.id, c));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {
     const res = await post('/cards/collection', { identifiers: need.slice(i, i + 75).map((id) => ({ id })) });

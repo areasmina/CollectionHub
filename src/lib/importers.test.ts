@@ -14,13 +14,13 @@ describe('parseCsv', () => {
 describe('parseImport', () => {
   it('reads a ManaBox export', () => {
     const csv =
-      'Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price\n' +
-      '"Alesha, Who Laughs at Fate",FDN,Foundations,115,normal,rare,1,100953,a93e3406-4e29-4bc0-ae52-cbd2ac1f99a4,3.52\n' +
-      'Sol Ring,CMM,Commander Masters,410,foil,uncommon,2,1,bf6a2f02-0000-0000-0000-000000000000,1\n';
+      'Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price,Added\n' +
+      '"Alesha, Who Laughs at Fate",FDN,Foundations,115,normal,rare,1,100953,a93e3406-4e29-4bc0-ae52-cbd2ac1f99a4,3.52,2026-10-01T23:45:32.777Z\n' +
+      'Sol Ring,CMM,Commander Masters,410,foil,uncommon,2,1,bf6a2f02-0000-0000-0000-000000000000,1,\n';
     const p = parseImport('﻿' + csv);
     expect(p.format).toBe('manabox');
     expect(p.errors).toEqual([]);
-    expect(p.rows[0]).toMatchObject({ name: 'Alesha, Who Laughs at Fate', qty: 1, set: 'FDN', cn: '115', id: 'a93e3406-4e29-4bc0-ae52-cbd2ac1f99a4', foil: false });
+    expect(p.rows[0]).toMatchObject({ name: 'Alesha, Who Laughs at Fate', qty: 1, set: 'FDN', cn: '115', id: 'a93e3406-4e29-4bc0-ae52-cbd2ac1f99a4', foil: false, added: '2026-10-01T23:45:32.777Z' });
     expect(p.rows[1]).toMatchObject({ name: 'Sol Ring', qty: 2, foil: true });
   });
 

@@ -10,9 +10,12 @@ export function ownedMap(entries: { name: string; qty: number }[]): Map<string, 
 }
 
 /** owned = in this binder; other = only in the other binder (never counted as owned). */
+// Basic lands are never worth listing as missing.
+const BASICS = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes', 'snow-covered plains', 'snow-covered island', 'snow-covered swamp', 'snow-covered mountain', 'snow-covered forest']);
+
 export function statusOf(name: string, mine: Map<string, number>, other?: Map<string, number>): Status {
   const k = norm(name);
-  if (mine.has(k)) return 'owned';
+  if (mine.has(k) || BASICS.has(k)) return 'owned';
   return other?.has(k) ? 'other' : 'missing';
 }
 

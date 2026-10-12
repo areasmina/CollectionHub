@@ -38,3 +38,7 @@ alter table decks enable row level security;
 create policy "own profiles" on profiles for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own cards" on cards for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own decks" on decks for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Swaps + shopping-list checks per binder, first-seen date per card (same as migrations/002_extras.sql).
+alter table profiles add column if not exists extras jsonb;
+alter table cards add column if not exists added timestamptz;
