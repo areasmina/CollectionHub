@@ -46,7 +46,7 @@ The app works fully without this. To use the same binders on your PC and phone:
    VITE_SUPABASE_ANON_KEY=eyJ...
    ```
    `.env` is git-ignored. The anon key is meant to be public (row-level security protects the data); never put the `service_role` key here.
-6. Restart `npm run dev`. Tap **⇅** in the header, enter your email, open the link from the email on that device.
+6. Restart `npm run dev`. Tap **⇅** in the header and **Sign in with GitHub** (needs a GitHub OAuth app with callback `https://<project>.supabase.co/auth/v1/callback`, its Client ID/secret in Supabase → Authentication → Sign In / Providers → GitHub), or enter your email for a sign-in link. Once signed in you can also set a password to sign in without email (Supabase's free email service allows only a few emails per hour).
 7. **Push to cloud** on the device that has your data; **Pull from cloud** on the other one.
 
 Sync is a whole snapshot: Push replaces the cloud copy, Pull replaces the device copy. Push after making changes, pull before using the other device.
