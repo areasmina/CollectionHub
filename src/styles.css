@@ -3146,3 +3146,11 @@ button.logo {
   display: flex;
   align-items: center;
 }
+
+.cell .fetched {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--se);
+  font-size: 11px;
+  color: var(--muted);
+}

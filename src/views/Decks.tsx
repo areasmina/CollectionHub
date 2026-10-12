@@ -5,7 +5,7 @@ import { statusOf, summarize } from '../lib/compare';
 import { db, type Card, type Cheap, type Deck } from '../lib/db';
 import { deckCsv, deckText, download } from '../lib/export';
 import { norm } from '../lib/names';
-import { cad } from '../lib/prices';
+import { cad, fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cheapest, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
@@ -105,6 +105,9 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
           <div className="cell">
             <span className="lbl">DECK PRICE</span>
             <span className="price tapey y1 t2 big">{byKey.size ? `≈${cad(deckCost)}` : 'CA$—'}</span>
+            <small className="fetched" title={PRICE_METHOD}>
+              cheapest printings · {fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}
+            </small>
           </div>
           <SaltCell names={deck.cards.map((c) => c.name)} />
           <div className="cell">

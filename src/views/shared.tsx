@@ -3,7 +3,7 @@ import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
-import { cad, rateNote, toCad } from '../lib/prices';
+import { cad, finishUsd, rateNote, toCad } from '../lib/prices';
 
 export interface Shared {
   profile: number;
@@ -19,6 +19,8 @@ export const usd = (c?: Card) => (c?.usd ? `≈${cad(toCad(c.usd)!)}` : '≈CA$�
 /** Estimated CAD total × quantity; cards without a USD price are left out. */
 export const priceSum = (items: { card?: Card; qty: number }[]) => items.reduce((n, i) => n + (toCad(i.card?.usd) ?? 0) * i.qty, 0);
 export const money = (n: number) => `${cad(n)} est.`;
+/** The card with the price of the finish you own (foil entries use the foil price). */
+export const priced = (c: Card | undefined, foil?: boolean) => (c && foil ? { ...c, usd: finishUsd(c, true) } : c);
 
 /** Scryfall page for a card by exact name (Scryfall opens the card page when the name matches one card). */
 export const scryfallUrl = (name: string) => `https://scryfall.com/search?q=${encodeURIComponent(`!"${name.split(' // ')[0]}"`)}`;

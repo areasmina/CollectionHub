@@ -51,7 +51,7 @@ export async function cheapest(names: string[]): Promise<Map<string, Cheap>> {
 /** Card with its price swapped for the cheapest printing's, when known. */
 export const withCheapest = (c: Card | undefined, cheap: Map<string, Cheap>) => {
   const p = c && cheap.get(c.key);
-  return c && p?.usd ? { ...c, usd: p.usd, buy: p.buy ?? c.buy } : c;
+  return c && p?.usd ? { ...c, usd: p.usd, buy: p.buy ?? c.buy, priceAt: p.at } : c;
 };
 
 export function toCard(c: any): Card {
@@ -64,12 +64,14 @@ export function toCard(c: any): Card {
     text: c.oracle_text ?? (c.card_faces ?? []).map((f: any) => f.oracle_text).join('\n'),
     ci: c.color_identity ?? [],
     img: c.image_uris?.small ?? face?.image_uris?.small,
-    usd: c.prices?.usd ?? c.prices?.usd_foil ?? undefined,
+    usd: c.prices?.usd ?? c.prices?.usd_foil ?? c.prices?.usd_etched ?? undefined,
+    usdFoil: c.prices?.usd_foil ?? c.prices?.usd_etched ?? undefined,
     eur: c.prices?.eur ?? c.prices?.eur_foil ?? undefined,
     mana: c.mana_cost ?? (c.card_faces ?? []).map((f: any) => f.mana_cost).filter(Boolean).join(' // '),
     cmc: c.cmc,
     buy: c.purchase_uris?.tcgplayer,
     legal: c.legalities?.commander === 'legal',
+    pv: 2,
     at: Date.now(),
   };
 }
@@ -80,7 +82,8 @@ const WEEK = 7 * 864e5;
 export async function cardsByIds(ids: string[]): Promise<Map<string, Card>> {
   const uniq = [...new Set(ids)];
   const out = new Map<string, Card>();
-  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.cmc != null && Date.now() - c.at < WEEK && out.set(c.id, c));
+  // pv 2 = has the foil price: older cache entries are fetched again once.
+  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.pv === 2 && Date.now() - c.at < WEEK && out.set(c.id, c));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {
     const res = await post('/cards/collection', { identifiers: need.slice(i, i + 75).map((id) => ({ id })) });
@@ -104,7 +107,8 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
     const ident = identOf(r);
     const k = identKey(ident);
     if (found.has(k)) continue;
-    const hit = r.id ? await db.cards.get(r.id) : await db.cards.where('key').equals(norm(r.name)).first();
+    // A row naming its printing (set + number) must get that printing, not whichever one of the name is cached.
+    const hit = r.id ? await db.cards.get(r.id) : r.set && r.cn ? undefined : await db.cards.where('key').equals(norm(r.name)).first();
     if (hit) found.set(k, hit);
     else if (!need.some((n) => identKey(n) === k)) need.push(ident);
   }

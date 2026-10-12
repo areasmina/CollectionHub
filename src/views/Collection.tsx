@@ -1,12 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
 import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
 import { cad } from '../lib/prices';
 import { CardsView } from './CardsView';
 import { isCommander } from './Discover';
-import { PriceLink, priceSum, Progress, Thumb } from './shared';
+import { fetchedNote, PRICE_METHOD } from '../lib/prices';
+import { cardsByIds } from '../lib/scryfall';
+import { PriceLink, priced, priceSum, Progress, Thumb } from './shared';
 import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
 
 export function ImportReport({ r }: { r: ImportResult }) {
@@ -69,7 +71,11 @@ export function Collection({ profile, name }: { profile: number; name: string })
 
   const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))])).filter(Boolean).map((c) => [c!.id, c!])), [entries]) ?? new Map<string, Card>();
   const total = entries.reduce((n, e) => n + e.qty, 0);
-  const value = priceSum(entries.map((e) => ({ card: cards.get(e.cardId), qty: e.qty })));
+  const value = priceSum(entries.map((e) => ({ card: priced(cards.get(e.cardId), e.foil), qty: e.qty })));
+  // Prices older than a week are fetched again (only those).
+  useEffect(() => {
+    if (entries.length) cardsByIds(entries.map((e) => e.cardId)).catch(() => {});
+  }, [entries.length]);
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
@@ -113,7 +119,9 @@ export function Collection({ profile, name }: { profile: number; name: string })
           <div className="slip">
             <span className="se">worth about</span>
             <b>{value > 0 ? cad(value) : 'CA$—'}</b>
-            <span className="se small">est. · Scryfall prices of your printings</span>
+            <span className="se small" title={PRICE_METHOD}>
+              est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
+            </span>
             <span className="warn">warning</span>
             {value > 0 && <span className="stamp">APPRAISED</span>}
           </div>

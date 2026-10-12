@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { PriceLink, Thumb } from './shared';
+import { PriceLink, priced, Thumb } from './shared';
 
 /** A per-device preference kept in localStorage (falls back to memory). */
 function usePref<T extends string>(key: string, initial: T): [T, (v: T) => void] {
@@ -100,7 +100,7 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
               <QtyEdit e={e} jinx />
               <RemoveBtn e={e} />
             </span>
-            <PriceLink card={cards.get(e.cardId)} tape={e.cardId} />
+            <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
           </li>
         ))}
       </ul>
@@ -123,7 +123,7 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
               <b>{e.name}</b>
               <span>{setLine(e)}</span>
             </span>
-            <PriceLink card={cards.get(e.cardId)} tape={e.cardId} />
+            <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
             <RemoveBtn e={e} />
           </li>
         ))}

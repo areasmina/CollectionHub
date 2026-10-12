@@ -63,9 +63,15 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
    banned); the Collection page says how many. Not done: a per-card "available copies" column (comes with filters, item 3).
 3. 🟡 Collection organisation/editing: search by name, set grouping, qty edit done. Missing: sort, filters (colour,
    type, rarity, MV, price, foil, in deck / not in deck).
-4. 🟡 Valuation: binder value uses your printing's price, but foil entries are priced at the non-foil price (`usd ??
-   usd_foil`), and decks/missing use the cheapest printing instead. Unify the method, price foils correctly, show
-   retrieval time.
+4. ✅ Valuation (phase 3a.3). One stated method (`PRICE_METHOD`, in every price tooltip): cards you own = your
+   printing and finish (foil copies use Scryfall's foil, else etched price; non-foil when no foil price exists); deck
+   price, missing cost and buy lists = the cheapest paper printing (non-foil first). "Scryfall prices fetched <dates>"
+   under the binder value, both deck prices and the TO BUY receipt (`fetchedNote`, tested). Collection prices older than
+   a week are fetched again when the Collection opens (they never refreshed before). Every cached card is fetched once
+   more to pick up foil prices (card-data version `pv` 2). Also fixed: a text line naming its printing ("1x Sol Ring (CMM)
+   410 *F*") was matched to whichever printing of that name was cached; it now gets the named printing. Entries imported
+   from text before this fix may point at another printing (ManaBox CSV imports use Scryfall ids and were fine);
+   re-import such a list to correct it.
 5. ✅ Collection Match in the commander header (owned of total, %, missing, missing cost) + copies alert.
 6. ⬜ Suggested Deck (5.1): scan B3/B4/B5 × budgets, pick the most-owned page, build a 100-card deck from owned cards
    first, fill gaps with owned substitutes, list purchases separately.
@@ -79,7 +85,8 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 
 1. 🟡 EDHREC attribution: deck counts shown on commander pages; timestamp, archetype size and inclusion % per card not
    shown.
-2. 🟡 Pricing: provider (TCGplayer via Scryfall) and rate (ECB, date) in the receipt note; no per-price timestamp.
+2. 🟡 Pricing: provider (TCGplayer via Scryfall), rate (ECB, date), method and fetch dates shown. Missing: Scryfall's
+   own update time (not in its API), original USD next to CA$.
 3. 🟡 Salt ✅ (EDHREC). Bracket estimate ⬜ (Game Changers list, two-card combos via Commander Spellbook, fast mana,
    tutors; confidence and reasons shown).
 4. ⬜ Advanced collection search (Scryfall-style fields we actually store; no full query language).

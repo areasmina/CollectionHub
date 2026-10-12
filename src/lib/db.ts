@@ -10,11 +10,14 @@ export interface Card {
   ci: string[];
   img?: string;
   usd?: string;
+  usdFoil?: string; // foil (else etched) price of this printing
+  priceAt?: number; // when the shown price was fetched (cheapest-printing price: its own time)
   eur?: string;
   mana?: string;
   cmc?: number;
   buy?: string; // TCGplayer link from Scryfall
   legal: boolean;
+  pv?: number; // card-data version: 2 = has usdFoil
   at?: number; // fetched at (ms)
 }
 /** One printing in a binder. */

@@ -4,7 +4,7 @@ import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, BUDGETS, fetchPage, imgOf, pagePath, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
-import { cad, rateNote, shopUrl } from '../lib/prices';
+import { cad, fetchedNote, PRICE_METHOD, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
 import { CardLine, CardTile, money, priceSum, SaltCell, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
@@ -194,7 +194,9 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         <span>TO BUY ({toBuy.length})</span>
         <span>{pricesIn ? money(toBuyCost) : '≈CA$—'}</span>
       </div>
-      <p className="small">{rateNote()}</p>
+      <p className="small">
+        {rateNote()} {fetchedNote(missing.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}.
+      </p>
       <hr />
       <div className="thanks">thank you for building with what you own</div>
     </aside>
@@ -329,6 +331,9 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             <span className="price tapey y1 t2 big" aria-label={`Whole deck costs about ${pricesIn ? money(deckCost) : 'an unknown amount'}`}>
               {pricesIn ? `≈${cad(deckCost)}` : 'CA$—'}
             </span>
+            <small className="fetched" title={PRICE_METHOD}>
+              cheapest printings · {fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}
+            </small>
           </div>
           {page && <SaltCell names={names} />}
           <div className="cell">
