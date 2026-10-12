@@ -1,9 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
-import { db } from '../lib/db';
+import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
-import { Progress } from './shared';
+import { money, priceSum, Progress, usd } from './shared';
 
 export function ImportReport({ r }: { r: ImportResult }) {
   return (
@@ -63,7 +63,9 @@ export function Collection({ profile, name }: { profile: number; name: string })
     setBusy(null);
   }
 
+  const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))])).filter(Boolean).map((c) => [c!.id, c!])), [entries]) ?? new Map<string, Card>();
   const total = entries.reduce((n, e) => n + e.qty, 0);
+  const value = priceSum(entries.map((e) => ({ card: cards.get(e.cardId), qty: e.qty })));
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
@@ -77,7 +79,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
         </label>
       </div>
       <p className="muted">
-        {total.toLocaleString()} cards ({entries.length.toLocaleString()} entries).
+        {total.toLocaleString()} cards ({entries.length.toLocaleString()} entries){value > 0 && ` · worth about ${money(value)} (Scryfall prices of your printings)`}.
       </p>
 
       <h2>Import</h2>
@@ -125,9 +127,11 @@ export function Collection({ profile, name }: { profile: number; name: string })
         {shown.slice(0, limit).map((e) => (
           <li key={e.id} className="card owned">
             <span className="qty">{e.qty}</span>
+            {cards.get(e.cardId)?.img ? <img src={cards.get(e.cardId)!.img} alt="" loading="lazy" width={36} height={50} /> : <span className="noimg" />}
             <span className="cname">
               {e.name} <small className="muted">{[e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ')}</small>
             </span>
+            <small className="right">{usd(cards.get(e.cardId))}</small>
             <button className="icon" aria-label={`Remove ${e.name}`} onClick={() => db.entries.delete(e.id!)}>
               ✕
             </button>

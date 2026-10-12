@@ -1,14 +1,23 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { resolveRows } from '../lib/scryfall';
 import { importDeck, type ImportResult } from '../lib/actions';
-import { summarize } from '../lib/compare';
-import { db, type Deck } from '../lib/db';
+import { statusOf, summarize } from '../lib/compare';
+import { db, type Card, type Deck } from '../lib/db';
+import { norm } from '../lib/names';
 import { deckCsv, deckText, download } from '../lib/export';
 import { ImportReport } from './Collection';
-import { CardLine, Progress, type Shared } from './shared';
+import { CardLine, money, priceSum, Progress, type Shared } from './shared';
 
 function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => void }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
+  const byKey = useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).toArray()).map((c) => [c.key, c])), [deck]) ?? new Map<string, Card>();
+  const cardOf = (name: string) => byKey.get(norm(name));
+  // Decks saved from EDHREC hold names only: look up any card not cached yet (images, prices).
+  useEffect(() => {
+    resolveRows(deck.cards.map((c) => ({ name: c.name, qty: c.qty })), () => {}).catch(() => {});
+  }, [deck.id]);
+  const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const cards = [...deck.cards].sort((a, b) => Number(b.name === deck.commander) - Number(a.name === deck.commander));
   return (
@@ -20,6 +29,7 @@ function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => vo
       {deck.commander && <p className="muted">Commander: {deck.commander}</p>}
       <div className="summary">
         <strong>{sum.pct}%</strong> owned · {sum.missing + sum.other} missing{sum.other > 0 && ` (${sum.other} in ${s.otherName})`}
+        {byKey.size > 0 && ` · missing cards ≈ ${money(missingCost)}`}
       </div>
       <div className="row">
         <button onClick={() => download(file('txt'), deckText(deck))}>Export text</button>
@@ -38,7 +48,7 @@ function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => vo
       </div>
       <ul className="cards">
         {cards.map((c) => (
-          <CardLine key={c.name} name={c.name} s={s} right={c.qty > 1 ? `×${c.qty}` : c.name === deck.commander ? 'Commander' : undefined} />
+          <CardLine key={c.name} name={c.name} card={cardOf(c.name)} s={s} right={c.qty > 1 ? `×${c.qty}` : c.name === deck.commander ? 'Commander' : undefined} />
         ))}
       </ul>
     </section>

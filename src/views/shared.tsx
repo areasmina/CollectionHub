@@ -1,4 +1,5 @@
 import { statusOf } from '../lib/compare';
+import type { Card } from '../lib/db';
 
 export interface Shared {
   profile: number;
@@ -8,17 +9,31 @@ export interface Shared {
 }
 
 /** A card line: owned normal, missing greyed, "in <other binder>" labelled. */
-export function CardLine({ name, img, s, right }: { name: string; img?: string; s: Shared; right?: React.ReactNode }) {
+export const usd = (c?: Card) => (c?.usd ? `$${Number(c.usd).toFixed(2)}` : c?.eur ? `€${Number(c.eur).toFixed(2)}` : '');
+
+/** USD total × quantity; cards without a USD price are left out. */
+export const priceSum = (items: { card?: Card; qty: number }[]) => items.reduce((n, i) => n + Number(i.card?.usd ?? 0) * i.qty, 0);
+export const money = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+export function CardLine({ name, img, card, s, right }: { name: string; img?: string; card?: Card; s: Shared; right?: React.ReactNode }) {
   const st = statusOf(name, s.mine, s.other);
+  const src = card?.img ?? img;
+  const price = usd(card);
   return (
     <li className={`card ${st}`}>
-      {img ? <img src={img} alt="" loading="lazy" width={36} height={50} /> : <span className="noimg" />}
+      {src ? <img src={src} alt="" loading="lazy" width={36} height={50} /> : <span className="noimg" />}
       <span className="cname">
         {name}
+        {card?.mana && <small className="mana"> {card.mana}</small>}
         {st === 'other' && <small className="tag">in {s.otherName}</small>}
         {st === 'missing' && <span className="sr">(missing)</span>}
       </span>
-      {right && <span className="right">{right}</span>}
+      {(right || price) && (
+        <span className="right">
+          {right}
+          {price && (card?.buy ? <a className="price" href={card.buy} target="_blank" rel="noreferrer">{price}</a> : <small className="price">{price}</small>)}
+        </span>
+      )}
     </li>
   );
 }

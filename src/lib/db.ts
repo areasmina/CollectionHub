@@ -10,7 +10,11 @@ export interface Card {
   ci: string[];
   img?: string;
   usd?: string;
+  eur?: string;
+  mana?: string;
+  buy?: string; // TCGplayer link from Scryfall
   legal: boolean;
+  at?: number; // fetched at (ms)
 }
 /** One printing in a binder. */
 export interface Entry {

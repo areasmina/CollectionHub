@@ -9,6 +9,7 @@ export interface EdhCard {
   decks?: number;
   potential?: number;
   synergy?: number;
+  lift?: number;
   qty?: number;
 }
 export interface EdhList {
@@ -48,11 +49,13 @@ export function parsePage(j: any): EdhPage {
   const jd = j?.container?.json_dict ?? {};
   // Average decks carry the real 99 with quantities in deck.cards {Type: [[name, qty]]}.
   const deck = j?.deck?.cards as Record<string, [string, number][]> | undefined;
+  const views: any[] = (jd.cardlists ?? []).flatMap((l: any) => l.cardviews ?? []);
+  const idOf = new Map(views.map((v) => [v.name, v.id]));
   const lists: EdhList[] = deck
-    ? Object.entries(deck).map(([header, cs]) => ({ header, cards: cs.map(([name, qty]) => ({ name, qty })) }))
+    ? Object.entries(deck).map(([header, cs]) => ({ header, cards: cs.map(([name, qty]) => ({ name, qty, id: idOf.get(name) })) }))
     : (jd.cardlists ?? []).map((l: any) => ({
         header: l.header,
-        cards: (l.cardviews ?? []).map((v: any) => ({ name: v.name, id: v.id, decks: v.num_decks, potential: v.potential_decks, synergy: v.synergy })),
+        cards: (l.cardviews ?? []).map((v: any) => ({ name: v.name, id: v.id, decks: v.num_decks, potential: v.potential_decks, synergy: v.synergy, lift: v.lift })),
       }));
   return { header: j?.header ?? '', numDecks: jd.card?.num_decks ?? j?.num_decks_avg, tags: j?.panels?.taglinks ?? [], lists };
 }

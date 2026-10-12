@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { summarize } from '../lib/compare';
-import { db } from '../lib/db';
+import { statusOf, summarize } from '../lib/compare';
+import { db, type Card } from '../lib/db';
+import { cardsByIds } from '../lib/scryfall';
 import { BRACKETS, BUDGETS, fetchPage, imgOf, pagePath, type EdhPage } from '../lib/edhrec';
 import { slug as toSlug } from '../lib/names';
-import { CardLine, Seg, type Shared } from './shared';
+import { CardLine, money, priceSum, Seg, type Shared } from './shared';
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
@@ -36,8 +37,22 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
     };
   }, [path]);
 
-  const names = [...new Set(page?.lists.flatMap((l) => l.cards.map((c) => c.name)) ?? [])];
+  // EDHREC lists carry Scryfall ids but no prices: fetch prices/images from Scryfall (cached a week).
+  const [cards, setCards] = useState<Map<string, Card>>(new Map());
+  useEffect(() => {
+    const ids = page?.lists.flatMap((l) => l.cards.map((c) => c.id).filter(Boolean) as string[]) ?? [];
+    let live = true;
+    if (ids.length) cardsByIds(ids).then((m) => live && setCards(m)).catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [page]);
+
+  const all = page?.lists.flatMap((l) => l.cards) ?? [];
+  const names = [...new Set(all.map((c) => c.name))];
   const sum = summarize(names, s.mine, s.other);
+  const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
+  const missingCost = priceSum(missing.map((c) => ({ card: c.id ? cards.get(c.id) : undefined, qty: c.qty ?? 1 })));
 
   async function saveDeck() {
     if (!page) return;
@@ -79,6 +94,7 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
           <div className="summary">
             <strong>{sum.pct}%</strong> owned · {sum.owned} of {sum.total} cards in this binder
             {sum.other > 0 && ` · ${sum.other} more in ${s.otherName}`}
+            {cards.size > 0 && ` · missing cards ≈ ${money(missingCost)}`}
             {kind === 'average' && (
               <button onClick={saveDeck} disabled={!!saved}>
                 {saved || 'Save as deck'}
@@ -98,12 +114,13 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
                       key={c.name}
                       name={c.name}
                       img={imgOf(c.id)}
+                      card={c.id ? cards.get(c.id) : undefined}
                       s={s}
                       right={
                         c.potential ? (
-                          <>
-                            {pct((c.decks ?? 0) / c.potential)} <small>syn {c.synergy! >= 0 ? '+' : ''}{pct(c.synergy ?? 0)}</small>
-                          </>
+                          <span title={`${(c.decks ?? 0).toLocaleString()} of ${c.potential.toLocaleString()} decks · synergy ${pct(c.synergy ?? 0)}`}>
+                            {pct((c.decks ?? 0) / c.potential)} <small>{c.lift ? `${c.lift.toFixed(1)}x lift` : `syn ${pct(c.synergy ?? 0)}`}</small>
+                          </span>
                         ) : c.qty && c.qty > 1 ? (
                           `×${c.qty}`
                         ) : undefined

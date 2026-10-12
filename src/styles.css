@@ -384,3 +384,14 @@ summary {
 .report code {
   word-break: break-all;
 }
+
+.price {
+  display: block;
+  font-size: 0.8rem;
+}
+.mana {
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
