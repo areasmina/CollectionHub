@@ -2703,3 +2703,61 @@ button.logo {
     transition: none;
   }
 }
+
+/* Discover filters on phones: full-width panel, collapsible behind the FILTERS button */
+.frow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.ftoggle {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0;
+  min-height: 44px;
+  cursor: pointer;
+}
+.fhint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--se);
+  font-size: 14px;
+  color: var(--hazard);
+}
+.filters.shut .fpanel,
+.filters.shut .caption {
+  display: none;
+}
+@media (max-width: 700px) {
+  .hero {
+    gap: 14px;
+  }
+  .fhead > svg {
+    display: none;
+  }
+  .fhead h2 {
+    padding: 0 40px 0 12px;
+    font-size: 20px;
+  }
+  .fpanel {
+    margin-top: 10px;
+    padding: 12px;
+    gap: 10px;
+    transform: none;
+  }
+  .fpanel .sbox {
+    flex-basis: 100%;
+  }
+  .colours {
+    gap: 6px;
+  }
+  .colours button {
+    height: 48px;
+  }
+}

@@ -41,6 +41,8 @@ export function Discover(s: Shared) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('match'); // most owned first
   const [colours, setColours] = useState<string[]>([]);
+  const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
+  const phone = window.innerWidth <= 700;
   const [stats, setStats] = useState<Map<string, Stat>>(new Map());
   const data = useLiveQuery(async () => {
     const entries = await db.entries.where('profile').equals(s.profile).toArray();
@@ -123,17 +125,31 @@ export function Discover(s: Shared) {
       <main>
         <section className="hero">
           <Title text="WHAT CAN I BUILD?" label="What can I build?" size={64} seed={7} />
-          <div className="filters">
+          <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>
                 <path d="M4 22 C40 8 70 26 104 14 S168 4 196 16 L208 6 L214 20 C226 12 240 14 256 4 L250 24 C220 30 196 22 170 30 S80 26 60 32 S20 30 4 22 Z" fill="currentColor" />
               </svg>
-              <h2>
-                <span className="worn" aria-hidden="true" />
-                FILTERS
-              </h2>
+              <div className="frow">
+                <h2>
+                  <span className="worn" aria-hidden="true" />
+                  {phone ? (
+                    <button className="ftoggle" aria-expanded={fOpen} aria-controls="fpanel" onClick={() => setFOpen(!fOpen)}>
+                      FILTERS {fOpen ? '▲' : '▼'}
+                    </button>
+                  ) : (
+                    'FILTERS'
+                  )}
+                </h2>
+                {phone && !fOpen && (
+                  <span className="fhint">
+                    {[SORTS.find(([v]) => v === sort)?.[1].split(':')[0], colours.join(' '), q.trim() && `"${q.trim()}"`].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+              </div>
             </div>
             <form
+              id="fpanel"
               className="fpanel"
               aria-label="Find a commander"
               onSubmit={(e) => {
