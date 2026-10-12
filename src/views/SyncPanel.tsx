@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { pull, push, signIn, supabase } from '../lib/sync';
+import { currentUser, pull, push, signIn, supabase } from '../lib/sync';
 
 export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
@@ -10,7 +10,7 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => setUser(data.user?.email ?? null));
+    currentUser().then((u) => setUser(u?.email ?? null));
     const { data } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user.email ?? null));
     return () => data.subscription.unsubscribe();
   }, []);

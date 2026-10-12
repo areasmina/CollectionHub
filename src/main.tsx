@@ -19,6 +19,8 @@ import '@fontsource/special-elite/latin-400.css';
 import './styles.css';
 
 registerSW({ immediate: true });
+// Ask the browser not to clear this site's storage under space pressure (keeps binders and the sign-in).
+navigator.storage?.persist?.().catch(() => {});
 // Prices show in CAD: wait briefly for today's rate (never more than 1.5 s).
 Promise.race([loadRate(), new Promise((r) => setTimeout(r, 1500))]).then(() =>
   createRoot(document.getElementById('root')!).render(

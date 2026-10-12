@@ -5,15 +5,32 @@ import { resolveRows } from './scryfall';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 /** null when sync isn't configured; the app works fully without it. */
-export const supabase = url && key ? createClient(url, key) : null;
+export const supabase = url && key
+  ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
+  : null;
+
+// Phones pause timers in the background: on return, refresh the token right away instead of waiting.
+if (supabase && typeof document !== 'undefined')
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      supabase.auth.startAutoRefresh();
+      supabase.auth.getSession();
+    }
+  });
+
+/** The signed-in user from the saved session (works offline; a network hiccup doesn't look like a sign-out). */
+export async function currentUser() {
+  const { data } = await supabase!.auth.getSession();
+  return data.session?.user ?? null;
+}
 
 export const signIn = (email: string) =>
   supabase!.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
 
 async function userId() {
-  const { data } = await supabase!.auth.getUser();
-  if (!data.user) throw new Error('Sign in first.');
-  return data.user.id;
+  const user = await currentUser();
+  if (!user) throw new Error('Sign in first.');
+  return user.id;
 }
 
 async function selectAll(table: string) {
