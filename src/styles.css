@@ -2661,10 +2661,14 @@ button.logo {
   justify-content: space-between;
   box-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
 }
-.hubtab {
+.hubtabwrap {
   position: absolute;
   top: 100%;
   right: 16px;
+  filter: drop-shadow(3px 4px 0 rgba(0, 0, 0, 0.85)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
+}
+.hubtab {
+  display: block;
   min-height: 44px;
   min-width: 64px;
   padding: 0 16px 8px;
@@ -2678,7 +2682,6 @@ button.logo {
   clip-path: polygon(0 0, 100% 0, 97% 70%, 100% 100%, 64% 88%, 40% 100%, 6% 90%, 3% 60%);
   transform: rotate(-1.5deg);
   transform-origin: top center;
-  filter: drop-shadow(3px 3px 0 #000);
 }
 .hubtab:focus-visible {
   outline: 3px solid var(--hazard);

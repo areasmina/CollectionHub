@@ -72,9 +72,12 @@ export default function App() {
       <div className="hubwrap" ref={hubRef} onPointerEnter={(e) => e.pointerType === 'mouse' && openHub()} onPointerLeave={(e) => e.pointerType === 'mouse' && closeHubSoon()} onFocus={(e) => (e.target as HTMLElement).matches(':focus-visible') && openHub()} onBlur={(e) => !hubRef.current?.contains(e.relatedTarget as Node) && setHubOpen(false)}>
         <div className="hubstrip" aria-hidden="true" />
         <div className={`hubslide${hubOpen ? ' open' : ''}`}>
-          <button className="hubtab" aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => setHubOpen(!hubOpen)}>
-            {hubOpen ? '×' : '≡'}
-          </button>
+          {/* The shadow sits on a wrapper: a clip-path on the button itself would cut its drop-shadow off. */}
+          <span className="hubtabwrap">
+            <button className="hubtab" aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => setHubOpen(!hubOpen)}>
+              {hubOpen ? '×' : '≡'}
+            </button>
+          </span>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
             <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="CollectionHub, go to Discover">
               COLLECTIONHUB
