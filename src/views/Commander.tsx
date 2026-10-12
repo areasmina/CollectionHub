@@ -208,7 +208,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           <div className="cimg gbox">
             {/* The commander's own card: always full colour with a xerox look (contrast, halftone, grain). */}
             <span className="xart cmdrimg">
-              <Tape style={{ top: -13, left: 70, width: 86, height: 24, transform: 'rotate(-6deg)' }} />
+              <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
               {bigImg && <img src={bigImg} alt={label} />}
               <Xgrain />
             </span>

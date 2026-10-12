@@ -2765,3 +2765,23 @@ button.logo {
     height: 48px;
   }
 }
+
+/* Commander card: the frame is a block sized to the card, so the image fills it (was an inline span, leaving the
+   card small inside a taller frame). Bigger on phones; tape centred above it. */
+.cimg .xart {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+.cimg .xart img {
+  border-radius: 8px;
+}
+.cimg .xart > .tape {
+  z-index: 4;
+}
+@media (max-width: 700px) {
+  .chero .cimg {
+    width: min(300px, 80vw);
+    margin-top: 14px;
+  }
+}
