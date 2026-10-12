@@ -3,6 +3,7 @@ import { pull, push, signIn, supabase } from '../lib/sync';
 
 export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [user, setUser] = useState<string | null>(null);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
@@ -39,12 +40,14 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
           className="row"
           onSubmit={async (e) => {
             e.preventDefault();
-            const { error } = await signIn(email);
-            setMsg(error ? error.message : 'Check your email for the sign-in link.');
+            // Password if typed (no email needed), else a magic link.
+            const { error } = password ? await supabase!.auth.signInWithPassword({ email, password }) : await signIn(email);
+            setMsg(error ? error.message : password ? '' : 'Check your email for the sign-in link.');
           }}
         >
-          <input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-          <button type="submit">Send link</button>
+          <input type="email" required autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+          <input type="password" autoComplete="current-password" placeholder="Password (if you set one)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
+          <button type="submit">{password ? 'Sign in' : 'Send link'}</button>
         </form>
       ) : (
         <>
@@ -58,6 +61,18 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
             </button>
             <button onClick={() => supabase!.auth.signOut()}>Sign out</button>
           </div>
+          <form
+            className="row"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const { error } = await supabase!.auth.updateUser({ password });
+              setMsg(error ? error.message : 'Password set. Sign in on other devices with your email and this password.');
+              if (!error) setPassword('');
+            }}
+          >
+            <input type="password" autoComplete="new-password" minLength={6} required placeholder="Set a password (sign in without email)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="New password" />
+            <button type="submit">Set password</button>
+          </form>
         </>
       )}
       {msg && <p role="status">{msg}</p>}
