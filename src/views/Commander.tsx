@@ -9,12 +9,15 @@ import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
 import { CardLine, money, priceSum, Seg, Thumb, usd, type Shared } from './shared';
 
+// The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
+const SHOW_AS_COMMANDER = false;
+
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => p?.lists.flatMap((l) => l.cards.map((c) => c.id).filter(Boolean) as string[]) ?? [];
 
 export function CommanderView({ name, s, onBack }: { name: string; s: Shared; onBack: () => void }) {
   const slug = toSlug(name);
-  const [kind, setKind] = useState<'commander' | 'average'>('commander');
+  const [kind, setKind] = useState<'commander' | 'average'>(SHOW_AS_COMMANDER ? 'commander' : 'average');
   const [bracket, setBracket] = useState('');
   const [budget, setBudget] = useState('');
   const [tag, setTag] = useState('');
@@ -160,7 +163,7 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
       </button>
       <h1>{name}</h1>
       <div className="controls">
-        <Seg label="View" value={kind} options={[['commander', 'As Commander'], ['average', 'Average Deck']]} onChange={(v) => setKind(v as typeof kind)} />
+        {SHOW_AS_COMMANDER && <Seg label="View" value={kind} options={[['commander', 'As Commander'], ['average', 'Average Deck']]} onChange={(v) => setKind(v as typeof kind)} />}
         <Seg label="Bracket" value={bracket} options={BRACKETS} onChange={setBracket} />
         <Seg label="Budget" value={budget} options={BUDGETS} onChange={setBudget} />
       </div>
