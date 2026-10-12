@@ -33,6 +33,8 @@ export default function App() {
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
   const [sync, setSync] = useState(false);
+  const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
+  const goDiscover = () => (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
   const other = profile === 1 ? 2 : 1;
@@ -56,10 +58,12 @@ export default function App() {
       <ZineDefs />
       <header className="top">
         <div className="lefthead">
-          <strong className="logo">COLLECTIONHUB</strong>
+          <button className="logo" onClick={goDiscover} aria-label="CollectionHub, go to Discover">
+            COLLECTIONHUB
+          </button>
           <nav className="tabs" aria-label="Sections">
             {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
-              <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>
+              <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => (t === 'discover' ? goDiscover() : setTab(t))}>
                 {t.toUpperCase()}
               </button>
             ))}
@@ -95,7 +99,7 @@ export default function App() {
       </header>
       {sync && <SyncPanel onClose={() => setSync(false)} />}
       <PreviewLayer />
-      {tab === 'discover' && <Discover {...shared} />}
+      {tab === 'discover' && <Discover key={home} {...shared} />}
       {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
       {tab === 'decks' && <Decks {...shared} />}
       <footer className="credits">

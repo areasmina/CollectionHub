@@ -972,8 +972,8 @@ a.price:hover {
   transform: skewX(-18deg);
 }
 .rise span.on {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--own, var(--accent));
+  border-color: var(--own, var(--accent));
 }
 
 /* ---------- commander page ---------- */
@@ -1090,15 +1090,10 @@ a.price:hover {
   padding: 0 12px;
   min-height: 44px;
 }
-.hscroll button:first-child {
+.hscroll button[aria-pressed='true'] {
   background: var(--hazard);
   color: var(--ink);
   border-color: var(--hazard);
-}
-.hscroll button[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--white);
-  border-color: var(--accent);
 }
 .strip {
   position: relative;
@@ -1203,7 +1198,7 @@ a.price:hover {
   transform: skewX(-20deg);
 }
 .cells10 span.on {
-  background: var(--accent);
+  background: var(--own, var(--accent));
 }
 .match .meter small {
   font-size: 12px;
@@ -2260,3 +2255,135 @@ a.price::after,
   display: inline-block;
   min-height: 44px;
 }
+
+/* Dropdown menus: native option lists get light paper, dark ink (readable in both themes). */
+select option {
+  background: #ffffff;
+  color: #0a0a0a;
+  font-family: 'Archivo', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+/* List / grid switch on the commander page */
+.viewsw {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+  margin-top: 28px;
+}
+.viewsw button {
+  min-height: 44px;
+  min-width: 96px;
+  background: var(--bg);
+  color: var(--text);
+  border: 3px solid var(--text);
+  font-family: var(--an);
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+.viewsw button + button {
+  border-left: 0;
+}
+.viewsw button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--white);
+  border-color: var(--accent);
+}
+.deckgrid.after-sw {
+  margin-top: 14px;
+}
+.zgrid {
+  list-style: none;
+  margin: 0;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 18px 14px;
+}
+.ztile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ztile .timg {
+  position: relative;
+  display: block;
+  aspect-ratio: 63 / 88;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #333;
+  box-shadow: 4px 4px 0 var(--ink);
+  border: 2px solid var(--text);
+}
+.ztile .timg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+}
+.ztile.missing .timg,
+.ztile.other .timg {
+  opacity: 0.45;
+}
+.ztile .tname {
+  font-family: var(--an);
+  font-size: 15px;
+  line-height: 1.15;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.ztile.missing .tname,
+.ztile.other .tname {
+  color: var(--muted);
+}
+.ztile .tnote {
+  font-family: var(--se);
+  font-size: 12px;
+  color: var(--muted);
+}
+.ztile .tacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.ztile .swapbtn {
+  min-height: 40px;
+  font-size: 14px;
+  padding: 0 8px;
+}
+.zgrid .note-pop {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  width: min(420px, 92vw);
+  max-height: 85dvh;
+  overflow: auto;
+  transform: translate(-50%, -50%) rotate(-1.5deg);
+  animation: none;
+  z-index: 46;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(0, 0, 0, 0.55);
+}
+.cbody .titlewrap {
+  cursor: pointer;
+}
+
+button.logo {
+  background: none;
+  border: 0;
+  padding: 0;
+  min-height: 44px;
+  color: var(--text);
+  cursor: pointer;
+}
+

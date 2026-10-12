@@ -120,6 +120,33 @@ export function CardLine({
   );
 }
 
+/** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
+export function CardTile({ name, img, card, s, note, marker, onOpen, children }: Parameters<typeof CardLine>[0]) {
+  const st = statusOf(name, s.mine, s.other);
+  const src = (card?.img ?? img)?.replace('/small/', '/normal/');
+  return (
+    <li className={`ztile ${st}`} onClick={onOpen}>
+      <Thumb src={src} className="timg xart" />
+      <span className="tname">
+        {name}
+        {st === 'missing' && <span className="sr">(missing)</span>}
+      </span>
+      {note && <span className="tnote">{note}</span>}
+      {marker && <span className="swapmark">↔ for {marker}</span>}
+      {st === 'other' && <span className="tagother">in {s.otherName}</span>}
+      <span className="tacts">
+        {onOpen && (
+          <button className="swapbtn" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Undo swap for ${marker}` : `Swap ${name}`}>
+            ↺ SWAP
+          </button>
+        )}
+        <PriceLink card={card} plain={st === 'owned' && !marker} />
+      </span>
+      {children}
+    </li>
+  );
+}
+
 export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void; roman?: boolean }) {
   return (
     <div className="segs" role="radiogroup" aria-label={label}>

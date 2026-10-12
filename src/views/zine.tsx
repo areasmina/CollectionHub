@@ -3,18 +3,20 @@ import { useMemo } from 'react';
 
 const frac = (x: number) => x - Math.floor(x);
 
-/** Ransom-note title: seeded cut-out letters (cream ~60%, black ~20%, yellow ~20%, never two dark/yellow in a row). */
+/** Ransom-note title ("What can I build?" reference): seeded cut-out letters, cream ~62% / black ~38%, never two black in a row,
+ * halftone dots fading in from one edge of each tile. */
 export function Ransom({ text, size: wanted, seed }: { text: string; size: number; seed: number }) {
   // Words never break, so shrink until the longest word fits the screen (each tile is ~1× size wide).
   const longest = Math.max(...text.split(' ').map((w) => w.length));
   const size = Math.max(18, Math.min(wanted, Math.floor((window.innerWidth - 64) / (longest * 1.02))));
   const words = useMemo(() => {
     const rnd = (n: number) => frac(Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453);
-    const tex = 'radial-gradient(rgba(90,70,40,.13) 1px, transparent 1.4px) 0 0/3px 3px, ';
+    // A solid layer that turns transparent toward one edge reveals the halftone dots beneath it.
+    const tone = (deg: number, base: string, dot: string) =>
+      `linear-gradient(${deg}deg, ${base} 48%, transparent 92%), radial-gradient(${dot} 1.1px, transparent 1.7px) 0 0/4px 4px, ${base}`;
     const papers = {
-      cream: { bg: tex + 'linear-gradient(172deg, #F4EFE1 0%, #E6DCC6 100%)', fg: '#111111' },
-      black: { bg: 'radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.4px) 0 0/3px 3px, linear-gradient(172deg, #1C1C1C, #050505)', fg: '#F1EBDC' },
-      yellow: { bg: tex + 'linear-gradient(172deg, #FFDB4D 0%, #F1C400 100%)', fg: '#111111' },
+      cream: { fg: '#111111', bg: (d: number) => tone(d, '#F4EFE1', 'rgba(0,0,0,.55)') },
+      black: { fg: '#F1EBDC', bg: (d: number) => tone(d, '#0E0E0E', 'rgba(255,255,255,.35)') },
     };
     const fonts: React.CSSProperties[] = [
       { fontFamily: "'Alfa Slab One', serif" },
@@ -31,8 +33,8 @@ export function Ransom({ text, size: wanted, seed }: { text: string; size: numbe
       w.split('').map((ch) => {
         k++;
         const r = rnd(k);
-        let pk: keyof typeof papers = r < 0.58 ? 'cream' : r < 0.79 ? 'black' : 'yellow';
-        if (pk !== 'cream' && pk === last) pk = 'cream';
+        let pk: keyof typeof papers = r < 0.62 ? 'cream' : 'black';
+        if (pk === 'black' && last === 'black') pk = 'cream';
         last = pk;
         const p = papers[pk];
         const outer: React.CSSProperties = {
@@ -45,7 +47,7 @@ export function Ransom({ text, size: wanted, seed }: { text: string; size: numbe
           minWidth: Math.round(size * 0.62),
           fontSize: Math.round(size * (0.9 + rnd(k + 50) * 0.14)),
           padding: `${Math.round(size * (0.07 + rnd(k + 250) * 0.04))}px ${Math.round(size * (0.12 + rnd(k + 200) * 0.05))}px`,
-          background: p.bg,
+          background: p.bg(Math.round(rnd(k + 450) * 360)),
           color: p.fg,
           clipPath: clips[Math.floor(rnd(k + 350) * clips.length)],
           boxShadow: `inset 0 0 0 1px rgba(0,0,0,.18), inset 0 -${Math.round(size * 0.05)}px ${Math.round(size * 0.08)}px rgba(0,0,0,.12)`,
@@ -210,13 +212,15 @@ export const Pips = ({ ci, size = 20 }: { ci: string[]; size?: number }) => (
   </span>
 );
 
-/** Rising skewed bar (Discover card, 12 steps) filled to pct. */
+/** Ownership colour: red at 0%, yellow around 50%, green at 100%. */
+export const ownColour = (pct: number) => `hsl(${Math.round(Math.max(0, Math.min(100, pct)) * 1.25)}, 78%, 46%)`;
+
+/** Rising skewed bar (12 steps) filled to pct, greener as it fills ("READY TO SLEEVE" reference). */
 export const RiseBars = ({ pct }: { pct: number }) => (
-  <span className="rise" aria-hidden="true">
+  <span className="rise" aria-hidden="true" style={{ '--own': ownColour(pct) } as React.CSSProperties}>
     {Array.from({ length: 12 }, (_, b) => (
       <span key={b} className={(b + 1) / 12 <= pct / 100 + 0.04 ? 'on' : ''} style={{ height: 6 + b }} />
     ))}
   </span>
 );
-
 export const Tape = ({ style }: { style: React.CSSProperties }) => <span aria-hidden="true" className="tape" style={style} />;

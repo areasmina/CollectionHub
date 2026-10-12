@@ -7,8 +7,8 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, money, priceSum, Segs, usd, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, RiseBars, Tape, Title, Xgrain } from './zine';
+import { CardLine, CardTile, money, priceSum, Segs, usd, type Shared } from './shared';
+import { Doodles, ownColour, PageDecor, Pips, RiseBars, Tape, Title, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 const SHOW_AS_COMMANDER = false;
@@ -134,6 +134,24 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
+  // Grid (card images) is the default; the choice is remembered on this device.
+  const [view, setViewState] = useState<'grid' | 'list'>(() => {
+    try {
+      return localStorage.getItem('ch:view') === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+  const setView = (v: 'grid' | 'list') => {
+    setViewState(v);
+    setMenuFor(null);
+    try {
+      localStorage.setItem('ch:view', v);
+    } catch {
+      /* per-device convenience only */
+    }
+  };
+  const Item = view === 'grid' ? CardTile : CardLine;
 
   const receipt = kind === 'average' && missing.length > 0 && (
     <aside className="receipt gbox" id="shop" aria-label="Shopping list">
@@ -155,9 +173,8 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
                 </span>
               </label>
               <span className="pr">
-                <span title={rateNote()}>{usd(cardOf(c))}</span>
-                <a href={shopUrl(c.name)} target="_blank" rel="noreferrer" aria-label={`Search ${c.name} on shop.com`}>
-                  shop ↗
+                <a href={shopUrl(c.name)} target="_blank" rel="noreferrer" title={rateNote()} aria-label={`${usd(cardOf(c))}: search ${c.name} on shop.com`}>
+                  {usd(cardOf(c))} ↗
                 </a>
               </span>
             </li>
@@ -189,7 +206,6 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
         <section className="chero">
           <span className="worn" aria-hidden="true" />
           <div className="chead">
-            <span className="cn">{label.toUpperCase()}</span>
             <Pips ci={ci} size={24} />
             <span className="right">
               <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
@@ -214,7 +230,10 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
               </span>
               <Doodles n={301} count={2} spots={[[60, 62], [-20, 4], [70, 0]]} />
             </div>
-            <Title text={label.toUpperCase()} label={label} size={label.length > 22 ? 40 : 52} seed={11} />
+            {/* Clicking the commander's name goes back to Discover (the COMMANDERS link does the same for keyboards). */}
+            <div className="titleclick" onClick={onBack} title="Back to Discover">
+              <Title text={label.toUpperCase()} label={label} size={label.length > 22 ? 40 : 52} seed={11} />
+            </div>
           </div>
           {tags.length > 0 && (
             <div className="builtaround">
@@ -253,7 +272,7 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
               <span className="burst" aria-hidden="true" />
               <span className="num">{page ? `${sum.pct}%` : '—'}</span>
               <span className="meter">
-                <span className="cells10" aria-hidden="true">
+                <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
                   {Array.from({ length: 10 }, (_, i) => (
                     <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
                   ))}
@@ -303,7 +322,18 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
         {error && <p className="error">{error}</p>}
         {!page && !error && <p className="count">Loading EDHREC data…</p>}
         {page && (
-          <div className="deckgrid">
+          <div className="viewsw" role="group" aria-label="Card view">
+            <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+              GRID
+            </button>
+            <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+              LIST
+            </button>
+          </div>
+        )}
+        {page && (
+          <div className="deckgrid after-sw">
+            {menuFor && view === 'grid' && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
               {page.lists.map((l) => {
                 const ls = summarize(l.cards.map((c) => c.name), s.mine, s.other);
@@ -317,14 +347,14 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
-                    <ul className="zlist">
+                    <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {l.cards.map((c) => {
                         const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned';
                         const repl = swaps[c.name];
                         const rc = repl ? recCard.get(norm(repl)) : undefined;
                         const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
                         return (
-                          <CardLine
+                          <Item
                             key={c.name}
                             name={repl ?? c.name}
                             img={imgOf(rc?.id ?? c.id)}
@@ -381,7 +411,7 @@ export function CommanderView({ name, s, onBack }: { name: string; s: Shared; on
                                 {!repl && suggest(c).length === 0 && <p className="small">{recs ? 'No owned card fits this slot.' : 'Loading suggestions…'}</p>}
                               </div>
                             )}
-                          </CardLine>
+                          </Item>
                         );
                       })}
                     </ul>

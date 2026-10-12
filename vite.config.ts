@@ -8,6 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
+      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
       manifest: {
         name: 'CollectionHub',
         short_name: 'CollectionHub',
