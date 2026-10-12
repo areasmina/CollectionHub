@@ -49,7 +49,7 @@ function useSets(enabled: boolean) {
 }
 
 /** − n + quantity editor; saves to the binder (synced on the next Push). */
-function QtyEdit({ e }: { e: Entry }) {
+function QtyEdit({ e, jinx }: { e: Entry; jinx?: boolean }) {
   const [text, setText] = useState(String(e.qty));
   useEffect(() => setText(String(e.qty)), [e.qty]);
   const save = (n: number) => {
@@ -58,7 +58,8 @@ function QtyEdit({ e }: { e: Entry }) {
     if (q !== e.qty) db.entries.update(e.id!, { qty: q });
   };
   return (
-    <span className="qtyedit" onClick={(ev) => ev.stopPropagation()}>
+    <span className={`qtyedit${jinx ? ' jinx' : ''}`} onClick={(ev) => ev.stopPropagation()}>
+      {jinx && <small aria-hidden="true">QTY</small>}
       <button aria-label={`One less ${e.name}`} disabled={e.qty <= 1} onClick={() => save(e.qty - 1)}>
         −
       </button>
@@ -95,11 +96,11 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
             <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className="timg xart" name={e.name} />
             <span className="tname">{e.name}</span>
             <span className="tnote">{setLine(e)}</span>
-            <span className="tacts">
-              <QtyEdit e={e} />
-              <PriceLink card={cards.get(e.cardId)} />
+            <span className="ctrl">
+              <QtyEdit e={e} jinx />
               <RemoveBtn e={e} />
             </span>
+            <PriceLink card={cards.get(e.cardId)} tape={e.cardId} />
           </li>
         ))}
       </ul>
@@ -122,7 +123,7 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
               <b>{e.name}</b>
               <span>{setLine(e)}</span>
             </span>
-            <PriceLink card={cards.get(e.cardId)} />
+            <PriceLink card={cards.get(e.cardId)} tape={e.cardId} />
             <RemoveBtn e={e} />
           </li>
         ))}

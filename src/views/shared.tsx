@@ -73,8 +73,11 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
   );
 }
 /** Yellow price sticker; links to TCGplayer when Scryfall gives a link. */
-export function PriceLink({ card, plain }: { card?: Card; plain?: boolean }) {
-  const cls = `price${plain ? ' plain' : ''}`;
+export function PriceLink({ card, plain, tape }: { card?: Card; plain?: boolean; tape?: string }) {
+  // tape: a seed (e.g. card id) picks one of 5 yellow shades x 4 textures, so a grid of prices doesn't look samey.
+  let h = 0;
+  for (const ch of tape ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const cls = `price${plain ? ' plain' : ''}${tape ? ` tapey y${h % 5} t${(h >> 3) % 4}` : ''}`;
   return card?.buy && card.usd ? (
     <a className={cls} href={card.buy} target="_blank" rel="noreferrer" title={rateNote()} onClick={(e) => e.stopPropagation()}>
       {usd(card)}

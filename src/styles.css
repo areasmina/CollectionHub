@@ -2859,8 +2859,81 @@ button.logo {
   font-family: var(--an);
   font-size: 20px;
 }
-.cgrid2 .tacts {
+/* Collection grid: a Jinx-style spray-paint quantity, then the price on a scrap of yellow tape. */
+.cgrid2 .ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
+}
+.qtyedit.jinx {
+  position: relative;
+  border: 0;
+  background: transparent;
+  align-items: center;
+}
+.qtyedit.jinx small {
+  position: absolute;
+  left: 38px;
+  top: -12px;
+  font-family: var(--an);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #ff2fa0;
+  transform: rotate(-9deg);
+  text-shadow: 0 0 3px rgba(255, 47, 160, 0.7);
+  pointer-events: none;
+}
+.qtyedit.jinx button {
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  color: #19d3e6;
+  border: 2px dashed #19d3e6;
+  border-radius: 50%;
+  font-size: 20px;
+}
+.qtyedit.jinx input {
+  width: 46px;
+  font-size: 26px;
+  color: var(--text);
+  transform: rotate(-4deg);
+  /* spray halo: pink fuzz with a cyan offset, like Jinx's tags */
+  text-shadow: 0 0 6px #ff2fa0, 2px 2px 0 #ff2fa0, -2px -1px 0 #19d3e6;
+}
+.price.tapey {
+  align-self: flex-start;
+  padding: 3px 12px;
+  font-size: 16px;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.35);
+  opacity: 0.94;
+}
+.price.tapey.y0 { --tp: #ffcc00; }
+.price.tapey.y1 { --tp: #ffd83a; }
+.price.tapey.y2 { --tp: #f5bf00; }
+.price.tapey.y3 { --tp: #ffe066; }
+.price.tapey.y4 { --tp: #e8b400; }
+/* t0 torn ends · t1 crinkled · t2 halftone · t3 frayed stripes */
+.price.tapey.t0 {
+  background: var(--tp);
+  clip-path: polygon(0 8%, 5% 0, 3% 30%, 6% 55%, 2% 80%, 5% 100%, 95% 92%, 98% 70%, 94% 45%, 99% 22%, 96% 0);
+  transform: rotate(-3deg);
+}
+.price.tapey.t1 {
+  background: linear-gradient(100deg, transparent 0 30%, rgba(255, 255, 255, 0.35) 32%, transparent 36% 64%, rgba(0, 0, 0, 0.12) 66%, transparent 70%), var(--tp);
+  transform: rotate(2deg);
+}
+.price.tapey.t2 {
+  background: radial-gradient(rgba(0, 0, 0, 0.18) 1px, transparent 1.5px) 0 0/5px 5px, var(--tp);
+  transform: rotate(-1deg);
+}
+.price.tapey.t3 {
+  background: repeating-linear-gradient(90deg, transparent 0 9px, rgba(255, 255, 255, 0.28) 9px 11px), var(--tp);
+  clip-path: polygon(3% 0, 100% 6%, 97% 100%, 0 94%);
+  transform: rotate(3.5deg);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .price.tapey { box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.7); }
 }
 .cgrid2 .xbtn {
   width: 44px;
