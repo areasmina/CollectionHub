@@ -51,9 +51,13 @@ The app works fully without this. To use the same binders on your PC and phone:
 
 Sync is a whole snapshot: Push replaces the cloud copy, Pull replaces the device copy. Push after making changes, pull before using the other device.
 
-## Deploy (optional)
+## Deploy (Vercel)
 
-`npm run build` makes a static site in `dist/`. Any static host works (Netlify, Vercel, Cloudflare Pages, GitHub Pages): build command `npm run build`, output folder `dist`, and set the two `VITE_SUPABASE_*` variables in the host's settings if you use sync. Add the deployed URL to Supabase's redirect URLs.
+1. vercel.com → Continue with GitHub (free Hobby plan) → Add New → Project → Import `CollectionHub`.
+2. Framework preset is detected as Vite (`vercel.json` also sets it; it adds no-cache headers for the service worker so updates arrive). Add the environment variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` → Deploy.
+3. Supabase → Authentication → URL Configuration: Site URL = the Vercel address; add `http://localhost:5173` under Redirect URLs.
+
+Every push to `main` redeploys. Other static hosts work the same way: build `npm run build`, output `dist`.
 
 ## Android app later (Capacitor)
 
