@@ -2596,3 +2596,40 @@ button.logo {
     gap: 6px;
   }
 }
+
+/* Phones: logo on top, then one even 48px row — binder picker flexes, theme toggle and sync fixed */
+@media (max-width: 899px) {
+  .top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 8px 16px 10px;
+  }
+  .lefthead {
+    justify-content: flex-start;
+  }
+  .righthead {
+    width: 100%;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .binder {
+    flex: 1;
+    max-width: none;
+    height: 48px;
+    min-height: 48px;
+  }
+  .themes {
+    height: 48px;
+    flex: none;
+  }
+  .themes button {
+    height: 100%;
+    width: 48px;
+  }
+  .righthead .iconbtn {
+    width: 48px;
+    height: 48px;
+    flex: none;
+  }
+}
