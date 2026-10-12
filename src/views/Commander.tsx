@@ -7,7 +7,7 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, money, priceSum, Segs, usd, type Shared } from './shared';
+import { CardLine, CardTile, money, priceSum, scryfallUrl, Segs, usd, type Shared } from './shared';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -209,7 +209,11 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             {/* The commander's own card: always full colour with a xerox look (contrast, halftone, grain). */}
             <span className="xart cmdrimg">
               <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-              {bigImg && <img src={bigImg} alt={label} />}
+              {bigImg && (
+                <a href={`https://edhrec.com/commanders/${slug}`} target="_blank" rel="noreferrer" title="Open on EDHREC">
+                  <img src={bigImg} alt={`${label}: open on EDHREC`} />
+                </a>
+              )}
               <Xgrain />
             </span>
             <Doodles n={301} count={1} spots={[[60, 62], [-20, 4]]} />
@@ -391,6 +395,9 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                                     </svg>
                                   </button>
                                 </div>
+                                <a className="scrylink" href={scryfallUrl(c.name)} target="_blank" rel="noreferrer">
+                                  {c.name} on Scryfall ↗
+                                </a>
                                 <ul>
                                   {repl && (
                                     <li>

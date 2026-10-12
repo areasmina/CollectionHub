@@ -18,24 +18,37 @@ export const usd = (c?: Card) => (c?.usd ? `≈${cad(toCad(c.usd)!)}` : '≈CA$�
 export const priceSum = (items: { card?: Card; qty: number }[]) => items.reduce((n, i) => n + (toCad(i.card?.usd) ?? 0) * i.qty, 0);
 export const money = (n: number) => `${cad(n)} est.`;
 
+/** Scryfall page for a card by exact name (Scryfall opens the card page when the name matches one card). */
+export const scryfallUrl = (name: string) => `https://scryfall.com/search?q=${encodeURIComponent(`!"${name.split(' // ')[0]}"`)}`;
+/** Devices with a mouse: hover previews, click opens Scryfall. Touch devices: tap shows the preview. */
+const canHover = () => typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+
 // Large card preview: one overlay for the whole app (PreviewLayer in App).
-let setPreview: (p: { src: string; tap: boolean } | null) => void = () => {};
+type Preview = { src: string; tap: boolean; href?: string };
+let setPreview: (p: Preview | null) => void = () => {};
 export function PreviewLayer() {
-  const [p, set] = useState<{ src: string; tap: boolean } | null>(null);
+  const [p, set] = useState<Preview | null>(null);
   useEffect(() => void (setPreview = set), []);
   if (!p) return null;
   return (
     <div className={`preview${p.tap ? ' tap' : ''}`} onClick={() => set(null)} role="dialog" aria-label="Card preview (tap to close)">
       <img src={p.src} alt="" />
+      {p.tap && p.href && (
+        <a className="btn ink scry" href={p.href} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+          OPEN ON SCRYFALL ↗
+        </a>
+      )}
     </div>
   );
 }
 
-/** Card image: preview after resting the mouse 1 s on it, or right away on tap. */
-export function Thumb({ src, className = 'thumb xart' }: { src?: string; className?: string }) {
+/** Card image: 1 s hover preview; click opens Scryfall (mouse) or the preview with a Scryfall link (touch).
+ *  `onPick` replaces the click (missing cards open their swap note instead). */
+export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: string; className?: string; name?: string; onPick?: () => void }) {
   const timer = useRef<number>(undefined);
   if (!src) return <span className={className} aria-hidden="true" />;
   const big = src.replace('/small/', '/normal/').replace('/art_crop/', '/normal/');
+  const href = name ? scryfallUrl(name) : undefined;
   return (
     <span className={className}>
       <img
@@ -50,13 +63,15 @@ export function Thumb({ src, className = 'thumb xart' }: { src?: string; classNa
         onClick={(e) => {
           e.stopPropagation();
           clearTimeout(timer.current);
-          setPreview({ src: big, tap: true });
+          setPreview(null);
+          if (onPick) return onPick();
+          if (href && canHover()) return void window.open(href, '_blank', 'noopener');
+          setPreview({ src: big, tap: true, href });
         }}
       />
     </span>
   );
 }
-
 /** Yellow price sticker; links to TCGplayer when Scryfall gives a link. */
 export function PriceLink({ card, plain }: { card?: Card; plain?: boolean }) {
   const cls = `price${plain ? ' plain' : ''}`;
@@ -96,7 +111,7 @@ export function CardLine({
   const st = statusOf(name, s.mine, s.other);
   return (
     <li className={`zrow ${st}`} onMouseEnter={onOpen} onMouseLeave={onClose} onClick={onOpen}>
-      <Thumb src={card?.img ?? img} />
+      <Thumb src={card?.img ?? img} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="nm">{name}</span>
         <span className="note">
@@ -126,7 +141,7 @@ export function CardTile({ name, img, card, s, note, marker, onOpen, children }:
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   return (
     <li className={`ztile ${st}`} onClick={onOpen}>
-      <Thumb src={src} className="timg xart" />
+      <Thumb src={src} className="timg xart" name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="tname">
         {name}
         {st === 'missing' && <span className="sr">(missing)</span>}
