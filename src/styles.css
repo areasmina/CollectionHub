@@ -2527,3 +2527,72 @@ button.logo {
 .crow .xart {
   filter: none;
 }
+
+/* Commander header image: full colour, xerox treatment (punchy contrast, halftone, grain) */
+.cimg .cmdrimg,
+.cimg .cmdrimg:hover {
+  filter: contrast(1.3) saturate(1.25);
+}
+.cimg .cmdrimg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(rgba(0, 0, 0, 0.35) 1px, transparent 1.5px) 0 0/4px 4px;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.cimg .cmdrimg .xg {
+  opacity: 0.45;
+}
+
+/* Meta line: compact text, bigger tap area kept invisibly */
+.cmeta .typed {
+  line-height: 1.7;
+}
+.cmeta .typed a {
+  position: relative;
+  min-height: 0;
+  line-height: inherit;
+}
+.cmeta .typed a::after {
+  content: '';
+  position: absolute;
+  inset: -12px -8px;
+}
+
+/* Phones: less clutter in the commander header */
+@media (max-width: 700px) {
+  .sheet {
+    display: none;
+  }
+  .chero {
+    gap: 14px;
+  }
+  .chero .cimg {
+    width: min(150px, 42vw);
+  }
+  .cmeta {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .cmeta .score {
+    margin-left: 0;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px dashed var(--raised);
+  }
+  .cmeta .bigpct {
+    font-size: 34px;
+  }
+  .cmeta .typed {
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  .chero .builtaround {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+}

@@ -7,6 +7,8 @@ const frac = (x: number) => x - Math.floor(x);
  * halftone dots fading in from one edge of each tile. */
 export function Ransom({ text, size: wanted, seed, breakWords }: { text: string; size: number; seed: number; breakWords?: boolean }) {
   // Unless words may break (commander banner), shrink until the longest word fits the screen (each tile is ~1× size wide).
+  // Breaking mid-word reads well on wide screens only; phones keep whole words.
+  breakWords = breakWords && window.innerWidth > 700;
   const longest = breakWords ? 9 : Math.max(...text.split(' ').map((w) => w.length));
   const size = Math.max(18, Math.min(wanted, Math.floor((window.innerWidth - 64) / (longest * 1.02))));
   const words = useMemo(() => {
