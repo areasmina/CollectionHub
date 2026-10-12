@@ -36,6 +36,17 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
       {!supabase ? (
         <p className="muted">Sync isn't set up. Everything is saved on this device. See README → "Device sync" to turn it on.</p>
       ) : !user ? (
+        <>
+        <button
+          className="github"
+          onClick={async () => {
+            const { error } = await supabase!.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: location.origin + location.pathname } });
+            if (error) setMsg(error.message);
+          }}
+        >
+          Sign in with GitHub
+        </button>
+        <p className="muted">Or with your email:</p>
         <form
           className="row"
           onSubmit={async (e) => {
@@ -49,6 +60,7 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
           <input type="password" autoComplete="current-password" placeholder="Password (if you set one)" value={password} onChange={(e) => setPassword(e.target.value)} aria-label="Password" />
           <button type="submit">{password ? 'Sign in' : 'Send link'}</button>
         </form>
+        </>
       ) : (
         <>
           <p className="muted">Signed in as {user}. Push replaces the cloud copy with this device; Pull replaces this device with the cloud copy.</p>
