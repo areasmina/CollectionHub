@@ -201,11 +201,12 @@ export const Xgrain = () => (
   </svg>
 );
 
-const PIP: Record<string, string> = { W: '#FFFBD5', U: '#AAE0FA', B: '#CBC2BF', R: '#F9AA8F', G: '#9BD3AE' };
+// Solid, crisp tiles (no worn filter, which blurred them): deep mana colours, white letters, cream frame.
+const PIP: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 export const Pips = ({ ci, size = 20 }: { ci: string[]; size?: number }) => (
   <span className="pips" aria-label={ci.length ? `Colours ${ci.join('')}` : 'Colourless'}>
     {(ci.length ? ci : ['C']).map((c) => (
-      <span key={c} className="pip" style={{ width: size, height: size, fontSize: Math.round(size * 0.55), background: PIP[c] ?? '#D9D9D9' }}>
+      <span key={c} className="pip" style={{ width: size, height: size, fontSize: Math.round(size * 0.5), background: PIP[c] ?? '#8A8A8A', color: c === 'W' ? '#1A1A1A' : '#FFFFFF' }}>
         {c}
       </span>
     ))}

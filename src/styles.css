@@ -884,9 +884,9 @@ a.price:hover {
   align-items: center;
   justify-content: center;
   font-family: 'Archivo Black', sans-serif;
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.55);
-  filter: url(#worn);
+  line-height: 1;
+  border: 2px solid #f1ebdc;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
 }
 .ccard .mat {
   display: block;

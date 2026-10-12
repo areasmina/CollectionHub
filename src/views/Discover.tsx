@@ -39,7 +39,7 @@ export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState('name');
+  const [sort, setSort] = useState('match'); // most owned first
   const [colours, setColours] = useState<string[]>([]);
   const [stats, setStats] = useState<Map<string, Stat>>(new Map());
   const data = useLiveQuery(async () => {
