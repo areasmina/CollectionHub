@@ -4,6 +4,7 @@ import { importCollection, resetProfile, type ImportResult } from '../lib/action
 import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
 import { cad } from '../lib/prices';
+import { CardsView } from './CardsView';
 import { isCommander } from './Discover';
 import { PriceLink, priceSum, Progress, Thumb } from './shared';
 import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
@@ -186,39 +187,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
             <span aria-hidden="true" className="fade" />
           </label>
 
-          <div className="colhead" aria-hidden="true">
-            <span>qty</span>
-            <span />
-            <span>card · set</span>
-            <span>each</span>
-            <span />
-          </div>
-          <ul className="crows">
-            {shown.slice(0, limit).map((e) => (
-              <li key={e.id} className="crow">
-                <span className="qty" aria-label={`Quantity ${e.qty}`}>
-                  <b>{e.qty}</b>
-                  <i>×</i>
-                </span>
-                <Thumb src={cards.get(e.cardId)?.img} />
-                <span className="cn">
-                  <b>{e.name}</b>
-                  <span>{[e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ')}</span>
-                </span>
-                <PriceLink card={cards.get(e.cardId)} />
-                <button className="xbtn" aria-label={`Remove ${e.name}`} onClick={() => db.entries.delete(e.id!)}>
-                  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                    <path d="M2 2 L12 12 M12 2 L2 12" fill="none" stroke="currentColor" strokeWidth="2.5" />
-                  </svg>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {shown.length > limit && (
-            <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
-              SHOW MORE ({shown.length - limit} LEFT)
-            </button>
-          )}
+          <CardsView entries={shown} cards={cards} />
         </section>
       </main>
     </>

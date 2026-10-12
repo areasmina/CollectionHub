@@ -2804,3 +2804,89 @@ button.logo {
     display: none !important;
   }
 }
+
+/* ---------- Collection: list/grid, editable quantity, group by set ---------- */
+.cardopts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  margin-top: 16px;
+}
+.cardopts .viewsw {
+  margin-top: 0;
+}
+.cardopts .check {
+  min-height: 44px;
+  font-family: var(--se);
+  font-size: 15px;
+}
+.cardopts .check input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+.colhead,
+.crow {
+  grid-template-columns: 132px 46px minmax(0, 1fr) auto 44px;
+}
+.qtyedit {
+  display: inline-flex;
+  align-items: stretch;
+  height: 44px;
+  border: 2px solid var(--text);
+  background: var(--bg);
+}
+.qtyedit button {
+  width: 40px;
+  border: 0;
+  background: var(--text);
+  color: var(--bg);
+  font-family: var(--an);
+  font-size: 22px;
+  line-height: 1;
+}
+.qtyedit button:disabled {
+  opacity: 0.35;
+}
+.qtyedit input {
+  width: 44px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  font-family: var(--an);
+  font-size: 20px;
+}
+.cgrid2 .tacts {
+  gap: 6px;
+}
+.cgrid2 .xbtn {
+  width: 44px;
+  height: 44px;
+}
+.setgroups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.setgrp.empty > summary {
+  opacity: 0.55;
+}
+.setgrp > summary .h {
+  font-size: 18px;
+}
+@media (max-width: 560px) {
+  .colhead,
+  .crow {
+    grid-template-columns: 112px 40px minmax(0, 1fr) 44px;
+  }
+  .qtyedit button {
+    width: 34px;
+  }
+  .qtyedit input {
+    width: 36px;
+  }
+}
