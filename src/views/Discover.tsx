@@ -35,6 +35,20 @@ type Cmdr = Card & { added?: number };
 /** Per commander, from EDHREC's average deck: share owned, cards missing, EDHREC decks. */
 type Stat = { pct: number; missing: number; decks?: number } | null;
 
+// Results survive page switches: recomputed only when the binder's contents change or after a day.
+const CACHE_MS = 864e5;
+let statsCache: { sig: string; at: number; map: Map<string, Stat> } = { sig: '', at: 0, map: new Map() };
+const binderSig = (profile: number, mine: Map<string, number>) => {
+  // Which cards are owned is what matters (quantities don't change % owned); order-independent sum of name hashes.
+  let sum = 0;
+  for (const k of mine.keys()) {
+    let h = 0;
+    for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+    sum = (sum + (h >>> 0)) % 4294967296;
+  }
+  return `${profile}|${mine.size}|${sum}`;
+};
+
 export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
@@ -43,7 +57,14 @@ export function Discover(s: Shared) {
   const [colours, setColours] = useState<string[]>([]);
   const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
   const phone = window.innerWidth <= 700;
-  const [stats, setStats] = useState<Map<string, Stat>>(new Map());
+  const sig = binderSig(s.profile, s.mine);
+  const [stats, setStatsState] = useState<Map<string, Stat>>(() => (statsCache.sig === sig && Date.now() - statsCache.at < CACHE_MS ? statsCache.map : new Map()));
+  const setStats = (f: (m: Map<string, Stat>) => Map<string, Stat>) =>
+    setStatsState((m) => {
+      const next = f(m);
+      statsCache = { sig, at: statsCache.sig === sig ? statsCache.at : Date.now(), map: next };
+      return next;
+    });
   const data = useLiveQuery(async () => {
     const entries = await db.entries.where('profile').equals(s.profile).toArray();
     const cards = await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))]);
@@ -62,7 +83,13 @@ export function Discover(s: Shared) {
 
   // Stats for every commander, loaded in the background (EDHREC pages are paced and cached a day).
   const pending = commanders.filter((c) => !stats.has(c.key)).sort((a, b) => a.name.localeCompare(b.name));
-  useEffect(() => setStats(new Map()), [s.mine]);
+  // Binder changed (import, quantity edit, other binder picked): start over.
+  useEffect(() => {
+    if (statsCache.sig !== sig || Date.now() - statsCache.at >= CACHE_MS) {
+      statsCache = { sig, at: Date.now(), map: new Map() };
+      setStatsState(new Map());
+    }
+  }, [sig]);
   useEffect(() => {
     if (!pending.length || open) return;
     let live = true;
