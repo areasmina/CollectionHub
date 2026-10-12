@@ -1537,6 +1537,7 @@ a.price:hover {
 @media (max-width: 700px) {
   .receipt {
     max-width: none;
+    transform: none; /* a long list tilted 1.2° would drift off the right edge */
   }
 }
 .receipt h2 {
