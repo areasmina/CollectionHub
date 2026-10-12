@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
 import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
-import { money, priceSum, Progress, usd } from './shared';
+import { money, priceSum, Progress, Thumb, usd } from './shared';
 
 export function ImportReport({ r }: { r: ImportResult }) {
   return (
@@ -127,7 +127,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
         {shown.slice(0, limit).map((e) => (
           <li key={e.id} className="card owned">
             <span className="qty">{e.qty}</span>
-            {cards.get(e.cardId)?.img ? <img src={cards.get(e.cardId)!.img} alt="" loading="lazy" width={36} height={50} /> : <span className="noimg" />}
+            <Thumb src={cards.get(e.cardId)?.img} />
             <span className="cname">
               {e.name} <small className="muted">{[e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ')}</small>
             </span>

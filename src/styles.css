@@ -405,3 +405,152 @@ summary {
   font-weight: 600;
 }
 
+
+/* Substitutions */
+.card {
+  position: relative;
+}
+.card.swappable {
+  cursor: pointer;
+}
+.swapmark {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--bg);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+.submenu {
+  position: absolute;
+  z-index: 20;
+  left: 40px;
+  right: 0;
+  bottom: calc(100% - 6px);
+  max-width: 360px;
+  padding: 0.4rem;
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+.subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.subhead .icon {
+  min-height: 32px;
+  min-width: 32px;
+}
+.submenu [role='menuitem'] {
+  width: 100%;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.3rem;
+  text-align: left;
+}
+.small {
+  font-size: 0.85rem;
+}
+.check {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.check input,
+.shop input {
+  width: auto;
+  min-height: 0;
+}
+
+/* Shopping list: right of the deck on wide screens, below it on phones */
+.deckgrid {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 900px) {
+  main:has(.deckgrid) {
+    max-width: 1200px;
+  }
+  .deckgrid {
+    grid-template-columns: 1fr 320px;
+    align-items: start;
+  }
+  .shop {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100dvh - 140px);
+    overflow: auto;
+  }
+}
+.shop {
+  padding: 0.5rem 0.8rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.shop h2 {
+  margin-top: 0.3rem;
+}
+.shop ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.shop li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.shop label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 36px;
+}
+.shop li.done span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.shop .right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Large card preview */
+.preview {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.preview.tap {
+  pointer-events: auto;
+  background: rgb(0 0 0 / 0.6);
+}
+.preview img {
+  width: min(320px, 80vw);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
+}
+
+@media (min-width: 900px) {
+  .shopjump {
+    display: none;
+  }
+}
+

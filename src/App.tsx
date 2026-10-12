@@ -6,6 +6,7 @@ import { Collection } from './views/Collection';
 import { Decks } from './views/Decks';
 import { Discover } from './views/Discover';
 import { SyncPanel } from './views/SyncPanel';
+import { PreviewLayer } from './views/shared';
 
 type Tab = 'discover' | 'collection' | 'decks';
 const store = {
@@ -67,6 +68,7 @@ export default function App() {
         </button>
       </header>
       {sync && <SyncPanel onClose={() => setSync(false)} />}
+      <PreviewLayer />
       <main>
         {tab === 'discover' && <Discover {...shared} />}
         {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}

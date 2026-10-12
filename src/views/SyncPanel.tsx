@@ -15,12 +15,12 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  const act = async (f: () => Promise<{ cards: number; decks: number }>, done: string) => {
+  const act = async (f: () => Promise<{ cards: number; decks: number; migrated?: boolean }>, done: string) => {
     setBusy(true);
     setMsg('');
     try {
       const r = await f();
-      setMsg(`${done}: ${r.cards} card entries, ${r.decks} decks.`);
+      setMsg(`${done}: ${r.cards} card entries, ${r.decks} decks.${r.migrated === false ? ' Swaps, shopping-list checks and dates stayed on this device: run supabase/migrations/002_extras.sql in Supabase to sync them too.' : ''}`);
     } catch (e) {
       setMsg(`Failed: ${(e as Error).message}`);
     }
