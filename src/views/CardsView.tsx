@@ -133,7 +133,8 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
 export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
-  const [view, setView] = usePref<'list' | 'grid'>('ch:collview2', 'grid'); // grid by default (new key so an old 'list' choice doesn't stick)
+  // Always opens in grid; LIST switches for this visit only.
+  const [view, setView] = useState<'list' | 'grid'>('grid');
   const [group, setGroup] = usePref<'on' | 'off'>('ch:collgroup', 'off');
   const [hideEmpty, setHideEmpty] = usePref<'on' | 'off'>('ch:collempty', 'on');
   const [limit, setLimit] = useState(100);
