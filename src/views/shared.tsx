@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
+import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, rateNote, toCad } from '../lib/prices';
 
@@ -213,5 +214,29 @@ export function SaltCell({ names }: { names: string[] }) {
         </details>
       )}
     </div>
+  );
+}
+/** Hazard note: cards your decks share more often than you own copies (decks are virtual lists). */
+export function ShortAlert({ items }: { items: Shortfall[] }) {
+  if (!items.length) return null;
+  const row = (s: Shortfall) => (
+    <li key={s.name}>
+      {shortText(s)}. <small>You own {s.own} · used in {s.decks.join(', ')}</small>
+    </li>
+  );
+  return (
+    <aside className="shortalert" role="status">
+      <b>⚠ COPIES</b>
+      {items.length <= 3 ? (
+        <ul>{items.map(row)}</ul>
+      ) : (
+        <details>
+          <summary>
+            {items.length} cards are in more decks than you have copies for
+          </summary>
+          <ul>{items.map(row)}</ul>
+        </details>
+      )}
+    </aside>
   );
 }

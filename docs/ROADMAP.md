@@ -55,15 +55,18 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 
 1. 🟡 Collection storage audit. Entries are per printing (`cardId` + set + number + foil), imports merge duplicates in
    one transaction. Missing per-entry: language, etched/other finishes, condition.
-2. ⬜ Ownership vs allocation. Today ownership = copies summed by card name; decks never reserve copies; quantity is
-   ignored (owning 1 satisfies a deck needing 3). Add: copies needed across all decks vs owned, the "need N more copies
-   of X" alert, available copies per card, legality-aware ownership.
+2. ✅ Copies across decks (phase 3a.2). Decks stay virtual lists that may share cards. `shortfalls()` (lib/copies,
+   tested) adds up the copies all saved decks use per card and compares them with the copies owned; basics skipped,
+   cards owned 0 times are "missing" instead. Alert "You'll need N more copies of X to have it in all decks" on the
+   Decks page, on each deck (its own cards) and on the commander page (as if you built this deck too; saved decks of the
+   same commander count as this deck). Ownership ignores cards Scryfall marks not legal in Commander (tokens, Un-cards,
+   banned); the Collection page says how many. Not done: a per-card "available copies" column (comes with filters, item 3).
 3. 🟡 Collection organisation/editing: search by name, set grouping, qty edit done. Missing: sort, filters (colour,
    type, rarity, MV, price, foil, in deck / not in deck).
 4. 🟡 Valuation: binder value uses your printing's price, but foil entries are priced at the non-foil price (`usd ??
    usd_foil`), and decks/missing use the cheapest printing instead. Unify the method, price foils correctly, show
    retrieval time.
-5. ✅ Collection Match in the commander header (owned of total, %, missing, missing cost). ⬜ Allocation-aware copies.
+5. ✅ Collection Match in the commander header (owned of total, %, missing, missing cost) + copies alert.
 6. ⬜ Suggested Deck (5.1): scan B3/B4/B5 × budgets, pick the most-owned page, build a 100-card deck from owned cards
    first, fill gaps with owned substitutes, list purchases separately.
 7. 🟡 My Decks: import text, view, price, missing, note/tags, export, delete. Missing: edit, rename, duplicate,

@@ -7,7 +7,8 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, money, priceSum, SaltCell, scryfallUrl, Segs, usd, type Shared } from './shared';
+import { CardLine, CardTile, money, priceSum, SaltCell, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
+import { shortfalls } from '../lib/copies';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -131,6 +132,12 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
   const toBuyCost = priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const pricesIn = cards.size > 0;
+  // If you built this deck too: owned cards your saved decks already use up (saved decks of this commander are the same deck).
+  const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [];
+  const thisDeck = `this ${name.split(' // ')[0]} deck`;
+  const short = page
+    ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: swaps[c.name] ?? c.name, qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
+    : [];
   const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
@@ -342,6 +349,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           </span>
         </section>
 
+        <ShortAlert items={short} />
         {error && <p className="error">{error}</p>}
         {!page && !error && <p className="count">Loading EDHREC data…</p>}
         {page && (

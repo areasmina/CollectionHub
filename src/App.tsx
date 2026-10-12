@@ -51,8 +51,11 @@ export default function App() {
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
   const other = profile === 1 ? 2 : 1;
-  const mine = useMemo(() => ownedMap(entries.filter((e) => e.profile === profile)), [entries, profile]);
-  const theirs = useMemo(() => ownedMap(entries.filter((e) => e.profile === other)), [entries, other]);
+  // Ownership for Commander: cards Scryfall marks not legal in Commander (tokens, Un-cards, banned) don't count.
+  const illegal = useLiveQuery(async () => new Set(await db.cards.filter((c) => !c.legal).primaryKeys()), []) ?? new Set<string>();
+  const counts = (p: number) => ownedMap(entries.filter((e) => e.profile === p && !illegal.has(e.cardId)));
+  const mine = useMemo(() => counts(profile), [entries, profile, illegal]);
+  const theirs = useMemo(() => counts(other), [entries, other, illegal]);
   const nameOf = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Binder ${id}`;
   const dark = theme === 'system' ? systemDark() : theme === 'dark';
 

@@ -3114,3 +3114,35 @@ button.logo {
 .dcard .price.tapey {
   align-self: flex-start;
 }
+
+/* Copies alert: decks sharing more copies than you own */
+.shortalert {
+  margin: 14px 0;
+  padding: 10px 14px 10px 18px;
+  background: repeating-linear-gradient(-45deg, var(--hazard) 0 10px, #141414 10px 20px) left / 8px 100% no-repeat, #f4efe2;
+  color: #141414;
+  font-family: var(--se);
+  font-size: 15px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.shortalert b {
+  font-family: var(--an);
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+.shortalert ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.shortalert li + li {
+  margin-top: 4px;
+}
+.shortalert small {
+  color: #5c5c5c;
+}
+.shortalert summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}

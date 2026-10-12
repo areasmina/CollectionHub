@@ -8,7 +8,8 @@ import { norm } from '../lib/names';
 import { cad } from '../lib/prices';
 import { cheapest, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
-import { CardLine, priceSum, Progress, SaltCell, type Shared } from './shared';
+import { shortfalls } from '../lib/copies';
+import { CardLine, priceSum, Progress, SaltCell, ShortAlert, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -39,7 +40,7 @@ function DeckNotes({ deck }: { deck: Deck }) {
   );
 }
 
-function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => void }) {
+function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: () => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
   const byKey =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ??
@@ -132,6 +133,7 @@ function DeckView({ deck, s, onBack }: { deck: Deck; s: Shared; onBack: () => vo
             </button>
           </div>
         </section>
+        <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
         <DeckNotes deck={deck} />
         <div className="deckgrid">
           <div className="lists">
@@ -169,8 +171,9 @@ export function Decks(s: Shared) {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState('');
 
+  const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
-  if (deck) return <DeckView deck={deck} s={s} onBack={() => setOpen(null)} />;
+  if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} />;
 
   async function add() {
     setError('');
@@ -197,6 +200,7 @@ export function Decks(s: Shared) {
           {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
           <span className="cur">_</span>
         </p>
+        <ShortAlert items={short} />
         <ul className="dgrid">
           {decks.map((d, i) => {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);

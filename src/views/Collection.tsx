@@ -73,6 +73,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
+  const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
   const upload = (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
@@ -117,6 +118,12 @@ export function Collection({ profile, name }: { profile: number; name: string })
             {value > 0 && <span className="stamp">APPRAISED</span>}
           </div>
         </section>
+
+        {illegal > 0 && (
+          <p className="count">
+            {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
+          </p>
+        )}
 
         <section className="importrow">
           <div className="flyer gbox">
