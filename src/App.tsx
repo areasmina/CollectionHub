@@ -82,6 +82,14 @@ export default function App() {
             <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="CollectionHub, go to Discover">
               COLLECTIONHUB
             </button>
+            {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
+            <nav className="tabs hubnav" aria-label="Sections">
+              {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
+                <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => ((t === 'discover' ? goDiscover() : setTab(t)), setHubOpen(false))}>
+                  {t.toUpperCase()}
+                </button>
+              ))}
+            </nav>
             <div className="righthead">
               <select className="binder" aria-label="Binder" value={profile} onChange={(e) => (setProfile(Number(e.target.value)), setHubOpen(false))}>
                 {[1, 2].map((id) => (

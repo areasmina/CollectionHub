@@ -2785,3 +2785,22 @@ button.logo {
     margin-top: 14px;
   }
 }
+
+/* Desktop: Discover / Collection / Decks sit in the hidden HUB drawer; phones keep the bottom bar. */
+@media (min-width: 900px) {
+  .navbar {
+    display: none;
+  }
+  .hubinner {
+    justify-content: flex-start;
+    gap: 22px;
+  }
+  .hubinner .righthead {
+    margin-left: auto;
+  }
+}
+@media (max-width: 899px) {
+  .hubnav {
+    display: none !important;
+  }
+}
