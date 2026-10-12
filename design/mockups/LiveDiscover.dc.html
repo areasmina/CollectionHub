@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discover zine</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Archivo:wght@400;600;800&family=Archivo+Black&family=Black+Ops+One&family=Playfair+Display:ital,wght@1,900&family=Shippori+Mincho+B1:wght@800&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0A}
+a{color:#FFFFFF}a:hover{color:#E60012}
+.torn{clip-path:polygon(0 3%,7% 0,15% 4%,24% 0,33% 3%,44% 0,55% 4%,66% 0,77% 3%,88% 0,100% 2%,98% 14%,100% 27%,97% 41%,100% 55%,98% 70%,100% 84%,97% 100%,85% 97%,72% 100%,58% 96%,44% 100%,30% 97%,16% 100%,4% 96%,0 100%,2% 84%,0 66%,3% 50%,0 33%,2% 16%)}
+.jag{clip-path:polygon(0 6%,5% 0,40% 3%,72% 0,100% 4%,97% 35%,100% 70%,96% 100%,60% 96%,25% 100%,0 95%,3% 55%)}
+.stripe{background:repeating-linear-gradient(-45deg,#FFCC00 0 7px,#0A0A0A 7px 14px)}
+input::placeholder{color:#777777}
+@keyframes tick{to{transform:translateX(-50%)}}
+.tick{display:inline-flex;animation:tick 34s linear infinite}
+@keyframes slashIn{from{transform:translateX(-90px) skewX(-6deg);opacity:0}}
+.slash{animation:slashIn .7s cubic-bezier(.2,.9,.2,1) both}
+@keyframes blink{50%{opacity:0}}
+.cur{animation:blink 1s steps(1) infinite}
+@keyframes sway{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg)}}
+.sway{animation:sway 5s ease-in-out infinite}
+.card{transition:transform .18s ease,box-shadow .18s ease}
+.card:hover,.card:focus-visible{transform:rotate(0deg) translateY(-8px) !important;box-shadow:9px 9px 0 #E60012 !important}
+.doodle path{stroke-dasharray:600;stroke-dashoffset:0}
+@keyframes draw{from{stroke-dashoffset:600}}
+.card:hover .doodle path,.card:focus-visible .doodle path{animation:draw .7s ease-out both}
+.xerox{filter:grayscale(1) contrast(1.35)}
+@keyframes streak{0%,100%{opacity:.35}50%{opacity:.7}}
+.streak{animation:streak 4s ease-in-out infinite}
+.card:hover .art,.card:focus-visible .art{filter:brightness(1.15) saturate(1.4)}
+.art{transition:filter .25s}
+.btn{transition:transform .1s,box-shadow .1s}
+.btn:active{transform:translate(4px,4px) skewX(-12deg) !important;box-shadow:none !important}
+@media (prefers-reduced-motion: reduce){.tick,.slash,.cur,.sway,.streak,.card:hover .doodle path{animation:none}.card,.btn,.art{transition:none}}
+.ht{background-image:radial-gradient(rgba(70,0,0,.55) 1.7px,transparent 2.1px);background-size:8px 8px}
+.tape{z-index:3;background:repeating-linear-gradient(90deg,rgba(255,255,255,.1) 0 2px,transparent 2px 7px),linear-gradient(180deg,rgba(208,208,204,.9),rgba(140,140,138,.9));clip-path:polygon(2% 0,98% 7%,100% 24%,96% 42%,100% 60%,96% 80%,99% 100%,1% 94%,4% 78%,0 58%,3% 38%,0 18%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.warn{position:relative;display:inline-block;background:radial-gradient(rgba(0,0,0,.25) 1px,transparent 1.6px) 0 0/5px 7px,radial-gradient(rgba(255,255,255,.5) 1px,transparent 1.5px) 2px 3px/9px 11px,#FFCC00;color:#0A0A0A;font-family:'Archivo Black',sans-serif;text-transform:lowercase;letter-spacing:.3px;padding:11px 14px 10px;line-height:1;clip-path:polygon(0 5%,22% 0,51% 4%,78% 0,100% 3%,98% 50%,100% 96%,70% 100%,38% 96%,12% 100%,0 96%,2% 48%)}
+.warn::before,.warn::after{content:"";position:absolute;left:0;right:0;height:6px;background:repeating-linear-gradient(-45deg,#0A0A0A 0 6px,transparent 6px 12px)}
+.warn::before{top:1px}.warn::after{bottom:1px}
+.hfade{position:relative;overflow:hidden}
+.hfade::before{content:"";position:absolute;top:0;bottom:0;right:0;width:60%;background:radial-gradient(circle,#0A0A0A 30%,transparent 33%) 0 0/6px 6px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 70%);mask-image:linear-gradient(90deg,transparent,#000 70%);pointer-events:none}
+.hfade::after{content:"";position:absolute;top:0;bottom:0;right:0;width:30%;background:radial-gradient(circle,#0A0A0A 48%,transparent 52%) 3px 3px/6px 6px;-webkit-mask-image:linear-gradient(90deg,transparent,#000);mask-image:linear-gradient(90deg,transparent,#000);pointer-events:none}
+.scratch{position:relative}
+.scratch::after{content:"";position:absolute;right:-3px;top:-4px;bottom:-4px;width:36px;background:repeating-linear-gradient(90deg,#F1EBDC 0 2px,transparent 2px 5px,#F1EBDC 5px 6px,transparent 6px 10px);-webkit-mask-image:linear-gradient(180deg,#000 0 18%,transparent 20% 34%,#000 36% 62%,transparent 64% 72%,#000 74%);mask-image:linear-gradient(180deg,#000 0 18%,transparent 20% 34%,#000 36% 62%,transparent 64% 72%,#000 74%);pointer-events:none}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1900px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column; font-family: 'Archivo', sans-serif; color: #FFFFFF; background-color: #0A0A0A; background-image: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px); background-size: 24px 24px">
+
+  <svg aria-hidden="true" width="0" height="0" style="position: absolute">
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" result="n"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="n" scale="5"></feDisplacementMap></filter>
+    <filter id="worn"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" result="w"></feTurbulence><feDisplacementMap in="SourceGraphic" in2="w" scale="6"></feDisplacementMap></filter>
+    <filter id="xgrain"><feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" stitchTiles="stitch"></feTurbulence><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.35"></feColorMatrix></filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter>
+  </svg>
+
+  <div aria-hidden="true" style="position: absolute; inset: 0 0 auto 0; height: 820px; background: repeating-conic-gradient(from 0deg at 46% 30%, rgba(255,255,255,.12) 0deg 2.5deg, transparent 2.5deg 11deg)"></div>
+  <div aria-hidden="true" class="streak" style="position: absolute; left: 30%; top: 520px; width: 1100px; height: 10px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75) 40%, transparent); filter: blur(2px); transform: rotate(-17deg)"></div>
+  <div aria-hidden="true" class="streak" style="position: absolute; left: 36%; top: 590px; width: 900px; height: 4px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.9) 50%, transparent); filter: blur(1px); transform: rotate(-15deg); animation-delay: -1.5s"></div>
+  <div aria-hidden="true" class="streak" style="position: absolute; left: 44%; top: 650px; width: 800px; height: 18px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.4) 55%, transparent); filter: blur(4px); transform: rotate(-19deg); animation-delay: -2.6s"></div>
+  <div aria-hidden="true" style="position: absolute; right: -60px; top: 560px; width: 620px; height: 1400px; background: #EDE6D6; clip-path: polygon(0 6%, 6% 4.6%, 10% 5.4%, 16% 3.4%, 22% 4.4%, 27% 2.6%, 33% 3.6%, 40% 1.8%, 46% 2.8%, 53% 1%, 60% 2%, 67% .4%, 74% 1.4%, 82% 0, 90% 1%, 100% 0, 100% 100%, 0 100%); transform: rotate(-6deg)"></div>
+  <div aria-hidden="true" class="ht" style="position: absolute; right: -60px; top: 572px; width: 620px; height: 1400px; background-color: #C8102E; clip-path: polygon(0 6.6%, 5% 5.4%, 11% 6%, 15% 4.2%, 23% 5.2%, 28% 3.4%, 34% 4.2%, 41% 2.6%, 47% 3.4%, 52% 1.8%, 61% 2.8%, 66% 1.2%, 75% 2.2%, 81% .8%, 91% 1.8%, 100% .8%, 100% 100%, 0 100%); transform: rotate(-6deg)"></div>
+  <div aria-hidden="true" class="torn" style="position: absolute; left: -170px; top: 1180px; width: 380px; height: 440px; background: #C8102E; transform: rotate(12deg)"></div>
+
+  <header style="position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 24px; background: #0A0A0A; border-bottom: 5px solid #E60012">
+    <div style="display: flex; align-items: center; gap: 22px; flex-wrap: wrap">
+      <div style="font-family: 'Anton', sans-serif; font-size: 34px; letter-spacing: .5px; text-shadow: 3px 3px 0 #E60012">COLLECTIONHUB</div>
+      <nav aria-label="Sections" style="display: flex; gap: 4px">
+        <a href="LiveDiscover.dc.html" class="jag" style="text-decoration: none; background: #E60012; color: #FFFFFF; font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 1px; padding: 12px 26px; transform: skewX(-12deg)">DISCOVER</a>
+        <a href="LiveCollection.dc.html" style="text-decoration: none; background: #0A0A0A; color: #FFFFFF; border: 2px solid #FFFFFF; font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 1px; padding: 10px 22px; transform: skewX(-12deg)">COLLECTION</a>
+        <a href="LiveDecks.dc.html" style="text-decoration: none; background: #0A0A0A; color: #FFFFFF; border: 2px solid #FFFFFF; font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 1px; padding: 10px 22px; transform: skewX(-12deg)">DECKS</a>
+      </nav>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center">
+      <button style="display: flex; align-items: center; gap: 10px; background: #0A0A0A; color: #FFFFFF; border: 2px solid #FFFFFF; font-family: 'Special Elite', monospace; font-size: 15px; padding: 0 14px; min-height: 44px">Binder 1 ▾</button>
+      <div role="group" aria-label="Theme" style="display: flex; background: #FFFFFF; border: 2px solid #FFFFFF">
+        <button aria-label="Dark theme, on" style="width: 44px; height: 40px; background: #0A0A0A; color: #FFFFFF; border: 0; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M14 13.5A7 7 0 0 1 7.5 3 7 7 0 1 0 17 12.5a7 7 0 0 1-3 1z" fill="currentColor"></path></svg></button>
+        <button aria-label="Light theme" style="width: 44px; height: 40px; background: #FFFFFF; color: #0A0A0A; border: 0; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="4" fill="currentColor"></circle><path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.6 3.6l2.1 2.1M14.3 14.3l2.1 2.1M3.6 16.4l2.1-2.1M14.3 5.7l2.1-2.1" stroke="currentColor" stroke-width="2"></path></svg></button>
+      </div>
+      <button aria-label="Sync" style="width: 44px; height: 44px; background: #0A0A0A; color: #FFFFFF; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M5 15 V3 M2 6 L5 3 L8 6 M13 3 V15 M10 12 L13 15 L16 12" fill="none" stroke="currentColor" stroke-width="2"></path></svg></button>
+    </div>
+  </header>
+
+  <div aria-hidden="true" style="position: relative; z-index: 1; margin: 22px -30px 0; background: #E60012; transform: rotate(-1.4deg); padding: 7px 0; white-space: nowrap; overflow: hidden; border-top: 3px solid #FFFFFF; border-bottom: 3px solid #FFFFFF">
+    <span class="tick" style="font-family: 'Anton', sans-serif; font-size: 19px; letter-spacing: .5px; gap: 40px; padding-left: 40px">
+      <span>★ WHAT CAN YOU BUILD WITH WHAT YOU OWN?</span><span>★ 296 COMMANDERS IN BINDER 1</span><span>★ OWN IT · BUILD IT · SLEEVE IT</span><span>★ MISSING CARDS GET SWAPPED FROM YOUR BINDER</span>
+      <span>★ WHAT CAN YOU BUILD WITH WHAT YOU OWN?</span><span>★ 296 COMMANDERS IN BINDER 1</span><span>★ OWN IT · BUILD IT · SLEEVE IT</span><span>★ MISSING CARDS GET SWAPPED FROM YOUR BINDER</span>
+    </span>
+  </div>
+
+  <div aria-hidden="true" style="position: absolute; inset: 0; z-index: 1; pointer-events: none">
+    <sc-for list="{{wall}}" as="d" hint-placeholder-count="4">
+      <svg aria-hidden="true" class="doodle" viewBox="0 0 120 90" width="{{d.w}}" height="{{d.h}}" style="position: absolute; z-index: {{d.z}}; pointer-events: none; left: {{d.x}}%; top: {{d.y}}%; transform: rotate({{d.r}}deg) scaleX({{d.flip}}); filter: url(#worn); opacity: {{d.o}}"><path d="{{d.fill}}" fill="{{d.c}}" stroke="{{d.c}}" stroke-width="2"></path><path d="{{d.stroke}}" fill="none" stroke="{{d.c}}" stroke-width="{{d.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    </sc-for>
+  </div>
+
+  <main style="position: relative; z-index: 1; flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; box-sizing: border-box; padding: 0 24px 80px">
+
+    <section style="display: flex; flex-wrap: wrap; gap: 30px 40px; align-items: center; margin-top: 26px">
+      <div style="position: relative; flex: 999 1 600px; min-height: 290px">
+        <div class="ht slash" aria-hidden="true" style="position: absolute; left: -80px; top: 18px; width: 700px; height: 270px; background-color: #E60012; clip-path: polygon(0 14%, 100% 0, 92% 100%, 0 86%)"></div>
+        <h1 aria-label="What can I build?" style="position: relative; margin: 0; padding: 40px 0 0 6px; font-weight: 400">
+          <dc-import name="Ransom" text="WHAT CAN I BUILD?" size="86" seed="7" hint-size="620px,220px"></dc-import>
+        </h1>
+      </div>
+
+      <div style="flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column">
+    <div style="position: relative; margin-top: 0; display: flex; flex-direction: column; align-items: flex-start">
+      <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style="margin-left: 6px; filter: url(#worn)"><path d="M4 22 C40 8 70 26 104 14 S168 4 196 16 L208 6 L214 20 C226 12 240 14 256 4 L250 24 C220 30 196 22 170 30 S80 26 60 32 S20 30 4 22 Z" fill="#F1EBDC"></path><path d="M230 26 L246 30 L238 33 Z" fill="#F1EBDC"></path></svg>
+      <h2 class="scratch" style="position: relative; margin: 4px 0 0; padding: 8px 64px 8px 16px; font-family: 'Archivo Black', sans-serif; font-weight: 400; font-size: 22px; letter-spacing: 1px; color: #F1EBDC"><span aria-hidden="true" style="position: absolute; inset: 0; border: 3px solid #F1EBDC; filter: url(#worn)"></span>FILTERS</h2>
+    </div>
+    <section aria-label="Find a commander" style="position: relative; margin-top: 12px; background: #FFFFFF; color: #0A0A0A; padding: 18px 22px; display: flex; flex-wrap: wrap; gap: 16px 22px; align-items: flex-end; transform: rotate(-.4deg)">
+      <span aria-hidden="true" style="position: absolute; inset: -2px; border: 3px solid #FFFFFF; filter: url(#worn); pointer-events: none"></span>
+      <span aria-hidden="true" class="tape" style="position: absolute; top: -12px; left: -16px; width: 90px; height: 24px; transform: rotate(-24deg)"></span>
+      <span aria-hidden="true" class="tape" style="position: absolute; bottom: -10px; right: -12px; width: 90px; height: 24px; transform: rotate(-20deg)"></span>
+
+      <label style="flex: 999 1 300px; display: flex; align-items: stretch; min-height: 52px; border: 3px solid #0A0A0A; background: #FFFFFF; cursor: text">
+        <span style="display: flex; align-items: center; background: #0A0A0A; color: #FFFFFF; font-family: 'Anton', sans-serif; font-size: 19px; letter-spacing: 1px; padding: 0 12px">SEARCH</span>
+        <input placeholder="commander name_" style="flex: 1; min-width: 0; background: transparent; color: #0A0A0A; border: 0; outline-offset: -4px; outline-color: #E60012; font-family: 'Special Elite', monospace; font-size: 16px; padding: 0 12px">
+        <span aria-hidden="true" class="hfade" style="flex: 0 0 74px"></span>
+      </label>
+      <label style="position: relative; flex: 1 1 260px; display: flex; align-items: stretch; min-height: 52px; border: 3px solid #0A0A0A; background: #FFFFFF; cursor: pointer">
+        <span style="display: flex; align-items: center; background: #0A0A0A; color: #FFFFFF; font-family: 'Anton', sans-serif; font-size: 19px; letter-spacing: 1px; padding: 0 12px; pointer-events: none">SORT</span>
+        <select style="flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; background: transparent; color: #0A0A0A; border: 0; outline-offset: -4px; outline-color: #E60012; font-family: 'Anton', sans-serif; font-size: 17px; letter-spacing: .5px; padding: 0 46px 0 12px; cursor: pointer">
+          <option>NAME A→Z</option><option>% OWNED</option><option>PRICE</option><option>RECENTLY ADDED</option>
+        </select>
+        <span aria-hidden="true" style="position: absolute; right: 0; top: 0; bottom: 0; width: 40px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #0A0A0A 30%, transparent 34%) 0 0/6px 6px; pointer-events: none"><span style="background: #E60012; color: #FFFFFF; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 13px">▼</span></span>
+      </label>
+      <div role="group" aria-label="Filter by colour" style="flex: 1 1 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px"><button aria-pressed="true" aria-label="White" style="position: relative; height: 54px; background: #E60012; color: #FFFFFF; border: 3px solid #EDE6D6; box-shadow: inset 0 0 0 2px #0A0A0A; font-family: 'Archivo Black', sans-serif; font-size: 17px; padding: 0 0 6px; cursor: pointer">W<span aria-hidden="true" style="position: absolute; left: 5px; right: 5px; bottom: 5px; height: 5px; background: #F3E7B0"></span></button><button aria-pressed="false" aria-label="Blue" style="position: relative; height: 54px; background: #0A0A0A; color: #FFFFFF; border: 3px solid #EDE6D6; box-shadow: inset 0 0 0 2px #0A0A0A; font-family: 'Archivo Black', sans-serif; font-size: 17px; padding: 0 0 6px; cursor: pointer">U<span aria-hidden="true" style="position: absolute; left: 5px; right: 5px; bottom: 5px; height: 5px; background: #2F7FD8"></span></button><button aria-pressed="false" aria-label="Black" style="position: relative; height: 54px; background: #0A0A0A; color: #FFFFFF; border: 3px solid #EDE6D6; box-shadow: inset 0 0 0 2px #0A0A0A; font-family: 'Archivo Black', sans-serif; font-size: 17px; padding: 0 0 6px; cursor: pointer">B<span aria-hidden="true" style="position: absolute; left: 5px; right: 5px; bottom: 5px; height: 5px; background: #8C8C8C"></span></button><button aria-pressed="false" aria-label="Red" style="position: relative; height: 54px; background: #0A0A0A; color: #FFFFFF; border: 3px solid #EDE6D6; box-shadow: inset 0 0 0 2px #0A0A0A; font-family: 'Archivo Black', sans-serif; font-size: 17px; padding: 0 0 6px; cursor: pointer">R<span aria-hidden="true" style="position: absolute; left: 5px; right: 5px; bottom: 5px; height: 5px; background: #E60012"></span></button><button aria-pressed="false" aria-label="Green" style="position: relative; height: 54px; background: #0A0A0A; color: #FFFFFF; border: 3px solid #EDE6D6; box-shadow: inset 0 0 0 2px #0A0A0A; font-family: 'Archivo Black', sans-serif; font-size: 17px; padding: 0 0 6px; cursor: pointer">G<span aria-hidden="true" style="position: absolute; left: 5px; right: 5px; bottom: 5px; height: 5px; background: #2FA35A"></span></button></div>
+    </section>
+        <p style="position: relative; z-index: 2; margin: 18px 0 0; font-family: 'Special Elite', monospace; font-size: 15px; line-height: 1.55"><span style="background: #0A0A0A; color: #FFCC00; padding: 3px 8px; box-decoration-break: clone; -webkit-box-decoration-break: clone">&gt; Your binder vs EDHREC. Missing cards get filled from cards you own<span class="cur">_</span></span></p>
+      </div>
+    </section>
+
+
+    <p style="margin: 30px 0 0; font-family: 'Special Elite', monospace; font-size: 15px; color: #D0D0D0">296 of 296 commanders in this binder.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 44px 26px; margin-top: 30px">
+      <sc-for list="{{cards}}" as="c" hint-placeholder-count="10">
+        <a href="LiveCommander.dc.html" class="card" style="position: relative; display: flex; flex-direction: column; text-decoration: none; color: #F1EBDC; background: #0D0D0D; border-radius: 12px; padding: 14px 14px 12px; box-shadow: 6px 6px 0 #000000; transform: rotate({{c.rot}}deg)">
+          <span aria-hidden="true" style="position: absolute; inset: 0; border: 4px solid #EDE6D6; border-radius: 12px; filter: url(#worn); pointer-events: none"></span>
+          <span aria-hidden="true" style="position: absolute; inset: 6px; border: 1px solid rgba(237,230,214,.35); border-radius: 8px; pointer-events: none"></span>
+          <sc-if value="{{c.tape}}" hint-placeholder-val="{{false}}">
+            <span aria-hidden="true" class="tape" style="position: absolute; {{c.tapePos}}; width: 86px; height: 30px; transform: rotate({{c.tapeRot}}deg)"></span>
+          </sc-if>
+          <sc-for list="{{c.doodles}}" as="d" hint-placeholder-count="1">
+            <svg aria-hidden="true" class="doodle" viewBox="0 0 120 90" width="{{d.w}}" height="{{d.h}}" style="position: absolute; z-index: {{d.z}}; pointer-events: none; left: {{d.x}}%; top: {{d.y}}%; transform: rotate({{d.r}}deg) scaleX({{d.flip}}); filter: url(#worn); opacity: {{d.o}}"><path d="{{d.fill}}" fill="{{d.c}}" stroke="{{d.c}}" stroke-width="2"></path><path d="{{d.stroke}}" fill="none" stroke="{{d.c}}" stroke-width="{{d.sw}}" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </sc-for>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px">
+            <span style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 18px; line-height: 1.12; text-transform: uppercase; letter-spacing: -.2px">{{c.name}}</span>
+            <span style="display: flex; gap: 3px; flex: 0 0 auto; padding-top: 2px">
+              <sc-for list="{{c.pips}}" as="p" hint-placeholder-count="2">
+                <span style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-family: 'Archivo Black', sans-serif; font-size: 11px; background: {{p.bg}}; color: {{p.fg}}; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.55); filter: url(#worn)">{{p.l}}</span>
+              </sc-for>
+            </span>
+          </div>
+          <span style="font-family: 'Special Elite', monospace; font-size: 13px; color: #CFC8B8; margin-top: 5px; text-align: center">{{c.tags}}</span>
+          <div style="position: relative; margin-top: 9px; aspect-ratio: 4 / 3; background: #EDE6D6; padding: 4px; box-sizing: border-box">
+            <div style="position: relative; width: 100%; height: 100%; border: 3px solid #0A0A0A; box-sizing: border-box; overflow: hidden">
+              <div class="art xerox" style="position: absolute; inset: 0; background: {{c.art}}"></div>
+              <svg aria-hidden="true" width="100%" height="100%" style="position: absolute; inset: 0; mix-blend-mode: multiply; opacity: .8"><rect width="100%" height="100%" filter="url(#xgrain)"></rect></svg>
+              <span style="position: absolute; left: 5px; top: 5px; font-family: 'Space Mono', monospace; font-size: 9px; color: #F1EBDC; background: #0A0A0A; padding: 0 4px">[ART CROP]</span>
+            </div>
+          </div>
+          <span style="font-family: 'Special Elite', monospace; font-size: 13px; line-height: 1.45; margin-top: 12px">Own {{c.pct}}% of the deck. {{c.missing}}</span>
+          <span style="align-self: flex-start; margin-top: 8px; font-family: 'Special Elite', monospace; font-size: 13px; padding: 2px 8px; background: {{c.badgeBg}}; color: {{c.badgeFg}}; border: 1.5px solid {{c.badgeBd}}">{{c.badge}}</span>
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; margin-top: 10px">
+            <span style="font-family: 'Space Mono', monospace; font-size: 10px; line-height: 1.35; color: #B5AE9F; text-transform: uppercase">NO. {{c.no}}<br>{{c.decks}} decks<br>{{c.price}}</span>
+            <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+              <span style="font-family: 'Archivo', sans-serif; font-weight: 800; font-size: 32px; line-height: 1">{{c.pct}}%</span>
+              <span aria-hidden="true" style="display: flex; align-items: flex-end; gap: 2px; height: 18px">
+                <sc-for list="{{c.bars}}" as="b" hint-placeholder-count="12">
+                  <span style="width: 5px; height: {{b.h}}px; background: {{b.bg}}; border: 1px solid {{b.bd}}; transform: skewX(-18deg); box-sizing: border-box"></span>
+                </sc-for>
+              </span>
+            </span>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </main>
+
+  <svg aria-hidden="true" width="100%" height="100%" style="position: absolute; inset: 0; pointer-events: none; z-index: 4; opacity: .3; mix-blend-mode: overlay"><rect width="100%" height="100%" filter="url(#grain)"></rect></svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var pip = {
+      W: { l: 'W', bg: '#FFFFFF', fg: '#0A0A0A' },
+      U: { l: 'U', bg: '#0A0A0A', fg: '#FFFFFF' },
+      B: { l: 'B', bg: '#0A0A0A', fg: '#FFFFFF' },
+      R: { l: 'R', bg: '#E60012', fg: '#FFFFFF' },
+      G: { l: 'G', bg: '#0A0A0A', fg: '#FFFFFF' }
+    };
+    pip.W = { l: 'W', bg: '#FFFBD5', fg: '#0A0A0A' };
+    pip.G = { l: 'G', bg: '#9BD3AE', fg: '#0A0A0A' };
+    pip.U = { l: 'U', bg: '#AAE0FA', fg: '#0A0A0A' };
+    pip.B = { l: 'B', bg: '#CBC2BF', fg: '#0A0A0A' };
+    pip.R = { l: 'R', bg: '#F9AA8F', fg: '#0A0A0A' };
+    var raw = [
+      ['Abomination, World Ravager', 'R', 'Reanimator · Big Mana', 84.1, 12, '≈CA$0.41', '1,206'],
+      ['Absolute Virtue', 'WU', 'Voltron · Protection', 62.3, 31, '≈CA$7.54', '2,381'],
+      ['Adeline, Resplendent Cathar', 'W', 'Tokens · Aggro · Humans', 39.0, 55, '≈CA$3.78', '9,812'],
+      ['Adrix and Nev, Twincasters', 'UG', 'Tokens · Clones · Ramp', 91.8, 6, '≈CA$11.81', '4,017'],
+      ['Aerith Gainsborough', 'W', 'Lifegain · Counters', 97.6, 2, '≈CA$3.29', '3,540'],
+      ['Agent Venom', 'B', 'Aristocrats · Draw', 73.4, 21, '≈CA$—', '1,988'],
+      ['Alesha, Who Smiles at Death', 'R', 'Reanimator · Aggro', 96.3, 3, '≈CA$—', '3,102'],
+      ['Aminatou, the Fateshifter', 'WUB', 'Blink · Superfriends', 58.2, 34, '≈CA$—', '2,764'],
+      ['Anafenza, Kin-Tree Spirit', 'W', 'Counters · Bolster', 91.2, 7, '≈CA$—', '904'],
+      ['Animar, Soul of Elements', 'URG', 'Creatures · Cost Reduction', 66.7, 28, '≈CA$—', '5,231']
+    ];
+    // Original marker doodles in the spirit of 2000s cartoon-band zines: each is a stroke path + a filled path.
+    var lib = [
+      { stroke: 'M14 60 L20 24 L38 46 L52 16 L66 46 L86 22 L90 60 Z M10 68 C40 62 70 72 96 64 M30 68 L30 84 M73 66 L74 78', fill: 'M52 32 m-4 0 a4 4 0 1 0 8 0 a4 4 0 1 0 -8 0' },
+      { stroke: 'M30 50 C22 18 88 14 82 48 C82 60 74 62 72 70 L38 70 C36 62 30 60 30 50 Z M42 38 L52 48 M52 38 L42 48 M62 38 L72 48 M72 38 L62 48 M45 70 L45 79 M53 70 L53 79 M61 70 L61 79 M68 70 L68 78', fill: 'M56 53 L52 61 L60 61 Z' },
+      { stroke: 'M58 8 L66 34 L94 30 L72 48 L84 76 L58 58 L32 76 L44 48 L22 30 L50 34 Z M104 14 L100 46 M112 16 L108 44', fill: 'M100 58 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M108 56 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0' },
+      { stroke: 'M8 72 C28 18 60 82 70 40 C76 12 48 14 56 36 C62 60 96 56 104 22 M90 26 L104 20 L108 36', fill: '' },
+      { stroke: 'M12 46 C40 14 80 14 108 46 C80 76 40 76 12 46 Z M30 28 L22 14 M48 20 L46 4 M72 20 L76 4 M90 28 L100 14', fill: 'M60 46 m-13 0 a13 13 0 1 0 26 0 a13 13 0 1 0 -26 0' },
+      { stroke: 'M8 54 L18 18 L28 52 L36 20 C52 16 52 38 38 38 L54 56 M60 22 C78 16 80 54 62 54 C52 54 54 30 68 30 M84 18 L96 56 L108 18 M4 70 C40 60 80 78 116 62 M106 56 L116 62 L108 72 M28 52 L28 66', fill: '' },
+      { stroke: 'M64 6 L36 48 L58 48 L44 84 L88 34 L62 34 L80 6 Z M22 20 L10 14 M100 64 L112 72', fill: '' },
+      { stroke: 'M40 52 L41 76 M72 60 L72 70', fill: 'M40 40 m-11 0 a11 11 0 1 0 22 0 a11 11 0 1 0 -22 0 M66 28 m-5 0 a5 5 0 1 0 10 0 a5 5 0 1 0 -10 0 M72 54 m-7 0 a7 7 0 1 0 14 0 a7 7 0 1 0 -14 0 M22 62 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M90 38 m-3 0 a3 3 0 1 0 6 0 a3 3 0 1 0 -6 0 M54 70 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0 M100 22 m-2 0 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0' },
+      { stroke: 'M30 22 C20 50 26 80 58 82 C90 82 96 50 88 22 C70 32 46 32 30 22 Z M30 22 L22 4 L40 16 L46 0 L58 14 L70 0 L74 16 L96 6 L88 22 M38 64 C50 74 66 74 80 64', fill: 'M44 46 m-8 0 a8 10 0 1 0 16 0 a8 10 0 1 0 -16 0 M74 46 m-8 0 a8 10 0 1 0 16 0 a8 10 0 1 0 -16 0' },
+      { stroke: 'M20 70 C20 30 40 14 60 14 C80 14 100 30 100 70 M20 70 L100 70 M34 70 L34 50 M60 70 L60 40 M86 70 L86 50 M12 80 C44 74 76 86 108 78', fill: '' },
+      { stroke: 'M60 10 L60 80 M25 45 L95 45 M35 20 L85 70 M85 20 L35 70', fill: 'M60 45 m-8 0 a8 8 0 1 0 16 0 a8 8 0 1 0 -16 0' }
+    ];
+    var srnd = function (n) { var x = Math.sin(n * 91.345 + 7.77) * 24634.6345; return x - Math.floor(x); };
+    var inks = ['#E60012', '#E60012', '#F1EBDC', '#FFCC00', '#E60012'];
+    var spots = [[52, 36], [-8, 26], [58, 52], [-10, 58], [40, -6], [62, 70]];
+    var makeDoodle = function (n, spot, big) {
+      var g = lib[Math.floor(srnd(n) * lib.length)];
+      var w = Math.round((big ? 170 : 72) + srnd(n + 1) * (big ? 140 : 56));
+      return {
+        stroke: g.stroke, fill: g.fill || 'M0 0', c: inks[Math.floor(srnd(n + 2) * inks.length)],
+        w: w, h: Math.round(w * 0.75), sw: (3 + srnd(n + 3) * 3).toFixed(1),
+        r: Math.round(srnd(n + 4) * 60 - 30), flip: srnd(n + 5) < 0.5 ? -1 : 1,
+        x: Math.round(spot[0] + srnd(n + 6) * 10 - 5), y: Math.round(spot[1] + srnd(n + 7) * 8 - 4),
+        o: big ? (0.55 + srnd(n + 8) * 0.3).toFixed(2) : 1, z: big ? 0 : 2
+      };
+    };
+    var pickDoodles = function (i) {
+      var n = (i + 1) * 37;
+      var count = srnd(n) < 0.25 ? 0 : (srnd(n + 9) < 0.7 ? 1 : 2);
+      var out = [];
+      for (var d = 0; d < count; d++) out.push(makeDoodle(n + d * 13, spots[Math.floor(srnd(n + d * 5 + 11) * spots.length)], false));
+      return out;
+    };
+    var wall = [makeDoodle(501, [2, 8], true), makeDoodle(533, [58, 12], true), makeDoodle(577, [86, 34], true), makeDoodle(611, [-2, 56], true), makeDoodle(659, [80, 74], true)];
+    var rots = [-1.2, 0.8, -0.5, 1.1, 0.6, -0.9, 0.4, -0.7, 1, -1.1];
+    var tapes = ['top: -14px; left: -18px', 'top: -12px; right: 14px', 'bottom: 40px; right: -26px'];
+    var cards = raw.map(function (r, i) {
+      var pct = r[3];
+      var ready = pct >= 90;
+      var bars = [];
+      for (var b = 0; b < 12; b++) {
+        var on = (b + 1) / 12 <= pct / 100 + 0.04;
+        bars.push({ h: 6 + b, bg: on ? '#E60012' : 'transparent', bd: on ? '#E60012' : '#5A5A5A' });
+      }
+      var red = i % 3 !== 1;
+      var blob = red ? 'radial-gradient(ellipse at ' + (30 + (i * 17) % 40) + '% 55%, rgba(0,0,0,.9) 0 18%, transparent 52%), ' : '';
+      return {
+        name: r[0], tags: r[2], pct: pct.toFixed(1), price: r[5], decks: r[6], no: ('00' + (i + 1)).slice(-3),
+        missing: r[4] + ' cards missing.',
+        badge: ready ? '[READY TO SLEEVE!]' : '[' + r[4] + ' TO BUY]',
+        badgeBg: ready ? '#C8102E' : 'transparent', badgeFg: ready ? '#F1EBDC' : '#FFCC00', badgeBd: ready ? '#C8102E' : '#FFCC00',
+        pips: r[1].split('').map(function (x) { return pip[x]; }),
+        rot: rots[i], tape: i % 3 !== 2, tapePos: tapes[i % 3], tapeRot: [-28, 8, -64][i % 3], doodles: pickDoodles(i),
+        bars: bars,
+        art: 'radial-gradient(rgba(0,0,0,.9) 1.1px, transparent 1.5px) 0 0/3px 3px, ' + blob + 'linear-gradient(' + (140 + i * 23) + 'deg, #F5F5F5 0%, #C9C9C9 25%, #6B6B6B 55%, #1A1A1A 85%)'
+      };
+    });
+    return { cards: cards, wall: wall };
+  }
+}
+</script>
+</body>
+</html>
