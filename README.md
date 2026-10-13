@@ -1,4 +1,4 @@
-# CollectionHub
+# DeckMage
 
 Your Magic: The Gathering collections next to EDHREC commander data: what you own shows normally, what you're missing is greyed out.
 

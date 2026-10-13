@@ -10,8 +10,8 @@ export default defineConfig({
       includeAssets: ['icon.svg'],
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
       manifest: {
-        name: 'CollectionHub',
-        short_name: 'CollectionHub',
+        name: 'DeckMage',
+        short_name: 'DeckMage',
         description: 'Your MTG collections, compared with EDHREC commander data.',
         theme_color: '#1b1f2a',
         background_color: '#1b1f2a',

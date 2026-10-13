@@ -5665,3 +5665,49 @@ ul.popnote .small {
 .logo .brandmark .hat {
   filter: drop-shadow(1px 1px 0 rgba(230, 0, 18, 0.7));
 }
+
+/* DeckMage logo: cream torn tiles, heavy black letters, slight wobble */
+.logo .brandmark {
+  gap: 6px;
+}
+.logo .brandmark .hat {
+  filter: url(#rough);
+  transform: rotate(-6deg);
+}
+.logo .brandmark .word {
+  display: inline-flex;
+  gap: 2px;
+}
+.logo .brandmark .word + .word {
+  margin-left: 6px;
+}
+.logo .brandmark .lt {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 3px 0;
+  background: radial-gradient(rgba(0, 0, 0, 0.12) 0.8px, transparent 1.3px) 0 0 / 4px 4px, #efe6d2;
+  color: #0e0e0e;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 22px;
+  line-height: 1.15;
+  text-align: center;
+  clip-path: polygon(3% 0, 97% 4%, 100% 96%, 2% 100%);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.7));
+}
+.eyedoodle .hangskull {
+  animation: sway 3.2s steps(1) infinite;
+}
+@keyframes sway {
+  0% { rotate: 0deg; }
+  25% { rotate: 4deg; }
+  50% { rotate: 0deg; }
+  75% { rotate: -4deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eyedoodle .hangskull { animation: none; }
+}
+.logo .brandmark .lt {
+  font-size: 25px;
+  min-width: 25px;
+}

@@ -471,12 +471,12 @@ export const EyeDoodle = memo(function EyeDoodle() {
 
       {/* red starburst spikes behind everything, like the banner reference */}
       <g className="spikes" fill={red} stroke={ink} strokeWidth="1" strokeLinejoin="round" opacity="0.9">
-        {Array.from({ length: 16 }, (_, i) => {
-          const a = ((i / 16) * 360 + 6) * (Math.PI / 180);
-          const r2 = [128, 104, 118, 96][i % 4];
-          const w = Math.PI / 90;
-          const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.8).toFixed(1)}`;
-          return <path key={i} d={`M${P(a - w * 2, 50)} L${P(a, r2)} L${P(a + w * 2, 50)}Z`} />;
+        {Array.from({ length: 30 }, (_, i) => {
+          const a = ((i / 30) * 360 + 4) * (Math.PI / 180);
+          const r2 = [150, 112, 132, 98, 142, 120][i % 6];
+          const w = Math.PI / 150;
+          const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.78).toFixed(1)}`;
+          return <path key={i} d={`M${P(a - w * 2, 48)} L${P(a, r2)} L${P(a + w * 2, 48)}Z`} />;
         })}
       </g>
 
@@ -527,6 +527,16 @@ export const EyeDoodle = memo(function EyeDoodle() {
         {/* upper lid shadow line and crease */}
         <path d={`M${cx - 44} ${cy - 2} Q${cx} ${cy - 42} ${cx + 44} ${cy - 2}`} fill="none" stroke="#5a1a10" strokeWidth="2.4" />
         <path d={`M${cx - 50} ${cy - 6} Q${cx} ${cy - 52} ${cx + 50} ${cy - 6}`} fill="none" stroke={ink} strokeWidth="1.4" />
+      </g>
+
+      {/* skull hanging under the eye, like the banner */}
+      <g className="hangskull" filter="url(#eyeink)" stroke={ink} strokeWidth="1.8" strokeLinejoin="round" transform={`translate(${cx} ${cy + 62})`}>
+        <path d="M0 -14 V-6" strokeWidth="1.4" />
+        <path d="M-10 4 C-10 -9 10 -9 10 4 C10 8 7 9 6 11 L6 15 L-6 15 L-6 11 C-7 9 -10 8 -10 4Z" fill={cream} />
+        <circle cx="-4" cy="3" r="3" fill={ink} />
+        <circle cx="4" cy="3" r="3" fill={ink} />
+        <path d="M0 7 l-1.4 2.6 h2.8Z" fill={ink} strokeWidth="0.8" />
+        <path d="M-3 12 v3 M0 12 v3 M3 12 v3" strokeWidth="1" />
       </g>
 
       {/* near half: in front, with a shadow */}
@@ -589,18 +599,32 @@ export function ManaIcon({ c }: { c: string }) {
   );
 }
 
-/** Header logo: wizard hat + DECK WIZARD in cut-out letters. */
+/** Header logo: sketchy cream wizard hat + DECK MAGE in cream cut-out tiles with black letters (owner's logo style). */
 export function Logo() {
+  const tile = (ch: string, i: number) => {
+    const r = Math.sin(i * 12.9898 + 4.1) * 43758.5453;
+    const f = r - Math.floor(r);
+    return (
+      <span key={i} className="lt" style={{ transform: `rotate(${(f * 7 - 3.5).toFixed(1)}deg) translateY(${Math.round(f * 4 - 2)}px)` }}>
+        {ch}
+      </span>
+    );
+  };
   return (
     <span className="brandmark">
-      <svg className="hat" width="34" height="30" viewBox="0 0 34 30" aria-hidden="true">
-        <path d="M4 24 C10 22 24 22 31 24 C27 26 9 27 4 24Z" fill="#f3e6c9" stroke="#0a0a0a" strokeWidth="1.6" />
-        <path d="M9 23 C11 16 13 8 21 3 C19 8 22 11 25 14 C23 15 24 19 26 23 Z" fill="#f3e6c9" stroke="#0a0a0a" strokeWidth="1.6" strokeLinejoin="round" />
-        <path d="M21 3 C24 2 27 4 28 7" fill="none" stroke="#0a0a0a" strokeWidth="1.6" />
-        <path d="M14 15 l1.4 2.6 l-2.8 0Z M18 10 l1 1.8 l-2 0Z" fill="#e60012" />
-        <path d="M2 10 l4 -2 M3 15 l3 0" stroke="#f3e6c9" strokeWidth="1.6" strokeLinecap="round" />
+      <svg className="hat" width="40" height="34" viewBox="0 0 40 34" aria-hidden="true" fill="none" stroke="#efe6d2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 27 C14 24 28 24 36 27 C30 30 12 30 6 27Z" strokeWidth="2.2" />
+        <path d="M11 26 C13 18 15 10 23 4 C21 9 24 13 27 16 C25 17 26 21 29 26" strokeWidth="2.2" />
+        <path d="M23 4 C27 3 29 6 29 9" strokeWidth="2" />
+        <path d="M14 21 l2 -1 M18 15 l1.5 -1 M21 22 l2 -0.5 M17 24 l1 -1" strokeWidth="1.8" />
+        <path d="M2 12 l5 -1.5 M1 17 l5 0 M3 22 l4 -1.5" strokeWidth="1.8" />
       </svg>
-      <Ransom text="DECK WIZARD" size={22} seed={42} />
+      <span className="word" aria-hidden="true">
+        {'DECK'.split('').map((c, i) => tile(c, i))}
+      </span>
+      <span className="word" aria-hidden="true">
+        {'MAGE'.split('').map((c, i) => tile(c, i + 7))}
+      </span>
     </span>
   );
 }

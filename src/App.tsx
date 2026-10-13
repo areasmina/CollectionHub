@@ -83,7 +83,7 @@ export default function App() {
             </button>
           </span>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
-            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="Deck Wizard, go to Discover">
+            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Discover">
               <Logo />
             </button>
             {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
