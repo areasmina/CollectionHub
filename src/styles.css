@@ -3986,3 +3986,22 @@ ul.popnote .small {
     z-index: 46;
   }
 }
+
+/* Collection grouped by set: release year after the name, set symbol after the card count */
+.setgrp > summary .yr {
+  font-family: var(--se);
+  font-size: 14px;
+  color: #6b6b6b;
+  margin-left: 4px;
+}
+.setgrp > summary .n {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.seticon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  object-fit: contain;
+}

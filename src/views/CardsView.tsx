@@ -22,7 +22,7 @@ function usePref<T extends string>(key: string, initial: T): [T, (v: T) => void]
   return [v, set];
 }
 
-type SetInfo = { code: string; name: string; released: string };
+type SetInfo = { code: string; name: string; released: string; icon?: string };
 const SKIP_TYPES = ['token', 'memorabilia', 'minigame', 'alchemy', 'treasure_chest', 'vanguard'];
 
 /** Paper Magic sets from Scryfall (one request, cached a week). */
@@ -31,7 +31,7 @@ function useSets(enabled: boolean) {
   useEffect(() => {
     if (!enabled || sets.length) return;
     (async () => {
-      const hit = await db.edhrec.get('scryfall:sets');
+      const hit = await db.edhrec.get('scryfall:sets:v2'); // v2: with set icons
       if (hit && Date.now() - hit.at < 7 * 864e5) return setSets(hit.data as SetInfo[]);
       const j = await fetch('https://api.scryfall.com/sets', { headers: { Accept: 'application/json' } })
         .then((r) => r.json())
@@ -39,9 +39,9 @@ function useSets(enabled: boolean) {
       if (!j?.data) return;
       const list: SetInfo[] = j.data
         .filter((x: any) => !x.digital && !SKIP_TYPES.includes(x.set_type))
-        .map((x: any) => ({ code: x.code, name: x.name, released: x.released_at ?? '' }))
+        .map((x: any) => ({ code: x.code, name: x.name, released: x.released_at ?? '', icon: x.icon_svg_uri }))
         .sort((a: SetInfo, b: SetInfo) => b.released.localeCompare(a.released));
-      await db.edhrec.put({ path: 'scryfall:sets', data: list, at: Date.now() });
+      await db.edhrec.put({ path: 'scryfall:sets:v2', data: list, at: Date.now() });
       setSets(list);
     })();
   }, [enabled]);
@@ -149,8 +149,8 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
     bySet.get(k)!.push(e);
   }
   const known = new Map(sets.map((x) => [x.code, x]));
-  const groups: { code: string; name: string; list: Entry[] }[] = [
-    ...(hideEmpty === 'on' ? sets.filter((x) => bySet.has(x.code)) : sets).map((x) => ({ code: x.code, name: x.name, list: bySet.get(x.code) ?? [] })),
+  const groups: { code: string; name: string; year?: string; icon?: string; list: Entry[] }[] = [
+    ...(hideEmpty === 'on' ? sets.filter((x) => bySet.has(x.code)) : sets).map((x) => ({ code: x.code, name: x.name, year: x.released.slice(0, 4), icon: x.icon, list: bySet.get(x.code) ?? [] })),
     ...[...bySet.keys()].filter((k) => !known.has(k)).sort().map((k) => ({ code: k, name: k === '?' ? 'Unknown set' : k.toUpperCase(), list: bySet.get(k)! })),
   ];
   const toggle = (code: string) => setOpen((o) => (o.has(code) ? (o.delete(code), new Set(o)) : new Set(o).add(code)));
@@ -185,10 +185,14 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
               <details key={g.code} className={`cat setgrp${n ? '' : ' empty'}`} open={open.has(g.code)} onToggle={(ev) => (ev.currentTarget.open !== open.has(g.code) ? toggle(g.code) : null)}>
                 <summary>
                   <span className="pm" aria-hidden="true" />
-                  <span className="h">{g.name}</span>
+                  <span className="h">
+                    {g.name}
+                    {g.year && <small className="yr"> {g.year}</small>}
+                  </span>
                   <span className="dots" aria-hidden="true" />
                   <span className="n">
                     {g.code.toUpperCase()} · {n} {n === 1 ? 'card' : 'cards'}
+                    {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
                   </span>
                 </summary>
                 {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
