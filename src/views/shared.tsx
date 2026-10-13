@@ -139,9 +139,11 @@ export function CardLine({
   onOpen,
   onClose,
   onMenu,
+  foil,
   children,
 }: {
   onMenu?: (x: number, y: number) => void; // card menu (right-click / press and hold)
+  foil?: boolean; // foil copy: the image gets a sheen
   name: string;
   img?: string;
   card?: Card;
@@ -156,7 +158,7 @@ export function CardLine({
   const press = useMenuPress(onMenu);
   return (
     <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
-      <Thumb src={card?.img ?? img} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      <Thumb src={card?.img ?? img} className={`thumb xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="nm">{name}</span>
         <span className="note">
@@ -181,13 +183,13 @@ export function CardLine({
 }
 
 /** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
-export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, children }: Parameters<typeof CardLine>[0]) {
+export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
   return (
     <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
-      <Thumb src={src} className="timg xart" name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="tname">
         {name}
         {st === 'missing' && <span className="sr">(missing)</span>}

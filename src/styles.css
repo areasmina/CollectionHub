@@ -4005,3 +4005,59 @@ ul.popnote .small {
   flex: none;
   object-fit: contain;
 }
+
+/* Foil cards: a soft rainbow sheen drifting across the art (static when motion is reduced) */
+.foil {
+  position: relative;
+  overflow: hidden;
+}
+.foil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 22%, rgba(255, 70, 190, 0.28) 36%, rgba(255, 240, 120, 0.32) 45%, rgba(80, 230, 255, 0.28) 54%, rgba(170, 120, 255, 0.22) 62%, transparent 76%);
+  background-size: 260% 100%;
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  animation: foilsheen 5s ease-in-out infinite alternate;
+}
+.foil::before {
+  /* a faint fixed glint so a foil reads as foil even mid-sweep */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), transparent 35%, transparent 70%, rgba(255, 255, 255, 0.1));
+}
+@keyframes foilsheen {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foil::after {
+    animation: none;
+    background-position: 45% 0;
+  }
+}
+
+/* Discover: a light halftone dot screen over the commander art (eases off on hover) */
+.ccard .frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(rgba(10, 10, 10, 0.55) 0.9px, transparent 1.4px) 0 0 / 4px 4px;
+  mix-blend-mode: multiply;
+  opacity: 0.35;
+  transition: opacity 0.2s;
+}
+.ccard:hover .frame::after,
+.ccard:focus-visible .frame::after {
+  opacity: 0.18;
+}

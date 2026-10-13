@@ -478,6 +478,7 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
                           s={s}
                           note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
                           onMenu={(x, y) => setMenu({ card: c, x, y })}
+                          foil={c.foil}
                         />
                       ))}
                     </ul>

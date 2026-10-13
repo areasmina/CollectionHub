@@ -93,7 +93,7 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
       <ul className="zgrid cgrid2">
         {list.map((e) => (
           <li key={e.id} className="ztile owned">
-            <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className="timg xart" name={e.name} />
+            <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
             <span className="tname">{e.name}</span>
             <span className="tnote">{setLine(e)}</span>
             <span className="ctrl">
@@ -118,7 +118,7 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
         {list.map((e) => (
           <li key={e.id} className="crow">
             <QtyEdit e={e} />
-            <Thumb src={cards.get(e.cardId)?.img} name={e.name} />
+            <Thumb src={cards.get(e.cardId)?.img} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} />
             <span className="cn">
               <b>{e.name}</b>
               <span>{setLine(e)}</span>
