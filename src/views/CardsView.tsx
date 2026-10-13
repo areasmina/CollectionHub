@@ -78,6 +78,18 @@ function QtyEdit({ e, jinx }: { e: Entry; jinx?: boolean }) {
   );
 }
 
+/** A set's main colour among your cards from it: W U B R G, M (multicolour) or C (colourless), weighted by copies. */
+function toneOf(list: Entry[], cards: Map<string, Card>) {
+  const n = new Map<string, number>();
+  for (const e of list) {
+    const ci = cards.get(e.cardId)?.ci;
+    if (!ci) continue;
+    const k = ci.length > 1 ? 'M' : ci[0] ?? 'C';
+    n.set(k, (n.get(k) ?? 0) + e.qty);
+  }
+  return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'none';
+}
+
 /** Grid quantity: spray-painted X tally on the card (X, XX, XXX, XXXX; X12 from 5). Tap it to edit: − n +,
  *  the − turns into a bin at 1. Closes when you tap anywhere else. */
 function Tally({ e }: { e: Entry }) {
@@ -194,6 +206,7 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
     ...(hideEmpty === 'on' ? sets.filter((x) => bySet.has(x.code)) : sets).map((x) => ({ code: x.code, name: x.name, year: x.released.slice(0, 4), icon: x.icon, list: bySet.get(x.code) ?? [] })),
     ...[...bySet.keys()].filter((k) => !known.has(k)).sort().map((k) => ({ code: k, name: k === '?' ? 'Unknown set' : k.toUpperCase(), list: bySet.get(k)! })),
   ];
+  const tone = (list: Entry[]) => toneOf(list, cards);
   const toggle = (code: string) => setOpen((o) => (o.has(code) ? (o.delete(code), new Set(o)) : new Set(o).add(code)));
 
   return (
@@ -223,7 +236,7 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
           {groups.map((g) => {
             const n = g.list.reduce((s, e) => s + e.qty, 0);
             return (
-              <details key={g.code} className={`cat setgrp${n ? '' : ' empty'}`} open={open.has(g.code)} onToggle={(ev) => (ev.currentTarget.open !== open.has(g.code) ? toggle(g.code) : null)}>
+              <details key={g.code} data-col={tone(g.list)} className={`cat setgrp${n ? '' : ' empty'}`} open={open.has(g.code)} onToggle={(ev) => (ev.currentTarget.open !== open.has(g.code) ? toggle(g.code) : null)}>
                 <summary>
                   <span className="pm" aria-hidden="true" />
                   <span className="h">

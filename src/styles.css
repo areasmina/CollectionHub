@@ -4737,3 +4737,78 @@ ul.popnote .small {
     transition: none;
   }
 }
+
+/* Category bars: the +/− box is the same fixed square everywhere, with a drawn plus/minus (not a font glyph) */
+.cat > summary {
+  padding-left: 4px;
+}
+.cat > summary .pm {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  align-self: center;
+  position: relative;
+  font-size: 0;
+}
+.cat > summary .pm::before,
+.cat > summary .pm::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 4px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+.cat > summary .pm::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.cat[open] > summary .pm::before {
+  content: '';
+}
+.cat[open] > summary .pm::after {
+  display: none;
+}
+
+/* Set bars take the set's main colour among your cards (white, blue, black, red, green, gold, grey) */
+.setgrp {
+  --sb: var(--white);
+  --sf: var(--ink);
+  --sd: var(--ink);
+}
+.setgrp[data-col='W'] { --sb: #efe6c8; --sf: #1a1a1a; --sd: #6b5d36; }
+.setgrp[data-col='U'] { --sb: #2f62b8; --sf: #ffffff; --sd: #0d2a5c; }
+.setgrp[data-col='B'] { --sb: #3a3340; --sf: #f1ebdc; --sd: #0d0b10; }
+.setgrp[data-col='R'] { --sb: #c4352a; --sf: #ffffff; --sd: #5c0d07; }
+.setgrp[data-col='G'] { --sb: #2f7d4a; --sf: #ffffff; --sd: #0d3a1c; }
+.setgrp[data-col='M'] { --sb: #d4a72c; --sf: #1a1a1a; --sd: #5e4508; }
+.setgrp[data-col='C'] { --sb: #8f8f94; --sf: #111111; --sd: #3a3a3e; }
+.setgrp > summary {
+  background: var(--sb);
+  color: var(--sf);
+}
+.setgrp > summary .dots {
+  background-image: linear-gradient(90deg, var(--sb) 30%, transparent 100%), radial-gradient(var(--sd) 1.6px, transparent 1.9px);
+}
+.setgrp > summary .yr {
+  color: inherit;
+  opacity: 0.7;
+}
+.setgrp > summary .n {
+  color: inherit;
+}
+.setgrp > summary .seticon {
+  /* set symbols are black SVGs: invert on dark bars */
+  filter: var(--seticon, none);
+}
+.setgrp[data-col='U'],
+.setgrp[data-col='B'],
+.setgrp[data-col='R'],
+.setgrp[data-col='G'] {
+  --seticon: invert(1);
+}
+.setgrp > summary .pm {
+  background: var(--ink);
+  color: #fff;
+}
