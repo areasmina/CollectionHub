@@ -16,6 +16,11 @@ const PATTERNS: Record<Feel, number | number[]> = {
 };
 const KEY = 'ch:haptics';
 
+/** Whether this browser can do haptics at all (Chrome / Samsung Internet / Edge on Android; iOS 18+ Safari).
+ *  Firefox removed its Vibration API (v129), so it is false there. */
+export const hapticsSupported = () =>
+  typeof navigator !== 'undefined' && (typeof (navigator as Navigator & { vibrate?: unknown }).vibrate === 'function' || /iP(hone|ad|od)/.test(navigator.userAgent));
+
 export function hapticsOn() {
   try {
     if (localStorage.getItem(KEY) === 'off') return false;

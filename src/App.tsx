@@ -1,4 +1,4 @@
-import { haptic, hapticsOn, setHaptics } from './lib/haptics';
+import { haptic, hapticsOn, hapticsSupported, setHaptics } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ownedMap } from './lib/compare';
@@ -117,12 +117,12 @@ export default function App() {
                   </svg>
                 </button>
               </div>
-              <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHaptics(!haptOn), setHaptOn(!haptOn))}>
+              {hapticsSupported() && <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHaptics(!haptOn), setHaptOn(!haptOn))}>
                 <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <rect x="6" y="2" width="8" height="16" rx="2" />
                   {haptOn ? <path d="M3 6 v8 M1 8 v4 M17 6 v8 M19 8 v4" /> : <path d="M2 2 L18 18" />}
                 </svg>
-              </button>
+              </button>}
               <button className="iconbtn" onClick={() => (setSync(!sync), setHubOpen(false))} aria-label="Sync between devices" aria-expanded={sync}>
                 <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                   <path d="M5 15 V3 M2 6 L5 3 L8 6 M13 3 V15 M10 12 L13 15 L16 12" fill="none" stroke="currentColor" strokeWidth="2" />
