@@ -4016,10 +4016,10 @@ ul.popnote .small {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 22%, rgba(255, 70, 190, 0.28) 36%, rgba(255, 240, 120, 0.32) 45%, rgba(80, 230, 255, 0.28) 54%, rgba(170, 120, 255, 0.22) 62%, transparent 76%);
-  background-size: 260% 100%;
+  background: linear-gradient(115deg, transparent 18%, rgba(255, 70, 190, 0.38) 34%, rgba(255, 240, 120, 0.42) 44%, rgba(80, 230, 255, 0.38) 54%, rgba(170, 120, 255, 0.3) 63%, transparent 80%);
+  background-size: 240% 100%;
   mix-blend-mode: screen;
-  opacity: 0.7;
+  opacity: 0.85;
   animation: foilsheen 5s ease-in-out infinite alternate;
 }
 .foil::before {
@@ -4029,7 +4029,7 @@ ul.popnote .small {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16), transparent 35%, transparent 70%, rgba(255, 255, 255, 0.1));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), transparent 35%, transparent 70%, rgba(255, 255, 255, 0.14));
 }
 @keyframes foilsheen {
   from {
