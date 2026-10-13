@@ -152,7 +152,7 @@ export function Discover(s: Shared) {
       <main>
         <section className="hero">
           <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
-          {!phone && <EyeDoodle />}
+          <EyeDoodle />
           <p className="tagline">Your collection. Real decks. No guesswork.</p>
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">

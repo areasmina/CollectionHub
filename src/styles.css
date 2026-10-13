@@ -5246,10 +5246,19 @@ ul.popnote .small {
     align-self: center;
   }
 }
+/* Phones and narrow windows: the eye art is its own band under the title + tagline, above the filters */
 @media (max-width: 1099px) {
-  .eyedoodle {
-    display: none;
+  .hero .titlewrap { order: 0; }
+  .hero .tagline { order: 1; }
+  .hero .eyedoodle {
+    order: 2;
+    display: block;
+    align-self: center;
+    width: min(100%, 420px);
+    height: auto;
+    margin: -6px auto -10px;
   }
+  .hero .filters { order: 3; }
 }
 @media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
   .eyedoodle path:first-of-type {
@@ -5862,4 +5871,53 @@ ul.popnote .small {
 }
 .logo .brandmark .word.xerox .lt:nth-child(3n) {
   filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.7)) url(#rough);
+}
+@media (min-width: 701px) and (max-width: 1099px) {
+  .hero .fpanel {
+    flex-wrap: wrap;
+  }
+  .hero .fpanel .sbox.search {
+    flex: 1 1 100%;
+  }
+  .hero .fpanel .sbox.sort {
+    flex: 1 1 260px;
+  }
+}
+
+/* Phones: same filter bar as desktop, always open (no FILTERS toggle): search, then sort, then the colour buttons */
+@media (max-width: 700px) {
+  .hero .fhead {
+    display: none;
+  }
+  .hero .filters.shut .fpanel,
+  .hero .filters.shut .caption {
+    display: flex;
+  }
+  .hero .filters.shut .caption {
+    display: block;
+  }
+  .hero .fpanel {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px;
+    margin-top: 4px;
+    transform: rotate(-0.3deg);
+  }
+  .hero .fpanel .sbox {
+    flex: 1 1 100%;
+    min-height: 48px;
+  }
+  .hero .colours {
+    flex: 1 1 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .hero .colours button {
+    flex: 1;
+    height: 54px;
+  }
+  .hero .caption {
+    font-size: 13px;
+  }
 }
