@@ -9,6 +9,7 @@ import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
 import { freeDeckName } from '../lib/nav';
+import { orderSections } from '../lib/sections';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
@@ -23,7 +24,7 @@ const SHOW_AS_COMMANDER = false;
 
 const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V' };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-const ids = (p: EdhPage | null) => p?.lists.flatMap((l) => l.cards.map((c) => c.id).filter(Boolean) as string[]) ?? [];
+const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
 
 export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const slug = toSlug(name);
@@ -84,7 +85,9 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     };
   }, [page, recs]);
 
-  const all = page?.lists.flatMap((l) => l.cards) ?? [];
+  // Average deck: Commander, Planeswalkers, Creatures, Instants, Sorceries, Enchantments, Artifacts, Lands (EDHREC's own order otherwise).
+  const sections = page ? (kind === 'average' ? orderSections(page.lists, page.card ? { name, id: page.card.id, qty: 1 } : undefined) : page.lists) : [];
+  const all = sections.flatMap((l) => l.cards);
   const names = [...new Set(all.map((c) => c.name))];
   const sum = summarize(names, s.mine, s.other);
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
@@ -376,25 +379,15 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         {error && <p className="error">{error}</p>}
         {!page && !error && <p className="count">Loading EDHREC data…</p>}
         {page && (
-          <div className="dtools" role="toolbar" aria-label="Card view">
-            <div className="viewsw" role="group" aria-label="Card view">
-              <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
-                <GridIcon /> Grid
-              </button>
-              <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
-                <ListIcon /> List
-              </button>
-            </div>
-            <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-            <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
-          </div>
-        )}
-        {page && (
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
-              {page.lists.map((l) => {
-                const ls = summarize(l.cards.map((c) => c.name), s.mine, s.other);
+              {/* How the cards are ordered and filtered, right above them */}
+              <div className="dtools" role="toolbar" aria-label="Card order and filter">
+                <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+              </div>
+              {sections.map((l, i) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => !!swaps[c.name] || statusOf(c.name, s.mine) === 'owned';
                 const cs = sortBy(
@@ -403,19 +396,38 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                   (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
                 );
                 if (!cs.length) return null;
+                const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
                 return (
                   <details key={l.header} className="cat" open>
                     <summary>
                       <span className="pm" aria-hidden="true" />
-                      <span className="h">{l.header}</span>
+                      <span className="h">
+                        {l.header} ({cs.reduce((n, c) => n + (c.qty ?? 1), 0)})
+                      </span>
+                      {pricesIn && (
+                        <span className="gval" title="What this group's cards are worth (cheapest printings)">
+                          ≈{cad(priceSum(cs.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 }))))}
+                        </span>
+                      )}
                       <span className="dots" aria-hidden="true" />
                       <span className="n">
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
+                    {i === 0 && (
+                      // Grid / list sits in the first section (the commander's), in the space beside the card
+                      <div className={`viewsw mini${view === 'grid' && cs.length === 1 ? ' over' : ''}`} role="group" aria-label="Card view">
+                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                          <GridIcon />
+                        </button>
+                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                          <ListIcon />
+                        </button>
+                      </div>
+                    )}
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => {
-                        const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned';
+                        const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned' && norm(c.name) !== norm(name);
                         const repl = swaps[c.name];
                         const rc = repl ? recCard.get(norm(repl)) : undefined;
                         const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';

@@ -230,3 +230,27 @@ for (const [ok, text, name] of [[true, /Buzz sent/, 'sent'], [false, /blocked/, 
     await fits(page, ['.hapnote']);
   });
 }
+
+test('Commander page (Discover): sections in order with count + cost, grid/list in the commander section, two filters', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('details.cat').first()).toBeVisible();
+  // order: Commander, Creatures, Instants, Sorceries, Enchantments, Artifacts, Lands (no planeswalkers in the sample deck)
+  const heads = await page.locator('details.cat > summary .h').allInnerTexts();
+  expect(heads.map((h) => h.replace(/\s*\(\d+\)\s*$/, ''))).toEqual(['COMMANDER', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ENCHANTMENTS', 'ARTIFACTS', 'LANDS']);
+  expect(heads[0]).toMatch(/\(1\)$/);
+  expect(heads.at(-1)).toMatch(/\(20\)$/); // 10 Forest + 10 Island
+  // every section shows what its cards cost
+  await expect(page.locator('details.cat > summary .gval')).toHaveCount(7);
+  await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
+  // two filter boxes above the cards, grid / list in the first section
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(2);
+  await fits(page, ['.lists > .dtools']);
+  const sw = page.locator('details.cat').first().locator('.viewsw.mini');
+  await expect(sw).toBeVisible();
+  await fits(page, ['.viewsw.mini']);
+  await sw.getByRole('button', { name: 'List view' }).click();
+  await expect(page.locator('ul.zlist').first()).toBeVisible();
+  await sw.getByRole('button', { name: 'Grid view' }).click();
+  await expect(page.locator('ul.zgrid').first()).toBeVisible();
+  await page.screenshot({ path: 'test-results/commander-sections.png' });
+});
