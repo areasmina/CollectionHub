@@ -3173,8 +3173,15 @@ button.logo {
   min-width: 80px;
   padding: 0 12px;
 }
+/* Deck actions (export, rename, duplicate, delete) get their own row, right-aligned under the view controls */
 .dtools .grow {
-  flex: 1;
+  flex: 1 0 100%;
+  height: 0;
+}
+@media (min-width: 701px) {
+  .dtools .grow + .sticker {
+    margin-left: auto;
+  }
 }
 .dside {
   flex: 1 1 300px;

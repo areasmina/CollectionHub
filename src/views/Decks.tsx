@@ -291,7 +291,14 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
   );
 }
 
-function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: () => void; short: ReturnType<typeof shortfalls> }) {
+/** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
+async function freeName(profile: number, want: string, except?: number) {
+  const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));
+  if (!taken.has(want.toLowerCase())) return want;
+  for (let i = 2; ; i++) if (!taken.has(`${want} ${i}`.toLowerCase())) return `${want} ${i}`;
+}
+
+function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
   const byKey =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ??
@@ -441,6 +448,31 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
             CSV
           </button>
           <button
+            className="sticker"
+            onClick={async () => {
+              const want = prompt('Rename deck', deck.name)?.trim();
+              if (!want || want === deck.name) return;
+              const name = await freeName(deck.profile, want, deck.id);
+              if (name !== want && !confirm(`Another deck is already called "${want}". Use "${name}"?`)) return;
+              haptic('success');
+              await db.decks.update(deck.id!, { name });
+            }}
+          >
+            RENAME
+          </button>
+          <button
+            className="sticker"
+            onClick={async () => {
+              const { id: _, ...copy } = deck;
+              const name = await freeName(deck.profile, `${deck.name} (copy)`);
+              haptic('success');
+              onOpen(await db.decks.add({ ...copy, name, cards: deck.cards.map((c) => ({ ...c })), tags: deck.tags && [...deck.tags], updated: Date.now() }));
+              scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            DUPLICATE
+          </button>
+          <button
             className="stencil"
             onClick={async () => {
               if (confirm(`Delete deck "${deck.name}"?`)) {
@@ -531,7 +563,7 @@ export function Decks(s: Shared) {
 
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
-  if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} />;
+  if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
 
   async function add() {
     setError('');
