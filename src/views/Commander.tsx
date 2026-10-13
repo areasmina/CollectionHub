@@ -14,7 +14,7 @@ import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arr
 // EDHREC's own order first on commander pages.
 const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
 import { SwapNote } from './SwapNote';
-import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
+import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 const SHOW_AS_COMMANDER = false;
@@ -357,10 +357,10 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           <div className="dtools" role="toolbar" aria-label="Card view">
             <div className="viewsw" role="group" aria-label="Card view">
               <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
-                GRID
+                <GridIcon /> Grid
               </button>
               <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
-                LIST
+                <ListIcon /> List
               </button>
             </div>
             <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />

@@ -14,7 +14,7 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
+import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -422,11 +422,11 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
         <div className="dtools" role="toolbar" aria-label="Deck view">
           <div className="viewsw" role="group" aria-label="Card view">
             <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
-              GRID
-            </button>
+                <GridIcon /> Grid
+              </button>
             <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
-              LIST
-            </button>
+                <ListIcon /> List
+              </button>
           </div>
           <Pick label="GROUP" value={grouping} options={GROUPINGS} onChange={setGrouping} />
           <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />

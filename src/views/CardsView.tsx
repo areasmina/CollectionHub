@@ -1,3 +1,4 @@
+import { GridIcon, ListIcon } from './zine';
 import { useEffect, useRef, useState } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
 import { PriceLink, priced, Thumb } from './shared';
@@ -215,11 +216,11 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
       <div className="cardopts">
         <div className="viewsw" role="group" aria-label="Card view">
           <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
-            LIST
-          </button>
+                <ListIcon /> List
+              </button>
           <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
-            GRID
-          </button>
+                <GridIcon /> Grid
+              </button>
         </div>
         <label className="check">
           <input type="checkbox" checked={group === 'on'} onChange={(e) => setGroup(e.target.checked ? 'on' : 'off')} /> Group by set

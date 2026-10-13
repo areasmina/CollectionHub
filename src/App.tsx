@@ -8,7 +8,7 @@ import { Discover } from './views/Discover';
 import { SyncPanel } from './views/SyncPanel';
 import { authReturn } from './lib/sync';
 import { PreviewLayer } from './views/shared';
-import { ZineDefs } from './views/zine';
+import { ZineDefs, Logo } from './views/zine';
 
 type Tab = 'discover' | 'collection' | 'decks';
 const store = {
@@ -83,8 +83,8 @@ export default function App() {
             </button>
           </span>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
-            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="CollectionHub, go to Discover">
-              COLLECTIONHUB
+            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="Deck Wizard, go to Discover">
+              <Logo />
             </button>
             {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
             <nav className="tabs hubnav" aria-label="Sections">

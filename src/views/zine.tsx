@@ -398,21 +398,13 @@ export const EyeDoodle = memo(function EyeDoodle() {
         </clipPath>
       </defs>
 
-      {/* sky: drifting clouds and a dragon flying past now and then */}
+      {/* sky: drifting clouds */}
       <g mask="url(#skymask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {/* drifting clouds */}
         <g className="clouds" fill="#b9b0d8" opacity="0.35" strokeWidth="1.4">
           <path d="M40 92 q6 -12 18 -8 q8 -12 22 -4 q14 -2 14 10 q8 4 2 10 h-58 q-8 -4 2 -8Z" />
           <path d="M250 74 q6 -10 16 -6 q8 -10 20 -2 q12 0 12 9 q6 4 0 8 h-50 q-6 -4 2 -9Z" />
           <path d="M150 64 q4 -8 12 -5 q6 -8 15 -2 q9 0 9 7 q5 3 0 6 h-38 q-5 -3 2 -6Z" />
-        </g>
-        {/* dragon flying across now and then (two wing frames) */}
-        <g className="dragon" fill="#4b3a78" opacity="0.75" strokeWidth="1.6">
-          <path d="M0 0 C10 -4 22 -4 32 0 L44 -2 L52 2 L44 4 C34 8 18 8 6 6 C-6 8 -16 4 -22 6 C-14 2 -8 2 0 0Z" />
-          <path d="M48 -1 l6 -5 l1 4Z" />
-          <path className="wing w0" d="M14 -2 C10 -18 18 -28 30 -32 C26 -22 30 -14 36 -10 C30 -10 24 -6 22 -2Z" />
-          <path className="wing w1" d="M14 2 C8 12 12 22 24 26 C22 18 26 12 32 8 C26 8 22 6 20 3Z" />
-          <path d="M56 1 q8 -2 14 2 q-6 2 -14 0Z" fill="#e58a2b" stroke="none" opacity="0.9" />
         </g>
       </g>
 
@@ -477,6 +469,17 @@ export const EyeDoodle = memo(function EyeDoodle() {
       {/* far half of the rings: behind the fire and eye */}
       <g ref={back} className="orbs back" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round" />
 
+      {/* red starburst spikes behind everything, like the banner reference */}
+      <g className="spikes" fill={red} stroke={ink} strokeWidth="1" strokeLinejoin="round" opacity="0.9">
+        {Array.from({ length: 16 }, (_, i) => {
+          const a = ((i / 16) * 360 + 6) * (Math.PI / 180);
+          const r2 = [128, 104, 118, 96][i % 4];
+          const w = Math.PI / 90;
+          const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.8).toFixed(1)}`;
+          return <path key={i} d={`M${P(a - w * 2, 50)} L${P(a, r2)} L${P(a + w * 2, 50)}Z`} />;
+        })}
+      </g>
+
       {/* sunburst rays behind the flames: yellow wedges with black ink lines */}
       <g className="rays" stroke={ink} strokeLinecap="round">
         {Array.from({ length: 36 }, (_, i) => {
@@ -537,3 +540,67 @@ export const EyeDoodle = memo(function EyeDoodle() {
     </svg>
   );
 });
+
+/** Grid / list icons for the view switches. */
+export const GridIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor">
+    <rect x="1" y="1" width="7" height="7" rx="1" />
+    <rect x="10" y="1" width="7" height="7" rx="1" />
+    <rect x="1" y="10" width="7" height="7" rx="1" />
+    <rect x="10" y="10" width="7" height="7" rx="1" />
+  </svg>
+);
+export const ListIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor">
+    <rect x="1" y="2" width="3" height="3" rx="0.5" />
+    <rect x="6" y="2.5" width="11" height="2" rx="1" />
+    <rect x="1" y="7.5" width="3" height="3" rx="0.5" />
+    <rect x="6" y="8" width="11" height="2" rx="1" />
+    <rect x="1" y="13" width="3" height="3" rx="0.5" />
+    <rect x="6" y="13.5" width="11" height="2" rx="1" />
+  </svg>
+);
+
+/** Mana symbols for the colour buttons (W sun, U drop, B skull, R fire swirl, G tree). */
+export function ManaIcon({ c }: { c: string }) {
+  const k = { width: 22, height: 22, viewBox: '0 0 24 24', 'aria-hidden': true as const, fill: 'currentColor' };
+  if (c === 'W')
+    return (
+      <svg {...k}>
+        <circle cx="12" cy="12" r="5" />
+        {Array.from({ length: 8 }, (_, i) => (
+          <rect key={i} x="11" y="1" width="2" height="5" rx="1" transform={`rotate(${i * 45} 12 12)`} />
+        ))}
+      </svg>
+    );
+  if (c === 'U') return <svg {...k}><path d="M12 2 C8 9 5 12 5 15.5 A7 7 0 0 0 19 15.5 C19 12 16 9 12 2Z" /></svg>;
+  if (c === 'B')
+    return (
+      <svg {...k}>
+        <path d="M12 3 C6.5 3 4 6.5 4 10.5 C4 13.5 6 15 7 15.5 L7 19 L17 19 L17 15.5 C18 15 20 13.5 20 10.5 C20 6.5 17.5 3 12 3Z M9 9 a2 2 0 1 1 0 4 a2 2 0 1 1 0 -4Z M15 9 a2 2 0 1 1 0 4 a2 2 0 1 1 0 -4Z" fillRule="evenodd" />
+        <path d="M9 19 v2 M12 19 v2 M15 19 v2" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    );
+  if (c === 'R') return <svg {...k}><path d="M12 2 C13 6 17 7 17 12 A5 5 0 0 1 7 12 C7 9.5 8.5 8 9.5 6.5 C9.5 9 11 10 12 10 C10.5 7.5 11 4.5 12 2Z M12 14 a2.2 2.2 0 1 0 0.1 0Z" fillRule="evenodd" /><path d="M5 18 Q12 23 19 18 Q12 21 5 18Z" /></svg>;
+  return (
+    <svg {...k}>
+      <path d="M12 2 C7 2 4.5 5.5 5 9 C3 10.5 3.5 14 6.5 14.5 C7.5 16 10 16 11 15 L11 22 L13 22 L13 15 C14 16 16.5 16 17.5 14.5 C20.5 14 21 10.5 19 9 C19.5 5.5 17 2 12 2Z" />
+    </svg>
+  );
+}
+
+/** Header logo: wizard hat + DECK WIZARD in cut-out letters. */
+export function Logo() {
+  return (
+    <span className="brandmark">
+      <svg className="hat" width="34" height="30" viewBox="0 0 34 30" aria-hidden="true">
+        <path d="M4 24 C10 22 24 22 31 24 C27 26 9 27 4 24Z" fill="#f3e6c9" stroke="#0a0a0a" strokeWidth="1.6" />
+        <path d="M9 23 C11 16 13 8 21 3 C19 8 22 11 25 14 C23 15 24 19 26 23 Z" fill="#f3e6c9" stroke="#0a0a0a" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M21 3 C24 2 27 4 28 7" fill="none" stroke="#0a0a0a" strokeWidth="1.6" />
+        <path d="M14 15 l1.4 2.6 l-2.8 0Z M18 10 l1 1.8 l-2 0Z" fill="#e60012" />
+        <path d="M2 10 l4 -2 M3 15 l3 0" stroke="#f3e6c9" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+      <Ransom text="DECK WIZARD" size={22} seed={42} />
+    </span>
+  );
+}

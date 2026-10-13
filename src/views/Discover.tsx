@@ -6,7 +6,7 @@ import { fetchPage, pagePath } from '../lib/edhrec';
 import { slug } from '../lib/names';
 import { CommanderView } from './Commander';
 import { Progress, usd, type Shared } from './shared';
-import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle } from './zine';
+import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
 const SORTS: [string, string][] = [
@@ -153,6 +153,7 @@ export function Discover(s: Shared) {
         <section className="hero">
           <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
           {!phone && <EyeDoodle />}
+          <p className="tagline">Your collection. Real decks. No guesswork.</p>
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>
@@ -189,7 +190,13 @@ export function Discover(s: Shared) {
               <Tape style={{ top: -12, left: -16, width: 90, height: 24, transform: 'rotate(-24deg)' }} />
               <Tape style={{ bottom: -10, right: -12, width: 90, height: 24, transform: 'rotate(-20deg)' }} />
               <label className="sbox search">
-                <span className="tab">SEARCH</span>
+                <span className="tab">
+                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                    <circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" strokeWidth="2.6" />
+                    <path d="M13 13 L18 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                  <span className="sr">Search</span>
+                </span>
                 <input type="search" placeholder="commander name, Enter opens any_" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
                 <span aria-hidden="true" className="hfade fade" />
               </label>
@@ -209,7 +216,8 @@ export function Discover(s: Shared) {
               <div className="colours" role="group" aria-label="Filter by colour identity">
                 {COLOURS.map(([l, n, bar]) => (
                   <button type="button" key={l} aria-pressed={colours.includes(l)} aria-label={n} onClick={() => toggle(l)}>
-                    {l}
+                    <ManaIcon c={l} />
+                    <b aria-hidden="true">{l}</b>
                     <i aria-hidden="true" style={{ background: bar }} />
                   </button>
                 ))}
