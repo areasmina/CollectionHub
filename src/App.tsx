@@ -5,6 +5,7 @@ import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
+import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
 
@@ -13,11 +14,12 @@ const Collection = lazy(() => import('./views/Collection').then((m) => ({ defaul
 const Decks = lazy(() => import('./views/Decks').then((m) => ({ default: m.Decks })));
 const SyncPanel = lazy(() => import('./views/SyncPanel').then((m) => ({ default: m.SyncPanel })));
 // Warm the rest once the page is idle (keeps the session fresh and makes tab switches instant).
+const SYNC_LABEL: Record<SyncStatus, string> = { off: 'not signed in', syncing: 'syncing…', synced: 'up to date', conflict: 'needs you: changed on both sides', offline: 'offline, will sync later', error: 'last sync failed' };
 const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 2500));
 idle(() => {
   import('./views/Collection');
   import('./views/Decks');
-  if (import.meta.env.VITE_SUPABASE_URL) import('./lib/sync');
+  if (import.meta.env.VITE_SUPABASE_URL) import('./lib/autosync').then((m) => m.startAutoSync());
 });
 
 type Tab = 'discover' | 'collection' | 'decks';
@@ -43,7 +45,8 @@ export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
-  const [sync, setSync] = useState(!!authReturn); // back from a sign-in redirect: show the result
+  const [sync, setSync] = useState(!!authReturn);
+  const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   const [hubOpen, setHubOpen] = useState(false);
   const [haptOn, setHaptOn] = useState(hapticsOn);
   const hubRef = useRef<HTMLDivElement>(null);
@@ -89,7 +92,7 @@ export default function App() {
         <div className={`hubslide${hubOpen ? ' open' : ''}`}>
           {/* The shadow sits on a wrapper: a clip-path on the button itself would cut its drop-shadow off. */}
           <span className="hubtabwrap">
-            <button className="hubtab" aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
+            <button className={`hubtab${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
               {hubOpen ? '×' : '≡'}
             </button>
           </span>
@@ -132,7 +135,7 @@ export default function App() {
                   {haptOn ? <path d="M3 6 v8 M1 8 v4 M17 6 v8 M19 8 v4" /> : <path d="M2 2 L18 18" />}
                 </svg>
               </button>}
-              <button className="iconbtn" onClick={() => (setSync(!sync), setHubOpen(false))} aria-label="Sync between devices" aria-expanded={sync}>
+              <button className={`iconbtn syncbtn s-${syncSt.status}`} onClick={() => (setSync(!sync), setHubOpen(false))} aria-label={`Sync between devices (${SYNC_LABEL[syncSt.status]})`} title={SYNC_LABEL[syncSt.status]} aria-expanded={sync}>
                 <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                   <path d="M5 15 V3 M2 6 L5 3 L8 6 M13 3 V15 M10 12 L13 15 L16 12" fill="none" stroke="currentColor" strokeWidth="2" />
                 </svg>

@@ -5,6 +5,7 @@ import { resolveRows } from './scryfall';
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 import { authReturn } from './authreturn';
+import { clearDirty, quietly, setLastVersion } from './syncstate';
 export { authReturn };
 
 /** null when sync isn't configured; the app works fully without it. */
@@ -88,6 +89,7 @@ const dropRows = async (table: string, uid: string, op: 'lte' | 'gt', id: number
 
 // shortcut: whole snapshot per account, last push wins; upgrade to per-row merging if two devices edit offline at once.
 export async function push() {
+  const started = Date.now();
   const uid = await userId();
   const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
   const risk = syncRisk('push', entries.length + decks.length, (await count('cards', uid)) + (await count('decks', uid)));
@@ -95,7 +97,7 @@ export async function push() {
   // New rows go in first; the old ones are removed only once everything arrived, so a failed push never empties the cloud.
   const old = { cards: await maxId('cards', uid), decks: await maxId('decks', uid) };
   // `extras` (swaps, shopping-list checks) and `added` need supabase/migrations/002_extras.sql; without it they stay on this device.
-  const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, updated_at: new Date().toISOString(), extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [] } }));
+  const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [] } }));
   let migrated = true;
   let { error } = await supabase!.from('profiles').upsert(profileRows);
   if (error?.code === 'PGRST204') {
@@ -135,6 +137,12 @@ export async function push() {
   }
   if (old.cards) await dropRows('cards', uid, 'lte', old.cards);
   if (old.decks) await dropRows('decks', uid, 'lte', old.decks);
+  // Stamping the version last tells other devices the new copy is complete.
+  const version = new Date().toISOString();
+  const { error: stampErr } = await supabase!.from('profiles').update({ updated_at: version }).eq('user_id', uid);
+  if (stampErr) throw stampErr;
+  setLastVersion(Date.parse(version));
+  clearDirty(started);
   return { cards: entries.length, decks: decks.length, migrated };
 }
 
@@ -150,17 +158,20 @@ export async function undoPull() {
     await db.entries.bulkAdd(b.entries);
     await db.decks.bulkAdd(b.decks);
   });
+  setLastVersion(null); // this device and the cloud now differ: automatic sync asks which to keep
   return { cards: b.entries.length, decks: b.decks.length };
 }
 
 export async function pull() {
-  await userId();
+  const started = Date.now();
+  const uid = await userId();
+  const version = await cloudVersion(uid);
   const [profiles, cards, decks] = await Promise.all([selectAll('profiles'), selectAll('cards'), selectAll('decks')]);
   const local = { profiles: await db.profiles.toArray(), entries: await db.entries.toArray(), decks: await db.decks.toArray() };
   const risk = syncRisk('pull', local.entries.length + local.decks.length, cards.length + decks.length);
   if (risk) throw new Error(risk);
   await db.edhrec.put({ path: BACKUP, data: local, at: Date.now() });
-  await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
+  await quietly(() => db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
     for (const p of profiles) {
       const local = await db.profiles.get(p.slot);
       // Without the extras column, keep this device's swaps and checks.
@@ -172,8 +183,34 @@ export async function pull() {
       cards.map((c) => ({ profile: c.slot, cardId: c.card_id, name: c.name, qty: c.qty, set: c.set_code ?? undefined, cn: c.collector_number ?? undefined, foil: c.foil, added: c.added ? Date.parse(c.added) : undefined })),
     );
     await db.decks.bulkAdd(decks.map((d) => ({ profile: d.slot, name: d.name, commander: d.commander ?? undefined, cards: d.cards, updated: Date.parse(d.updated_at), note: d.extras?.note || undefined, tags: d.extras?.tags?.length ? d.extras.tags : undefined })));
-  });
+  }));
+  setLastVersion(version);
+  clearDirty(started);
   // Card details (type, colours, image) come from Scryfall's cache on this device.
   await resolveRows(cards.map((c) => ({ name: c.name, qty: 1, id: c.card_id })), () => {});
   return { cards: cards.length, decks: decks.length };
+}
+
+/** The cloud copy's version: when it was last pushed (ms), 0 when nothing was pushed yet. */
+export async function cloudVersion(uid: string) {
+  const { data, error } = await supabase!.from('profiles').select('updated_at').eq('user_id', uid).order('updated_at', { ascending: false }).limit(1);
+  if (error) throw error;
+  return data?.[0]?.updated_at ? Date.parse(data[0].updated_at) : 0;
+}
+
+/** Card and deck fingerprints, the same for this device and the cloud when they hold the same binders and decks. */
+const deckKey = (slot: number, name: string, commander: string | null | undefined, cards: Deck['cards']) =>
+  `${slot}|${name}|${commander ?? ''}|${cards.map((c) => `${c.name}:${c.qty}:${c.foil ? 1 : 0}`).join(',')}`;
+const fingerprint = (cards: string[], decks: string[]) => [...cards].sort().join('\n') + '\n--\n' + [...decks].sort().join('\n');
+export async function sameAsCloud() {
+  const [cards, decks, entries, local] = await Promise.all([selectAll('cards'), selectAll('decks'), db.entries.toArray(), db.decks.toArray()]);
+  const cloud = fingerprint(
+    cards.map((c) => `${c.slot}|${c.card_id}|${c.qty}|${c.foil ? 1 : 0}`),
+    decks.map((d) => deckKey(d.slot, d.name, d.commander, d.cards)),
+  );
+  const mine = fingerprint(
+    entries.map((e) => `${e.profile}|${e.cardId}|${e.qty}|${e.foil ? 1 : 0}`),
+    local.map((d) => deckKey(d.profile, d.name, d.commander, d.cards)),
+  );
+  return { same: cloud === mine, cloudCount: cards.length + decks.length, localCount: entries.length + local.length };
 }

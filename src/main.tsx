@@ -4,6 +4,8 @@ import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { loadRate } from './lib/prices';
 import { authReturn } from './lib/authreturn';
+// Registers the change tracker before anything writes, so automatic sync sees every edit.
+import './lib/syncstate';
 // Fonts ship with the app (also offline) instead of loading from Google.
 import '@fontsource/anton/latin-400.css';
 import '@fontsource/archivo/latin-400.css';

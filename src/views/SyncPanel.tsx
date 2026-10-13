@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { syncNow } from '../lib/autosync';
+import { useSyncState } from '../lib/syncstate';
 import { authReturn, currentUser, lastBackup, providerEnabled, pull, push, signIn, supabase, undoPull } from '../lib/sync';
 
 // Provider marks for the sign-in buttons (Google "G" in its own colours, GitHub's Invertocat in the button colour).
@@ -22,6 +24,7 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
   const [user, setUser] = useState<string | null>(null);
   const [msg, setMsg] = useState(authReturn?.error ? `Sign-in failed: ${authReturn.error}` : '');
   const [busy, setBusy] = useState(false);
+  const st = useSyncState();
   const [backupAt, setBackupAt] = useState<number | null>(null);
   useEffect(() => void lastBackup().then(setBackupAt), [busy]);
 
@@ -42,6 +45,7 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
       setMsg(`Failed: ${(e as Error).message}`);
     }
     setBusy(false);
+    void syncNow(); // refresh the status (and resume automatic sync after a conflict)
   };
 
   return (
@@ -87,7 +91,23 @@ export function SyncPanel({ onClose }: { onClose: () => void }) {
         </>
       ) : (
         <>
-          <p className="muted">Signed in as {user}. Push replaces the cloud copy with this device; Pull replaces this device with the cloud copy.</p>
+          <p className="muted">Signed in as {user}. Changes sync on their own: edits here go up a few seconds later, edits from your other devices come down when you open the app.</p>
+          {st.status === 'conflict' ? (
+            <p className="syncstate conflict" role="alert">
+              <b>Pick which copy to keep.</b> {st.msg} Automatic sync is paused so nothing gets overwritten. <b>Push</b> keeps this device (the cloud copy is replaced). <b>Pull</b> keeps the cloud (this device's copy can be put back with Undo).
+            </p>
+          ) : (
+            <p className="syncstate" role="status">
+              <span className={`syncdot s-${st.status}`} aria-hidden="true" />
+              {st.status === 'synced' ? `Up to date · ${new Date(st.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : st.status === 'syncing' ? 'Syncing…' : st.status === 'offline' ? 'Offline: will sync when back online' : st.status === 'error' ? `Sync failed: ${st.msg}` : 'Starting…'}
+              {st.status !== 'syncing' && (
+                <button className="linkbtn" onClick={() => void syncNow()}>
+                  sync now
+                </button>
+              )}
+            </p>
+          )}
+          <p className="muted">By hand: Push replaces the cloud copy with this device; Pull replaces this device with the cloud copy.</p>
           <div className="row">
             <button className="btn" disabled={busy} onClick={() => act(push, 'Pushed')}>
               Push to cloud
