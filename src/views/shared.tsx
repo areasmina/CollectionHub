@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
 import { shortText, type Shortfall } from '../lib/copies';
@@ -187,82 +187,49 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
   </div>
 );
 
-/** Header stats under a commander / deck name: deck price (yellow tape), salt, and optionally the bracket. */
+/** Header stats in the title banner, beside the colour pips: deck price on yellow tape, salt on a torn paper scrap,
+ *  optional extras (bracket stamp); the price note sits under the row. */
 export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: React.ReactNode }) {
   return (
-    <div className="hstats boxed" onClick={(e) => e.stopPropagation()}>
-      <div className="hstat">
-        <span className="lbl">deck price</span>
-        <span className="price tapey y1 t2 big" aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
-          {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
-        </span>
-        <small className="fetched" title={PRICE_METHOD}>
-          cheapest printings · {fetched}
-        </small>
-      </div>
+    <div className="hstats" onClick={(e) => e.stopPropagation()}>
+      <span className="price tapey y1 t0 big" title={PRICE_METHOD} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
+        <small>DECK</small> {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
+      </span>
       <SaltStat names={names} />
       {children}
+      <small className="fetched" title={PRICE_METHOD}>
+        deck price: cheapest printings · {fetched}
+      </small>
     </div>
   );
 }
 
-/** The stats box sits in the title banner's bottom-right corner, beside the name's last line. When that line is too
- *  long (or the screen narrow), the title gets class "stack" and the box drops below the colour pips instead. */
-export function useStatsFit<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [stack, setStack] = useState(false);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const check = () => {
-      const box = el.querySelector<HTMLElement>('.hstats');
-      const letters = el.querySelectorAll('h1 .jit');
-      const last = letters[letters.length - 1]?.parentElement;
-      if (!box || !last) return;
-      const t = el.getBoundingClientRect();
-      // Where the box's left edge is when it sits in the corner (right: 18px); its width is the same either way.
-      const left = t.right - 18 - box.offsetWidth;
-      setStack(innerWidth <= 700 || last.getBoundingClientRect().right > left - 14);
-    };
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  });
-  return [ref, stack] as const;
-}
-
-/** The deck's salt (sum of EDHREC salt scores); tap/hover shows the saltiest cards. */
+/** The deck's salt (sum of EDHREC salt scores) on a torn paper scrap; tap shows the saltiest cards. */
 export function SaltStat({ names }: { names: string[] }) {
   const [salt, setSalt] = useState<Map<string, number> | null>(null);
   useEffect(() => void saltMap().then(setSalt), []);
   const s = salt && deckSalt(names, salt);
   return (
-    <div className="hstat salt">
-      <span className="lbl">salt</span>
-      {!s ? (
-        <span className="amt">…</span>
-      ) : (
-        <details>
-          <summary aria-label={`Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards`}>
-            <span className="amt">{s.total.toFixed(1)}</span>
-            <small>{s.top.length ? 'saltiest ▾' : 'no salty cards'}</small>
-          </summary>
-          {s.top.length > 0 && (
-            <ol className="popnote">
-              {s.top.map((c) => (
-                <li key={c.name}>
-                  {c.name} <b>{c.salt.toFixed(2)}</b>
-                </li>
-              ))}
-              <li className="small">sum of EDHREC salt (0–4 per card, player votes) over its top 1,000 saltiest cards</li>
-            </ol>
-          )}
-        </details>
+    <details className="scrap salt">
+      <summary aria-label={s ? `Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards` : 'Salt loading'}>
+        <span className="k">SALT</span>
+        <span className="amt">{s ? s.total.toFixed(1) : '…'}</span>
+        {s && s.top.length > 0 && <span className="caret" aria-hidden="true">▾</span>}
+      </summary>
+      {s && (
+        <ul className="popnote">
+          {s.top.map((c) => (
+            <li key={c.name}>
+              {c.name} <b>{c.salt.toFixed(2)}</b>
+            </li>
+          ))}
+          <li className="small">{s.top.length ? '' : 'No salty cards. '}Sum of EDHREC salt (0–4 per card, player votes) over its top 1,000 saltiest cards.</li>
+        </ul>
       )}
-    </div>
+    </details>
   );
 }
+
 /** Hazard note: cards your decks share more often than you own copies (decks are virtual lists). */
 export function ShortAlert({ items }: { items: Shortfall[] }) {
   if (!items.length) return null;

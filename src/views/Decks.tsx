@@ -10,7 +10,7 @@ import { cad, fetchedNote } from '../lib/prices';
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, useStatsFit, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -68,26 +68,26 @@ const useStored = <T extends string>(key: string, fallback: T, allowed: T[]): [T
 /** Bracket estimate stamp; tap shows the reasons. */
 function BracketStat({ call }: { call: BracketCall }) {
   return (
-    <div className="hstat bracket">
-      <span className="lbl">bracket</span>
-      <details>
-        <summary aria-label={`Estimated bracket ${call.bracket}. Show why`}>
-          <span className="bstamp">{ROMAN[call.bracket]}</span>
-          <small>estimate ▾</small>
-        </summary>
-        <ul className="popnote">
-          {call.reasons.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-          {call.gameChangers.length > 0 && (
-            <li>
-              Game Changers: <b>{call.gameChangers.join(', ')}</b>
-            </li>
-          )}
-          <li className="small">From the official bracket rules we can check. Two-card combos aren't checked; bracket I vs II and V depend on how the deck is meant to play.</li>
-        </ul>
-      </details>
-    </div>
+    <details className="scrap bracket">
+      <summary aria-label={`Estimated bracket ${call.bracket}. Show why`}>
+        <span className="k">BRACKET</span>
+        <span className="bstamp">{ROMAN[call.bracket]}</span>
+        <span className="caret" aria-hidden="true">
+          ▾
+        </span>
+      </summary>
+      <ul className="popnote">
+        {call.reasons.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+        {call.gameChangers.length > 0 && (
+          <li>
+            Game Changers: <b>{call.gameChangers.join(', ')}</b>
+          </li>
+        )}
+        <li className="small">An estimate from the official bracket rules we can check. Two-card combos aren't checked; bracket I vs II and V depend on how the deck is meant to play.</li>
+      </ul>
+    </details>
   );
 }
 
@@ -223,7 +223,6 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
   const sorted = [...deck.cards].sort((a, b) => (cardOf(a.name)?.cmc ?? 0) - (cardOf(b.name)?.cmc ?? 0) || a.name.localeCompare(b.name));
   for (const c of sorted) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
-  const [titleRef, stack] = useStatsFit<HTMLDivElement>();
 
   return (
     <>
@@ -250,15 +249,17 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
             </div>
           )}
           <div className="cright">
-            <div ref={titleRef} className={`ctitle${stack ? ' stack' : ''}`}>
+            <div className="ctitle">
               <div className="banner ht" aria-hidden="true" />
               <h1 aria-label={deck.name}>
                 <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} breakWords />
               </h1>
-              <Pips ci={ci} size={30} />
-              <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
-                <BracketStat call={call} />
-              </HeroStats>
+              <div className="namerow">
+                <Pips ci={ci} size={30} />
+                <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
+                  <BracketStat call={call} />
+                </HeroStats>
+              </div>
             </div>
             <div className="cmeta">
               <span className="typed">

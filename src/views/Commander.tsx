@@ -7,7 +7,7 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, HeroStats, money, useStatsFit, priceSum, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, money, priceSum, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
@@ -142,7 +142,6 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
-  const [titleRef, stack] = useStatsFit<HTMLDivElement>();
   // Grid (card images) is the default; the choice is remembered on this device.
   const [view, setViewState] = useState<'grid' | 'list'>(() => {
     try {
@@ -231,13 +230,15 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           </div>
           <div className="cright">
             {/* Clicking the commander's name goes back to Discover (the COMMANDERS link does the same for keyboards). */}
-            <div ref={titleRef} className={`ctitle${stack ? ' stack' : ''}`} onClick={onBack} title="Back to Discover">
+            <div className="ctitle" onClick={onBack} title="Back to Discover">
               <div className="banner ht" aria-hidden="true" />
               <h1 aria-label={label}>
                 <Ransom text={label.toUpperCase()} size={label.length > 28 ? 44 : 54} seed={11} breakWords />
               </h1>
-              <Pips ci={ci} size={30} />
-              {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
+              <div className="namerow">
+                <Pips ci={ci} size={30} />
+                {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
+              </div>
             </div>
             <div className="cmeta">
               <span className="typed">

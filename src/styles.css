@@ -3009,64 +3009,13 @@ button.logo {
   height: 100%;
 }
 
-/* Deck price (yellow tape) and salt cells in the commander / deck strips. */
+/* Deck price on yellow tape (commander / deck headers) */
 .price.tapey.big {
   font-family: var(--an);
   font-size: 24px;
   padding: 6px 14px;
   margin-top: 4px;
 }
-.salt details {
-  position: relative;
-}
-.salt summary {
-  list-style: none;
-  cursor: pointer;
-  min-height: 44px;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.salt summary::-webkit-details-marker {
-  display: none;
-}
-.salt .amt {
-  font-family: var(--an);
-  font-size: 30px;
-  color: #19d3e6;
-  text-shadow: 2px 2px 0 var(--ink);
-}
-.salt small {
-  font-family: var(--se);
-  font-size: 12px;
-  color: var(--muted);
-}
-.salt ol {
-  position: absolute;
-  z-index: 20;
-  top: 100%;
-  left: 0;
-  width: max-content;
-  max-width: min(320px, 86vw);
-  margin: 4px 0 0;
-  padding: 10px 14px 10px 30px;
-  background: #f4efe2;
-  color: #141414;
-  font-family: var(--se);
-  font-size: 14px;
-  box-shadow: 4px 4px 0 var(--ink);
-  transform: rotate(-1deg);
-}
-.salt ol b {
-  color: var(--accent);
-}
-.salt ol .small {
-  list-style: none;
-  margin: 6px 0 0 -16px;
-  font-size: 11px;
-  color: #5c5c5c;
-}
-
 /* Deck note + tags */
 .decknotes {
   position: relative;
@@ -3155,73 +3104,6 @@ button.logo {
   color: var(--muted);
 }
 
-/* Header stats under the commander / deck name: price tape, salt, bracket */
-.hstats {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 14px 34px;
-  padding: 0 4px 0 24px;
-  cursor: default;
-}
-.hstat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.hstat > .lbl {
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.hstat .price.tapey.big {
-  margin-top: 2px;
-}
-.hstat.salt .amt {
-  line-height: 44px;
-}
-.hstat.salt summary {
-  align-items: center;
-}
-.hstat.bracket summary {
-  list-style: none;
-  cursor: pointer;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.hstat.bracket summary::-webkit-details-marker {
-  display: none;
-}
-.hstat.bracket details {
-  position: relative;
-}
-.bstamp {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 46px;
-  height: 40px;
-  padding: 0 8px;
-  border: 3px solid var(--accent);
-  color: var(--accent);
-  font-family: 'Shippori Mincho B1', serif;
-  font-weight: 800;
-  font-size: 24px;
-  transform: rotate(-4deg);
-  background: radial-gradient(rgba(230, 0, 18, 0.18) 1px, transparent 1.5px) 0 0/4px 4px;
-}
-.hstat.bracket small {
-  font-family: var(--se);
-  font-size: 12px;
-  color: var(--muted);
-}
 .popnote {
   position: absolute;
   z-index: 20;
@@ -3250,12 +3132,6 @@ button.logo {
   margin: 6px 0 0 -16px;
   font-size: 11px;
   color: #5c5c5c;
-}
-@media (max-width: 700px) {
-  .hstats {
-    padding: 0 4px;
-    gap: 12px 22px;
-  }
 }
 
 /* Deck page: commander-style header, toolbar, cards + analysis side panel (Moxfield-like) */
@@ -3518,61 +3394,119 @@ ul.popnote .small {
   }
 }
 
-/* Stats box in the title banner's bottom-right corner (beside the name's last line); drops under the pips when it won't fit */
-.ctitle .hstats.boxed {
-  position: absolute;
-  right: 18px;
-  bottom: 14px;
-  z-index: 2;
-  width: max-content;
-  max-width: calc(100% - 36px);
-  padding: 12px 18px 12px 14px;
-  gap: 10px 34px;
-  background: #141414;
-  color: #ffffff;
-  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.45);
-}
-.ctitle .hstats.boxed .lbl,
-.ctitle .hstats.boxed .fetched,
-.ctitle .hstats.boxed small {
-  color: #b5b5b5;
-}
-.ctitle.stack .hstats.boxed {
+
+/* Under the commander / deck name, on the red banner: pips, price on yellow tape, salt on a torn paper scrap,
+   bracket stamped on paper. No box behind them: the banner shows through. */
+.namerow {
   position: relative;
-  right: auto;
-  bottom: auto;
-  align-self: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+.hstats {
+  display: contents;
+  cursor: default;
+}
+.hstats .price.tapey.big {
+  margin: 0;
+  font-size: 22px;
+  padding: 5px 14px 4px;
+  color: #0a0a0a;
+  box-shadow: 3px 3px 0 #0a0a0a;
+}
+.hstats .price small {
+  font-family: var(--se);
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-right: 2px;
+}
+.scrap {
+  position: relative;
+}
+.scrap > summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 14px 3px 12px;
+  background: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1.5px) 0 0/4px 4px, #f4f1ea;
+  color: #0a0a0a;
+  box-shadow: 3px 3px 0 #0a0a0a;
+  /* torn left and right edges */
+  clip-path: polygon(2% 0, 98% 3%, 100% 30%, 97% 52%, 100% 78%, 97% 100%, 3% 96%, 0 72%, 3% 48%, 0 22%);
+}
+.scrap > summary::-webkit-details-marker {
+  display: none;
+}
+.scrap .k {
+  font-family: 'Black Ops One', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+.scrap .caret {
+  font-size: 12px;
+  color: #5c5c5c;
+}
+.scrap.salt > summary {
+  transform: rotate(2deg);
+}
+.scrap.salt .amt {
+  font-family: var(--an);
+  font-size: 26px;
+  line-height: 1;
+  color: #0a0a0a;
+  /* a cyan salt-crystal smear under the number */
+  background: linear-gradient(transparent 58%, #19d3e6 58% 88%, transparent 88%);
+  padding: 0 2px;
+}
+.scrap.bracket > summary {
+  transform: rotate(-2deg);
+}
+.scrap .bstamp {
+  min-width: 40px;
+  height: 34px;
+  font-size: 21px;
+  border-width: 3px;
+  background: none;
+}
+.namerow .fetched {
+  flex-basis: 100%;
+  margin: -4px 0 0;
+  font-family: var(--se);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.namerow .popnote {
+  margin-top: 8px;
 }
 @media (max-width: 700px) {
-  .ctitle .hstats.boxed {
-    padding: 10px 12px;
-    gap: 10px 22px;
+  .namerow {
+    gap: 10px 12px;
+  }
+  .hstats .price.tapey.big {
+    font-size: 19px;
+    padding: 4px 10px 3px;
+  }
+  .scrap > summary {
+    padding: 3px 10px 3px 9px;
+  }
+  .scrap.salt .amt {
+    font-size: 22px;
   }
 }
-@media (max-width: 700px) {
-  .ctitle.stack .hstats.boxed {
-    align-self: stretch;
-    width: auto;
-    max-width: none;
-    flex-wrap: nowrap;
-  }
-  .ctitle .hstats.boxed > .hstat:first-child {
-    flex: 1 1 auto;
-  }
-  .ctitle .hstats.boxed > .hstat {
-    flex: 0 1 auto;
-  }
-}
-@media (max-width: 700px) {
-  .ctitle .hstats.boxed summary small {
-    display: none;
-  }
-  .ctitle .hstats.boxed summary::after {
-    content: '▾';
-    font-size: 14px;
-    color: #b5b5b5;
-  }
-  .ctitle .hstats.boxed {
-    gap: 10px 16px;
-  }
+.bstamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border: 3px solid var(--accent);
+  color: var(--accent);
+  font-family: 'Shippori Mincho B1', serif;
+  font-weight: 800;
+  line-height: 1;
+  transform: rotate(-4deg);
 }
