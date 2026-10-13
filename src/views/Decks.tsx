@@ -219,31 +219,13 @@ function Curve({ curve }: { curve: number[] }) {
 
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
-/** Side panel: curve, types, colour pips, roles and a short read of the deck. */
+/** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
 function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
   return (
     <aside className="dpanel" aria-label="Deck analysis">
       <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
       <h2>ANALYSIS</h2>
-      <div className="dsec">
-        <h3>to complete</h3>
-        <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
-          <span className="wedge" aria-hidden="true">
-            <svg width="24" height="22" viewBox="0 0 24 22">
-              <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-              <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-            </svg>
-          </span>
-          <span className="amt">
-            <small>≈</small>
-            {pricesIn ? cad(missingCost) : 'CA$—'}
-          </span>
-        </div>
-        <small className="fetched">
-          {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
-        </small>
-      </div>
       <div className="dsec">
         <h3>
           mana curve <small>avg {st.avgMv.toFixed(2)}</small>
@@ -286,6 +268,24 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
           ))}
         </ul>
         <small className="fetched">Roles are counted from rules text, so treat them as a rough guide.{st.unknown ? ` ${st.unknown} cards still loading.` : ''}</small>
+      </div>
+      <div className="dsec">
+        <h3>to complete</h3>
+        <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
+          <span className="wedge" aria-hidden="true">
+            <svg width="24" height="22" viewBox="0 0 24 22">
+              <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
+              <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
+            </svg>
+          </span>
+          <span className="amt">
+            <small>≈</small>
+            {pricesIn ? cad(missingCost) : 'CA$—'}
+          </span>
+        </div>
+        <small className="fetched">
+          {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
+        </small>
       </div>
     </aside>
   );
