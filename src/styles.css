@@ -5215,41 +5215,15 @@ ul.popnote .small {
   box-shadow: none;
 }
 
-/* Discover: folk-tattoo hands-with-cards art in the space right of the title (wide screens) */
-.hero {
-  position: relative;
+/* commanders counter doodles sit on its left corner */
+.stat .crown {
+  right: auto;
+  left: -14px;
+  transform: rotate(-14deg);
 }
-.handsdoodle {
-  position: absolute;
-  z-index: 3;
-  right: 3%;
-  top: -34px;
-  width: clamp(200px, 22vw, 290px);
-  height: auto;
-  filter: drop-shadow(5px 5px 0 rgba(0, 0, 0, 0.55));
-  transform: rotate(4deg);
-  pointer-events: none;
-}
-@media (max-width: 1099px) {
-  .handsdoodle {
-    display: none;
-  }
-}
-@media (min-width: 1100px) {
-  .hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    column-gap: 20px;
-  }
-  .hero .filters {
-    grid-column: 1 / -1;
-  }
-  .handsdoodle {
-    position: relative;
+@media (max-width: 700px) {
+  .stat .crown {
     right: auto;
-    top: auto;
-    width: 210px;
-    margin: -24px 3% -8px 0;
+    left: -6px;
   }
 }

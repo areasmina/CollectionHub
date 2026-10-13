@@ -6,7 +6,7 @@ import { fetchPage, pagePath } from '../lib/edhrec';
 import { slug } from '../lib/names';
 import { CommanderView } from './Commander';
 import { Progress, usd, type Shared } from './shared';
-import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, HandsDoodle } from './zine';
+import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title } from './zine';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
 const SORTS: [string, string][] = [
@@ -152,7 +152,6 @@ export function Discover(s: Shared) {
       <main>
         <section className="hero">
           <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
-          {!phone && <HandsDoodle />}
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>

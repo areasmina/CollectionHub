@@ -200,7 +200,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
               <circle cx="4" cy="10" r="2.2" />
               <circle cx="58" cy="8" r="2.2" />
             </svg>
-            <Doodles n={377} count={1} spots={[[70, -20]]} />
+            <Doodles n={377} count={1} spots={[[-14, -20]]} />
           </div>
           <div className="slip">
             <span className="se">worth about</span>
