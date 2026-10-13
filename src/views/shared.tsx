@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
 import { shortText, type Shortfall } from '../lib/copies';
@@ -190,7 +190,7 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
 /** Header stats under a commander / deck name: deck price (yellow tape), salt, and optionally the bracket. */
 export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: React.ReactNode }) {
   return (
-    <div className="hstats" onClick={(e) => e.stopPropagation()}>
+    <div className="hstats boxed" onClick={(e) => e.stopPropagation()}>
       <div className="hstat">
         <span className="lbl">deck price</span>
         <span className="price tapey y1 t2 big" aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
@@ -204,6 +204,32 @@ export function HeroStats({ price, fetched, names, children }: { price?: number;
       {children}
     </div>
   );
+}
+
+/** The stats box sits in the title banner's bottom-right corner, beside the name's last line. When that line is too
+ *  long (or the screen narrow), the title gets class "stack" and the box drops below the colour pips instead. */
+export function useStatsFit<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [stack, setStack] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => {
+      const box = el.querySelector<HTMLElement>('.hstats');
+      const letters = el.querySelectorAll('h1 .jit');
+      const last = letters[letters.length - 1]?.parentElement;
+      if (!box || !last) return;
+      const t = el.getBoundingClientRect();
+      // Where the box's left edge is when it sits in the corner (right: 18px); its width is the same either way.
+      const left = t.right - 18 - box.offsetWidth;
+      setStack(innerWidth <= 700 || last.getBoundingClientRect().right > left - 14);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  });
+  return [ref, stack] as const;
 }
 
 /** The deck's salt (sum of EDHREC salt scores); tap/hover shows the saltiest cards. */

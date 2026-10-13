@@ -3517,3 +3517,62 @@ ul.popnote .small {
     display: inline;
   }
 }
+
+/* Stats box in the title banner's bottom-right corner (beside the name's last line); drops under the pips when it won't fit */
+.ctitle .hstats.boxed {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  z-index: 2;
+  width: max-content;
+  max-width: calc(100% - 36px);
+  padding: 12px 18px 12px 14px;
+  gap: 10px 34px;
+  background: #141414;
+  color: #ffffff;
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.45);
+}
+.ctitle .hstats.boxed .lbl,
+.ctitle .hstats.boxed .fetched,
+.ctitle .hstats.boxed small {
+  color: #b5b5b5;
+}
+.ctitle.stack .hstats.boxed {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  align-self: flex-start;
+}
+@media (max-width: 700px) {
+  .ctitle .hstats.boxed {
+    padding: 10px 12px;
+    gap: 10px 22px;
+  }
+}
+@media (max-width: 700px) {
+  .ctitle.stack .hstats.boxed {
+    align-self: stretch;
+    width: auto;
+    max-width: none;
+    flex-wrap: nowrap;
+  }
+  .ctitle .hstats.boxed > .hstat:first-child {
+    flex: 1 1 auto;
+  }
+  .ctitle .hstats.boxed > .hstat {
+    flex: 0 1 auto;
+  }
+}
+@media (max-width: 700px) {
+  .ctitle .hstats.boxed summary small {
+    display: none;
+  }
+  .ctitle .hstats.boxed summary::after {
+    content: '▾';
+    font-size: 14px;
+    color: #b5b5b5;
+  }
+  .ctitle .hstats.boxed {
+    gap: 10px 16px;
+  }
+}

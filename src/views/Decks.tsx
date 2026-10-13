@@ -10,7 +10,7 @@ import { cad, fetchedNote } from '../lib/prices';
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, useStatsFit, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -223,6 +223,7 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
   const sorted = [...deck.cards].sort((a, b) => (cardOf(a.name)?.cmc ?? 0) - (cardOf(b.name)?.cmc ?? 0) || a.name.localeCompare(b.name));
   for (const c of sorted) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
+  const [titleRef, stack] = useStatsFit<HTMLDivElement>();
 
   return (
     <>
@@ -249,16 +250,16 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
             </div>
           )}
           <div className="cright">
-            <div className="ctitle">
+            <div ref={titleRef} className={`ctitle${stack ? ' stack' : ''}`}>
               <div className="banner ht" aria-hidden="true" />
               <h1 aria-label={deck.name}>
                 <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} breakWords />
               </h1>
               <Pips ci={ci} size={30} />
+              <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
+                <BracketStat call={call} />
+              </HeroStats>
             </div>
-            <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
-              <BracketStat call={call} />
-            </HeroStats>
             <div className="cmeta">
               <span className="typed">
                 {[deck.commander ? `COMMANDER: ${deck.commander.toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
