@@ -6228,82 +6228,68 @@ button.sbox.deckbtn {
 .dhero.hasmenu button {
   cursor: pointer;
 }
-/* CARDS bar: count + grid / list, right above the first card section */
-.cardsbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding: 6px 6px 6px 14px;
-  background: var(--ink);
-  border: 2px solid var(--text);
-  box-shadow: 4px 4px 0 var(--accent);
-  transform: rotate(-0.4deg);
+/* Grid / list: two small icon buttons in the first card section, beside the commander */
+.viewsw.mini {
+  float: right;
+  margin: 12px 12px 4px 8px;
+  position: relative;
+  z-index: 1;
 }
-.cardsbar .h {
-  font-family: var(--an);
-  font-size: 20px;
-  letter-spacing: 2px;
-  color: var(--text);
+/* a lone card (the commander): sit in the empty space beside it without narrowing the grid */
+details.cat {
+  position: relative;
 }
-.cardsbar .h b {
-  font-family: 'Space Mono', monospace;
-  font-size: 16px;
-  color: var(--hazard);
-  margin-left: 6px;
+.viewsw.mini.over {
+  float: none;
+  position: absolute;
+  right: 0;
+  margin-top: 12px;
 }
-.cardsbar .viewsw {
-  margin: 0;
-}
-.cardsbar .viewsw button {
+.viewsw.mini button {
+  min-width: 44px;
   min-height: 40px;
-  min-width: 0;
-  padding: 0 14px;
+  padding: 0 10px;
 }
 @media (max-width: 700px) {
-  /* group / sort / show / DECK in a 2 × 2 grid: small red label on top, the choice under it */
+  /* group / sort / show / DECK: a compact 2 × 2 grid, label tag + choice on one line */
   .dtools {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
   .dtools .grow {
     display: none;
   }
   .dtools .sbox.pick {
     min-width: 0;
-    flex-direction: column;
-    min-height: 58px;
+    min-height: 40px;
+    border-width: 2px;
   }
   .dtools .sbox.pick .tab {
     font-size: 12px;
-    letter-spacing: 1.5px;
-    padding: 3px 8px 2px;
-    align-self: flex-start;
+    letter-spacing: 1px;
+    padding: 0 6px;
   }
   .dtools .sbox.pick select,
   .dtools .deckbtn .val {
     width: auto;
     flex: 1;
-    font-size: 15px;
-    padding: 0 30px 0 8px;
+    font-size: 13px;
+    padding: 0 26px 0 6px;
     text-overflow: ellipsis;
+    overflow: hidden;
   }
   .dtools .sbox.pick .arrow {
-    top: auto;
-    height: 34px;
-    width: 30px;
+    width: 26px;
+    background: none;
   }
   .dtools .sbox.pick .arrow span {
-    width: 20px;
-    height: 20px;
-    font-size: 11px;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
   }
   .dtools .deckbtn .arrow span {
-    font-size: 15px;
-  }
-  .cardsbar .viewsw button {
-    padding: 0 12px;
+    font-size: 13px;
   }
 }
 .deckmenu li > button {

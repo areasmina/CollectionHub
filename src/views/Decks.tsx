@@ -553,23 +553,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         <div className="deckgrid after-sw">
           <div className="lists">
-            {/* How the cards below are shown, right where they start */}
-            <div className="cardsbar">
-              <span className="h">
-                CARDS <b>{st.total}</b>
-              </span>
-              <div className="viewsw" role="group" aria-label="Card view">
-                <button aria-pressed={view === 'grid'} aria-label="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                  <GridIcon /> <span className="lbl">Grid</span>
-                </button>
-                <button aria-pressed={view === 'list'} aria-label="List view" onClick={() => (haptic('select'), setView('list'))}>
-                  <ListIcon /> <span className="lbl">List</span>
-                </button>
-              </div>
-            </div>
             {[...sections]
               .filter(([, cs]) => cs.length)
-              .map(([h, cs]) => {
+              .map(([h, cs], i) => {
                 const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
                 return (
                   <details key={h} className="cat" open>
@@ -583,6 +569,17 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
+                    {i === 0 && (
+                      // Grid / list sits in the first section (the commander's), in the space beside the card
+                      <div className={`viewsw mini${view === 'grid' && cs.length === 1 ? ' over' : ''}`} role="group" aria-label="Card view">
+                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                          <GridIcon />
+                        </button>
+                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                          <ListIcon />
+                        </button>
+                      </div>
+                    )}
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => (
                         <Item

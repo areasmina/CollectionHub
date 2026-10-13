@@ -54,8 +54,14 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   await expect(page.locator('.dpanel')).toBeVisible();
-  await expect(page.locator('.cardsbar .viewsw')).toBeVisible();
-  await fits(page, ['.cardsbar']);
+  // grid / list lives in the first (commander) section and switches the view
+  const sw = page.locator('details.cat').first().locator('.viewsw.mini');
+  await expect(sw).toBeVisible();
+  await fits(page, ['.viewsw.mini']);
+  await sw.getByRole('button', { name: 'List view' }).click();
+  await expect(page.locator('ul.zlist').first()).toBeVisible();
+  await sw.getByRole('button', { name: 'Grid view' }).click();
+  await expect(page.locator('ul.zgrid').first()).toBeVisible();
   const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
   // the deck re-renders while card data loads: retry until the tile is settled in view
   await expect(async () => {
