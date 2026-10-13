@@ -47,7 +47,10 @@ export function ImportReport({ r }: { r: ImportResult }) {
 }
 
 export function Collection({ profile, name }: { profile: number; name: string }) {
-  const entries = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]) ?? [];
+  const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
+  const entries = list ?? [];
+  // Import folds away; it opens by itself for an empty binder (and stays open while an import runs).
+  const [importOpen, setImportOpen] = useState<boolean | null>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -133,14 +136,19 @@ export function Collection({ profile, name }: { profile: number; name: string })
           </p>
         )}
 
+        <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
+          <summary>
+            <span className="stripe" aria-hidden="true" />
+            <b>IMPORT CARDS</b>
+            <small>ManaBox CSV, CSV or a text list · add to or replace {name}</small>
+            <span className="chev" aria-hidden="true">
+              ▾
+            </span>
+          </summary>
         <section className="importrow">
           <div className="flyer gbox">
             <Doodles n={433} count={1} spots={[[70, 60]]} paper />
             <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
-            <div className="hd">
-              <div className="stripe" aria-hidden="true" />
-              <h2>IMPORT</h2>
-            </div>
             <p>ManaBox CSV, a CSV with name/quantity columns, or a text list (Moxfield, Archidekt, "1 Sol Ring").</p>
             <label className="btn ink file">
               {upload}
@@ -160,7 +168,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
           <div className="pastecol">
             <label className="notebook">
               <span>…or paste here</span>
-              <textarea className="ruled" rows={6} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
+              <textarea className="ruled" rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
             </label>
             <div className="btnrow">
               <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
@@ -175,6 +183,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
             {result && <ImportReport r={result} />}
           </div>
         </section>
+        </details>
 
         <section>
           <div className="cardshead">
