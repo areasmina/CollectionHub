@@ -4291,3 +4291,101 @@ ul.popnote .small {
     margin-top: 14px;
   }
 }
+
+/* Collection stats sized to their content on desktop (no empty box space); centred on phones */
+@media (min-width: 701px) {
+  .stats {
+    align-items: flex-start;
+  }
+  .stat {
+    flex: 0 0 auto;
+    min-width: 132px;
+    padding: 10px 22px 8px 16px;
+  }
+  .slip {
+    flex: 0 1 auto;
+    width: max-content;
+    max-width: 560px;
+    padding: 12px 150px 10px 18px;
+  }
+  .slip .small {
+    white-space: nowrap;
+  }
+}
+@media (max-width: 700px) {
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+/* GROUP BY SET / HIDE EMPTY SETS: toggle stickers instead of plain checkboxes (red when on) */
+.cardopts .check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px 0 10px;
+  border: 3px solid var(--text);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--an);
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: rotate(-1deg);
+  box-shadow: 3px 3px 0 var(--accent);
+  transition: background 0.15s, transform 0.1s;
+}
+.cardopts .check:nth-of-type(2) {
+  transform: rotate(1deg);
+}
+.cardopts .check input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid currentColor;
+  background: transparent;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+}
+.cardopts .check input::after {
+  content: '✕';
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  transform: scale(0);
+  transition: transform 0.12s;
+}
+.cardopts .check input:checked::after {
+  transform: scale(1);
+}
+.cardopts .check:has(input:checked) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.cardopts .check:has(input:focus-visible) {
+  outline: 3px solid var(--hazard);
+  outline-offset: 2px;
+}
+.cardopts .check:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cardopts .check,
+  .cardopts .check input::after {
+    transition: none;
+  }
+}
