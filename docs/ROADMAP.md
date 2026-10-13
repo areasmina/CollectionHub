@@ -54,6 +54,15 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 - ✅ Collection by set: release year + set symbol. Foil cards: holo wash, light streaks, glare that follows the pointer.
   Halftone on Discover art; lighter on the deck header. Card frames: scratchy sepia-grey pen line site-wide.
 
+## Shipped 2026-10-13 (third batch)
+
+- ✅ Collection page compacted: ticket-stub counters (cards · unique cards · commanders, crown doodle), content-sized
+  value slip, import folded into a bar, toggle-sticker options, grid tiles with spray-paint X quantity and corner price.
+- ✅ Rotating top-3 widget (most valuable, biggest holdings, 3-day risers / fallers) backed by daily local price
+  snapshots (`lib/pricewatch`, tested); collection prices refresh daily.
+- ✅ Set bars coloured by the set's dominant colour among your cards; uniform +/− squares on all category bars.
+- ✅ Discover header compact on desktop (one-line title, slim filter bar).
+
 ## Priority 0: security and data safety (do first)
 
 - ✅ **Leaked Google OAuth client secret** in `google sc.png` (committed 50fb302, private repo): file removed from the
