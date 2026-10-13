@@ -195,3 +195,23 @@ test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and 
     await expect(curve).toBeVisible();
   }
 });
+
+test('Decks list: right-click / hold a deck opens the deck menu (duplicate, share, delete…)', async ({ page }) => {
+  await go(page, 'decks');
+  const tile = page.locator('.dcard').first();
+  if (page.viewportSize()!.width >= 1200) await tile.click({ button: 'right' });
+  else {
+    const b = (await tile.boundingBox())!;
+    await tile.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: b.x + 30, clientY: b.y + 30, isPrimary: true });
+    await page.waitForTimeout(650);
+    await tile.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
+  }
+  const menu = page.getByRole('menu', { name: 'Tatyova Lands options' });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: /Share|Copy decklist/ })).toBeVisible();
+  await page.waitForTimeout(250);
+  await fits(page, ['.deckmenu']);
+  await menu.getByRole('menuitem', { name: 'Duplicate' }).click();
+  // duplicating from the list opens the copy
+  await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
+});

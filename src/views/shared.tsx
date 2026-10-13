@@ -109,7 +109,7 @@ export function PriceLink({ card, plain, tape }: { card?: Card; plain?: boolean;
   );
 }
 
-/** Right-click (mouse) or press-and-hold (touch, 0.5 s) opens a card menu at that spot; the click a hold ends in is dropped. */
+/** Right-click, or press and hold (touch or mouse, 0.5 s), opens a card menu at that spot; the click a hold ends in is dropped. */
 export function useMenuPress(onMenu?: (x: number, y: number) => void) {
   const timer = useRef<number>(undefined);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -123,7 +123,7 @@ export function useMenuPress(onMenu?: (x: number, y: number) => void) {
       onMenu(e.clientX, e.clientY);
     },
     onPointerDown: (e: React.PointerEvent) => {
-      if (e.pointerType === 'mouse') return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return; // mouse: right-click above, or hold the left button
       fired.current = false;
       start.current = { x: e.clientX, y: e.clientY };
       timer.current = window.setTimeout(() => {

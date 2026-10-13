@@ -1,6 +1,6 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { changeQty, removeFromDeck, removeOneFromBinder, setFoil } from '../lib/deckedit';
@@ -261,7 +261,7 @@ function Curve({ curve }: { curve: number[] }) {
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
 /** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
-function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
+function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st: DeckStats; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
   // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
   const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
@@ -341,6 +341,10 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
           {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
         </small>
       </div>
+      <div className="dsec dnotes">
+        <h3>note &amp; tags</h3>
+        <DeckNotes deck={deck} />
+      </div>
       </div>
     </aside>
   );
@@ -348,11 +352,37 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
 
 
 /** Everything you do to the deck itself (not how its cards are shown), tucked behind one button. */
+/** A deck in the Decks list: tap opens it; right-click or press and hold opens the deck menu. */
+function DeckTile({ onClick, onMenu, label, children }: { onClick: () => void; onMenu: (x: number, y: number) => void; label: string; children: ReactNode }) {
+  const press = useMenuPress(onMenu);
+  return (
+    <button className="dcard gbox hasmenu" onClick={onClick} {...press} aria-label={`${label}: open (right-click or hold for options)`}>
+      {children}
+    </button>
+  );
+}
+
 type MenuAt = { x: number; y: number; anchor?: DOMRect }; // a point (right-click / hold) or under the DECK box
 
 
-function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at: MenuAt; file: (ext: string) => string; onClose: () => void; onBack: () => void; onOpen: (id: number) => void }) {
+function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: MenuAt; onClose: () => void; onDeleted?: () => void; onOpen: (id: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
+  const [copied, setCopied] = useState(false);
+  // Phones: the system share sheet (WhatsApp, Messages…). Elsewhere: the decklist goes to the clipboard.
+  const canShare = typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
+  async function share() {
+    const text = deckText(deck);
+    if (canShare) {
+      close();
+      await navigator.share({ title: deck.name, text }).catch(() => {});
+      return;
+    }
+    await navigator.clipboard?.writeText(text).catch(() => {});
+    haptic('success');
+    setCopied(true);
+    setTimeout(close, 900);
+  }
   const close = onClose;
   // Keep it on screen: under (or above) the DECK box, else at the pressed spot.
   const [pos, setPos] = useState({ left: at.x, top: at.y });
@@ -408,6 +438,11 @@ function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at:
                   ⧉ Duplicate <small>a copy you can change freely</small>
                 </button>
               </li>
+              <li>
+                <button role="menuitem" onClick={share}>
+                  {copied ? '✓ Copied' : canShare ? '⇪ Share' : '⎘ Copy decklist'} <small>{copied ? 'paste it anywhere' : canShare ? 'send the decklist to a friend' : 'paste into a chat, Moxfield…'}</small>
+                </button>
+              </li>
               <li className="sep" role="separator" />
               <li>
                 <button role="menuitem" onClick={act(() => download(file('txt'), deckText(deck)))}>
@@ -427,7 +462,7 @@ function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at:
                   onClick={act(async () => {
                     if (confirm(`Delete deck "${deck.name}"?`)) {
                       await db.decks.delete(deck.id!);
-                      onBack();
+                      onDeleted?.();
                     }
                   })}
                 >
@@ -475,7 +510,6 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     return () => clearTimeout(t);
   }, [toast]);
   const pricesIn = byKey.size > 0;
-  const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
@@ -574,7 +608,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
         <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
 
-        {deckMenu && <DeckMenu deck={deck} at={deckMenu} file={file} onClose={() => setDeckMenu(null)} onBack={onBack} onOpen={onOpen} />}
+        {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
           <div className="lists">
@@ -633,8 +667,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               })}
           </div>
           <div className="dside">
-            <DeckPanel st={st} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
-            <DeckNotes deck={deck} />
+            <DeckPanel deck={deck} st={st} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
           </div>
         </div>
         {menu && <CardMenu deck={deck} s={s} at={menu} owned={s.mine.get(norm(menu.card.name)) ?? 0} onClose={() => setMenu(null)} onToast={setToast} />}
@@ -667,6 +700,8 @@ export function Decks(s: Shared) {
       return new Map(cs.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, withCheapest(c, cheap)!]));
     }, [decks]) ?? new Map<string, Card>();
   const [open, setOpen] = useState<number | null>(null);
+  const [listMenu, setListMenu] = useState<{ id: number; at: MenuAt } | null>(null);
+  const menuDeck = listMenu && decks.find((d) => d.id === listMenu.id);
   // Opened from elsewhere (a deck name on another screen): wait for the decks to load, then open it.
   const [navTick, setNavTick] = useState(0);
   useEffect(() => onOpenDeck(() => setNavTick((n) => n + 1)), []);
@@ -711,6 +746,7 @@ export function Decks(s: Shared) {
           <span className="cur">_</span>
         </p>
         <ShortAlert items={short} />
+        {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid">
           {decks.map((d, i) => {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
@@ -720,7 +756,7 @@ export function Decks(s: Shared) {
             const art = d.commander ?? c?.name ?? '';
             return (
               <li key={d.id}>
-                <button className="dcard gbox" onClick={() => setOpen(d.id!)}>
+                <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
                   {i === 0 && <Doodles n={433} count={2} spots={[[64, 50], [70, -8]]} paper />}
                   <span className="rule" aria-hidden="true" />
                   <span className="ytape" aria-hidden="true" />
@@ -739,7 +775,7 @@ export function Decks(s: Shared) {
                     {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
                   </span>
                   {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
-                </button>
+                </DeckTile>
               </li>
             );
           })}
