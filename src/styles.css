@@ -5711,3 +5711,67 @@ ul.popnote .small {
   font-size: 25px;
   min-width: 25px;
 }
+
+/* Colour identity buttons in the zine style: torn paper squares with halftone, inked mana symbols, stencil letters,
+   slight tilt; the selected ones get a strip of yellow tape and a hard black shadow. */
+.hero .colours {
+  gap: 8px;
+}
+.hero .colours button {
+  position: relative;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  clip-path: polygon(2% 4%, 30% 0, 62% 3%, 98% 0, 100% 34%, 97% 70%, 100% 97%, 66% 100%, 34% 96%, 0 100%, 3% 64%, 0 30%);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 0.9px, transparent 1.4px), linear-gradient(160deg, rgba(255, 255, 255, 0.18), transparent 45%, rgba(0, 0, 0, 0.22));
+  background-size: 4px 4px, 100% 100%;
+  color: #0e0e0e;
+  transform: rotate(-2deg);
+  transition: transform 0.12s;
+}
+.hero .colours button:nth-child(even) {
+  transform: rotate(2deg);
+}
+.hero .colours button:nth-child(1) { background-color: #ece0bb; }
+.hero .colours button:nth-child(2) { background-color: #3a86d6; color: #08223f; }
+.hero .colours button:nth-child(3) { background-color: #8a8a8e; color: #111; }
+.hero .colours button:nth-child(4) { background-color: #e0453a; color: #3a0905; }
+.hero .colours button:nth-child(5) { background-color: #3c9e5c; color: #062a12; }
+.hero .colours button svg {
+  filter: url(#rough) drop-shadow(1px 1px 0 rgba(255, 255, 255, 0.35));
+}
+.hero .colours button b {
+  font-family: 'Black Ops One', sans-serif;
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.hero .colours button[aria-pressed='false'] {
+  filter: saturate(0.6) brightness(0.85);
+}
+.hero .colours button[aria-pressed='true'] {
+  outline: none;
+  filter: drop-shadow(3px 3px 0 #0a0a0a);
+  transform: rotate(0deg) translateY(-3px) scale(1.05);
+}
+.hero .colours button[aria-pressed='true']::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 70%;
+  height: 9px;
+  translate: -50% 0;
+  rotate: -6deg;
+  background: rgba(255, 204, 0, 0.85);
+}
+.hero .colours button:focus-visible {
+  outline: 3px solid var(--hazard);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero .colours button {
+    transition: none;
+  }
+}
