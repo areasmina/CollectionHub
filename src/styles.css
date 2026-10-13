@@ -4014,6 +4014,8 @@ ul.popnote .small {
   overflow: hidden;
   --gx: 30%;
   --gy: 25%;
+  /* the glare trails the pointer gently instead of snapping to it */
+  transition: --gx 0.9s cubic-bezier(0.2, 0.7, 0.2, 1), --gy 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .foil::before {
   content: '';
@@ -4025,7 +4027,7 @@ ul.popnote .small {
   background-size: 200% 200%;
   mix-blend-mode: overlay;
   opacity: 0.6;
-  animation: holoshift 9s ease-in-out infinite alternate;
+  animation: holoshift 26s ease-in-out infinite alternate;
 }
 .foil::after {
   content: '';
@@ -4039,7 +4041,7 @@ ul.popnote .small {
   background-size: 100% 100%, 220% 220%;
   mix-blend-mode: screen;
   opacity: 0.75;
-  animation: glare 7s ease-in-out infinite alternate;
+  animation: glare 20s ease-in-out infinite alternate;
 }
 .foil.tracking::after {
   animation: none;
