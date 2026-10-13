@@ -358,7 +358,7 @@ export function EyeDoodle() {
 
       {/* the owner's cherub engraving above, its devil twin below */}
       <image className="cherub" href="/cherub.png" x={cx - 40} y="-24" width="80" height="83" />
-      <image className="imp" href="/imp.png" x={cx - 38} y="208" width="76" height="79" />
+      <image className="imp" href="/imp.png" x={cx - 42} y="208" width="84" height="81" />
     </svg>
   );
 }
