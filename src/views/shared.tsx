@@ -56,8 +56,16 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
   if (!src) return <span className={className} aria-hidden="true" />;
   const big = src.replace('/small/', '/normal/').replace('/art_crop/', '/normal/');
   const href = name ? scryfallUrl(name) : undefined;
+  // Foil: the glare follows the pointer (mouse or finger) while it's over the card.
+  const foil = className.includes('foil');
+  const track = (e: React.PointerEvent<HTMLSpanElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty('--gx', `${Math.round(((e.clientX - r.left) / r.width) * 100)}%`);
+    e.currentTarget.style.setProperty('--gy', `${Math.round(((e.clientY - r.top) / r.height) * 100)}%`);
+    e.currentTarget.classList.add('tracking');
+  };
   return (
-    <span className={className}>
+    <span className={className} onPointerMove={foil ? track : undefined} onPointerLeave={foil ? (e) => e.currentTarget.classList.remove('tracking') : undefined}>
       <img
         src={src}
         alt=""

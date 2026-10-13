@@ -4006,43 +4006,82 @@ ul.popnote .small {
   object-fit: contain;
 }
 
-/* Foil cards: a soft rainbow sheen drifting across the art (static when motion is reduced) */
+/* Foil cards, after real foils: (1) a pastel holo wash over the whole card, (2) thin diagonal light streaks,
+   (3) a bright glare hot spot with a rainbow rim. The hot spot follows the mouse (--gx/--gy set by Thumb)
+   and drifts on its own otherwise; everything is still when motion is reduced. */
 .foil {
   position: relative;
   overflow: hidden;
-}
-.foil::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 18%, rgba(255, 70, 190, 0.38) 34%, rgba(255, 240, 120, 0.42) 44%, rgba(80, 230, 255, 0.38) 54%, rgba(170, 120, 255, 0.3) 63%, transparent 80%);
-  background-size: 240% 100%;
-  mix-blend-mode: screen;
-  opacity: 0.85;
-  animation: foilsheen 5s ease-in-out infinite alternate;
+  --gx: 30%;
+  --gy: 25%;
 }
 .foil::before {
-  /* a faint fixed glint so a foil reads as foil even mid-sweep */
   content: '';
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), transparent 35%, transparent 70%, rgba(255, 255, 255, 0.14));
+  background: linear-gradient(125deg, #ff5fc8 0%, #ffd84a 10%, #5dffa8 20%, #4fc8ff 30%, #9a6bff 40%, #ff5fc8 50%, #ffd84a 60%, #5dffa8 70%, #4fc8ff 80%, #9a6bff 90%, #ff5fc8 100%);
+  background-size: 200% 200%;
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+  animation: holoshift 9s ease-in-out infinite alternate;
 }
-@keyframes foilsheen {
+.foil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 240, 0.6) 0%, rgba(255, 220, 140, 0.4) 6%, rgba(255, 110, 190, 0.3) 13%, rgba(110, 255, 200, 0.22) 19%, rgba(100, 190, 255, 0.18) 25%, transparent 38%),
+    repeating-linear-gradient(115deg, transparent 0 7%, rgba(255, 255, 255, 0.22) 8.5%, transparent 10.5%, transparent 14%, rgba(255, 255, 255, 0.12) 15%, transparent 16.5%);
+  background-size: 100% 100%, 220% 220%;
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  animation: glare 7s ease-in-out infinite alternate;
+}
+.foil.tracking::after {
+  animation: none;
+}
+@keyframes holoshift {
   from {
-    background-position: 100% 0;
+    background-position: 0% 0%;
   }
   to {
-    background-position: 0 0;
+    background-position: 100% 100%;
   }
 }
+@keyframes glare {
+  0% {
+    --gx: 22%;
+    --gy: 18%;
+    background-position: 0 0, 0% 0%;
+  }
+  50% {
+    --gx: 70%;
+    --gy: 45%;
+  }
+  100% {
+    --gx: 40%;
+    --gy: 80%;
+    background-position: 0 0, 100% 100%;
+  }
+}
+@property --gx {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 30%;
+}
+@property --gy {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 25%;
+}
 @media (prefers-reduced-motion: reduce) {
+  .foil::before,
   .foil::after {
     animation: none;
-    background-position: 45% 0;
   }
 }
 
