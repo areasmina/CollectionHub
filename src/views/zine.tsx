@@ -266,7 +266,7 @@ export function EyeDoodle() {
     [270, <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g>],
   ];
   return (
-    <svg className="eyedoodle" viewBox="0 0 360 250" aria-hidden="true">
+    <svg className="eyedoodle" viewBox="0 -16 360 272" aria-hidden="true">
       <defs>
         <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
@@ -324,6 +324,39 @@ export function EyeDoodle() {
         ))}
       </g>
 
+
+      {/* retro devotional babies: cherub above the eye, little devil below; bob in stop motion */}
+      <g filter="url(#eyeink)" stroke={ink} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round">
+        <g className="cherub" transform={`translate(${cx} 6) scale(0.9)`}>
+          <ellipse cx="0" cy="-19" rx="11" ry="3.5" fill="none" stroke={yellow} strokeWidth="3" />
+          <path d="M-8 4 C-26 -6 -30 6 -24 12 C-30 14 -26 22 -14 16 Z" fill={cream} />
+          <path d="M8 4 C26 -6 30 6 24 12 C30 14 26 22 14 16 Z" fill={cream} />
+          <path d="M-20 8 l6 2 M-22 13 l7 1 M20 8 l-6 2 M22 13 l-7 1" strokeWidth="1.2" />
+          <path d="M-9 8 C-12 20 -8 26 0 26 C8 26 12 20 9 8 Z" fill="#f2c7a2" />
+          <circle cx="0" cy="-3" r="11" fill="#f2c7a2" />
+          <path d="M-9 -8 q3 -6 6 -2 q2 -6 6 -1 q3 -5 6 1" fill="none" stroke="#b9792c" strokeWidth="2.4" />
+          <circle cx="-4" cy="-3" r="1.4" fill={ink} stroke="none" />
+          <circle cx="4" cy="-3" r="1.4" fill={ink} stroke="none" />
+          <circle cx="-7" cy="1" r="2.2" fill="#e88a7c" stroke="none" />
+          <circle cx="7" cy="1" r="2.2" fill="#e88a7c" stroke="none" />
+          <path d="M-2 3 q2 2 4 0" fill="none" strokeWidth="1.4" />
+          <path d="M-6 18 h12" stroke={cream} strokeWidth="4" />
+        </g>
+        <g className="imp" transform={`translate(${cx} 222) scale(0.9)`}>
+          <path d="M8 18 C22 22 26 10 30 4 l4 -2 l-2 6 l-4 -1" fill="none" strokeWidth="2.2" stroke={ink} />
+          <path d="M-8 4 C-24 -10 -30 2 -26 8 L-20 6 L-22 14 L-12 12 Z" fill="#5a2a2a" />
+          <path d="M8 4 C24 -10 30 2 26 8 L20 6 L22 14 L12 12 Z" fill="#5a2a2a" />
+          <path d="M-9 8 C-12 20 -8 26 0 26 C8 26 12 20 9 8 Z" fill={red} />
+          <circle cx="0" cy="-3" r="11" fill={red} />
+          <path d="M-8 -10 C-12 -16 -10 -20 -6 -22 C-7 -17 -5 -14 -3 -13 Z M8 -10 C12 -16 10 -20 6 -22 C7 -17 5 -14 3 -13 Z" fill={cream} />
+          <path d="M-6 -4 l4 1.5 M6 -4 l-4 1.5" strokeWidth="1.6" />
+          <circle cx="-4" cy="-1" r="1.4" fill={ink} stroke="none" />
+          <circle cx="4" cy="-1" r="1.4" fill={ink} stroke="none" />
+          <path d="M-4 4 q4 3 8 0" fill="none" strokeWidth="1.4" />
+          <path d="M-2 5 l1 2 l1 -2" fill={cream} strokeWidth="0.8" />
+          <path d="M-16 26 L-12 2 M-15 4 l-3 -6 M-12 2 l0 -7 M-9 4 l3 -6" fill="none" stroke={yellow} strokeWidth="2.2" />
+        </g>
+      </g>
       {/* orbiting moon, heart, star, card */}
       <g className="orbit" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
         {orbit.map(([deg, el]) => {
