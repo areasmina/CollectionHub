@@ -2,15 +2,16 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { statusOf, summarize } from '../lib/compare';
-import { db, type Card, type Cheap, type Deck } from '../lib/db';
+import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
+import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
 import { norm } from '../lib/names';
-import { cad, fetchedNote, PRICE_METHOD } from '../lib/prices';
-import { cheapest, resolveRows, withCheapest } from '../lib/scryfall';
+import { cad, fetchedNote } from '../lib/prices';
+import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, priceSum, Progress, SaltCell, ShortAlert, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, Tape, Title, Xgrain } from './zine';
+import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, type Shared } from './shared';
+import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -40,6 +41,146 @@ function DeckNotes({ deck }: { deck: Deck }) {
   );
 }
 
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+type Grouping = 'type' | 'mv';
+const useStored = <T extends string>(key: string, fallback: T, allowed: T[]): [T, (v: T) => void] => {
+  const [v, set] = useState<T>(() => {
+    try {
+      const got = localStorage.getItem(key) as T | null;
+      return got && allowed.includes(got) ? got : fallback;
+    } catch {
+      return fallback;
+    }
+  });
+  return [
+    v,
+    (x: T) => {
+      set(x);
+      try {
+        localStorage.setItem(key, x);
+      } catch {
+        /* per-device convenience only */
+      }
+    },
+  ];
+};
+
+/** Bracket estimate stamp; tap shows the reasons. */
+function BracketStat({ call }: { call: BracketCall }) {
+  return (
+    <div className="hstat bracket">
+      <span className="lbl">bracket</span>
+      <details>
+        <summary aria-label={`Estimated bracket ${call.bracket}. Show why`}>
+          <span className="bstamp">{ROMAN[call.bracket]}</span>
+          <small>estimate ▾</small>
+        </summary>
+        <ul className="popnote">
+          {call.reasons.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+          {call.gameChangers.length > 0 && (
+            <li>
+              Game Changers: <b>{call.gameChangers.join(', ')}</b>
+            </li>
+          )}
+          <li className="small">From the official bracket rules we can check. Two-card combos aren't checked; bracket I vs II and V depend on how the deck is meant to play.</li>
+        </ul>
+      </details>
+    </div>
+  );
+}
+
+/** Mana curve: non-land cards by mana value (7 = 7+). */
+function Curve({ curve }: { curve: number[] }) {
+  const max = Math.max(1, ...curve);
+  return (
+    <div className="curve" role="img" aria-label={`Mana curve: ${curve.map((n, i) => `${n} at ${i === 7 ? '7 or more' : i}`).join(', ')}`}>
+      {curve.map((n, i) => (
+        <span key={i} className="col">
+          <span className="n">{n || ''}</span>
+          <span className="bar" style={{ height: `${(n / max) * 100}%` }} />
+          <span className="mv">{i === 7 ? '7+' : i}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
+
+/** Side panel: curve, types, colour pips, roles and a short read of the deck. */
+function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
+  const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
+  return (
+    <aside className="dpanel" aria-label="Deck analysis">
+      <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
+      <h2>ANALYSIS</h2>
+      <div className="dsec">
+        <h3>to complete</h3>
+        <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
+          <span className="wedge" aria-hidden="true">
+            <svg width="24" height="22" viewBox="0 0 24 22">
+              <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
+              <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
+            </svg>
+          </span>
+          <span className="amt">
+            <small>≈</small>
+            {pricesIn ? cad(missingCost) : 'CA$—'}
+          </span>
+        </div>
+        <small className="fetched">
+          {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
+        </small>
+      </div>
+      <div className="dsec">
+        <h3>
+          mana curve <small>avg {st.avgMv.toFixed(2)}</small>
+        </h3>
+        <Curve curve={st.curve} />
+      </div>
+      <div className="dsec">
+        <h3>types</h3>
+        <ul className="dtypes">
+          {GROUPS.filter((g) => st.groups.get(g)).map((g) => (
+            <li key={g}>
+              <span>{g}</span>
+              <span className="dots" aria-hidden="true" />
+              <b>{st.groups.get(g)}</b>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {pipTotal > 0 && (
+        <div className="dsec">
+          <h3>colour pips</h3>
+          <div className="pipbar" role="img" aria-label={Object.entries(st.pips).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')}>
+            {Object.entries(st.pips)
+              .filter(([, n]) => n)
+              .map(([k, n]) => (
+                <span key={k} style={{ flex: n, background: PIPC[k], color: k === 'W' ? '#1a1a1a' : '#fff' }}>
+                  {k} {n}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+      <div className="dsec">
+        <h3>the read</h3>
+        <ul className="dread">
+          {analysis(st).map((a) => (
+            <li key={a.text} className={a.tone}>
+              {a.text}
+            </li>
+          ))}
+        </ul>
+        <small className="fetched">Roles are counted from rules text, so treat them as a rough guide.{st.unknown ? ` ${st.unknown} cards still loading.` : ''}</small>
+      </div>
+    </aside>
+  );
+}
+
 function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: () => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
   const byKey =
@@ -47,16 +188,42 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
     new Map<string, Card>();
   const cheap = useLiveQuery(async () => new Map((await db.cheap.bulkGet(deck.cards.map((c) => norm(c.name)))).filter(Boolean).map((c) => [c!.key, c!])), [deck]) ?? new Map<string, Cheap>();
   const cardOf = (name: string) => withCheapest(byKey.get(norm(name)), cheap);
+  const [gc, setGc] = useState<Set<string> | null | undefined>(undefined);
   // Decks saved from EDHREC hold names only: look up any card not cached yet (images), then cheapest prices.
   useEffect(() => {
     resolveRows(deck.cards.map((c) => ({ name: c.name, qty: c.qty })), () => {})
       .then(() => cheapest(deck.cards.map((c) => c.name)))
       .catch(() => {});
+    gameChangers().then(setGc);
   }, [deck.id]);
+  const [view, setView] = useStored<'grid' | 'list'>('ch:view', 'grid', ['grid', 'list']);
+  const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', ['type', 'mv']);
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardOf(c.name), qty: c.qty })));
+  const pricesIn = byKey.size > 0;
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
-  const cards = [...deck.cards].sort((a, b) => Number(b.name === deck.commander) - Number(a.name === deck.commander));
+  const st = deckStats(deck.cards, cardOf, deck.commander);
+  const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
+  const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
+  const ci = cmdr?.ci ?? [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
+
+  // Moxfield-style sections: by card type (commander first) or by mana value (lands last).
+  const sections = new Map<string, DeckCard[]>();
+  const keyOf = (c: DeckCard) => {
+    const card = cardOf(c.name);
+    if (c.name === deck.commander) return 'Commander';
+    if (grouping === 'type') return groupOf(card?.type);
+    if (!card) return 'Other';
+    if (isLand(card.type)) return 'Lands';
+    const mv = Math.round(card.cmc ?? 0);
+    return mv >= 7 ? 'Mana value 7+' : `Mana value ${mv}`;
+  };
+  const order = grouping === 'type' ? [...GROUPS] : ['Commander', ...Array.from({ length: 7 }, (_, i) => `Mana value ${i}`), 'Mana value 7+', 'Lands', 'Other'];
+  for (const k of order) sections.set(k, []);
+  const sorted = [...deck.cards].sort((a, b) => (cardOf(a.name)?.cmc ?? 0) - (cardOf(b.name)?.cmc ?? 0) || a.name.localeCompare(b.name));
+  for (const c of sorted) sections.get(keyOf(c))?.push(c);
+  const Item = view === 'grid' ? CardTile : CardLine;
+
   return (
     <>
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
@@ -67,86 +234,123 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
           </svg>
           DECKS
         </button>
-        <Title text={deck.name.toUpperCase().slice(0, 40)} label={deck.name} size={deck.name.length > 24 ? 34 : 46} seed={33} />
-        {deck.commander && <p className="count">Commander: {deck.commander}</p>}
-        <section className="strip" aria-label="Deck totals">
-          <div className="cell wide">
-            <span className="lbl">COLLECTION MATCH</span>
-            <div className="match" role="img" aria-label={`${sum.pct}% owned in ${s.binderName}`}>
-              <span className="burst" aria-hidden="true" />
-              <span className="num">{sum.pct}%</span>
-              <span className="meter">
-                <span className="cells10" aria-hidden="true">
-                  {Array.from({ length: 10 }, (_, i) => (
-                    <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
-                  ))}
+
+        <section className={`chero dhero${cmdr?.img ? '' : ' noimg'}`}>
+          <span className="worn" aria-hidden="true" />
+          {cmdr?.img && (
+            <div className="cimg gbox">
+              <span className="xart cmdrimg">
+                <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
+                <a href={scryfallUrl(cmdr.name)} target="_blank" rel="noreferrer" title="Open on Scryfall">
+                  <img src={cmdr.img.replace('/small/', '/normal/')} alt={`${cmdr.name}: open on Scryfall`} />
+                </a>
+                <Xgrain />
+              </span>
+            </div>
+          )}
+          <div className="cright">
+            <div className="ctitle">
+              <div className="banner ht" aria-hidden="true" />
+              <h1 aria-label={deck.name}>
+                <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} breakWords />
+              </h1>
+              <Pips ci={ci} size={30} />
+            </div>
+            <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
+              <BracketStat call={call} />
+            </HeroStats>
+            <div className="cmeta">
+              <span className="typed">
+                {[deck.commander ? `COMMANDER: ${deck.commander.toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
+              </span>
+              <span className="score">
+                <span className="mono">
+                  YOU OWN {sum.owned} OF {sum.total}
+                  <br />
+                  IN {s.binderName.toUpperCase()}
                 </span>
-                <small>
-                  {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
-                </small>
+                <span className="pct">
+                  <span className="bigpct">{sum.pct}%</span>
+                  <RiseBars pct={sum.pct} />
+                </span>
               </span>
             </div>
           </div>
-          <div className="cell">
-            <span className="lbl">MISSING</span>
-            <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
-              <span className="wedge" aria-hidden="true">
-                <svg width="24" height="22" viewBox="0 0 24 22">
-                  <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-                  <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-                </svg>
-              </span>
-              <span className="amt">
-                <small>≈</small>
-                {byKey.size ? cad(missingCost) : 'CA$—'}
-              </span>
-            </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">DECK PRICE</span>
-            <span className="price tapey y1 t2 big">{byKey.size ? `≈${cad(deckCost)}` : 'CA$—'}</span>
-            <small className="fetched" title={PRICE_METHOD}>
-              cheapest printings · {fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}
-            </small>
-          </div>
-          <SaltCell names={deck.cards.map((c) => c.name)} />
-          <div className="cell">
-            <span className="lbl">EXPORT</span>
-            <div className="btnrow">
-              <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
-                TEXT
-              </button>
-              <button className="sticker" onClick={() => download(file('csv'), deckCsv(deck), 'text/csv')}>
-                CSV
-              </button>
-            </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">DELETE</span>
-            <button
-              className="stencil"
-              onClick={async () => {
-                if (confirm(`Delete deck "${deck.name}"?`)) {
-                  await db.decks.delete(deck.id!);
-                  onBack();
-                }
-              }}
-            >
-              DELETE DECK
+          {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
+        </section>
+
+        <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
+
+        <div className="dtools" role="toolbar" aria-label="Deck view">
+          <div className="viewsw" role="group" aria-label="Card view">
+            <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+              GRID
+            </button>
+            <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+              LIST
             </button>
           </div>
-        </section>
-        <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
-        <DeckNotes deck={deck} />
-        <div className="deckgrid">
+          <div className="viewsw" role="group" aria-label="Group cards by">
+            <button aria-pressed={grouping === 'type'} onClick={() => setGrouping('type')}>
+              TYPE
+            </button>
+            <button aria-pressed={grouping === 'mv'} aria-label="Mana value" onClick={() => setGrouping('mv')}>
+              <span className="wideonly">MANA VALUE</span>
+              <span className="narrowonly" aria-hidden="true">
+                MV
+              </span>
+            </button>
+          </div>
+          <span className="grow" />
+          <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
+            EXPORT TEXT
+          </button>
+          <button className="sticker" onClick={() => download(file('csv'), deckCsv(deck), 'text/csv')}>
+            CSV
+          </button>
+          <button
+            className="stencil"
+            onClick={async () => {
+              if (confirm(`Delete deck "${deck.name}"?`)) {
+                await db.decks.delete(deck.id!);
+                onBack();
+              }
+            }}
+          >
+            DELETE
+          </button>
+        </div>
+
+        <div className="deckgrid after-sw">
           <div className="lists">
-            <div className="cat">
-              <ul className="zlist">
-                {cards.map((c) => (
-                  <CardLine key={c.name} name={c.name} card={cardOf(c.name)} s={s} note={c.qty > 1 ? `×${c.qty}` : c.name === deck.commander ? 'Commander' : ''} />
-                ))}
-              </ul>
-            </div>
+            {[...sections]
+              .filter(([, cs]) => cs.length)
+              .map(([h, cs]) => {
+                const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
+                return (
+                  <details key={h} className="cat" open>
+                    <summary>
+                      <span className="pm" aria-hidden="true" />
+                      <span className="h">
+                        {h} ({cs.reduce((n, c) => n + c.qty, 0)})
+                      </span>
+                      <span className="dots" aria-hidden="true" />
+                      <span className="n">
+                        {ls.owned}/{ls.total} owned
+                      </span>
+                    </summary>
+                    <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
+                      {cs.map((c) => (
+                        <Item key={c.name} name={c.name} card={cardOf(c.name)} s={s} note={c.qty > 1 ? `×${c.qty}` : call.gameChangers.includes(c.name) ? 'Game Changer' : ''} />
+                      ))}
+                    </ul>
+                  </details>
+                );
+              })}
+          </div>
+          <div className="dside">
+            <DeckPanel st={st} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
+            <DeckNotes deck={deck} />
           </div>
         </div>
       </main>

@@ -37,6 +37,8 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 - ✅ Card links: commander image → EDHREC; owned cards → Scryfall; missing cards → swap note + Scryfall.
 - ✅ Deck price (whole + missing) on commander and deck pages and the deck list; deck note + tags (synced); salt
   (EDHREC top-1,000 salt list, sum; cards outside it count 0, stated in the UI).
+- ✅ Commander page: deck price and salt moved from the white strip to under the commander's name (`HeroStats`); the
+  strip keeps bracket, budget, collection match, missing cost and Save.
 - 🟡 Top ticker banner: Discover page only, fixed slogans, decorative (aria-hidden). Not yet on every page, no
   updates / collection insights.
 
@@ -75,8 +77,11 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 5. ✅ Collection Match in the commander header (owned of total, %, missing, missing cost) + copies alert.
 6. ⬜ Suggested Deck (5.1): scan B3/B4/B5 × budgets, pick the most-owned page, build a 100-card deck from owned cards
    first, fill gaps with owned substitutes, list purchases separately.
-7. 🟡 My Decks: import text, view, price, missing, note/tags, export, delete. Missing: edit, rename, duplicate,
-   create from scratch, analysis, cards the import couldn't match are dropped from the deck.
+7. 🟡 My Decks: import text, view, price, missing, note/tags, export, delete. Deck page rebuilt (Moxfield-like):
+   commander-style header (commander art, ransom name, pips, price · salt · bracket under the name, owned %), grid/list,
+   group by type or mana value with counts, analysis panel (cost to complete, mana curve, types, colour pips, a short
+   read against the usual 35–38 lands / 9–12 ramp / 9–12 draw / 7–10 removal / 2–4 wipes; roles counted from rules
+   text). Missing: edit, rename, duplicate, create from scratch; cards the import couldn't match are dropped.
 8. ⬜ Legality and completeness: 100 cards, singleton, colour identity, banned, commander legality.
 9. 🟡 Owned vs missing is shown everywhere (colour vs greyed, TO BUY receipt); purchases not yet a separate section of a
    generated deck.
@@ -87,8 +92,9 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
    shown.
 2. 🟡 Pricing: provider (TCGplayer via Scryfall), rate (ECB, date), method and fetch dates shown. Missing: Scryfall's
    own update time (not in its API), original USD next to CA$.
-3. 🟡 Salt ✅ (EDHREC). Bracket estimate ⬜ (Game Changers list, two-card combos via Commander Spellbook, fast mana,
-   tutors; confidence and reasons shown).
+3. 🟡 Salt ✅ (EDHREC). Bracket estimate ✅ on the deck page (`bracketOf`, tested): Game Changers (Scryfall
+   `is:gamechanger`, cached a week), mass land denial, extra turns, tutors; floor II, never V; reasons shown.
+   Two-card combos (Commander Spellbook) ⬜.
 4. ⬜ Advanced collection search (Scryfall-style fields we actually store; no full query language).
 5. ⬜ Collection analytics + daily value snapshots (history starts at the first snapshot) — in the ≡ menu.
 6. ⬜ Deck Simulator (opening hands, mulligans, draws, exact hypergeometric odds, Monte Carlo with a seed) — in ≡.

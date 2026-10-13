@@ -150,3 +150,27 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
   }
   return { matched, unmatched };
 }
+
+/** The official Commander Game Changers list (Scryfall's is:gamechanger), keyed by norm(name), cached a week. null when offline. */
+let gcLoad: Promise<Set<string> | null> | null = null;
+export function gameChangers(): Promise<Set<string> | null> {
+  return (gcLoad ??= (async () => {
+    const hit = await db.edhrec.get('scryfall:gamechangers');
+    if (hit && Date.now() - hit.at < WEEK) return new Set(hit.data as string[]);
+    try {
+      const keys: string[] = [];
+      let url: string | undefined = `${API}/cards/search?q=${encodeURIComponent('is:gamechanger')}`;
+      while (url) {
+        const page: any = await req(url, {}, 1);
+        for (const c of page.data) keys.push(norm(c.name));
+        url = page.has_more ? page.next_page : undefined;
+      }
+      if (!keys.length) throw new Error('empty');
+      await db.edhrec.put({ path: 'scryfall:gamechangers', data: keys, at: Date.now() });
+      return new Set(keys);
+    } catch {
+      gcLoad = null; // try again next time
+      return hit ? new Set(hit.data as string[]) : null;
+    }
+  })());
+}

@@ -3016,10 +3016,10 @@ button.logo {
   padding: 6px 14px;
   margin-top: 4px;
 }
-.cell.salt details {
+.salt details {
   position: relative;
 }
-.cell.salt summary {
+.salt summary {
   list-style: none;
   cursor: pointer;
   min-height: 44px;
@@ -3027,21 +3027,21 @@ button.logo {
   align-items: baseline;
   gap: 8px;
 }
-.cell.salt summary::-webkit-details-marker {
+.salt summary::-webkit-details-marker {
   display: none;
 }
-.cell.salt .amt {
+.salt .amt {
   font-family: var(--an);
   font-size: 30px;
   color: #19d3e6;
   text-shadow: 2px 2px 0 var(--ink);
 }
-.cell.salt small {
+.salt small {
   font-family: var(--se);
   font-size: 12px;
   color: var(--muted);
 }
-.cell.salt ol {
+.salt ol {
   position: absolute;
   z-index: 20;
   top: 100%;
@@ -3057,10 +3057,10 @@ button.logo {
   box-shadow: 4px 4px 0 var(--ink);
   transform: rotate(-1deg);
 }
-.cell.salt ol b {
+.salt ol b {
   color: var(--accent);
 }
-.cell.salt ol .small {
+.salt ol .small {
   list-style: none;
   margin: 6px 0 0 -16px;
   font-size: 11px;
@@ -3147,10 +3147,373 @@ button.logo {
   align-items: center;
 }
 
-.cell .fetched {
+.fetched {
   display: block;
   margin-top: 4px;
   font-family: var(--se);
   font-size: 11px;
   color: var(--muted);
+}
+
+/* Header stats under the commander / deck name: price tape, salt, bracket */
+.hstats {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px 34px;
+  padding: 0 4px 0 24px;
+  cursor: default;
+}
+.hstat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.hstat > .lbl {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.hstat .price.tapey.big {
+  margin-top: 2px;
+}
+.hstat.salt .amt {
+  line-height: 44px;
+}
+.hstat.salt summary {
+  align-items: center;
+}
+.hstat.bracket summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hstat.bracket summary::-webkit-details-marker {
+  display: none;
+}
+.hstat.bracket details {
+  position: relative;
+}
+.bstamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 40px;
+  padding: 0 8px;
+  border: 3px solid var(--accent);
+  color: var(--accent);
+  font-family: 'Shippori Mincho B1', serif;
+  font-weight: 800;
+  font-size: 24px;
+  transform: rotate(-4deg);
+  background: radial-gradient(rgba(230, 0, 18, 0.18) 1px, transparent 1.5px) 0 0/4px 4px;
+}
+.hstat.bracket small {
+  font-family: var(--se);
+  font-size: 12px;
+  color: var(--muted);
+}
+.popnote {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  left: 0;
+  width: max-content;
+  max-width: min(340px, 86vw);
+  margin: 4px 0 0;
+  padding: 10px 14px 10px 30px;
+  background: #f4efe2;
+  color: #141414;
+  font-family: var(--se);
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+.popnote b {
+  color: var(--accent);
+}
+.popnote li + li {
+  margin-top: 4px;
+}
+.popnote .small {
+  list-style: none;
+  margin: 6px 0 0 -16px;
+  font-size: 11px;
+  color: #5c5c5c;
+}
+@media (max-width: 700px) {
+  .hstats {
+    padding: 0 4px;
+    gap: 12px 22px;
+  }
+}
+
+/* Deck page: commander-style header, toolbar, cards + analysis side panel (Moxfield-like) */
+.dhero.noimg {
+  grid-template-columns: minmax(0, 1fr);
+}
+.dhero .ctitle {
+  cursor: default;
+}
+.dhero > .stamp {
+  right: 22px;
+  top: 18px;
+  z-index: 3;
+  font-size: 22px;
+  transform: rotate(-12deg);
+  background: rgba(10, 10, 10, 0.55);
+}
+.dtools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+}
+.dtools .viewsw {
+  margin-top: 0;
+}
+.dtools .viewsw button {
+  min-width: 80px;
+  padding: 0 12px;
+}
+.dtools .grow {
+  flex: 1;
+}
+.dside {
+  flex: 1 1 300px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+@media (min-width: 1000px) {
+  .dside {
+    flex: 0 0 340px;
+    position: sticky;
+    top: 16px;
+  }
+}
+.dside .decknotes {
+  margin: 0;
+}
+.dpanel {
+  position: relative;
+  background: var(--surface);
+  border: 3px solid var(--text);
+  box-shadow: 6px 6px 0 var(--accent);
+  padding: 18px 16px 16px;
+}
+.dpanel h2 {
+  margin: 0 0 6px;
+  font-family: var(--an);
+  font-size: 30px;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-shadow: 3px 3px 0 var(--accent);
+}
+.dsec {
+  padding: 14px 0 4px;
+  border-top: 1px dashed var(--raised);
+  margin-top: 10px;
+}
+.dsec h3 {
+  margin: 0 0 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.dsec h3 small {
+  font-family: var(--se);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.curve {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+}
+.curve .col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+}
+.curve .bar {
+  display: block;
+  min-height: 2px;
+  background: radial-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1.5px) 0 0/5px 5px, var(--accent);
+  border: 2px solid var(--text);
+  transform: skewX(-6deg);
+  transition: height 0.3s ease;
+}
+.curve .n,
+.curve .mv {
+  text-align: center;
+  font-family: var(--an);
+  font-size: 14px;
+  line-height: 1;
+}
+.curve .mv {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dtypes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dtypes li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--se);
+  font-size: 15px;
+}
+.dtypes .dots {
+  flex: 1;
+  border-bottom: 2px dotted var(--raised);
+}
+.dtypes b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 18px;
+}
+.pipbar {
+  display: flex;
+  height: 30px;
+  border: 2px solid var(--text);
+  overflow: hidden;
+}
+.pipbar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pipbar span + span {
+  border-left: 2px solid var(--text);
+}
+.dread {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dread li {
+  padding-left: 22px;
+  position: relative;
+}
+.dread li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--an);
+}
+.dread li.ok::before {
+  content: '✓';
+  color: #2f9e57;
+}
+.dread li.low::before {
+  content: '▼';
+  color: var(--hazard);
+}
+.dread li.high::before {
+  content: '▲';
+  color: var(--accent);
+}
+@media (max-width: 700px) {
+  .dhero > .stamp {
+    font-size: 15px;
+    right: 10px;
+    top: 10px;
+  }
+  .dtools .grow {
+    display: none;
+  }
+}
+ul.popnote {
+  list-style: none;
+  padding-left: 14px;
+}
+ul.popnote li::before {
+  content: '— ';
+  color: var(--accent);
+}
+ul.popnote li.small::before {
+  content: '';
+}
+ul.popnote .small {
+  margin-left: 0;
+}
+/* Phones/tablets: analysis before the card list (it would sit under 100 cards otherwise), toolbar in two even rows */
+@media (max-width: 999px) {
+  .dside {
+    order: -1;
+  }
+}
+@media (max-width: 700px) {
+  .dtools {
+    gap: 10px;
+  }
+  .dtools .viewsw {
+    flex: 1 1 140px;
+  }
+  .dtools .viewsw button {
+    flex: 1;
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 15px;
+  }
+  .dtools .sticker,
+  .dtools .stencil {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+}
+.narrowonly {
+  display: none;
+}
+@media (max-width: 700px) {
+  .wideonly {
+    display: none;
+  }
+  .narrowonly {
+    display: inline;
+  }
 }

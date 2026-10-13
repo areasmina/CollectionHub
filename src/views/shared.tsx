@@ -3,7 +3,7 @@ import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
-import { cad, finishUsd, rateNote, toCad } from '../lib/prices';
+import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
 
 export interface Shared {
   profile: number;
@@ -187,14 +187,33 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
   </div>
 );
 
-/** Strip cell: the deck's salt (sum of EDHREC salt scores); tap/hover shows the saltiest cards. */
-export function SaltCell({ names }: { names: string[] }) {
+/** Header stats under a commander / deck name: deck price (yellow tape), salt, and optionally the bracket. */
+export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: React.ReactNode }) {
+  return (
+    <div className="hstats" onClick={(e) => e.stopPropagation()}>
+      <div className="hstat">
+        <span className="lbl">deck price</span>
+        <span className="price tapey y1 t2 big" aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
+          {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
+        </span>
+        <small className="fetched" title={PRICE_METHOD}>
+          cheapest printings · {fetched}
+        </small>
+      </div>
+      <SaltStat names={names} />
+      {children}
+    </div>
+  );
+}
+
+/** The deck's salt (sum of EDHREC salt scores); tap/hover shows the saltiest cards. */
+export function SaltStat({ names }: { names: string[] }) {
   const [salt, setSalt] = useState<Map<string, number> | null>(null);
   useEffect(() => void saltMap().then(setSalt), []);
   const s = salt && deckSalt(names, salt);
   return (
-    <div className="cell salt">
-      <span className="lbl">SALT</span>
+    <div className="hstat salt">
+      <span className="lbl">salt</span>
       {!s ? (
         <span className="amt">…</span>
       ) : (
@@ -204,7 +223,7 @@ export function SaltCell({ names }: { names: string[] }) {
             <small>{s.top.length ? 'saltiest ▾' : 'no salty cards'}</small>
           </summary>
           {s.top.length > 0 && (
-            <ol>
+            <ol className="popnote">
               {s.top.map((c) => (
                 <li key={c.name}>
                   {c.name} <b>{c.salt.toFixed(2)}</b>
