@@ -3689,3 +3689,22 @@ ul.popnote .small {
     flex: 0 0 auto;
   }
 }
+/* Phones: the tag row scrolls inside the frame and fades out at the right (as on desktop) instead of widening the header */
+@media (max-width: 700px) {
+  .chero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cmeta,
+  .cmeta .builtaround,
+  .chero .hscroll {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .chero .hscroll {
+    mask-image: linear-gradient(90deg, #000 78%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 78%, transparent);
+  }
+}
+.hscroll {
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
