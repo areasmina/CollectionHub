@@ -5242,7 +5242,7 @@ ul.popnote .small {
   .eyedoodle {
     width: 300px;
     height: auto;
-    margin: -12px 2% -14px 0;
+    margin: -16px 2% -18px 0;
   }
 }
 @media (max-width: 1099px) {
@@ -5311,14 +5311,14 @@ ul.popnote .small {
   z-index: 1;
 }
 
-/* Eye art motion: stop-motion fire (3 drawn frames), roaming iris + blink, slow orbit of moon / heart / star / card */
+/* Eye art motion: slow stop-motion fire (3 drawn frames, ~0.7 s each), roaming iris + blink, tilted orbit,
+   bobbing cherub / devil in steps. */
 .eyedoodle .ef {
   opacity: 0;
-  animation: ef 0.42s steps(1) infinite;
+  animation: ef 2.1s steps(1) infinite;
 }
-.eyedoodle .ef.f0 { animation-delay: 0s; }
-.eyedoodle .ef.f1 { animation-delay: -0.14s; }
-.eyedoodle .ef.f2 { animation-delay: -0.28s; }
+.eyedoodle .ef.f1 { animation-delay: -1.4s; }
+.eyedoodle .ef.f2 { animation-delay: -0.7s; }
 @keyframes ef {
   0% { opacity: 1; }
   33.3% { opacity: 0; }
@@ -5326,66 +5326,66 @@ ul.popnote .small {
 .eyedoodle .eyeball {
   transform-box: fill-box;
   transform-origin: center;
-  animation: blink 6s infinite;
+  animation: blink 7s infinite;
 }
 @keyframes blink {
   0%, 46%, 50%, 92%, 100% { transform: scaleY(1); }
   48%, 94% { transform: scaleY(0.08); }
 }
 .eyedoodle .iris {
-  animation: look 9s steps(1) infinite;
+  animation: look 10s steps(1) infinite;
 }
 @keyframes look {
   0% { transform: translate(0, 0); }
-  14% { transform: translate(-16px, -3px); }
-  30% { transform: translate(-16px, 5px); }
+  14% { transform: translate(-15px, -3px); }
+  30% { transform: translate(-15px, 5px); }
   44% { transform: translate(0, 0); }
-  58% { transform: translate(17px, -4px); }
-  72% { transform: translate(9px, 7px); }
-  86% { transform: translate(0, -7px); }
+  58% { transform: translate(16px, -4px); }
+  72% { transform: translate(9px, 6px); }
+  86% { transform: translate(0, -6px); }
 }
-.eyedoodle .orbit {
-  transform-origin: 180px 120px;
-  animation: orbit 36s linear infinite;
+.eyedoodle .spin {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: orbit 40s linear infinite;
 }
-.eyedoodle .upright {
+.eyedoodle .unspin {
   transform-box: fill-box;
   transform-origin: center;
-  animation: orbit 36s linear infinite reverse;
+  animation: orbit 40s linear infinite reverse;
 }
 @keyframes orbit {
   to { transform: rotate(360deg); }
+}
+.eyedoodle .orbitlayer.front {
+  filter: drop-shadow(2px 4px 2px rgba(0, 0, 0, 0.45));
+}
+.eyedoodle .cherub,
+.eyedoodle .imp {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bob 2.8s steps(1) infinite;
+}
+.eyedoodle .imp {
+  animation-delay: -1.4s;
+}
+@keyframes bob {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(0, -3px) rotate(-2deg); }
+  50% { transform: translate(0, -1px) rotate(0deg); }
+  75% { transform: translate(0, 2px) rotate(2deg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .eyedoodle .ef,
   .eyedoodle .eyeball,
   .eyedoodle .iris,
-  .eyedoodle .orbit,
-  .eyedoodle .upright {
+  .eyedoodle .spin,
+  .eyedoodle .unspin,
+  .eyedoodle .cherub,
+  .eyedoodle .imp {
     animation: none;
   }
   .eyedoodle .ef.f0 {
     opacity: 1;
-  }
-}
-
-.eyedoodle .cherub,
-.eyedoodle .imp {
-  transform-box: fill-box;
-  animation: bob 1.6s steps(1) infinite;
-}
-.eyedoodle .imp {
-  animation-delay: -0.8s;
-}
-@keyframes bob {
-  0% { translate: 0 0; rotate: 0deg; }
-  25% { translate: 0 -3px; rotate: -3deg; }
-  50% { translate: 0 -1px; rotate: 0deg; }
-  75% { translate: 0 2px; rotate: 3deg; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .eyedoodle .cherub,
-  .eyedoodle .imp {
-    animation: none;
   }
 }

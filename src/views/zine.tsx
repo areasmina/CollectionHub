@@ -229,10 +229,10 @@ export const RiseBars = ({ pct }: { pct: number }) => (
 export const Tape = ({ style }: { style: React.CSSProperties }) => <span aria-hidden="true" className="tape" style={style} />;
 
 
-/** Discover header art in the owner's style, drawn straight onto the page (no panel): a faded landscape (volcano,
- *  hills, castle, dragon) melting into the dark, a flaming eye that looks around and blinks, stop-motion fire, and a
- *  moon, heart, star and card orbiting it. Wobbly ink via feDisplacementMap. Animations live in styles.css
- *  (.eyedoodle …) and stop under prefers-reduced-motion. Decorative. */
+/** Discover header art in the owner's style: a flaming eye over a faded mountain ridge, stop-motion fire, a moon,
+ *  flaming heart, star and card orbiting on a tilted ring (passing behind the eye on the far side and in front, with a
+ *  shadow, on the near side), the owner's cherub engraving above and its devil twin below. Animations live in
+ *  styles.css (.eyedoodle …) and stop under prefers-reduced-motion. Decorative. */
 export function EyeDoodle() {
   const ink = '#1c120c';
   const red = '#c9402a';
@@ -241,7 +241,7 @@ export function EyeDoodle() {
   const teal = '#3c8a90';
   const cream = '#f3e6c9';
   const cx = 180;
-  const cy = 120;
+  const cy = 130;
   const tongues = (r1: number, rLong: number, rShort: number, n: number, rot: number, wob: number) =>
     Array.from({ length: n }, (_, i) => {
       const a = ((i / n) * 360 + rot) * (Math.PI / 180);
@@ -258,53 +258,80 @@ export function EyeDoodle() {
     </g>
   );
   const star = (r: number) => `M0 ${-r} Q${r * 0.15} ${-r * 0.15} ${r} 0 Q${r * 0.15} ${r * 0.15} 0 ${r} Q${-r * 0.15} ${r * 0.15} ${-r} 0 Q${-r * 0.15} ${-r * 0.15} 0 ${-r}Z`;
-  // orbiting things sit on a 100px ring; each counter-rotates to stay upright
-  const orbit: [number, React.ReactNode][] = [
+  const items: [number, React.ReactNode][] = [
     [0, <path d="M6 -15 A16 16 0 1 0 6 15 A18 18 0 0 1 6 -15Z" fill={yellow} />],
     [90, <g><path d="M-6 -8 C-10 -15 -5 -20 -2 -23 C-3 -17 1 -15 1 -11 C3 -17 6 -20 9 -22 C8 -16 10 -12 8 -7Z" fill={orange} /><path d="M0 13 C-7 7 -16 1 -14 -6 C-13 -12 -4 -13 0 -6 C4 -13 13 -12 14 -6 C16 1 7 7 0 13Z" fill={red} /></g>],
     [180, <path d={star(11)} fill={yellow} />],
     [270, <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g>],
   ];
+  // Tilted ring: the ring is squashed (scale y 0.36) and spun; each item undoes the spin and the squash so it stays
+  // upright. Drawn twice: far half clipped behind the eye, near half in front.
+  const TILT = 0.36;
+  const R = 122;
+  const ring = (side: 'back' | 'front') => (
+    <g clipPath={`url(#orb-${side})`} className={`orbitlayer ${side}`}>
+      <g transform={`translate(${cx} ${cy}) scale(1 ${TILT})`}>
+        <g className="spin">
+          {items.map(([deg, el]) => {
+            const a = (deg * Math.PI) / 180;
+            return (
+              <g key={deg} transform={`translate(${(Math.cos(a) * R).toFixed(1)} ${(Math.sin(a) * R).toFixed(1)})`}>
+                <g className="unspin">
+                  <g transform={`scale(1 ${(1 / TILT).toFixed(3)})`}>{el}</g>
+                </g>
+              </g>
+            );
+          })}
+        </g>
+      </g>
+    </g>
+  );
   return (
-    <svg className="eyedoodle" viewBox="0 -16 360 272" aria-hidden="true">
+    <svg className="eyedoodle" viewBox="0 -26 360 316" aria-hidden="true">
       <defs>
         <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="3" />
         </filter>
-        <radialGradient id="eyefade" cx="50%" cy="55%" r="50%">
-          <stop offset="30%" stopColor="#fff" />
+        <radialGradient id="eyefade" cx="50%" cy="62%" r="52%">
+          <stop offset="35%" stopColor="#fff" />
           <stop offset="100%" stopColor="#000" />
         </radialGradient>
         <mask id="eyemask">
-          <rect width="360" height="250" fill="url(#eyefade)" />
+          <rect x="0" y="-40" width="360" height="330" fill="url(#eyefade)" />
         </mask>
         <clipPath id="eyeclip">
           <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} />
         </clipPath>
+        <clipPath id="orb-back">
+          <rect x="0" y="-40" width="360" height={cy + 40} />
+        </clipPath>
+        <clipPath id="orb-front">
+          <rect x="0" y={cy} width="360" height="200" />
+        </clipPath>
       </defs>
 
-      {/* faded landscape: volcano, hills, field, castle, dragon */}
-      <g mask="url(#eyemask)" opacity="0.55" filter="url(#eyeink)" stroke={ink} strokeWidth="2" strokeLinejoin="round">
-        <path d="M0 210 L52 150 L70 160 L96 118 L112 108 L126 118 L150 160 L172 150 L196 176 L240 140 L262 152 L300 120 L360 176 L360 250 L0 250Z" fill="#7a5644" />
-        <path d="M100 116 Q108 96 104 82 M112 108 Q118 92 126 86" fill="none" stroke="#b8aea4" strokeWidth="4" />
-        <path d="M104 112 l6 -14 l6 14Z" fill={red} />
-        <path d="M0 220 Q90 196 180 214 T360 206 L360 250 L0 250Z" fill="#4f7a62" />
-        <path d="M0 236 Q120 222 230 236 T360 232" fill="none" stroke="#6f9a80" strokeWidth="3" />
-        <g fill="#6a5c7c">
-          <path d="M266 150 v-20 h6 v-8 h4 v8 h6 v-14 h4 v14 h6 v-8 h4 v8 h6 v20Z" />
-          <path d="M276 108 l2 -6 l2 6 M290 102 l2 -6 l2 6" fill={red} />
+      {/* one faded mountain ridge, hatched like the reference */}
+      <g mask="url(#eyemask)" opacity="0.6" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round">
+        <path d="M0 250 L40 196 L62 206 L104 138 L128 122 L150 140 L186 186 L214 170 L246 196 L284 150 L304 142 L326 166 L360 196 L360 290 L0 290Z" fill="#6e4a38" strokeWidth="2.2" />
+        <path d="M120 128 L136 128 L130 120Z" fill={red} stroke="none" />
+        <g fill="none" stroke="#3a2418" strokeWidth="1.4" strokeLinecap="round">
+          <path d="M108 160 l-14 30 M118 162 l-10 38 M140 156 l8 34 M150 166 l12 30 M94 178 l-12 24 M292 170 l-10 26 M304 166 l4 30 M314 176 l12 24 M60 222 l-10 20 M232 206 l-6 24" />
         </g>
-        <path d="M300 74 C312 60 330 58 344 66 C336 68 332 74 334 80 C322 76 314 80 306 88 L298 84 C304 80 304 76 300 74Z M318 70 L330 50 L334 64 M324 74 L346 58" fill="#6f8a4a" />
-        <path d="M344 66 q8 -2 12 4 q-6 0 -8 4" fill={orange} stroke="none" opacity="0.8" />
+        <path d="M0 262 Q120 246 220 258 T360 252" fill="none" stroke="#8a6450" strokeWidth="2" />
       </g>
 
-      {/* flames: three hand-drawn frames swapped in steps (stop motion) */}
+      {/* far side of the ring, behind the eye */}
+      <g filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
+        {ring('back')}
+      </g>
+
+      {/* stop-motion fire: three drawn frames */}
       <g filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {[0, 1, 2].map(fire)}
       </g>
 
-      {/* eye: blinks (lids squash the whole eye), iris looks around */}
+      {/* eye: blinks, iris looks around */}
       <g className="eyeball" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         <path d={`M${cx - 48} ${cy} Q${cx} ${cy - 44} ${cx + 48} ${cy} Q${cx} ${cy + 44} ${cx - 48} ${cy}Z`} fill={cream} strokeWidth="3.4" />
         <g clipPath="url(#eyeclip)">
@@ -324,50 +351,14 @@ export function EyeDoodle() {
         ))}
       </g>
 
+      {/* near side of the ring, in front of the eye, with a soft shadow */}
+      <g filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
+        {ring('front')}
+      </g>
 
-      {/* retro devotional babies: cherub above the eye, little devil below; bob in stop motion */}
-      <g filter="url(#eyeink)" stroke={ink} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round">
-        <g className="cherub" transform={`translate(${cx} 6) scale(0.9)`}>
-          <ellipse cx="0" cy="-19" rx="11" ry="3.5" fill="none" stroke={yellow} strokeWidth="3" />
-          <path d="M-8 4 C-26 -6 -30 6 -24 12 C-30 14 -26 22 -14 16 Z" fill={cream} />
-          <path d="M8 4 C26 -6 30 6 24 12 C30 14 26 22 14 16 Z" fill={cream} />
-          <path d="M-20 8 l6 2 M-22 13 l7 1 M20 8 l-6 2 M22 13 l-7 1" strokeWidth="1.2" />
-          <path d="M-9 8 C-12 20 -8 26 0 26 C8 26 12 20 9 8 Z" fill="#f2c7a2" />
-          <circle cx="0" cy="-3" r="11" fill="#f2c7a2" />
-          <path d="M-9 -8 q3 -6 6 -2 q2 -6 6 -1 q3 -5 6 1" fill="none" stroke="#b9792c" strokeWidth="2.4" />
-          <circle cx="-4" cy="-3" r="1.4" fill={ink} stroke="none" />
-          <circle cx="4" cy="-3" r="1.4" fill={ink} stroke="none" />
-          <circle cx="-7" cy="1" r="2.2" fill="#e88a7c" stroke="none" />
-          <circle cx="7" cy="1" r="2.2" fill="#e88a7c" stroke="none" />
-          <path d="M-2 3 q2 2 4 0" fill="none" strokeWidth="1.4" />
-          <path d="M-6 18 h12" stroke={cream} strokeWidth="4" />
-        </g>
-        <g className="imp" transform={`translate(${cx} 222) scale(0.9)`}>
-          <path d="M8 18 C22 22 26 10 30 4 l4 -2 l-2 6 l-4 -1" fill="none" strokeWidth="2.2" stroke={ink} />
-          <path d="M-8 4 C-24 -10 -30 2 -26 8 L-20 6 L-22 14 L-12 12 Z" fill="#5a2a2a" />
-          <path d="M8 4 C24 -10 30 2 26 8 L20 6 L22 14 L12 12 Z" fill="#5a2a2a" />
-          <path d="M-9 8 C-12 20 -8 26 0 26 C8 26 12 20 9 8 Z" fill={red} />
-          <circle cx="0" cy="-3" r="11" fill={red} />
-          <path d="M-8 -10 C-12 -16 -10 -20 -6 -22 C-7 -17 -5 -14 -3 -13 Z M8 -10 C12 -16 10 -20 6 -22 C7 -17 5 -14 3 -13 Z" fill={cream} />
-          <path d="M-6 -4 l4 1.5 M6 -4 l-4 1.5" strokeWidth="1.6" />
-          <circle cx="-4" cy="-1" r="1.4" fill={ink} stroke="none" />
-          <circle cx="4" cy="-1" r="1.4" fill={ink} stroke="none" />
-          <path d="M-4 4 q4 3 8 0" fill="none" strokeWidth="1.4" />
-          <path d="M-2 5 l1 2 l1 -2" fill={cream} strokeWidth="0.8" />
-          <path d="M-16 26 L-12 2 M-15 4 l-3 -6 M-12 2 l0 -7 M-9 4 l3 -6" fill="none" stroke={yellow} strokeWidth="2.2" />
-        </g>
-      </g>
-      {/* orbiting moon, heart, star, card */}
-      <g className="orbit" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
-        {orbit.map(([deg, el]) => {
-          const a = (deg * Math.PI) / 180;
-          return (
-            <g key={deg} transform={`translate(${(cx + Math.cos(a) * 96).toFixed(1)} ${(cy + Math.sin(a) * 96).toFixed(1)})`}>
-              <g className="upright">{el}</g>
-            </g>
-          );
-        })}
-      </g>
+      {/* the owner's cherub engraving above, its devil twin below */}
+      <image className="cherub" href="/cherub.png" x={cx - 40} y="-24" width="80" height="83" />
+      <image className="imp" href="/imp.png" x={cx - 38} y="208" width="76" height="79" />
     </svg>
   );
 }
