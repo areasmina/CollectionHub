@@ -1,13 +1,14 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
-import { db, type Card } from '../lib/db';
+import { db, type Card, type Entry } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
-import { cad } from '../lib/prices';
+import { cad, toCad } from '../lib/prices';
 import { CardsView } from './CardsView';
 import { isCommander } from './Discover';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
+import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
 import { PriceLink, priced, priceSum, Progress, Thumb } from './shared';
 import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
 
@@ -46,6 +47,76 @@ export function ImportReport({ r }: { r: ImportResult }) {
   );
 }
 
+type Panel = { key: string; title: string; sub: string; rows: { e: Entry; card: Card; label: string; tone?: 'up' | 'down'; why?: string }[]; empty?: string };
+
+/** Rotating "top 3" widget: most valuable, highest total, 3-day risers, 3-day fallers. Every 4 s; hover pauses,
+ *  a click (not on a card) goes to the next one. */
+function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
+  const [i, setI] = useState(0);
+  const [hold, setHold] = useState(false);
+  const [past, setPast] = useState<Awaited<ReturnType<typeof snapshotFrom>>>(null);
+  useEffect(() => void snapshotFrom(3).then(setPast), [entries.length, cards.size]);
+  const unit = (e: Entry) => Number(priced(cards.get(e.cardId), e.foil)?.usd ?? 0);
+  const uniq = (xs: Entry[]) => xs.filter((x, j, a) => a.findIndex((y) => cards.get(y.cardId)?.key === cards.get(x.cardId)?.key) === j);
+  const owned = entries.filter((e) => cards.get(e.cardId) && unit(e) > 0);
+  const byUnit = uniq([...owned].sort((a, b) => unit(b) - unit(a))).slice(0, 3);
+  const byTotal = uniq([...owned].sort((a, b) => unit(b) * b.qty - unit(a) * a.qty)).slice(0, 3);
+  const since = past ? new Date(past.day + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  const moveRows = (ms: Move[], tone: 'up' | 'down') =>
+    ms.map((m) => ({ e: m.entry, card: cards.get(m.entry.cardId)!, tone, label: `${m.diff > 0 ? '▲' : '▼'} ${cad(Math.abs(toCad(String(m.diff)) ?? 0))}`, why: `${m.diff > 0 ? '+' : '−'}${Math.round((Math.abs(m.diff) / m.was) * 100)}%: ${cad(toCad(String(m.was)) ?? 0)} → ${cad(toCad(String(m.now)) ?? 0)}` }));
+  const panels: Panel[] = [
+    { key: 'unit', title: 'MOST VALUABLE', sub: 'per copy', rows: byUnit.map((e) => ({ e, card: cards.get(e.cardId)!, label: cad(toCad(String(unit(e))) ?? 0) })) },
+    { key: 'total', title: 'BIGGEST HOLDINGS', sub: 'price × copies', rows: byTotal.map((e) => ({ e, card: cards.get(e.cardId)!, label: `${e.qty}× · ${cad(toCad(String(unit(e) * e.qty)) ?? 0)}` })) },
+    { key: 'up', title: 'RISING', sub: past ? `since ${since}` : 'last 3 days', rows: past ? moveRows(movers(entries, cards, past.prices, 'up'), 'up') : [], empty: past ? 'Nothing went up.' : 'Collecting prices: risers show up after a day or two.' },
+    { key: 'down', title: 'FALLING', sub: past ? `since ${since}` : 'last 3 days', rows: past ? moveRows(movers(entries, cards, past.prices, 'down'), 'down') : [], empty: past ? 'Nothing went down.' : 'Collecting prices: fallers show up after a day or two.' },
+  ];
+  useEffect(() => {
+    if (hold || matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const t = setInterval(() => setI((x) => (x + 1) % panels.length), 4000);
+    return () => clearInterval(t);
+  }, [hold]);
+  if (!owned.length) return null;
+  const p = panels[i % panels.length];
+  return (
+    <div
+      className="topwidget"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Collection highlights"
+      onMouseEnter={() => setHold(true)}
+      onMouseLeave={() => setHold(false)}
+      onClick={() => setI((x) => (x + 1) % panels.length)}
+    >
+      <span className="pen" aria-hidden="true" />
+      <div className="twhead">
+        <span className={`tlabel ${p.key}`}>
+          TOP 3 · {p.title}
+        </span>
+        <small>{p.sub}</small>
+        <span className="twdots" aria-hidden="true">
+          {panels.map((x, j) => (
+            <i key={x.key} className={j === i % panels.length ? 'on' : ''} />
+          ))}
+        </span>
+      </div>
+      <ul key={p.key} aria-live="polite">
+        {p.rows.length ? (
+          p.rows.map(({ e, card, label, tone, why }, j) => (
+            <li key={e.id} style={{ '--i': j - (p.rows.length - 1) / 2 } as React.CSSProperties} onClick={(ev) => ev.stopPropagation()}>
+              <Thumb src={card.img?.replace('/small/', '/normal/')} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
+              <span className={`tw price tapey y${j} t${j}${tone ? ' ' + tone : ''}`} title={why}>
+                {label}
+              </span>
+            </li>
+          ))
+        ) : (
+          <li className="twempty">{p.empty}</li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 export function Collection({ profile, name }: { profile: number; name: string }) {
   const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
   const entries = list ?? [];
@@ -76,19 +147,16 @@ export function Collection({ profile, name }: { profile: number; name: string })
   const total = entries.reduce((n, e) => n + e.qty, 0);
   const value = priceSum(entries.map((e) => ({ card: priced(cards.get(e.cardId), e.foil), qty: e.qty })));
   // Prices older than a week are fetched again (only those).
+  // Collection prices refresh daily (Scryfall updates once a day), then today's prices are saved for the movers.
   useEffect(() => {
-    if (entries.length) cardsByIds(entries.map((e) => e.cardId)).catch(() => {});
+    if (entries.length)
+      cardsByIds(entries.map((e) => e.cardId), 864e5)
+        .then((m) => snapshot(entries, m))
+        .catch(() => {});
   }, [entries.length]);
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
-  // The binder's three most valuable cards (per copy, at the finish you own), fanned in the free space by the stats.
-  const top = entries
-    .map((e) => ({ e, card: cards.get(e.cardId)!, usd: Number(priced(cards.get(e.cardId), e.foil)?.usd ?? 0) }))
-    .filter((x) => x.card && x.usd > 0)
-    .sort((a, b) => b.usd - a.usd)
-    .filter((x, i, a) => a.findIndex((y) => y.card.key === x.card.key) === i)
-    .slice(0, 3);
   const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
   const upload = (
@@ -135,21 +203,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
             <span className="warn">warning</span>
             {value > 0 && <span className="stamp">APPRAISED</span>}
           </div>
-          {top.length > 0 && (
-            <div className="tophand" aria-label="Most valuable cards">
-              <span className="tlabel">
-                TOP {top.length} · <small>most valuable</small>
-              </span>
-              <ul>
-                {top.map(({ e, card }, i) => (
-                  <li key={e.id} style={{ '--i': i - (top.length - 1) / 2 } as React.CSSProperties}>
-                    <Thumb src={card.img?.replace('/small/', '/normal/')} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
-                    <PriceLink card={priced(card, e.foil)} tape={e.cardId} />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <TopWidget entries={entries} cards={cards} />
         </section>
 
         {illegal > 0 && (

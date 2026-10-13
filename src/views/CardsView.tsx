@@ -78,14 +78,15 @@ function QtyEdit({ e, jinx }: { e: Entry; jinx?: boolean }) {
   );
 }
 
-/** A set's main colour among your cards from it: W U B R G, M (multicolour) or C (colourless), weighted by copies. */
+/** A set's main colour among your cards from it: W U B R G or C (colourless), weighted by copies. A multicolour card
+ *  counts toward each of its colours (a white-blue card: half white, half blue), so no "gold" for multicolour. */
 function toneOf(list: Entry[], cards: Map<string, Card>) {
   const n = new Map<string, number>();
   for (const e of list) {
     const ci = cards.get(e.cardId)?.ci;
     if (!ci) continue;
-    const k = ci.length > 1 ? 'M' : ci[0] ?? 'C';
-    n.set(k, (n.get(k) ?? 0) + e.qty);
+    if (!ci.length) n.set('C', (n.get('C') ?? 0) + e.qty);
+    for (const c of ci) n.set(c, (n.get(c) ?? 0) + e.qty / ci.length);
   }
   return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'none';
 }

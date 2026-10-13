@@ -4812,3 +4812,178 @@ ul.popnote .small {
   background: var(--ink);
   color: #fff;
 }
+
+/* Rotating top-3 widget: same height as the ticket stub and slip, scribbled frame, cards fanned inside */
+@media (min-width: 701px) {
+  .topwidget {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 280px;
+    margin-left: 18px;
+    padding: 8px 12px 6px;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 10, 10, 0.88);
+    color: var(--text);
+    transform: rotate(0.5deg);
+    cursor: pointer;
+    user-select: none;
+  }
+  .topwidget > .pen {
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    border: 3px solid var(--text);
+    filter: url(#rough);
+  }
+  .topwidget > .pen::after {
+    content: '';
+    position: absolute;
+    inset: 3px 2px 1px 4px;
+    border: 1.5px solid var(--muted);
+    transform: rotate(-0.4deg);
+    opacity: 0.8;
+  }
+  .twhead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .twhead .tlabel {
+    font-family: var(--an);
+    font-size: 15px;
+    letter-spacing: 1px;
+    padding: 0 8px;
+    background: var(--hazard);
+    color: #0a0a0a;
+    transform: rotate(-2deg);
+    white-space: nowrap;
+  }
+  .twhead .tlabel.up {
+    background: #2fbf5c;
+  }
+  .twhead .tlabel.down {
+    background: var(--accent);
+    color: #fff;
+  }
+  .twhead small {
+    font-family: var(--se);
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .twdots {
+    margin-left: auto;
+    display: flex;
+    gap: 5px;
+  }
+  .twdots i {
+    width: 7px;
+    height: 7px;
+    border: 1.5px solid var(--text);
+    transform: rotate(45deg);
+  }
+  .twdots i.on {
+    background: var(--hazard);
+    border-color: var(--hazard);
+  }
+  .topwidget ul {
+    flex: 1;
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 22px;
+    animation: twin 0.35s ease-out;
+  }
+  .topwidget li {
+    position: relative;
+    transform: rotate(calc(var(--i) * 5deg));
+    transition: transform 0.18s;
+  }
+  .topwidget li:hover {
+    transform: rotate(0deg) translateY(-4px) scale(1.05);
+    z-index: 3;
+  }
+  .topwidget .thand {
+    display: block;
+    position: relative;
+    width: 58px;
+    aspect-ratio: 63 / 88;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #333;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+  }
+  .topwidget .thand img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .topwidget .tw.price {
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    transform: translateX(-50%) rotate(-3deg);
+    font-size: 10.5px;
+    padding: 0 5px;
+    white-space: nowrap;
+    color: #0a0a0a;
+  }
+  .topwidget .tw.price.up {
+    --tp: #5fe08a !important;
+  }
+  .topwidget .tw.price.down {
+    --tp: #ff7a82 !important;
+  }
+  .topwidget .twempty {
+    align-self: center;
+    font-family: var(--se);
+    font-size: 13px;
+    color: var(--muted);
+    transform: none;
+  }
+}
+@keyframes twin {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+@media (max-width: 700px) {
+  .topwidget {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .topwidget ul {
+    animation: none;
+  }
+}
+@media (min-width: 701px) {
+  .topwidget ul {
+    align-items: center;
+    gap: 16px;
+  }
+  .topwidget li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .topwidget .thand {
+    width: 54px;
+  }
+  .topwidget .tw.price {
+    position: static;
+    transform: rotate(-2deg);
+    font-size: 11px;
+    padding: 0 5px;
+  }
+}

@@ -79,11 +79,11 @@ export function toCard(c: any): Card {
 const WEEK = 7 * 864e5;
 
 /** Card data (prices, images) by Scryfall id: cache first, prices refreshed weekly. */
-export async function cardsByIds(ids: string[]): Promise<Map<string, Card>> {
+export async function cardsByIds(ids: string[], maxAge = WEEK): Promise<Map<string, Card>> {
   const uniq = [...new Set(ids)];
   const out = new Map<string, Card>();
   // pv 2 = has the foil price: older cache entries are fetched again once.
-  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.pv === 2 && Date.now() - c.at < WEEK && out.set(c.id, c));
+  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.pv === 2 && Date.now() - c.at < maxAge && out.set(c.id, c));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {
     const res = await post('/cards/collection', { identifiers: need.slice(i, i + 75).map((id) => ({ id })) });
