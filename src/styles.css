@@ -6336,3 +6336,32 @@ details.cat {
     font-size: 13px;
   }
 }
+/* A deck's name that opens the deck (copies warning, commander page) */
+.decklink {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.decklink:hover,
+.decklink:focus-visible {
+  color: var(--accent);
+}
+.decklink:has(.btn) {
+  text-decoration: none;
+}
+.mydecks {
+  display: block;
+  margin-top: 6px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

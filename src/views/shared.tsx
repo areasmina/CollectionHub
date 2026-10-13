@@ -1,7 +1,9 @@
 import { haptic } from '../lib/haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { statusOf } from '../lib/compare';
-import type { Card } from '../lib/db';
+import { db, type Card } from '../lib/db';
+import { openDeck } from '../lib/nav';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
@@ -163,7 +165,7 @@ export function CardLine({
   marker?: string; // the missing card a swap replaces
   onOpen?: () => void; // open the replacement note (hover, tap or SWAP)
   onClose?: () => void; // kept for callers; the note closes from its own button / the backdrop
-  children?: React.ReactNode; // replacement note
+  children?: ReactNode; // replacement note
 }) {
   const st = statusOf(name, s.mine, s.other);
   const press = useMenuPress(onMenu);
@@ -294,7 +296,7 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
 
 /** Header stats in the title banner, beside the colour pips: deck price on yellow tape, salt on a torn paper scrap,
  *  optional extras (bracket stamp); the price note sits under the row. */
-export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: React.ReactNode }) {
+export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: ReactNode }) {
   return (
     <div className="hstats" onClick={(e) => e.stopPropagation()}>
       <span className="price tapey y1 t0 big" title={PRICE_METHOD} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
@@ -335,12 +337,31 @@ export function SaltStat({ names }: { names: string[] }) {
   );
 }
 
+/** A deck's name that opens that deck, from any screen. */
+export function DeckLink({ name, children }: { name: string; children?: ReactNode }) {
+  return (
+    <button type="button" className="decklink" onClick={(e) => (e.stopPropagation(), haptic('select'), openDeck(name))} title={`Open ${name}`}>
+      {children ?? name}
+    </button>
+  );
+}
+
 /** Hazard note: cards your decks share more often than you own copies (decks are virtual lists). */
 export function ShortAlert({ items }: { items: Shortfall[] }) {
+  const real = useLiveQuery(async () => new Set((await db.decks.toArray()).map((d) => d.name)), []) ?? new Set<string>();
   if (!items.length) return null;
   const row = (s: Shortfall) => (
     <li key={s.name}>
-      {shortText(s)}. <small>You own {s.own} · used in {s.decks.join(', ')}</small>
+      {shortText(s)}.{' '}
+      <small>
+        You own {s.own} · used in{' '}
+        {s.decks.map((d, i) => (
+          <span key={d}>
+            {i > 0 && ', '}
+            {real.has(d) ? <DeckLink name={d} /> : d}
+          </span>
+        ))}
+      </small>
     </li>
   );
   return (

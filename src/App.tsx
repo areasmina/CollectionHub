@@ -5,6 +5,7 @@ import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
+import { onOpenDeck } from './lib/nav';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
@@ -79,6 +80,7 @@ export default function App() {
     store.set('ch:theme', theme);
   }, [theme]);
   useEffect(() => store.set('ch:tab', tab), [tab]);
+  useEffect(() => onOpenDeck(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
   const shared = { profile, mine, other: theirs, otherName: nameOf(other), binderName: nameOf(profile) };

@@ -147,3 +147,25 @@ test('Deck page: right-click / press and hold the header opens the deck menu', a
   await fits(page, ['.deckmenu']);
   await page.screenshot({ path: `test-results/deck-hold-${info.project.name}.png` });
 });
+
+test('Deck names open the deck: commander page and the copies warning', async ({ page }) => {
+  // Commander page: "your deck: Tatyova Lands" opens it
+  await page.locator('.ccard').first().click();
+  const link = page.locator('.mydecks .decklink', { hasText: 'Tatyova Lands' });
+  await link.scrollIntoViewIfNeeded();
+  await link.click();
+  await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
+  // A copy shares every card, so the copies warning lists both decks: each name opens its deck
+  await deckMenu(page, 'Duplicate');
+  await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
+  const other = page.locator('.shortalert .decklink', { hasText: /^Tatyova Lands$/ }).first();
+  await other.scrollIntoViewIfNeeded();
+  await other.click();
+  await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
+  // …and from the Decks list's warning
+  await page.locator('.backlink').click();
+  const copy = page.locator('.shortalert .decklink', { hasText: 'Tatyova Lands (copy)' }).first();
+  await copy.scrollIntoViewIfNeeded();
+  await copy.click();
+  await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
+});

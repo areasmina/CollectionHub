@@ -14,6 +14,7 @@ import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arr
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
+import { freeDeckName, onOpenDeck, takeDeck } from '../lib/nav';
 import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
@@ -291,12 +292,6 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
   );
 }
 
-/** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
-async function freeName(profile: number, want: string, except?: number) {
-  const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));
-  if (!taken.has(want.toLowerCase())) return want;
-  for (let i = 2; ; i++) if (!taken.has(`${want} ${i}`.toLowerCase())) return `${want} ${i}`;
-}
 
 /** Everything you do to the deck itself (not how its cards are shown), tucked behind one button. */
 type MenuAt = { x: number; y: number; anchor?: DOMRect }; // a point (right-click / hold) or under the DECK box
@@ -353,7 +348,7 @@ function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at:
                   onClick={act(async () => {
                     const want = prompt('Rename deck', deck.name)?.trim();
                     if (!want || want === deck.name) return;
-                    const name = await freeName(deck.profile, want, deck.id);
+                    const name = await freeDeckName(deck.profile, want, deck.id);
                     if (name !== want && !confirm(`Another deck is already called "${want}". Use "${name}"?`)) return;
                     haptic('success');
                     await db.decks.update(deck.id!, { name });
@@ -367,7 +362,7 @@ function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at:
                   role="menuitem"
                   onClick={act(async () => {
                     const { id: _, ...copy } = deck;
-                    const name = await freeName(deck.profile, `${deck.name} (copy)`);
+                    const name = await freeDeckName(deck.profile, `${deck.name} (copy)`);
                     haptic('success');
                     onOpen(await db.decks.add({ ...copy, name, cards: deck.cards.map((c) => ({ ...c })), tags: deck.tags && [...deck.tags], updated: Date.now() }));
                     scrollTo({ top: 0, behavior: 'smooth' });
@@ -637,6 +632,14 @@ export function Decks(s: Shared) {
       return new Map(cs.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, withCheapest(c, cheap)!]));
     }, [decks]) ?? new Map<string, Card>();
   const [open, setOpen] = useState<number | null>(null);
+  // Opened from elsewhere (a deck name on another screen): wait for the decks to load, then open it.
+  const [navTick, setNavTick] = useState(0);
+  useEffect(() => onOpenDeck(() => setNavTick((n) => n + 1)), []);
+  useEffect(() => {
+    const name = takeDeck((n) => decks.some((d) => d.name === n));
+    const d = name && decks.find((x) => x.name === name);
+    if (d) (setOpen(d.id!), scrollTo(0, 0));
+  }, [decks, navTick]);
   const [name, setName] = useState('');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);

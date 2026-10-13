@@ -8,7 +8,8 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
+import { freeDeckName } from '../lib/nav';
+import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -131,8 +132,9 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   async function saveDeck() {
     if (!page) return;
     const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: swaps[c.name] ?? c.name, qty: c.qty ?? 1 })));
-    await db.decks.add({ profile: s.profile, name: `${name} (EDHREC average)`, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
-    setSaved('Saved to Decks.');
+    const deckName = await freeDeckName(s.profile, `${name} (EDHREC average)`);
+    await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+    setSaved(deckName);
   }
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
@@ -140,6 +142,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const pricesIn = cards.size > 0;
   // If you built this deck too: owned cards your saved decks already use up (saved decks of this commander are the same deck).
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [];
+  // Your own decks led by this commander: one tap opens them.
+  const mine = decks.filter((d) => d.commander === name).sort((a, b) => b.updated - a.updated);
   const thisDeck = `this ${name.split(' // ')[0]} deck`;
   const short = page
     ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: swaps[c.name] ?? c.name, qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
@@ -335,9 +339,26 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           </div>
           <div className="cell">
             <span className="lbl">DECK</span>
-            <button className="btn" onClick={saveDeck} disabled={!!saved || !page || kind !== 'average'}>
-              {saved ? 'SAVED ✓' : 'SAVE AS DECK'}
-            </button>
+            {saved ? (
+              <DeckLink name={saved}>
+                <span className="btn">SAVED ✓ OPEN →</span>
+              </DeckLink>
+            ) : (
+              <button className="btn" onClick={saveDeck} disabled={!page || kind !== 'average'}>
+                SAVE AS DECK
+              </button>
+            )}
+            {mine.length > 0 && !saved && (
+              <span className="mydecks">
+                your deck{mine.length > 1 ? 's' : ''}:{' '}
+                {mine.map((d, i) => (
+                  <span key={d.id}>
+                    {i > 0 && ', '}
+                    <DeckLink name={d.name} />
+                  </span>
+                ))}
+              </span>
+            )}
           </div>
           <span className="hint">
             {kind === 'average' && missing.length > 0 ? 'click or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
