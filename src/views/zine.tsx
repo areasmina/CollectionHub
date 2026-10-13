@@ -444,6 +444,18 @@ export const EyeDoodle = memo(function EyeDoodle() {
         </g>
       </g>
 
+      {/* poster-style white lightning bolts and spray flecks */}
+      <g className="bolts" fill={cream} stroke={ink} strokeWidth="1.6" strokeLinejoin="round">
+        <path className="bolt b0" d="M30 86 l22 -6 l-10 12 l24 -4 l-34 22 l12 -14 l-18 2Z" />
+        <path className="bolt b1" d="M300 196 l20 -8 l-8 12 l22 -4 l-30 20 l10 -12 l-16 2Z" />
+        <path className="bolt b2" d="M326 60 l14 -4 l-6 8 l14 -2 l-20 14 l6 -8 l-10 0Z" fill={red} />
+      </g>
+      <g fill={cream} opacity="0.55">
+        {[[14, 104], [40, 150], [60, 72], [88, 210], [70, 196], [292, 88], [316, 132], [340, 150], [332, 214], [276, 228], [110, 70], [250, 72], [22, 190], [354, 182], [128, 226], [230, 232]].map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={i % 3 ? 0.9 : 1.4} />
+        ))}
+      </g>
+
       {/* scattered twinkling stars */}
       <g stroke={ink} strokeWidth="1.2" strokeLinejoin="round">
           <path className="spark s0" d={`M20 66 Q20.6 69.4 24 70 Q20.6 70.6 20 74 Q19.4 70.6 16 70 Q19.4 69.4 20 66Z`} fill={cream} />
@@ -465,27 +477,53 @@ export const EyeDoodle = memo(function EyeDoodle() {
       {/* far half of the rings: behind the fire and eye */}
       <g ref={back} className="orbs back" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round" />
 
+      {/* sunburst rays behind the flames: yellow wedges with black ink lines */}
+      <g className="rays" stroke={ink} strokeLinecap="round">
+        {Array.from({ length: 36 }, (_, i) => {
+          const a = (i / 36) * Math.PI * 2;
+          const r1 = 44;
+          const r2 = i % 2 ? 92 : 104;
+          const w = Math.PI / 72;
+          const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.86).toFixed(1)}`;
+          return (
+            <g key={i}>
+              <path d={`M${P(a - w, r1)} L${P(a, r2)} L${P(a + w, r1)}Z`} fill={i % 3 ? yellow : '#f7e7a6'} strokeWidth="0.8" opacity="0.85" />
+              <line x1={cx + Math.cos(a + w * 1.5) * 50} y1={cy + Math.sin(a + w * 1.5) * 50 * 0.86} x2={cx + Math.cos(a + w * 1.5) * (r2 - 8)} y2={cy + Math.sin(a + w * 1.5) * (r2 - 8) * 0.86} strokeWidth="0.9" opacity="0.7" />
+            </g>
+          );
+        })}
+      </g>
+
       <g className="firebeat" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {[0, 1, 2].map(fire)}
       </g>
 
-      <g className="eyeball" filter="url(#eyeink)" stroke={lid} strokeLinejoin="round" strokeLinecap="round">
-        <path d={`M${cx - 48} ${cy} Q${cx} ${cy - 44} ${cx + 48} ${cy} Q${cx} ${cy + 44} ${cx - 48} ${cy}Z`} fill={cream} strokeWidth="3.4" />
+      <g className="eyeball" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+        {/* lid band: red outer, orange inner (like the reference) */}
+        <path d={`M${cx - 58} ${cy} Q${cx} ${cy - 56} ${cx + 58} ${cy} Q${cx} ${cy + 52} ${cx - 58} ${cy}Z`} fill={lid} strokeWidth="2.6" />
+        <path d={`M${cx - 52} ${cy} Q${cx} ${cy - 47} ${cx + 52} ${cy} Q${cx} ${cy + 44} ${cx - 52} ${cy}Z`} fill={orange} strokeWidth="1.6" />
+        {/* eye white, pinkish, with a pink lower lid and red veins */}
+        <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} fill="#f6e4d8" strokeWidth="2.4" />
+        <path d={`M${cx - 40} ${cy + 6} Q${cx} ${cy + 34} ${cx + 40} ${cy + 6} Q${cx} ${cy + 26} ${cx - 40} ${cy + 6}Z`} fill="#eba0a0" stroke="none" opacity="0.8" />
+        <g fill="none" stroke="#c4402b" strokeWidth="1" opacity="0.8">
+          <path d={`M${cx - 44} ${cy} q8 -2 12 -6 m-12 6 q8 3 13 2 M${cx + 44} ${cy} q-8 -3 -12 -7 m12 7 q-9 2 -13 6 M${cx - 38} ${cy - 8} q5 1 7 4 M${cx + 36} ${cy + 9} q-5 0 -8 -3`} />
+        </g>
         <g clipPath="url(#eyeclip)">
           <g className="iris" ref={irisRef}>
-            <circle cx={cx} cy={cy} r="19" fill={iris} stroke="#1f3a66" strokeWidth="2.6" />
-            {Array.from({ length: 12 }, (_, i) => {
-              const a = (i / 12) * Math.PI * 2;
-              return <line key={i} x1={cx + Math.cos(a) * 9} y1={cy + Math.sin(a) * 9} x2={cx + Math.cos(a) * 17} y2={cy + Math.sin(a) * 17} strokeWidth="1.1" stroke="#26507f" />;
+            <circle cx={cx} cy={cy} r="21" fill="#7f9db4" stroke="#1c2a36" strokeWidth="3" />
+            <circle cx={cx} cy={cy} r="15" fill="#5f7f99" stroke="none" />
+            {Array.from({ length: 28 }, (_, i) => {
+              const a = (i / 28) * Math.PI * 2;
+              return <line key={i} x1={cx + Math.cos(a) * 9} y1={cy + Math.sin(a) * 9} x2={cx + Math.cos(a) * 19} y2={cy + Math.sin(a) * 19} strokeWidth="1" stroke="#2c4152" />;
             })}
-            <circle cx={cx} cy={cy} r="8" fill={ink} stroke={ink} strokeWidth="1" />
-            <circle cx={cx - 5} cy={cy - 6} r="3.2" fill={cream} stroke="none" />
+            <circle cx={cx} cy={cy} r="9.5" fill={ink} stroke={ink} strokeWidth="1" />
+            <circle cx={cx + 6} cy={cy - 7} r="4.2" fill="#fff" stroke="none" />
+            <circle cx={cx - 6} cy={cy + 6} r="1.6" fill="#fff" stroke="none" opacity="0.8" />
           </g>
         </g>
-        <path d={`M${cx - 44} ${cy - 5} Q${cx} ${cy - 46} ${cx + 44} ${cy - 5}`} fill="none" strokeWidth="2" />
-        {[-34, -22, -11, 0, 11, 22, 34].map((dx) => (
-          <line key={dx} x1={cx + dx} y1={cy - 32 + Math.abs(dx) * 0.42} x2={cx + dx * 1.18} y2={cy - 42 + Math.abs(dx) * 0.42} strokeWidth="2.2" />
-        ))}
+        {/* upper lid shadow line and crease */}
+        <path d={`M${cx - 44} ${cy - 2} Q${cx} ${cy - 42} ${cx + 44} ${cy - 2}`} fill="none" stroke="#5a1a10" strokeWidth="2.4" />
+        <path d={`M${cx - 50} ${cy - 6} Q${cx} ${cy - 52} ${cx + 50} ${cy - 6}`} fill="none" stroke={ink} strokeWidth="1.4" />
       </g>
 
       {/* near half: in front, with a shadow */}

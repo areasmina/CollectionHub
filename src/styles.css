@@ -5461,3 +5461,16 @@ ul.popnote .small {
     display: none;
   }
 }
+.eyedoodle .bolt {
+  animation: bolt 3.6s steps(1) infinite;
+}
+.eyedoodle .bolt.b1 { animation-delay: -1.2s; }
+.eyedoodle .bolt.b2 { animation-delay: -2.4s; }
+@keyframes bolt {
+  0% { opacity: 1; }
+  8% { opacity: 0.25; }
+  12% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eyedoodle .bolt { animation: none; }
+}
