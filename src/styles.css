@@ -4389,3 +4389,98 @@ ul.popnote .small {
     transition: none;
   }
 }
+
+/* Collection grid tile, minimal: art with the price taped to its top-right corner and the quantity spray-painted
+   as X tally marks (Jinx-style) on its bottom-left; name + set below. Tap the marks to edit. */
+.ctile .cart {
+  position: relative;
+  display: block;
+}
+.ctile .cart .timg {
+  display: block;
+}
+.ctile .cart > .price {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  right: -8px;
+  font-size: 13px;
+  padding: 2px 9px;
+  transform: rotate(4deg);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+.ctile .tname {
+  margin-top: 2px;
+}
+.ctile .tnote {
+  margin-top: -2px;
+}
+.tally {
+  position: absolute;
+  z-index: 5;
+  left: -6px;
+  bottom: -10px;
+}
+.tally .marks {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  background: none;
+  border: 0;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -3px;
+  color: #ff2fa0;
+  transform: rotate(-8deg);
+  /* spray paint: fuzzy pink halo, cyan offset, dark drop so it reads on any art */
+  text-shadow: 0 0 6px rgba(255, 47, 160, 0.85), 2px 2px 0 #19d3e6, -1px -1px 0 #0a0a0a, 3px 4px 0 rgba(0, 0, 0, 0.75);
+  cursor: pointer;
+}
+.tally .marks:hover,
+.tally .marks:focus-visible {
+  color: #ff6cc0;
+  transform: rotate(-8deg) scale(1.08);
+}
+.tstep {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: #0a0a0a;
+  border: 2px dashed #19d3e6;
+  box-shadow: 3px 3px 0 #ff2fa0;
+  transform: rotate(-3deg);
+  animation: drop 0.15s ease-out;
+}
+.tstep button {
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: 0;
+  color: #19d3e6;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+}
+.tstep button.bin {
+  color: #ff4a55;
+}
+.tstep b {
+  min-width: 30px;
+  text-align: center;
+  font-family: 'Archivo Black', sans-serif;
+  font-size: 22px;
+  color: #fff;
+  text-shadow: 0 0 6px #ff2fa0, 2px 2px 0 #ff2fa0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tstep {
+    animation: none;
+  }
+}
+.tally.editing {
+  left: 6px;
+  bottom: 8px;
+}

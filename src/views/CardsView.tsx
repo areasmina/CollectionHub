@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
 import { PriceLink, priced, Thumb } from './shared';
 
@@ -78,6 +78,48 @@ function QtyEdit({ e, jinx }: { e: Entry; jinx?: boolean }) {
   );
 }
 
+/** Grid quantity: spray-painted X tally on the card (X, XX, XXX, XXXX; X12 from 5). Tap it to edit: − n +,
+ *  the − turns into a bin at 1. Closes when you tap anywhere else. */
+function Tally({ e }: { e: Entry }) {
+  const [edit, setEdit] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!edit) return;
+    const away = (ev: PointerEvent) => !ref.current?.contains(ev.target as Node) && setEdit(false);
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [edit]);
+  const set = (q: number) => db.entries.update(e.id!, { qty: Math.min(999, q) });
+  const marks = e.qty <= 4 ? 'X'.repeat(e.qty) : `X${e.qty}`;
+  return (
+    <span ref={ref} className={`tally${edit ? ' editing' : ''}`} onClick={(ev) => ev.stopPropagation()}>
+      {edit ? (
+        <span className="tstep">
+          {e.qty > 1 ? (
+            <button aria-label={`One less ${e.name}`} onClick={() => set(e.qty - 1)}>
+              −
+            </button>
+          ) : (
+            <button className="bin" aria-label={`Remove ${e.name}`} onClick={() => confirm(`Remove ${e.name} from this binder?`) && db.entries.delete(e.id!)}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M3 4 H13 M6 4 V2 H10 V4 M4 4 L5 14 H11 L12 4" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+            </button>
+          )}
+          <b aria-live="polite">{e.qty}</b>
+          <button aria-label={`One more ${e.name}`} onClick={() => set(e.qty + 1)}>
+            +
+          </button>
+        </span>
+      ) : (
+        <button className="marks" aria-label={`${e.qty} ${e.qty === 1 ? 'copy' : 'copies'} of ${e.name}. Change quantity`} onClick={() => setEdit(true)}>
+          {marks}
+        </button>
+      )}
+    </span>
+  );
+}
+
 const RemoveBtn = ({ e }: { e: Entry }) => (
   <button className="xbtn" aria-label={`Remove ${e.name}`} onClick={() => confirm(`Remove ${e.name} from this binder?`) && db.entries.delete(e.id!)}>
     <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
@@ -92,15 +134,14 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
     return (
       <ul className="zgrid cgrid2">
         {list.map((e) => (
-          <li key={e.id} className="ztile owned">
-            <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
+          <li key={e.id} className="ztile owned ctile">
+            <span className="cart">
+              <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
+              <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
+              <Tally e={e} />
+            </span>
             <span className="tname">{e.name}</span>
             <span className="tnote">{setLine(e)}</span>
-            <span className="ctrl">
-              <QtyEdit e={e} jinx />
-              <RemoveBtn e={e} />
-            </span>
-            <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
           </li>
         ))}
       </ul>
