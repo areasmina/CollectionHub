@@ -377,6 +377,16 @@ export const EyeDoodle = memo(function EyeDoodle() {
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="3" />
         </filter>
+        {/* print wear: knock random speckles out of the artwork, like a worn screen print */}
+        <filter id="distress" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} seed={11} result="n" />
+          <feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -9 7.4" result="holes" />
+          <feComposite in="SourceGraphic" in2="holes" operator="in" />
+        </filter>
+        <filter id="grit">
+          <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves={3} seed={5} />
+          <feColorMatrix values="0 0 0 0 0.05  0 0 0 0 0.04  0 0 0 0 0.03  0 0 0 -1.4 0.9" />
+        </filter>
         <radialGradient id="eyefade" cx="50%" cy="60%" r="52%">
           <stop offset="35%" stopColor="#fff" />
           <stop offset="100%" stopColor="#000" />
@@ -397,11 +407,12 @@ export const EyeDoodle = memo(function EyeDoodle() {
           <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} />
         </clipPath>
       </defs>
+      <g filter="url(#distress)">
 
       {/* sky: drifting clouds */}
       <g mask="url(#skymask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {/* drifting clouds */}
-        <g className="clouds" fill="#b9b0d8" opacity="0.35" strokeWidth="1.4">
+        <g className="clouds" fill="#3a3330" opacity="0.6" strokeWidth="1.4">
           <path d="M40 92 q6 -12 18 -8 q8 -12 22 -4 q14 -2 14 10 q8 4 2 10 h-58 q-8 -4 2 -8Z" />
           <path d="M250 74 q6 -10 16 -6 q8 -10 20 -2 q12 0 12 9 q6 4 0 8 h-50 q-6 -4 2 -9Z" />
           <path d="M150 64 q4 -8 12 -5 q6 -8 15 -2 q9 0 9 7 q5 3 0 6 h-38 q-5 -3 2 -6Z" />
@@ -410,28 +421,28 @@ export const EyeDoodle = memo(function EyeDoodle() {
 
       {/* surreal mountainscape in three ridges: far (pale lilac, soft), middle (violet), near (deep blue, bold) */}
       <g mask="url(#eyemask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
-        <path d="M20 200 L70 150 L96 162 L132 112 L152 98 L172 116 L196 104 L222 92 L248 120 L276 108 L312 146 L344 170 L360 178 L360 268 L0 268 L0 208Z" fill="#8b7fc4" opacity="0.32" strokeWidth="1.4" />
+        <path d="M20 200 L70 150 L96 162 L132 112 L152 98 L172 116 L196 104 L222 92 L248 120 L276 108 L312 146 L344 170 L360 178 L360 268 L0 268 L0 208Z" fill="#2a2522" opacity="0.7" strokeWidth="1.4" />
         <path d="M152 98 l-6 10 l7 -3 l5 6 l2 -9Z M222 92 l-7 12 l8 -4 l6 6 l1 -10Z" fill={cream} opacity="0.35" stroke="none" />
         {/* volcano: cone, glowing crater, lava runs, smoke puffing in steps */}
         <g>
-          <path d="M226 200 L262 128 L270 124 L280 126 L288 130 L328 200Z" fill="#5c4560" strokeWidth="2" />
+          <path d="M226 200 L262 128 L270 124 L280 126 L288 130 L328 200Z" fill="#2a2120" strokeWidth="2" />
           <path d="M262 128 Q275 120 288 130 Q276 134 262 128Z" fill={orange} strokeWidth="1.6" />
           <path d="M270 128 q-6 22 -12 34 q-4 10 -10 18 M280 130 q4 18 8 30 q4 12 2 22 M275 130 q0 20 -2 40" fill="none" stroke={red} strokeWidth="2.6" />
           <path d="M268 140 l-10 26 M286 142 l12 30 M244 176 l-6 18 M306 172 l8 20" fill="none" stroke="#2a1a30" strokeWidth="1.2" />
-          <g className="smoke" fill="#9a92a8" opacity="0.65" strokeWidth="1.4">
+          <g className="smoke" fill="#5a524c" opacity="0.65" strokeWidth="1.4">
             <circle className="puff p0" cx="276" cy="112" r="7" />
             <circle className="puff p1" cx="270" cy="98" r="9" />
             <circle className="puff p2" cx="280" cy="82" r="11" />
           </g>
           <path className="ember" d="M275 120 l-2 -6 l3 2 l1 -6 l2 6 l2 -3 l-1 7Z" fill={yellow} strokeWidth="1" />
         </g>
-        <path d="M0 214 L40 182 L66 192 L104 146 L124 158 L150 136 L176 170 L206 160 L238 132 L262 146 L292 128 L330 172 L360 184 L360 268 L0 268Z" fill="#5a4aa0" opacity="0.55" strokeWidth="1.8" />
+        <path d="M0 214 L40 182 L66 192 L104 146 L124 158 L150 136 L176 170 L206 160 L238 132 L262 146 L292 128 L330 172 L360 184 L360 268 L0 268Z" fill="#1f1a18" opacity="0.85" strokeWidth="1.8" />
         <path d="M104 146 l-7 12 l8 -4 l6 7 l2 -11Z M292 128 l-8 13 l9 -4 l6 7 l1 -12Z" fill={cream} opacity="0.5" stroke="none" />
-        <g fill="none" stroke="#231a4a" strokeWidth="1.2" opacity="0.6">
+        <g fill="none" stroke="#c9402a" strokeWidth="1.1" opacity="0.45">
           <path d="M112 158 l-8 22 M122 164 l-2 20 M246 146 l-8 22 M256 150 l2 20 M300 140 l8 24" />
         </g>
-        <path d="M0 238 L34 214 L58 222 L92 196 L118 212 L150 228 L184 206 L214 220 L250 198 L282 214 L320 200 L360 222 L360 268 L0 268Z" fill="#26457e" opacity="0.8" strokeWidth="2.2" />
-        <g fill="none" stroke="#0e1838" strokeWidth="1.4" opacity="0.7">
+        <path d="M0 238 L34 214 L58 222 L92 196 L118 212 L150 228 L184 206 L214 220 L250 198 L282 214 L320 200 L360 222 L360 268 L0 268Z" fill="#151110" opacity="0.95" strokeWidth="2.2" />
+        <g fill="none" stroke="#c9402a" strokeWidth="1.2" opacity="0.5">
           <path d="M92 196 l-10 24 M100 202 l-2 22 M184 206 l-8 24 M192 210 l4 20 M250 198 l-8 26 M258 204 l6 22" />
         </g>
       </g>
@@ -470,13 +481,13 @@ export const EyeDoodle = memo(function EyeDoodle() {
       <g ref={back} className="orbs back" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round" />
 
       {/* red starburst spikes behind everything, like the banner reference */}
-      <g className="spikes" fill={red} stroke={ink} strokeWidth="1" strokeLinejoin="round" opacity="0.9">
+      <g className="spikes" fill="#d92a1c" stroke={ink} strokeWidth="1.2" strokeLinejoin="round">
         {Array.from({ length: 30 }, (_, i) => {
           const a = ((i / 30) * 360 + 4) * (Math.PI / 180);
           const r2 = [150, 112, 132, 98, 142, 120][i % 6];
           const w = Math.PI / 150;
           const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.78).toFixed(1)}`;
-          return <path key={i} d={`M${P(a - w * 2, 48)} L${P(a, r2)} L${P(a + w * 2, 48)}Z`} />;
+          return <path key={i} d={`M${P(a - w * 4.5, 46)} L${P(a, r2)} L${P(a + w * 4.5, 46)}Z`} />;
         })}
       </g>
 
@@ -546,6 +557,15 @@ export const EyeDoodle = memo(function EyeDoodle() {
             <g className={o.twinkle ? 'twinkle' : undefined}>{o.el}</g>
           </g>
         ))}
+      </g>
+      </g>
+      {/* grit and scratches over the whole piece */}
+      <rect x="0" y="0" width="360" height="268" filter="url(#grit)" opacity="0.4" style={{ mixBlendMode: 'multiply' }} pointerEvents="none" />
+      <g stroke="#0a0a0a" strokeWidth="0.7" opacity="0.35" fill="none" pointerEvents="none">
+        <path d="M30 60 L140 250 M210 40 L330 230 M90 50 L60 140 M300 60 L250 160 M150 90 L120 200" />
+      </g>
+      <g stroke="#f3e6c9" strokeWidth="0.6" opacity="0.18" fill="none" pointerEvents="none">
+        <path d="M60 70 L180 260 M240 50 L300 180 M120 60 L200 120" />
       </g>
     </svg>
   );
