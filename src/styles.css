@@ -16,6 +16,8 @@
   --hazard: #ffcc00;
   --fh: #f1ebdc;
   --rule-blue: #b9c4cf;
+  --pen: #8c8374; /* card frames: worn sepia-grey pen line */
+  --pen2: #5f584c;
   --se: 'Special Elite', monospace;
   --an: 'Anton', sans-serif;
   color-scheme: dark;
@@ -30,12 +32,16 @@
     --grid: rgba(10, 10, 10, 0.07);
     --danger-text: #b00c18;
     --fh: #0a0a0a;
+    --pen: #6e6658;
+    --pen2: #a39a8a;
     color-scheme: light;
   }
 }
 /* light */
 :root[data-theme='light'] {
   --fh: #0a0a0a;
+  --pen: #6e6658;
+  --pen2: #a39a8a;
   --bg: #ffffff;
   --surface: #ffffff;
   --text: #0a0a0a;
@@ -4113,4 +4119,38 @@ ul.popnote .small {
 .dhero .cimg .cmdrimg,
 .dhero .cimg .cmdrimg:hover {
   filter: contrast(1.12) saturate(1.12);
+}
+
+/* Card frames everywhere: no clean white border; a scratchy double pen line in worn sepia-grey on top of the art */
+.thumb,
+.ztile .timg {
+  border-color: transparent;
+  background-clip: padding-box; /* no grey edge where the white border was */
+}
+.thumb > .pen,
+.timg > .pen {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border: 2px solid var(--pen);
+  border-radius: inherit;
+  filter: url(#rough);
+}
+.thumb > .pen::after,
+.timg > .pen::after {
+  /* second, thinner stroke, a hair off: reads as a quick hand-drawn double line */
+  content: '';
+  position: absolute;
+  inset: 2px 1px 1px 3px;
+  border: 1px solid var(--pen2);
+  border-radius: inherit;
+  transform: rotate(-0.7deg);
+  opacity: 0.8;
+}
+@media (hover: hover) {
+  .ztile:hover .timg > .pen,
+  .zrow:hover .thumb > .pen {
+    border-color: var(--accent);
+  }
 }

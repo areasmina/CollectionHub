@@ -84,6 +84,7 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
           setPreview({ src: big, tap: true, href });
         }}
       />
+      <span className="pen" aria-hidden="true" />
     </span>
   );
 }
