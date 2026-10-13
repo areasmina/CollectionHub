@@ -75,20 +75,28 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await fits(page, ['.dhero', '.dtools', '.dpanel']);
 });
 
-test('Deck page: Delete is on screen, asks first, and removes the deck', async ({ page }) => {
+const deckMenu = async (page: import('@playwright/test').Page, item: string) => {
+  const b = page.getByRole('button', { name: /^Deck options/ });
+  await b.scrollIntoViewIfNeeded();
+  await b.click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  await page.waitForTimeout(250); // let the drop-in animation finish before measuring
+  await fits(page, ['.deckmenu']);
+  await menu.getByRole('menuitem', { name: item }).click();
+};
+
+test('Deck page: Delete is in the DECK menu, asks first, and removes the deck', async ({ page }) => {
   await go(page, 'decks');
   await expect(page.locator('.dcard')).toHaveCount(1);
   await page.locator('.dcard').first().click();
-  const del = page.getByRole('button', { name: 'DELETE', exact: true });
-  await del.scrollIntoViewIfNeeded();
-  await expect(del).toBeVisible();
-  await fits(page, ['.dtools .stencil']);
+  await fits(page, ['.dtools']);
   // Cancelling the confirm keeps the deck
   page.once('dialog', (d) => d.dismiss());
-  await del.click();
+  await deckMenu(page, 'Delete deck');
   await expect(page.locator('.dpanel')).toBeVisible();
   page.once('dialog', (d) => (expect(d.message()).toContain('Tatyova Lands'), d.accept()));
-  await del.click();
+  await deckMenu(page, 'Delete deck');
   await expect(page.locator('.dpanel')).toHaveCount(0);
   await expect(page.locator('.dcard')).toHaveCount(0);
 });
@@ -96,19 +104,22 @@ test('Deck page: Delete is on screen, asks first, and removes the deck', async (
 test('Deck page: Rename and Duplicate', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  const btn = (n: string) => page.getByRole('button', { name: n, exact: true });
-  await btn('RENAME').scrollIntoViewIfNeeded();
-  await fits(page, ['.dtools']);
+  await page.locator('.dtools').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `test-results/deck-tools-${info.project.name}.png` });
+  await page.getByRole('button', { name: /^Deck options/ }).click();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: `test-results/deck-menu-${info.project.name}.png` });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
   page.once('dialog', (d) => d.accept('Tatyova Ramp'));
-  await btn('RENAME').click();
+  await deckMenu(page, 'Rename');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Ramp');
-  await btn('DUPLICATE').click();
+  await deckMenu(page, 'Duplicate');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Ramp (copy)');
   // Renaming the copy to the original's name picks a free one instead
   const answers: (string | undefined)[] = ['Tatyova Ramp', undefined]; // the new name, then OK to "use Tatyova Ramp 2?"
   page.on('dialog', (d) => d.accept(answers.shift()));
-  await btn('RENAME').click();
+  await deckMenu(page, 'Rename');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Ramp 2');
   await page.locator('.backlink').click();
   await expect(page.locator('.dcard')).toHaveCount(2);

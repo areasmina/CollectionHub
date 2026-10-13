@@ -298,6 +298,103 @@ async function freeName(profile: number, want: string, except?: number) {
   for (let i = 2; ; i++) if (!taken.has(`${want} ${i}`.toLowerCase())) return `${want} ${i}`;
 }
 
+/** Everything you do to the deck itself (not how its cards are shown), tucked behind one button. */
+function DeckMenu({ deck, file, onBack, onOpen }: { deck: Deck; file: (ext: string) => string; onBack: () => void; onOpen: (id: number) => void }) {
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const close = () => setAt(null);
+  useLayoutEffect(() => {
+    if (!at || !ref.current) return;
+    const b = btn.current!.getBoundingClientRect();
+    const r = ref.current.getBoundingClientRect();
+    const left = Math.max(8, Math.min(b.right - r.width, innerWidth - r.width - 8));
+    const top = b.bottom + 8 + r.height > innerHeight - 8 ? Math.max(8, b.top - r.height - 8) : b.bottom + 8;
+    if (left !== at.left || top !== at.top) setAt({ left, top });
+  }, [at]);
+  useEffect(() => {
+    if (!at) return;
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    addEventListener('keydown', key);
+    addEventListener('scroll', close, { passive: true });
+    return () => (removeEventListener('keydown', key), removeEventListener('scroll', close));
+  }, [!!at]);
+  const act = (f: () => unknown) => () => (close(), f());
+  return (
+    <>
+      <button ref={btn} className="sticker deckbtn" aria-label="Deck options: rename, duplicate, export, delete" aria-haspopup="menu" aria-expanded={!!at} onClick={() => (haptic('open'), at ? close() : setAt({ left: 0, top: 0 }))}>
+        DECK <span aria-hidden="true">⋯</span>
+      </button>
+      {at && (
+        <>
+          <div className="backdrop menuback" onClick={close} />
+          <div ref={ref} className="cardmenu deckmenu" role="menu" aria-label={`${deck.name} options`} style={at}>
+            <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
+            <div className="mh">{deck.name}</div>
+            <ul>
+              <li>
+                <button
+                  role="menuitem"
+                  onClick={act(async () => {
+                    const want = prompt('Rename deck', deck.name)?.trim();
+                    if (!want || want === deck.name) return;
+                    const name = await freeName(deck.profile, want, deck.id);
+                    if (name !== want && !confirm(`Another deck is already called "${want}". Use "${name}"?`)) return;
+                    haptic('success');
+                    await db.decks.update(deck.id!, { name });
+                  })}
+                >
+                  ✎ Rename
+                </button>
+              </li>
+              <li>
+                <button
+                  role="menuitem"
+                  onClick={act(async () => {
+                    const { id: _, ...copy } = deck;
+                    const name = await freeName(deck.profile, `${deck.name} (copy)`);
+                    haptic('success');
+                    onOpen(await db.decks.add({ ...copy, name, cards: deck.cards.map((c) => ({ ...c })), tags: deck.tags && [...deck.tags], updated: Date.now() }));
+                    scrollTo({ top: 0, behavior: 'smooth' });
+                  })}
+                >
+                  ⧉ Duplicate <small>a copy you can change freely</small>
+                </button>
+              </li>
+              <li className="sep" role="separator" />
+              <li>
+                <button role="menuitem" onClick={act(() => download(file('txt'), deckText(deck)))}>
+                  ↓ Export as text <small>paste into Moxfield, Archidekt…</small>
+                </button>
+              </li>
+              <li>
+                <button role="menuitem" onClick={act(() => download(file('csv'), deckCsv(deck), 'text/csv'))}>
+                  ↓ Export as CSV <small>for spreadsheets</small>
+                </button>
+              </li>
+              <li className="sep" role="separator" />
+              <li>
+                <button
+                  role="menuitem"
+                  className="danger"
+                  onClick={act(async () => {
+                    if (confirm(`Delete deck "${deck.name}"?`)) {
+                      await db.decks.delete(deck.id!);
+                      onBack();
+                    }
+                  })}
+                >
+                  ✕ Delete deck
+                </button>
+              </li>
+            </ul>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
   const byKey =
@@ -441,48 +538,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
           <Pick label="SHOW" value={show} options={SHOWS} onChange={setShow} />
           <span className="grow" />
-          <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
-            EXPORT TEXT
-          </button>
-          <button className="sticker" onClick={() => download(file('csv'), deckCsv(deck), 'text/csv')}>
-            CSV
-          </button>
-          <button
-            className="sticker"
-            onClick={async () => {
-              const want = prompt('Rename deck', deck.name)?.trim();
-              if (!want || want === deck.name) return;
-              const name = await freeName(deck.profile, want, deck.id);
-              if (name !== want && !confirm(`Another deck is already called "${want}". Use "${name}"?`)) return;
-              haptic('success');
-              await db.decks.update(deck.id!, { name });
-            }}
-          >
-            RENAME
-          </button>
-          <button
-            className="sticker"
-            onClick={async () => {
-              const { id: _, ...copy } = deck;
-              const name = await freeName(deck.profile, `${deck.name} (copy)`);
-              haptic('success');
-              onOpen(await db.decks.add({ ...copy, name, cards: deck.cards.map((c) => ({ ...c })), tags: deck.tags && [...deck.tags], updated: Date.now() }));
-              scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          >
-            DUPLICATE
-          </button>
-          <button
-            className="stencil"
-            onClick={async () => {
-              if (confirm(`Delete deck "${deck.name}"?`)) {
-                await db.decks.delete(deck.id!);
-                onBack();
-              }
-            }}
-          >
-            DELETE
-          </button>
+          <DeckMenu deck={deck} file={file} onBack={onBack} onOpen={onOpen} />
         </div>
 
         <div className="deckgrid after-sw">
