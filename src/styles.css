@@ -57,6 +57,8 @@
 }
 html {
   overflow-x: hidden;
+  /* clip, unlike hidden, also stops focus / scrollIntoView from shifting the page sideways */
+  overflow-x: clip;
 }
 body {
   margin: 0;
@@ -66,6 +68,7 @@ body {
   color: var(--text);
   font: 16px/1.45 'Archivo', system-ui, sans-serif;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 a {
   color: inherit;
@@ -277,6 +280,7 @@ h2 {
 .stage {
   position: relative;
   overflow: hidden;
+  overflow: clip; /* hidden still lets focus scroll it sideways */
   min-height: 100dvh;
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
@@ -6074,5 +6078,19 @@ ul.popnote .small {
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) {
   .hero .filters .fpanel {
     animation: none;
+  }
+}
+.pageload {
+  min-height: 60vh;
+}
+
+/* Tablets / narrow desktop windows: the top-3 widget gets its own row under the ticket stub + slip */
+@media (min-width: 701px) and (max-width: 1199px) {
+  .stats {
+    flex-wrap: wrap;
+  }
+  .stats .topwidget {
+    flex: 1 1 100%;
+    margin: 18px 0 0;
   }
 }

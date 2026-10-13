@@ -1,15 +1,24 @@
 import { haptic, hapticsOn, hapticsSupported, setHaptics } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
-import { Collection } from './views/Collection';
-import { Decks } from './views/Decks';
 import { Discover } from './views/Discover';
-import { SyncPanel } from './views/SyncPanel';
-import { authReturn } from './lib/sync';
+import { authReturn } from './lib/authreturn';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
+
+// Pages other than Discover, and sync (Supabase), load on first use so the first open is quick.
+const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
+const Decks = lazy(() => import('./views/Decks').then((m) => ({ default: m.Decks })));
+const SyncPanel = lazy(() => import('./views/SyncPanel').then((m) => ({ default: m.SyncPanel })));
+// Warm the rest once the page is idle (keeps the session fresh and makes tab switches instant).
+const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 2500));
+idle(() => {
+  import('./views/Collection');
+  import('./views/Decks');
+  if (import.meta.env.VITE_SUPABASE_URL) import('./lib/sync');
+});
 
 type Tab = 'discover' | 'collection' | 'decks';
 const store = {
@@ -139,11 +148,17 @@ export default function App() {
           </button>
         ))}
       </nav>
-      {sync && <SyncPanel onClose={() => setSync(false)} />}
+      {sync && (
+        <Suspense fallback={null}>
+          <SyncPanel onClose={() => setSync(false)} />
+        </Suspense>
+      )}
       <PreviewLayer />
       {tab === 'discover' && <Discover key={home} {...shared} />}
-      {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
-      {tab === 'decks' && <Decks {...shared} />}
+      <Suspense fallback={<p className="count pageload">Loading…</p>}>
+        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
+        {tab === 'decks' && <Decks {...shared} />}
+      </Suspense>
       <footer className="credits">
         card data and images from <a href="https://scryfall.com">Scryfall</a> · deck data from <a href="https://edhrec.com">EDHREC</a> · not affiliated with Wizards of
         the Coast, Scryfall or EDHREC · ≈CA$ estimates

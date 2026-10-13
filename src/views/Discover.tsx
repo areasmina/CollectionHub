@@ -1,11 +1,12 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+
+const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m.CommanderView })));
 import { statusOf } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { fetchPage, pagePath } from '../lib/edhrec';
 import { slug } from '../lib/names';
-import { CommanderView } from './Commander';
 import { Progress, usd, type Shared } from './shared';
 import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
@@ -124,7 +125,12 @@ export function Discover(s: Shared) {
     };
   }, [commanders.length, s.mine, open]);
 
-  if (open) return <CommanderView name={open} s={s} no={openNo} onBack={() => setOpen(null)} />;
+  if (open)
+    return (
+      <Suspense fallback={<p className="count pageload">Loading…</p>}>
+        <CommanderView name={open} s={s} no={openNo} onBack={() => setOpen(null)} />
+      </Suspense>
+    );
 
   // Numeric sort with unknown values (no EDHREC deck, no price) always last.
   const byNum = (get: (c: Cmdr) => number | null | undefined, dir: 1 | -1) => (a: Cmdr, b: Cmdr) => {

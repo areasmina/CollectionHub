@@ -18,3 +18,5 @@ screenshots/
 # screenshots with credentials
 *.png
 !public/**/*.png
+test-results/
+playwright-report/

@@ -4,6 +4,13 @@ export const shopUrl = (name: string, template = SHOP_URL) => template.replace('
 
 const FALLBACK = 1.4; // used only until the day's rate loads
 let rate = FALLBACK;
+// Start from the last saved rate (any day) so the first paint already shows near-right prices.
+try {
+  const c = JSON.parse(localStorage.getItem('ch:usdcad') ?? 'null');
+  if (c?.rate) rate = c.rate;
+} catch {
+  /* no storage: fallback */
+}
 let rateDate = '';
 
 /** USD→CAD from Frankfurter (European Central Bank rates), cached for the day. */
