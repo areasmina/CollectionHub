@@ -74,3 +74,21 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   expect(menu!.x + menu!.width).toBeLessThanOrEqual(vw);
   await fits(page, ['.dhero', '.dtools', '.dpanel']);
 });
+
+test('Deck page: Delete is on screen, asks first, and removes the deck', async ({ page }) => {
+  await go(page, 'decks');
+  await expect(page.locator('.dcard')).toHaveCount(1);
+  await page.locator('.dcard').first().click();
+  const del = page.getByRole('button', { name: 'DELETE', exact: true });
+  await del.scrollIntoViewIfNeeded();
+  await expect(del).toBeVisible();
+  await fits(page, ['.dtools .stencil']);
+  // Cancelling the confirm keeps the deck
+  page.once('dialog', (d) => d.dismiss());
+  await del.click();
+  await expect(page.locator('.dpanel')).toBeVisible();
+  page.once('dialog', (d) => (expect(d.message()).toContain('Tatyova Lands'), d.accept()));
+  await del.click();
+  await expect(page.locator('.dpanel')).toHaveCount(0);
+  await expect(page.locator('.dcard')).toHaveCount(0);
+});
