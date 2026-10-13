@@ -235,7 +235,7 @@ export function HeroStats({ price, fetched, names, children }: { price?: number;
   return (
     <div className="hstats" onClick={(e) => e.stopPropagation()}>
       <span className="price tapey y1 t0 big" title={PRICE_METHOD} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
-        <small>DECK</small> {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
+        <small className="wideonly">DECK</small> {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
       </span>
       <SaltStat names={names} />
       {children}

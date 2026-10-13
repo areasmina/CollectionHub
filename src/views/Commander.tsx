@@ -239,7 +239,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             <div className="ctitle" onClick={onBack} title="Back to Discover">
               <div className="banner ht" aria-hidden="true" />
               <h1 aria-label={label}>
-                <Ransom text={label.toUpperCase()} size={label.length > 28 ? 44 : 54} seed={11} breakWords />
+                <Ransom text={label.toUpperCase()} size={label.length > 28 ? 44 : 54} seed={11} />
               </h1>
               <div className="namerow">
                 <Pips ci={ci} size={30} />

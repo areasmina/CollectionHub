@@ -256,7 +256,7 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
             <div className="ctitle">
               <div className="banner ht" aria-hidden="true" />
               <h1 aria-label={deck.name}>
-                <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} breakWords />
+                <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} />
               </h1>
               <div className="namerow">
                 <Pips ci={ci} size={30} />
@@ -267,7 +267,7 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
             </div>
             <div className="cmeta">
               <span className="typed">
-                {[deck.commander ? `COMMANDER: ${deck.commander.toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
+                {[deck.commander ? `COMMANDER: ${deck.commander.split(' // ')[0].toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
               </span>
               <span className="score">
                 <span className="mono">
