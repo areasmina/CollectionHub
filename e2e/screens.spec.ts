@@ -54,7 +54,8 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   await expect(page.locator('.dpanel')).toBeVisible();
-  await expect(page.locator('.dtools .viewsw')).toBeVisible();
+  await expect(page.locator('.cardsbar .viewsw')).toBeVisible();
+  await fits(page, ['.cardsbar']);
   const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
   // the deck re-renders while card data loads: retry until the tile is settled in view
   await expect(async () => {
@@ -123,4 +124,20 @@ test('Deck page: Rename and Duplicate', async ({ page }, info) => {
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Ramp 2');
   await page.locator('.backlink').click();
   await expect(page.locator('.dcard')).toHaveCount(2);
+});
+
+test('Deck page: right-click / press and hold the header opens the deck menu', async ({ page }, info) => {
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  const h1 = page.locator('.dhero h1');
+  if (info.project.name === 'desktop') await h1.click({ button: 'right' });
+  else {
+    const b = (await h1.boundingBox())!;
+    await h1.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: b.x + 20, clientY: b.y + 20, isPrimary: true });
+    await page.waitForTimeout(650);
+  }
+  await expect(page.getByRole('menu', { name: 'Tatyova Lands options' })).toBeVisible();
+  await page.waitForTimeout(250);
+  await fits(page, ['.deckmenu']);
+  await page.screenshot({ path: `test-results/deck-hold-${info.project.name}.png` });
 });

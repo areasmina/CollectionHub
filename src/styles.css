@@ -6185,18 +6185,34 @@ ul.popnote .small {
   margin-left: auto;
 }
 
-/* Deck page toolbar: how the cards are shown (grid/list, group, sort, show) + one DECK menu for the deck itself */
-.deckbtn {
-  gap: 8px;
+/* Deck page toolbar: group / sort / show + a DECK box (same look) that opens the deck menu */
+button.sbox.deckbtn {
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
 }
-.deckbtn span {
-  font-size: 22px;
+.deckbtn .val {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0 46px 0 10px;
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.deckbtn .arrow span {
+  font-size: 18px;
   line-height: 0;
-  transform: translateY(-1px);
+  padding-bottom: 4px;
 }
-.deckbtn[aria-expanded='true'] {
-  background: var(--accent);
-  color: var(--white);
+.dtools .deckbtn {
+  flex: 0 1 190px;
+}
+.deckbtn[aria-expanded='true'] .tab,
+.deckbtn[aria-expanded='true'] .arrow span {
+  background: var(--ink);
 }
 .deckmenu li > button {
   font-size: 16px;
@@ -6204,26 +6220,57 @@ ul.popnote .small {
 .deckmenu .danger {
   font-weight: 700;
 }
+/* Right-click / hold the deck header for the same menu */
+.dhero.hasmenu {
+  cursor: context-menu;
+}
+.dhero.hasmenu a,
+.dhero.hasmenu button {
+  cursor: pointer;
+}
+/* CARDS bar: count + grid / list, right above the first card section */
+.cardsbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 6px 6px 6px 14px;
+  background: var(--ink);
+  border: 2px solid var(--text);
+  box-shadow: 4px 4px 0 var(--accent);
+  transform: rotate(-0.4deg);
+}
+.cardsbar .h {
+  font-family: var(--an);
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: var(--text);
+}
+.cardsbar .h b {
+  font-family: 'Space Mono', monospace;
+  font-size: 16px;
+  color: var(--hazard);
+  margin-left: 6px;
+}
+.cardsbar .viewsw {
+  margin: 0;
+}
+.cardsbar .viewsw button {
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 14px;
+}
 @media (max-width: 700px) {
-  .dtools .viewsw {
-    order: -3;
+  /* group / sort / show / DECK in a 2 × 2 grid: small red label on top, the choice under it */
+  .dtools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
-  /* the spacer becomes a line break: view + DECK on top, the three dropdowns under */
   .dtools .grow {
-    display: block;
-    order: -1;
-    flex: 1 0 100%;
-    height: 0;
-    margin: -5px 0;
+    display: none;
   }
-  .dtools .deckbtn {
-    order: -2;
-    flex: 0 0 auto;
-    min-width: 112px;
-  }
-  /* Group / sort / show side by side: small red label on top, the choice under it */
   .dtools .sbox.pick {
-    flex: 1 1 0;
     min-width: 0;
     flex-direction: column;
     min-height: 58px;
@@ -6234,7 +6281,8 @@ ul.popnote .small {
     padding: 3px 8px 2px;
     align-self: flex-start;
   }
-  .dtools .sbox.pick select {
+  .dtools .sbox.pick select,
+  .dtools .deckbtn .val {
     width: auto;
     flex: 1;
     font-size: 15px;
@@ -6250,6 +6298,12 @@ ul.popnote .small {
     width: 20px;
     height: 20px;
     font-size: 11px;
+  }
+  .dtools .deckbtn .arrow span {
+    font-size: 15px;
+  }
+  .cardsbar .viewsw button {
+    padding: 0 12px;
   }
 }
 .deckmenu li > button {

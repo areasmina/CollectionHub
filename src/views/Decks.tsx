@@ -14,7 +14,7 @@ import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arr
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -299,36 +299,51 @@ async function freeName(profile: number, want: string, except?: number) {
 }
 
 /** Everything you do to the deck itself (not how its cards are shown), tucked behind one button. */
-function DeckMenu({ deck, file, onBack, onOpen }: { deck: Deck; file: (ext: string) => string; onBack: () => void; onOpen: (id: number) => void }) {
-  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
-  const btn = useRef<HTMLButtonElement>(null);
+type MenuAt = { x: number; y: number; anchor?: DOMRect }; // a point (right-click / hold) or under the DECK box
+
+function DeckButton({ open, onOpen }: { open: boolean; onOpen: (at: MenuAt | null) => void }) {
+  return (
+    <button
+      className="sbox pick deckbtn"
+      aria-label="Deck options: rename, duplicate, export, delete"
+      aria-haspopup="menu"
+      aria-expanded={open}
+      onClick={(e) => (haptic('open'), onOpen(open ? null : { x: 0, y: 0, anchor: e.currentTarget.getBoundingClientRect() }))}
+    >
+      <span className="tab">DECK</span>
+      <span className="val">OPTIONS</span>
+      <span className="arrow" aria-hidden="true">
+        <span>⋯</span>
+      </span>
+    </button>
+  );
+}
+
+function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at: MenuAt; file: (ext: string) => string; onClose: () => void; onBack: () => void; onOpen: (id: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const close = () => setAt(null);
+  const close = onClose;
+  // Keep it on screen: under (or above) the DECK box, else at the pressed spot.
+  const [pos, setPos] = useState({ left: at.x, top: at.y });
   useLayoutEffect(() => {
-    if (!at || !ref.current) return;
-    const b = btn.current!.getBoundingClientRect();
-    const r = ref.current.getBoundingClientRect();
-    const left = Math.max(8, Math.min(b.right - r.width, innerWidth - r.width - 8));
-    const top = b.bottom + 8 + r.height > innerHeight - 8 ? Math.max(8, b.top - r.height - 8) : b.bottom + 8;
-    if (left !== at.left || top !== at.top) setAt({ left, top });
+    const r = ref.current!.getBoundingClientRect();
+    const b = at.anchor;
+    const left = Math.max(8, Math.min(b ? b.right - r.width : at.x, innerWidth - r.width - 8));
+    const top = b ? (b.bottom + 8 + r.height > innerHeight - 8 ? Math.max(8, b.top - r.height - 8) : b.bottom + 8) : Math.max(8, Math.min(at.y, innerHeight - r.height - 8));
+    setPos({ left, top });
   }, [at]);
   useEffect(() => {
-    if (!at) return;
     const key = (e: KeyboardEvent) => e.key === 'Escape' && close();
     addEventListener('keydown', key);
     addEventListener('scroll', close, { passive: true });
     return () => (removeEventListener('keydown', key), removeEventListener('scroll', close));
-  }, [!!at]);
+  }, []);
   const act = (f: () => unknown) => () => (close(), f());
   return (
     <>
-      <button ref={btn} className="sticker deckbtn" aria-label="Deck options: rename, duplicate, export, delete" aria-haspopup="menu" aria-expanded={!!at} onClick={() => (haptic('open'), at ? close() : setAt({ left: 0, top: 0 }))}>
-        DECK <span aria-hidden="true">⋯</span>
-      </button>
-      {at && (
+      {(
         <>
-          <div className="backdrop menuback" onClick={close} />
-          <div ref={ref} className="cardmenu deckmenu" role="menu" aria-label={`${deck.name} options`} style={at}>
+          <div className="backdrop menuback" onClick={close} onContextMenu={(e) => (e.preventDefault(), close())} />
+          <div ref={ref} className="cardmenu deckmenu" role="menu" aria-label={`${deck.name} options`} style={pos}>
             <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
             <div className="mh">{deck.name}</div>
             <ul>
@@ -419,6 +434,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardFor(c), qty: c.qty })));
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
+  const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
+  const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
   const [toast, setToast] = useState<{ text: string; undo?: () => unknown } | null>(null);
   useEffect(() => {
     if (!toast) return;
@@ -476,7 +493,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           DECKS
         </button>
 
-        <section className={`chero dhero${cmdr?.img ? '' : ' noimg'}`}>
+        <section className={`chero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} title="Right-click (or press and hold) for deck options">
           <span className="worn" aria-hidden="true" />
           {cmdr?.img && (
             <div className="cimg gbox">
@@ -526,23 +543,30 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
 
         <div className="dtools" role="toolbar" aria-label="Deck view">
-          <div className="viewsw" role="group" aria-label="Card view">
-            <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
-                <GridIcon /> Grid
-              </button>
-            <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
-                <ListIcon /> List
-              </button>
-          </div>
           <Pick label="GROUP" value={grouping} options={GROUPINGS} onChange={setGrouping} />
           <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
           <Pick label="SHOW" value={show} options={SHOWS} onChange={setShow} />
           <span className="grow" />
-          <DeckMenu deck={deck} file={file} onBack={onBack} onOpen={onOpen} />
+          <DeckButton open={!!deckMenu} onOpen={setDeckMenu} />
         </div>
+        {deckMenu && <DeckMenu deck={deck} at={deckMenu} file={file} onClose={() => setDeckMenu(null)} onBack={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
           <div className="lists">
+            {/* How the cards below are shown, right where they start */}
+            <div className="cardsbar">
+              <span className="h">
+                CARDS <b>{st.total}</b>
+              </span>
+              <div className="viewsw" role="group" aria-label="Card view">
+                <button aria-pressed={view === 'grid'} aria-label="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                  <GridIcon /> <span className="lbl">Grid</span>
+                </button>
+                <button aria-pressed={view === 'list'} aria-label="List view" onClick={() => (haptic('select'), setView('list'))}>
+                  <ListIcon /> <span className="lbl">List</span>
+                </button>
+              </div>
+            </div>
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {
