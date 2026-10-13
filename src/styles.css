@@ -3708,3 +3708,160 @@ ul.popnote .small {
 .hscroll {
   -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
 }
+.pickcmdr mark {
+  background: var(--hazard);
+  padding: 0 4px;
+}
+.pickcmdr .btn {
+  min-height: 44px;
+  margin: 6px 0 0;
+  font-size: 17px;
+  padding: 0 14px;
+}
+.dcard .nocmdr {
+  font-family: var(--se);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* Card menu (deck page): right-click / press and hold a card */
+.hasmenu {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.menuback {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: transparent;
+}
+.cardmenu {
+  position: fixed;
+  z-index: 61;
+  width: min(300px, calc(100vw - 16px));
+  padding: 14px 10px 10px;
+  background: #f4efe2;
+  color: #141414;
+  box-shadow: 6px 6px 0 var(--accent), 0 0 0 3px #141414;
+  transform: rotate(-0.6deg);
+  animation: drop 0.18s ease-out;
+}
+.cardmenu .mh {
+  font-family: var(--an);
+  font-size: 18px;
+  line-height: 1.1;
+  padding: 0 6px 8px;
+  border-bottom: 2px dashed #9a9a9a;
+  margin-bottom: 4px;
+}
+.cardmenu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cardmenu li > button,
+.cardmenu li > a {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 8px;
+  background: none;
+  border: 0;
+  color: #141414;
+  font-family: var(--se);
+  font-size: 15px;
+  text-align: left;
+  text-decoration: none;
+}
+.cardmenu li > button:hover,
+.cardmenu li > a:hover,
+.cardmenu li > button:focus-visible,
+.cardmenu li > a:focus-visible {
+  background: #141414;
+  color: #f4efe2;
+}
+.cardmenu small {
+  font-size: 12px;
+  color: #6b6b6b;
+}
+.cardmenu button:hover small {
+  color: #c9c9c9;
+}
+.cardmenu .danger {
+  color: #b00c18;
+}
+.cardmenu .sep {
+  height: 0;
+  margin: 4px 0;
+  border-top: 1px dashed #b5b5b5;
+}
+.cardmenu .qtyrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  font-family: var(--se);
+  font-size: 15px;
+}
+.cardmenu .qtyrow span {
+  flex: 1;
+}
+.cardmenu .qtyrow button {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #141414;
+  background: #fff;
+  font-family: var(--an);
+  font-size: 20px;
+}
+/* Phones: the menu is a bottom sheet above the tab bar */
+@media (max-width: 700px) {
+  .cardmenu {
+    left: 8px !important;
+    right: 8px;
+    top: auto !important;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
+  }
+  .cardmenu li > button,
+  .cardmenu li > a {
+    min-height: 46px;
+    font-size: 16px;
+  }
+}
+.toast {
+  position: fixed;
+  z-index: 70;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 16px;
+  background: #141414;
+  color: #fff;
+  border: 2px solid #fff;
+  box-shadow: 5px 5px 0 var(--accent);
+  font-family: var(--se);
+  font-size: 15px;
+}
+.toast button {
+  min-height: 40px;
+  padding: 0 14px;
+  background: var(--hazard);
+  color: #141414;
+  border: 0;
+  font-family: var(--an);
+  font-size: 17px;
+}
+@media (max-width: 899px) {
+  .toast {
+    bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+}

@@ -35,6 +35,7 @@ export interface Entry {
 export interface DeckCard {
   name: string;
   qty: number;
+  foil?: boolean; // the deck wants (and, when owned, your binder holds) the foil version
 }
 export interface Deck {
   id?: number;

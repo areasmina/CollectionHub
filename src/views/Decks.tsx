@@ -1,17 +1,19 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
-import { statusOf, summarize } from '../lib/compare';
+import { BASICS, statusOf, summarize } from '../lib/compare';
+import { changeQty, removeFromDeck, removeOneFromBinder, setFoil } from '../lib/deckedit';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
-import { norm } from '../lib/names';
-import { cad, fetchedNote } from '../lib/prices';
+import { norm, slug } from '../lib/names';
+import { cad, fetchedNote, shopUrl } from '../lib/prices';
+import { guessCommander } from '../lib/commander';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -74,6 +76,126 @@ function BracketStat({ call }: { call: BracketCall }) {
         <li className="small">An estimate from the official bracket rules we can check. Two-card combos aren't checked; bracket I vs II and V depend on how the deck is meant to play.</li>
       </ul>
     </details>
+  );
+}
+
+/** A deck saved without a commander: suggest the likely one (one tap sets it); the card menu can set any card. */
+function PickCommander({ deck, cardOf }: { deck: Deck; cardOf: (name: string) => Card | undefined }) {
+  const guess = guessCommander(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })));
+  return (
+    <aside className="shortalert pickcmdr" role="status">
+      <b>⚠ NO COMMANDER</b>{' '}
+      {guess ? (
+        <>
+          This deck has no commander yet. It looks like <mark>{guess}</mark>.{' '}
+          <button className="btn" onClick={() => setCommander(deck, guess)}>
+            SET AS COMMANDER
+          </button>
+        </>
+      ) : (
+        'This deck has no commander yet. Right-click (or long-press) a card and choose Set as commander.'
+      )}
+    </aside>
+  );
+}
+
+/** Make a deck card the commander (the previous one stays in the deck as a normal card). */
+export const setCommander = (deck: Deck, name: string) => db.decks.update(deck.id!, { commander: name, updated: Date.now() });
+
+/** Card menu (right-click / press and hold): commander, links, foil, copies, remove from deck or binder. */
+function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Shared; at: { card: DeckCard; x: number; y: number }; owned: number; onClose: () => void; onToast: (t: { text: string; undo?: () => unknown }) => void }) {
+  const c = deck.cards.find((x) => x.name === at.card.name) ?? at.card; // live: + / − update the count
+  const ref = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  // Keep the note on screen: open left / up when the click is near the right / bottom edge.
+  const [pos, setPos] = useState({ left: at.x, top: at.y });
+  useLayoutEffect(() => {
+    const r = ref.current!.getBoundingClientRect();
+    setPos({ left: Math.max(8, Math.min(at.x, innerWidth - r.width - 8)), top: Math.max(8, Math.min(at.y, innerHeight - r.height - 8)) });
+  }, [at.x, at.y]);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    addEventListener('keydown', key);
+    addEventListener('scroll', onClose, { passive: true });
+    return () => (removeEventListener('keydown', key), removeEventListener('scroll', onClose));
+  }, []);
+  const isCmdr = c.name === deck.commander;
+  const many = c.qty > 1 || BASICS.has(norm(c.name));
+  const act = (f: () => unknown) => () => (f(), onClose());
+  const link = (href: string, text: string) => (
+    <li>
+      <a href={href} target="_blank" rel="noreferrer" onClick={onClose}>
+        {text} ↗
+      </a>
+    </li>
+  );
+  return (
+    <>
+      <div className="backdrop menuback" onClick={onClose} onContextMenu={(e) => (e.preventDefault(), onClose())} />
+      <div ref={ref} className="cardmenu" role="menu" aria-label={`${c.name} options`} style={pos}>
+        <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
+        <div className="mh">{c.name}</div>
+        <ul>
+          {!isCmdr && (
+            <li>
+              <button onClick={act(() => setCommander(deck, c.name))}>{deck.commander ? `★ Swap commander (replaces ${deck.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
+            </li>
+          )}
+          <li>
+            <button
+              onClick={() =>
+                navigator.clipboard
+                  ?.writeText(c.name)
+                  .then(() => setCopied(true))
+                  .then(() => setTimeout(onClose, 600))
+              }
+            >
+              {copied ? 'Copied ✓' : 'Copy card name'}
+            </button>
+          </li>
+          {link(shopUrl(c.name), 'Open in shop')}
+          {link(`https://edhrec.com/${isCmdr ? 'commanders' : 'cards'}/${slug(c.name.split(' // ')[0])}`, 'Open on EDHREC')}
+          {link(scryfallUrl(c.name), 'Open on Scryfall')}
+          <li className="sep" />
+          <li>
+            <button onClick={act(() => setFoil(deck, s.profile, c.name, !c.foil))}>
+              {c.foil ? 'Switch to non-foil' : '✦ Switch to foil'}
+              <small>{owned ? ' · your binder copy too' : ' · deck only (not owned)'}</small>
+            </button>
+          </li>
+          {many && (
+            <li className="qtyrow">
+              <span>Copies: {c.qty}</span>
+              <button aria-label="One copy fewer" onClick={() => changeQty(deck, c.name, -1)}>
+                −
+              </button>
+              <button aria-label="One copy more" onClick={() => changeQty(deck, c.name, 1)}>
+                +
+              </button>
+            </li>
+          )}
+          <li className="sep" />
+          <li>
+            <button className="danger" onClick={act(async () => onToast({ text: `Removed ${c.name} from the deck`, undo: await removeFromDeck(deck, c.name) }))}>
+              Remove from deck
+            </button>
+          </li>
+          {owned > 0 && !BASICS.has(norm(c.name)) && (
+            <li>
+              <button
+                className="danger"
+                onClick={act(async () => {
+                  if (!confirm(`Take one copy of ${c.name} out of ${s.binderName}? You own ${owned}.`)) return;
+                  onToast({ text: `Removed one ${c.name} from ${s.binderName}`, undo: await removeOneFromBinder(s.profile, c.name, c.foil) });
+                })}
+              >
+                Remove from binder <small>(you own {owned})</small>
+              </button>
+            </li>
+          )}
+        </ul>
+      </div>
+    </>
   );
 }
 
@@ -186,8 +308,17 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
   const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
   const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
-  const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
-  const deckCost = priceSum(deck.cards.map((c) => ({ card: cardOf(c.name), qty: c.qty })));
+  // Foil deck cards are priced at the foil price of the printing on file.
+  const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
+  const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
+  const deckCost = priceSum(deck.cards.map((c) => ({ card: cardFor(c), qty: c.qty })));
+  const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
+  const [toast, setToast] = useState<{ text: string; undo?: () => unknown } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const pricesIn = byKey.size > 0;
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const st = deckStats(deck.cards, cardOf, deck.commander);
@@ -285,6 +416,7 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
           {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
         </section>
 
+        {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
         <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
 
         <div className="dtools" role="toolbar" aria-label="Deck view">
@@ -339,7 +471,14 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
                     </summary>
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => (
-                        <Item key={c.name} name={c.name} card={cardOf(c.name)} s={s} note={c.qty > 1 ? `×${c.qty}` : call.gameChangers.includes(c.name) ? 'Game Changer' : ''} />
+                        <Item
+                          key={c.name}
+                          name={c.name}
+                          card={cardFor(c)}
+                          s={s}
+                          note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
+                          onMenu={(x, y) => setMenu({ card: c, x, y })}
+                        />
                       ))}
                     </ul>
                   </details>
@@ -351,6 +490,17 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
             <DeckNotes deck={deck} />
           </div>
         </div>
+        {menu && <CardMenu deck={deck} s={s} at={menu} owned={s.mine.get(norm(menu.card.name)) ?? 0} onClose={() => setMenu(null)} onToast={setToast} />}
+        {toast && (
+          <div className="toast" role="status">
+            <span>{toast.text}</span>
+            {toast.undo && (
+              <button onClick={() => (toast.undo!(), setToast(null))}>
+                UNDO
+              </button>
+            )}
+          </div>
+        )}
       </main>
     </>
   );
@@ -409,25 +559,29 @@ export function Decks(s: Shared) {
         <ul className="dgrid">
           {decks.map((d, i) => {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
-            const c = cmdrs.get(norm(d.commander ?? ''));
+            // No commander set: show the deck's most expensive card instead of a blank tile.
+            const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
+            const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
+            const art = d.commander ?? c?.name ?? '';
             return (
               <li key={d.id}>
                 <button className="dcard gbox" onClick={() => setOpen(d.id!)}>
                   {i === 0 && <Doodles n={433} count={2} spots={[[64, 50], [70, -8]]} paper />}
                   <span className="rule" aria-hidden="true" />
                   <span className="ytape" aria-hidden="true" />
-                  <span className={statusOf(d.commander ?? '', s.mine) === 'owned' ? 'xart owned' : 'xart'} aria-hidden="true">
+                  <span className={statusOf(art, s.mine) === 'owned' ? 'xart owned' : 'xart'} aria-hidden="true">
                     {c?.img && <img src={c.img.replace('/small/', '/normal/')} alt="" loading="lazy" />}
-                    {statusOf(d.commander ?? '', s.mine) !== 'owned' && <Xgrain />}
+                    {statusOf(art, s.mine) !== 'owned' && <Xgrain />}
                   </span>
                   <span className="t">
                     <b>{d.name}</b>
                     <span>
                       {d.cards.reduce((n, x) => n + x.qty, 0)} cards · {sum.pct}% owned
                     </span>
-                    {priced.size > 0 && <span className={`price tapey y${i % 5} t${(i * 3) % 4}`}>≈{cad(priceSum(d.cards.map((x) => ({ card: priced.get(norm(x.name)), qty: x.qty }))))}</span>}
+                    {priced.size > 0 && <span className={`price tapey y${i % 5} t${(i * 3) % 4}`}>≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</span>}
                     {d.tags?.length ? <span className="dtags">{d.tags.map((t) => `#${t}`).join(' ')}</span> : null}
-                    {c && <Pips ci={c.ci} size={24} />}
+                    {lead && <Pips ci={lead.ci} size={24} />}
+                    {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
                   </span>
                   {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
                 </button>

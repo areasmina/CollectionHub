@@ -35,10 +35,10 @@ describe('parseImport', () => {
     const p = parseImport("Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1x Sol Ring (CMM) 410 *F*\n2 Island\nSIDEBOARD:\n1 Opt (ELD) 59\n");
     expect(p.format).toBe('text');
     expect(p.rows).toEqual([
-      { name: "Atraxa, Praetors' Voice", qty: 1, set: undefined, cn: undefined, foil: false, section: 'Commander' },
+      { name: "Atraxa, Praetors' Voice", qty: 1, set: undefined, cn: undefined, foil: false, section: 'Commander', edge: true },
       { name: 'Sol Ring', qty: 1, set: 'CMM', cn: '410', foil: true, section: 'Deck' },
       { name: 'Island', qty: 2, set: undefined, cn: undefined, foil: false, section: 'Deck' },
-      { name: 'Opt', qty: 1, set: 'ELD', cn: '59', foil: false, section: 'SIDEBOARD' },
+      { name: 'Opt', qty: 1, set: 'ELD', cn: '59', foil: false, section: 'SIDEBOARD', edge: true },
     ]);
   });
 

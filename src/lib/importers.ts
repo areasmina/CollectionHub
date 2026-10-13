@@ -7,6 +7,7 @@ export interface Row {
   foil?: boolean;
   added?: string; // date the card entered the collection (ManaBox 'Added')
   section?: string;
+  edge?: boolean; // alone in a short block at the very start or end of a text list (where exports put the commander)
 }
 export interface ParseError {
   line: number;
@@ -81,10 +82,14 @@ function parseText(text: string): Parsed {
   const rows: Row[] = [];
   const errors: ParseError[] = [];
   let section: string | undefined;
+  let block = 0; // blank lines and section headers start a new block
+  const blockOf: number[] = [];
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = i + 1;
     let s = raw.trim();
-    if (!s || s.startsWith('#')) return;
+    if (!s) return void block++;
+    if (s.startsWith('#')) return;
+    if (/^(\/\/|[^\d].*:$)/.test(s) || (!/^\d/.test(s) && HEADER.test(s.replace(/\s*\(\d+\)\s*$/, '').replace(/:$/, '').trim()))) block++;
     if (s.startsWith('//')) return void (section = s.slice(2).trim());
     const bare = s.replace(/\s*\(\d+\)\s*$/, '').replace(/:$/, '').trim();
     if (!/^\d/.test(s) && (HEADER.test(bare) || s.endsWith(':'))) return void (section = bare);
@@ -94,6 +99,8 @@ function parseText(text: string): Parsed {
     let rowSection = section;
     const cat = /\[([^\]]*)\]/.exec(s); // Archidekt category, e.g. [Commander{top}]
     if (cat && /commander/i.test(cat[1])) rowSection = 'Commander';
+    if (/\*CMDR\*/i.test(s)) rowSection = 'Commander'; // Moxfield's commander mark
+    s = s.replace(/\*CMDR\*/gi, '');
     const foil = /\*[FE]\*/.test(s);
     s = s.replace(/\^[^^]*\^/g, '').replace(/\[[^\]]*\]/g, '').replace(/\*[FE]\*/g, '').trim();
     const sc = /\s+\(([A-Za-z0-9]{2,6})\)(?:\s+(\S+))?$/.exec(s);
@@ -101,7 +108,18 @@ function parseText(text: string): Parsed {
     if (!s) return errors.push({ line, text: raw, reason: 'No card name' });
     if (qty < 1) return errors.push({ line, text: raw, reason: 'Quantity must be at least 1' });
     rows.push({ name: s, qty, set: sc?.[1], cn: sc?.[2], foil, section: rowSection });
+    blockOf.push(block);
   });
+  // A block of 1–2 single cards at the very start or end, set apart by a blank line, is where Moxfield / MTGO exports
+  // put the commander. Only a hint: the deck import checks the card can be a commander.
+  const blocks = new Map<number, number[]>();
+  blockOf.forEach((b, i) => blocks.set(b, [...(blocks.get(b) ?? []), i]));
+  const ids = [...blocks.keys()];
+  if (ids.length > 1)
+    for (const b of [ids[0], ids[ids.length - 1]]) {
+      const rs = blocks.get(b)!;
+      if (rs.length <= 2 && rs.every((i) => rows[i].qty === 1)) rs.forEach((i) => (rows[i].edge = true));
+    }
   return { format: 'text', rows, errors };
 }
 

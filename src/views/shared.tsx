@@ -93,6 +93,38 @@ export function PriceLink({ card, plain, tape }: { card?: Card; plain?: boolean;
   );
 }
 
+/** Right-click (mouse) or press-and-hold (touch, 0.5 s) opens a card menu at that spot; the click a hold ends in is dropped. */
+export function useMenuPress(onMenu?: (x: number, y: number) => void) {
+  const timer = useRef<number>(undefined);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const fired = useRef(false);
+  if (!onMenu) return {};
+  const cancel = () => (clearTimeout(timer.current), (start.current = null));
+  return {
+    onContextMenu: (e: React.MouseEvent) => {
+      e.preventDefault();
+      cancel();
+      onMenu(e.clientX, e.clientY);
+    },
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      fired.current = false;
+      start.current = { x: e.clientX, y: e.clientY };
+      timer.current = window.setTimeout(() => {
+        fired.current = true;
+        navigator.vibrate?.(15);
+        onMenu(start.current!.x, start.current!.y);
+      }, 500);
+    },
+    onPointerMove: (e: React.PointerEvent) => start.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10 && cancel(),
+    onPointerUp: cancel,
+    onPointerCancel: cancel,
+    onClickCapture: (e: React.MouseEvent) => {
+      if (fired.current) (e.stopPropagation(), e.preventDefault(), (fired.current = false));
+    },
+  };
+}
+
 /** A card row: owned normal, missing dimmed with a SWAP button, "in <other binder>" labelled. */
 export function CardLine({
   name,
@@ -103,8 +135,10 @@ export function CardLine({
   marker,
   onOpen,
   onClose,
+  onMenu,
   children,
 }: {
+  onMenu?: (x: number, y: number) => void; // card menu (right-click / press and hold)
   name: string;
   img?: string;
   card?: Card;
@@ -116,8 +150,9 @@ export function CardLine({
   children?: React.ReactNode; // replacement note
 }) {
   const st = statusOf(name, s.mine, s.other);
+  const press = useMenuPress(onMenu);
   return (
-    <li className={`zrow ${st}`} onMouseEnter={onOpen} onMouseLeave={onClose} onClick={onOpen}>
+    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} onMouseEnter={onOpen} onMouseLeave={onClose} onClick={onOpen} {...press}>
       <Thumb src={card?.img ?? img} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="nm">{name}</span>
@@ -143,11 +178,12 @@ export function CardLine({
 }
 
 /** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
-export function CardTile({ name, img, card, s, note, marker, onOpen, children }: Parameters<typeof CardLine>[0]) {
+export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, children }: Parameters<typeof CardLine>[0]) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
+  const press = useMenuPress(onMenu);
   return (
-    <li className={`ztile ${st}`} onClick={onOpen}>
+    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
       <Thumb src={src} className="timg xart" name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="tname">
         {name}
