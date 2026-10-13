@@ -82,6 +82,13 @@ export function Collection({ profile, name }: { profile: number; name: string })
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
+  // The binder's three most valuable cards (per copy, at the finish you own), fanned in the free space by the stats.
+  const top = entries
+    .map((e) => ({ e, card: cards.get(e.cardId)!, usd: Number(priced(cards.get(e.cardId), e.foil)?.usd ?? 0) }))
+    .filter((x) => x.card && x.usd > 0)
+    .sort((a, b) => b.usd - a.usd)
+    .filter((x, i, a) => a.findIndex((y) => y.card.key === x.card.key) === i)
+    .slice(0, 3);
   const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
   const upload = (
@@ -128,6 +135,21 @@ export function Collection({ profile, name }: { profile: number; name: string })
             <span className="warn">warning</span>
             {value > 0 && <span className="stamp">APPRAISED</span>}
           </div>
+          {top.length > 0 && (
+            <div className="tophand" aria-label="Most valuable cards">
+              <span className="tlabel">
+                TOP {top.length} · <small>most valuable</small>
+              </span>
+              <ul>
+                {top.map(({ e, card }, i) => (
+                  <li key={e.id} style={{ '--i': i - (top.length - 1) / 2 } as React.CSSProperties}>
+                    <Thumb src={card.img?.replace('/small/', '/normal/')} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
+                    <PriceLink card={priced(card, e.foil)} tape={e.cardId} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
         {illegal > 0 && (
