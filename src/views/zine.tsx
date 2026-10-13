@@ -1,5 +1,5 @@
 // "Midnight Override" zine kit: ransom titles, marker doodles, page decor, pips (design/midnight-override-spec.md).
-import { useMemo } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 
 const frac = (x: number) => x - Math.floor(x);
 
@@ -229,11 +229,14 @@ export const RiseBars = ({ pct }: { pct: number }) => (
 export const Tape = ({ style }: { style: React.CSSProperties }) => <span aria-hidden="true" className="tape" style={style} />;
 
 
-/** Discover header art in the owner's style: a flaming eye over a faded mountain ridge, stop-motion fire, a moon,
- *  flaming heart, star and card orbiting on a tilted ring (passing behind the eye on the far side and in front, with a
- *  shadow, on the near side), the owner's cherub engraving above and its devil twin below. Animations live in
- *  styles.css (.eyedoodle …) and stop under prefers-reduced-motion. Decorative. */
-export function EyeDoodle() {
+type Orb = { el: React.ReactNode; ring: 0 | 1; at: number; size: number; twinkle?: boolean };
+
+/** Discover header art in the owner's style: a flaming eye over a surreal blue-purple mountainscape. Everything else
+ *  (the owner's cherub and devil engravings, moon, hearts, stars, skulls, a card) orbits it on two tilted rings in 3D:
+ *  farther items shrink, dim and pass behind the fire, nearer ones grow and pass in front with a shadow. Positions
+ *  are set per frame on the DOM (no re-render); fire, blink, iris and twinkles are CSS (styles.css .eyedoodle).
+ *  With reduced motion everything holds still. Decorative. */
+export const EyeDoodle = memo(function EyeDoodle() {
   const ink = '#1c120c';
   const red = '#c9402a';
   const orange = '#e58a2b';
@@ -241,7 +244,7 @@ export function EyeDoodle() {
   const teal = '#3c8a90';
   const cream = '#f3e6c9';
   const cx = 180;
-  const cy = 130;
+  const cy = 134;
   const tongues = (r1: number, rLong: number, rShort: number, n: number, rot: number, wob: number) =>
     Array.from({ length: n }, (_, i) => {
       const a = ((i / n) * 360 + rot) * (Math.PI / 180);
@@ -252,86 +255,132 @@ export function EyeDoodle() {
     }).join(' ');
   const fire = (f: number) => (
     <g key={f} className={`ef f${f}`}>
-      <path d={tongues(36, 78, 62, 20, f * 5, f * 1.7)} fill={red} strokeWidth="2.4" />
-      <path d={tongues(36, 66, 54, 20, 9 + f * 4, f * 2.1 + 1)} fill={orange} strokeWidth="2" />
-      <path d={tongues(36, 54, 46, 20, f * 6, f * 2.9 + 2)} fill={yellow} strokeWidth="1.8" />
+      <path d={tongues(36, 76, 60, 20, f * 5, f * 1.7)} fill={red} strokeWidth="2.4" />
+      <path d={tongues(36, 64, 52, 20, 9 + f * 4, f * 2.1 + 1)} fill={orange} strokeWidth="2" />
+      <path d={tongues(36, 52, 44, 20, f * 6, f * 2.9 + 2)} fill={yellow} strokeWidth="1.8" />
     </g>
   );
   const star = (r: number) => `M0 ${-r} Q${r * 0.15} ${-r * 0.15} ${r} 0 Q${r * 0.15} ${r * 0.15} 0 ${r} Q${-r * 0.15} ${r * 0.15} ${-r} 0 Q${-r * 0.15} ${-r * 0.15} 0 ${-r}Z`;
-  const items: [number, React.ReactNode][] = [
-    [0, <path d="M6 -15 A16 16 0 1 0 6 15 A18 18 0 0 1 6 -15Z" fill={yellow} />],
-    [90, <g><path d="M-6 -8 C-10 -15 -5 -20 -2 -23 C-3 -17 1 -15 1 -11 C3 -17 6 -20 9 -22 C8 -16 10 -12 8 -7Z" fill={orange} /><path d="M0 13 C-7 7 -16 1 -14 -6 C-13 -12 -4 -13 0 -6 C4 -13 13 -12 14 -6 C16 1 7 7 0 13Z" fill={red} /></g>],
-    [180, <path d={star(11)} fill={yellow} />],
-    [270, <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g>],
-  ];
-  // Tilted ring: the ring is squashed (scale y 0.36) and spun; each item undoes the spin and the squash so it stays
-  // upright. Drawn twice: far half clipped behind the eye, near half in front.
-  const TILT = 0.36;
-  const R = 122;
-  const ring = (side: 'back' | 'front') => (
-    <g clipPath={`url(#orb-${side})`} className={`orbitlayer ${side}`}>
-      <g transform={`translate(${cx} ${cy}) scale(1 ${TILT})`}>
-        <g className="spin">
-          {items.map(([deg, el]) => {
-            const a = (deg * Math.PI) / 180;
-            return (
-              <g key={deg} transform={`translate(${(Math.cos(a) * R).toFixed(1)} ${(Math.sin(a) * R).toFixed(1)})`}>
-                <g className="unspin">
-                  <g transform={`scale(1 ${(1 / TILT).toFixed(3)})`}>{el}</g>
-                </g>
-              </g>
-            );
-          })}
-        </g>
-      </g>
+  const skull = (
+    <g>
+      <path d="M-11 2 C-11 -14 11 -14 11 2 C11 6 8 7 7 9 L7 13 L-7 13 L-7 9 C-8 7 -11 6 -11 2Z" fill={cream} />
+      <circle cx="-4.5" cy="1" r="3.4" fill={ink} />
+      <circle cx="4.5" cy="1" r="3.4" fill={ink} />
+      <path d="M0 5 l-1.6 3 h3.2Z" fill={ink} strokeWidth="1" />
+      <path d="M-3.5 10 v3 M0 10 v3 M3.5 10 v3" strokeWidth="1.2" />
     </g>
   );
+  const heart = (
+    <g>
+      <path d="M-6 -8 C-10 -15 -5 -20 -2 -23 C-3 -17 1 -15 1 -11 C3 -17 6 -20 9 -22 C8 -16 10 -12 8 -7Z" fill={orange} />
+      <path d="M0 13 C-7 7 -16 1 -14 -6 C-13 -12 -4 -13 0 -6 C4 -13 13 -12 14 -6 C16 1 7 7 0 13Z" fill={red} />
+      <path d="M-8 -5 C-10 -2 -9 1 -7 3" fill="none" stroke={cream} strokeWidth="1.8" />
+    </g>
+  );
+  const orbs: Orb[] = [
+    { ring: 0, at: 0, size: 1, el: <image href="/cherub.png" x="-36" y="-38" width="72" height="75" /> },
+    { ring: 0, at: 180, size: 1, el: <image href="/imp.png" x="-38" y="-37" width="76" height="73" /> },
+    { ring: 0, at: 60, size: 1, el: <path d="M6 -15 A16 16 0 1 0 6 15 A18 18 0 0 1 6 -15Z" fill={yellow} /> },
+    { ring: 0, at: 120, size: 0.9, el: heart },
+    { ring: 0, at: 240, size: 0.9, el: skull },
+    { ring: 0, at: 300, size: 0.95, el: <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g> },
+    { ring: 1, at: 20, size: 0.8, twinkle: true, el: <path d={star(10)} fill={yellow} /> },
+    { ring: 1, at: 80, size: 0.7, el: skull },
+    { ring: 1, at: 140, size: 0.7, twinkle: true, el: <path d={star(8)} fill={cream} /> },
+    { ring: 1, at: 200, size: 0.75, twinkle: true, el: <g><path d={star(9)} fill={yellow} /><circle r="2" fill={cream} stroke="none" /></g> },
+    { ring: 1, at: 260, size: 0.6, el: heart },
+    { ring: 1, at: 320, size: 0.65, twinkle: true, el: <path d={star(7)} fill={yellow} /> },
+  ];
+  // ring 0: wide, slow; ring 1: tighter, tipped the other way, faster and counter-rotating
+  const RINGS = [
+    { rx: 136, ry: 46, tip: -8, period: 46000, dir: 1 },
+    { rx: 104, ry: 38, tip: 14, period: 30000, dir: -1 },
+  ];
+  const back = useRef<SVGGElement>(null);
+  const front = useRef<SVGGElement>(null);
+  const nodes = useRef<(SVGGElement | null)[]>([]);
+  useEffect(() => {
+    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0;
+    let last = 0;
+    const place = (t: number) => {
+      orbs.forEach((o, i) => {
+        const g = nodes.current[i];
+        if (!g) return;
+        const r = RINGS[o.ring];
+        const th = ((o.at + (r.dir * 360 * t) / r.period) * Math.PI) / 180;
+        const depth = Math.sin(th); // -1 far … 1 near
+        const tip = (r.tip * Math.PI) / 180;
+        const x0 = Math.cos(th) * r.rx;
+        const y0 = depth * r.ry;
+        const x = cx + x0 * Math.cos(tip) - y0 * Math.sin(tip);
+        const y = cy + x0 * Math.sin(tip) + y0 * Math.cos(tip);
+        const sc = o.size * (0.72 + 0.28 * (depth + 1) / 2 + 0.12 * depth);
+        g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${sc.toFixed(3)})`);
+        g.style.opacity = String((0.55 + 0.45 * (depth + 1) / 2).toFixed(2));
+        const want = depth < 0 ? back.current : front.current;
+        if (want && g.parentNode !== want) want.appendChild(g);
+      });
+      // nearer items drawn last within each half
+      for (const box of [back.current, front.current])
+        if (box) [...box.children].sort((a, b) => Number((a as SVGGElement).dataset.d ?? 0) - Number((b as SVGGElement).dataset.d ?? 0)).forEach((c) => box.appendChild(c));
+    };
+    const tick = (now: number) => {
+      if (now - last > 33) {
+        last = now;
+        orbs.forEach((o, i) => {
+          const r = RINGS[o.ring];
+          const g = nodes.current[i];
+          if (g) g.dataset.d = Math.sin(((o.at + (r.dir * 360 * now) / r.period) * Math.PI) / 180).toFixed(3);
+        });
+        place(now);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    if (still) {
+      orbs.forEach((o, i) => nodes.current[i] && (nodes.current[i]!.dataset.d = Math.sin((o.at * Math.PI) / 180).toFixed(3)));
+      place(0);
+    } else raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
-    <svg className="eyedoodle" viewBox="0 -26 360 316" aria-hidden="true">
+    <svg className="eyedoodle" viewBox="0 0 360 268" aria-hidden="true">
       <defs>
         <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
           <feDisplacementMap in="SourceGraphic" in2="n" scale="3" />
         </filter>
-        <radialGradient id="eyefade" cx="50%" cy="62%" r="52%">
+        <radialGradient id="eyefade" cx="50%" cy="60%" r="52%">
           <stop offset="35%" stopColor="#fff" />
           <stop offset="100%" stopColor="#000" />
         </radialGradient>
         <mask id="eyemask">
-          <rect x="0" y="-40" width="360" height="330" fill="url(#eyefade)" />
+          <rect width="360" height="268" fill="url(#eyefade)" />
         </mask>
         <clipPath id="eyeclip">
           <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} />
         </clipPath>
-        <clipPath id="orb-back">
-          <rect x="0" y="-40" width="360" height={cy + 40} />
-        </clipPath>
-        <clipPath id="orb-front">
-          <rect x="0" y={cy} width="360" height="200" />
-        </clipPath>
       </defs>
 
-      {/* one faded mountain ridge, hatched like the reference */}
-      <g mask="url(#eyemask)" opacity="0.6" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round">
-        <path d="M0 250 L40 196 L62 206 L104 138 L128 122 L150 140 L186 186 L214 170 L246 196 L284 150 L304 142 L326 166 L360 196 L360 290 L0 290Z" fill="#6e4a38" strokeWidth="2.2" />
-        <path d="M120 128 L136 128 L130 120Z" fill={red} stroke="none" />
-        <g fill="none" stroke="#3a2418" strokeWidth="1.4" strokeLinecap="round">
-          <path d="M108 160 l-14 30 M118 162 l-10 38 M140 156 l8 34 M150 166 l12 30 M94 178 l-12 24 M292 170 l-10 26 M304 166 l4 30 M314 176 l12 24 M60 222 l-10 20 M232 206 l-6 24" />
+      {/* surreal mountainscape: two blue-purple ridges, hatched, fading out */}
+      <g mask="url(#eyemask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round">
+        <path d="M0 214 L36 168 L58 178 L92 120 L114 104 L134 124 L168 176 L196 156 L222 130 L246 112 L268 132 L300 120 L330 150 L360 170 L360 268 L0 268Z" fill="#4a3f8a" opacity="0.55" strokeWidth="2" />
+        <path d="M0 236 L50 200 L84 214 L122 172 L148 190 L184 214 L226 182 L262 200 L300 176 L340 206 L360 200 L360 268 L0 268Z" fill="#2f5a8c" opacity="0.6" strokeWidth="2" />
+        <g fill="none" stroke="#17143a" strokeWidth="1.3" strokeLinecap="round" opacity="0.7">
+          <path d="M98 140 l-12 30 M110 132 l-6 40 M128 136 l10 34 M236 130 l-10 30 M250 124 l2 34 M262 140 l12 26 M116 186 l-8 22 M130 184 l6 22 M228 196 l-6 20 M296 190 l8 20" />
         </g>
-        <path d="M0 262 Q120 246 220 258 T360 252" fill="none" stroke="#8a6450" strokeWidth="2" />
+        <path d="M108 104 l6 -10 l6 10" fill={cream} opacity="0.7" strokeWidth="1.6" />
+        <path d="M240 112 l6 -10 l6 10" fill={cream} opacity="0.7" strokeWidth="1.6" />
       </g>
 
-      {/* far side of the ring, behind the eye */}
-      <g filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
-        {ring('back')}
-      </g>
+      {/* far half of the rings: behind the fire and eye */}
+      <g ref={back} className="orbs back" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round" />
 
-      {/* stop-motion fire: three drawn frames */}
       <g filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {[0, 1, 2].map(fire)}
       </g>
 
-      {/* eye: blinks, iris looks around */}
       <g className="eyeball" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         <path d={`M${cx - 48} ${cy} Q${cx} ${cy - 44} ${cx + 48} ${cy} Q${cx} ${cy + 44} ${cx - 48} ${cy}Z`} fill={cream} strokeWidth="3.4" />
         <g clipPath="url(#eyeclip)">
@@ -351,14 +400,14 @@ export function EyeDoodle() {
         ))}
       </g>
 
-      {/* near side of the ring, in front of the eye, with a soft shadow */}
-      <g filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
-        {ring('front')}
+      {/* near half: in front, with a shadow */}
+      <g ref={front} className="orbs front" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
+        {orbs.map((o, i) => (
+          <g key={i} ref={(g) => void (nodes.current[i] = g)}>
+            <g className={o.twinkle ? 'twinkle' : undefined}>{o.el}</g>
+          </g>
+        ))}
       </g>
-
-      {/* the owner's cherub engraving above, its devil twin below */}
-      <image className="cherub" href="/cherub.png" x={cx - 40} y="-24" width="80" height="83" />
-      <image className="imp" href="/imp.png" x={cx - 42} y="208" width="84" height="81" />
     </svg>
   );
-}
+});

@@ -5240,9 +5240,9 @@ ul.popnote .small {
     grid-column: 1 / -1;
   }
   .eyedoodle {
-    width: 300px;
+    width: 340px;
     height: auto;
-    margin: -16px 2% -18px 0;
+    margin: -22px 1% -26px 0;
   }
 }
 @media (max-width: 1099px) {
@@ -5311,8 +5311,8 @@ ul.popnote .small {
   z-index: 1;
 }
 
-/* Eye art motion: slow stop-motion fire (3 drawn frames, ~0.7 s each), roaming iris + blink, tilted orbit,
-   bobbing cherub / devil in steps. */
+/* Eye art motion: slow stop-motion fire (3 drawn frames), blink + roaming iris, twinkling stars. The 3D orbit is
+   driven from EyeDoodle. */
 .eyedoodle .ef {
   opacity: 0;
   animation: ef 2.1s steps(1) infinite;
@@ -5344,45 +5344,27 @@ ul.popnote .small {
   72% { transform: translate(9px, 6px); }
   86% { transform: translate(0, -6px); }
 }
-.eyedoodle .spin {
-  transform-box: view-box;
-  transform-origin: 0 0;
-  animation: orbit 40s linear infinite;
-}
-.eyedoodle .unspin {
+.eyedoodle .twinkle {
   transform-box: fill-box;
   transform-origin: center;
-  animation: orbit 40s linear infinite reverse;
+  animation: twinkle 1.8s steps(1) infinite;
 }
-@keyframes orbit {
-  to { transform: rotate(360deg); }
+.eyedoodle .orbs > g:nth-child(odd) .twinkle {
+  animation-delay: -0.9s;
 }
-.eyedoodle .orbitlayer.front {
-  filter: drop-shadow(2px 4px 2px rgba(0, 0, 0, 0.45));
+@keyframes twinkle {
+  0% { transform: scale(1) rotate(0deg); }
+  33% { transform: scale(1.3) rotate(15deg); }
+  66% { transform: scale(0.85) rotate(-8deg); }
 }
-.eyedoodle .cherub,
-.eyedoodle .imp {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: bob 2.8s steps(1) infinite;
-}
-.eyedoodle .imp {
-  animation-delay: -1.4s;
-}
-@keyframes bob {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(0, -3px) rotate(-2deg); }
-  50% { transform: translate(0, -1px) rotate(0deg); }
-  75% { transform: translate(0, 2px) rotate(2deg); }
+.eyedoodle .orbs.front {
+  filter: url(#eyeink) drop-shadow(3px 6px 3px rgba(0, 0, 0, 0.5));
 }
 @media (prefers-reduced-motion: reduce) {
   .eyedoodle .ef,
   .eyedoodle .eyeball,
   .eyedoodle .iris,
-  .eyedoodle .spin,
-  .eyedoodle .unspin,
-  .eyedoodle .cherub,
-  .eyedoodle .imp {
+  .eyedoodle .twinkle {
     animation: none;
   }
   .eyedoodle .ef.f0 {
