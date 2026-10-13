@@ -157,6 +157,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
   const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
+  const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
   const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
   const upload = (
@@ -185,13 +186,20 @@ export function Collection({ profile, name }: { profile: number; name: string })
           </div>
           <div className="stat" style={{ transform: 'rotate(.8deg)' }}>
             <span className="worn" aria-hidden="true" />
-            <b>{entries.length.toLocaleString()}</b>
-            <span>entries</span>
+            <b>{unique.toLocaleString()}</b>
+            <span>unique cards</span>
           </div>
           <div className="stat red gbox" style={{ transform: 'rotate(-1.4deg)' }}>
             <span className="worn" aria-hidden="true" />
             <b>{commanders.toLocaleString()}</b>
             <span>commanders</span>
+            <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
+              <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
+              <path d="M5 40 C20 37 42 42 58 38" />
+              <circle cx="30" cy="4" r="2.6" />
+              <circle cx="4" cy="10" r="2.2" />
+              <circle cx="58" cy="8" r="2.2" />
+            </svg>
             <Doodles n={377} count={1} spots={[[70, -20]]} />
           </div>
           <div className="slip">

@@ -151,7 +151,7 @@ export function Discover(s: Shared) {
       </div>
       <main>
         <section className="hero">
-          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={64} seed={7} />
+          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>

@@ -5101,3 +5101,86 @@ ul.popnote .small {
     padding: 0 5px;
   }
 }
+
+/* Discover header, desktop: title on one line, then the filters as one slim taped bar (search · sort · colours),
+   caption and progress tucked under it, so the commander grid starts much higher. Phones unchanged. */
+@media (min-width: 701px) {
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .hero .titlewrap,
+  .hero .filters {
+    flex: none;
+  }
+  .hero .fhead {
+    display: none;
+  }
+  .hero .fpanel {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 10px 12px;
+    transform: rotate(-0.25deg);
+  }
+  .hero .fpanel .sbox {
+    min-height: 46px;
+  }
+  .hero .fpanel .sbox.search {
+    flex: 1 1 auto;
+  }
+  .hero .fpanel .sbox.sort {
+    flex: 0 1 300px;
+  }
+  .hero .colours {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+  }
+  .hero .colours button {
+    width: 46px;
+    height: 46px;
+    font-size: 15px;
+  }
+  .hero .caption {
+    margin: 4px 0 0;
+    font-size: 13px;
+  }
+  .hero + .progress,
+  .hero ~ .count {
+    margin-top: 10px;
+  }
+}
+
+/* Yellow marker crown scribbled on the commanders counter */
+.stat .crown {
+  position: absolute;
+  z-index: 3;
+  top: -22px;
+  right: -14px;
+  width: 46px;
+  height: 32px;
+  transform: rotate(14deg);
+  fill: none;
+  stroke: var(--hazard);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#rough) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+  pointer-events: none;
+}
+.stat .crown circle {
+  fill: var(--hazard);
+  stroke: none;
+}
+@media (max-width: 700px) {
+  .stat .crown {
+    top: -16px;
+    right: -6px;
+    width: 36px;
+    height: 26px;
+  }
+}
