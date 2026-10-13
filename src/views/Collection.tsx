@@ -179,18 +179,22 @@ export function Collection({ profile, name }: { profile: number; name: string })
         </section>
 
         <section className="stats">
-          <div className="stat" style={{ transform: 'rotate(-1deg)' }}>
+          <div className="stat gbox" style={{ transform: 'rotate(-1deg)' }}>
             <span className="worn" aria-hidden="true" />
+            <span className="spray" aria-hidden="true" />
             <b>{total.toLocaleString()}</b>
             <span>cards</span>
+            <Doodles n={377} count={1} spots={[[70, -24]]} />
           </div>
           <div className="stat" style={{ transform: 'rotate(.8deg)' }}>
             <span className="worn" aria-hidden="true" />
+            <span className="spray" aria-hidden="true" />
             <b>{unique.toLocaleString()}</b>
             <span>unique cards</span>
           </div>
           <div className="stat red gbox" style={{ transform: 'rotate(-1.4deg)' }}>
             <span className="worn" aria-hidden="true" />
+            <span className="spray" aria-hidden="true" />
             <b>{commanders.toLocaleString()}</b>
             <span>commanders</span>
             <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
@@ -200,7 +204,6 @@ export function Collection({ profile, name }: { profile: number; name: string })
               <circle cx="4" cy="10" r="2.2" />
               <circle cx="58" cy="8" r="2.2" />
             </svg>
-            <Doodles n={377} count={1} spots={[[-14, -20]]} />
           </div>
           <div className="slip">
             <span className="se">worth about</span>

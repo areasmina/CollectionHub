@@ -228,3 +228,113 @@ export const RiseBars = ({ pct }: { pct: number }) => (
 );
 export const Tape = ({ style }: { style: React.CSSProperties }) => <span aria-hidden="true" className="tape" style={style} />;
 
+
+/** Discover header art in the owner's style, drawn straight onto the page (no panel): a faded landscape (volcano,
+ *  hills, castle, dragon) melting into the dark, a flaming eye that looks around and blinks, stop-motion fire, and a
+ *  moon, heart, star and card orbiting it. Wobbly ink via feDisplacementMap. Animations live in styles.css
+ *  (.eyedoodle …) and stop under prefers-reduced-motion. Decorative. */
+export function EyeDoodle() {
+  const ink = '#1c120c';
+  const red = '#c9402a';
+  const orange = '#e58a2b';
+  const yellow = '#f2c63e';
+  const teal = '#3c8a90';
+  const cream = '#f3e6c9';
+  const cx = 180;
+  const cy = 120;
+  const tongues = (r1: number, rLong: number, rShort: number, n: number, rot: number, wob: number) =>
+    Array.from({ length: n }, (_, i) => {
+      const a = ((i / n) * 360 + rot) * (Math.PI / 180);
+      const r2 = (i % 2 ? rShort : rLong) + Math.sin(i * 2.3 + wob) * 6;
+      const w = (Math.PI / n) * 1.05;
+      const pt = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.86).toFixed(1)}`;
+      return `M${pt(a - w, r1)} C${pt(a - w * 0.6, (r1 + r2) * 0.55)} ${pt(a - w * 0.3, r2 * 0.9)} ${pt(a + w * (0.15 + 0.15 * Math.sin(wob + i)), r2)} C${pt(a + w * 0.1, r2 * 0.8)} ${pt(a + w * 0.7, (r1 + r2) * 0.5)} ${pt(a + w, r1)}Z`;
+    }).join(' ');
+  const fire = (f: number) => (
+    <g key={f} className={`ef f${f}`}>
+      <path d={tongues(36, 78, 62, 20, f * 5, f * 1.7)} fill={red} strokeWidth="2.4" />
+      <path d={tongues(36, 66, 54, 20, 9 + f * 4, f * 2.1 + 1)} fill={orange} strokeWidth="2" />
+      <path d={tongues(36, 54, 46, 20, f * 6, f * 2.9 + 2)} fill={yellow} strokeWidth="1.8" />
+    </g>
+  );
+  const star = (r: number) => `M0 ${-r} Q${r * 0.15} ${-r * 0.15} ${r} 0 Q${r * 0.15} ${r * 0.15} 0 ${r} Q${-r * 0.15} ${r * 0.15} ${-r} 0 Q${-r * 0.15} ${-r * 0.15} 0 ${-r}Z`;
+  // orbiting things sit on a 100px ring; each counter-rotates to stay upright
+  const orbit: [number, React.ReactNode][] = [
+    [0, <path d="M6 -15 A16 16 0 1 0 6 15 A18 18 0 0 1 6 -15Z" fill={yellow} />],
+    [90, <g><path d="M-6 -8 C-10 -15 -5 -20 -2 -23 C-3 -17 1 -15 1 -11 C3 -17 6 -20 9 -22 C8 -16 10 -12 8 -7Z" fill={orange} /><path d="M0 13 C-7 7 -16 1 -14 -6 C-13 -12 -4 -13 0 -6 C4 -13 13 -12 14 -6 C16 1 7 7 0 13Z" fill={red} /></g>],
+    [180, <path d={star(11)} fill={yellow} />],
+    [270, <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g>],
+  ];
+  return (
+    <svg className="eyedoodle" viewBox="0 0 360 250" aria-hidden="true">
+      <defs>
+        <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3" />
+        </filter>
+        <radialGradient id="eyefade" cx="50%" cy="55%" r="50%">
+          <stop offset="30%" stopColor="#fff" />
+          <stop offset="100%" stopColor="#000" />
+        </radialGradient>
+        <mask id="eyemask">
+          <rect width="360" height="250" fill="url(#eyefade)" />
+        </mask>
+        <clipPath id="eyeclip">
+          <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} />
+        </clipPath>
+      </defs>
+
+      {/* faded landscape: volcano, hills, field, castle, dragon */}
+      <g mask="url(#eyemask)" opacity="0.55" filter="url(#eyeink)" stroke={ink} strokeWidth="2" strokeLinejoin="round">
+        <path d="M0 210 L52 150 L70 160 L96 118 L112 108 L126 118 L150 160 L172 150 L196 176 L240 140 L262 152 L300 120 L360 176 L360 250 L0 250Z" fill="#7a5644" />
+        <path d="M100 116 Q108 96 104 82 M112 108 Q118 92 126 86" fill="none" stroke="#b8aea4" strokeWidth="4" />
+        <path d="M104 112 l6 -14 l6 14Z" fill={red} />
+        <path d="M0 220 Q90 196 180 214 T360 206 L360 250 L0 250Z" fill="#4f7a62" />
+        <path d="M0 236 Q120 222 230 236 T360 232" fill="none" stroke="#6f9a80" strokeWidth="3" />
+        <g fill="#6a5c7c">
+          <path d="M266 150 v-20 h6 v-8 h4 v8 h6 v-14 h4 v14 h6 v-8 h4 v8 h6 v20Z" />
+          <path d="M276 108 l2 -6 l2 6 M290 102 l2 -6 l2 6" fill={red} />
+        </g>
+        <path d="M300 74 C312 60 330 58 344 66 C336 68 332 74 334 80 C322 76 314 80 306 88 L298 84 C304 80 304 76 300 74Z M318 70 L330 50 L334 64 M324 74 L346 58" fill="#6f8a4a" />
+        <path d="M344 66 q8 -2 12 4 q-6 0 -8 4" fill={orange} stroke="none" opacity="0.8" />
+      </g>
+
+      {/* flames: three hand-drawn frames swapped in steps (stop motion) */}
+      <g filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+        {[0, 1, 2].map(fire)}
+      </g>
+
+      {/* eye: blinks (lids squash the whole eye), iris looks around */}
+      <g className="eyeball" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+        <path d={`M${cx - 48} ${cy} Q${cx} ${cy - 44} ${cx + 48} ${cy} Q${cx} ${cy + 44} ${cx - 48} ${cy}Z`} fill={cream} strokeWidth="3.4" />
+        <g clipPath="url(#eyeclip)">
+          <g className="iris">
+            <circle cx={cx} cy={cy} r="19" fill={teal} strokeWidth="2.4" />
+            {Array.from({ length: 12 }, (_, i) => {
+              const a = (i / 12) * Math.PI * 2;
+              return <line key={i} x1={cx + Math.cos(a) * 9} y1={cy + Math.sin(a) * 9} x2={cx + Math.cos(a) * 17} y2={cy + Math.sin(a) * 17} strokeWidth="1.1" stroke="#1d4a4e" />;
+            })}
+            <circle cx={cx} cy={cy} r="8" fill={ink} strokeWidth="1" />
+            <circle cx={cx - 5} cy={cy - 6} r="3.2" fill={cream} stroke="none" />
+          </g>
+        </g>
+        <path d={`M${cx - 44} ${cy - 5} Q${cx} ${cy - 46} ${cx + 44} ${cy - 5}`} fill="none" strokeWidth="2" />
+        {[-34, -22, -11, 0, 11, 22, 34].map((dx) => (
+          <line key={dx} x1={cx + dx} y1={cy - 32 + Math.abs(dx) * 0.42} x2={cx + dx * 1.18} y2={cy - 42 + Math.abs(dx) * 0.42} strokeWidth="2.2" />
+        ))}
+      </g>
+
+      {/* orbiting moon, heart, star, card */}
+      <g className="orbit" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
+        {orbit.map(([deg, el]) => {
+          const a = (deg * Math.PI) / 180;
+          return (
+            <g key={deg} transform={`translate(${(cx + Math.cos(a) * 96).toFixed(1)} ${(cy + Math.sin(a) * 96).toFixed(1)})`}>
+              <g className="upright">{el}</g>
+            </g>
+          );
+        })}
+      </g>
+    </svg>
+  );
+}

@@ -5227,3 +5227,144 @@ ul.popnote .small {
     left: -6px;
   }
 }
+
+/* Discover: flaming eye art (owner's folk-tattoo style) in its own cell right of the title, wide screens only */
+@media (min-width: 1100px) {
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 20px;
+  }
+  .hero .filters {
+    grid-column: 1 / -1;
+  }
+  .eyedoodle {
+    width: 300px;
+    height: auto;
+    margin: -24px 2% -30px 0;
+  }
+}
+@media (max-width: 1099px) {
+  .eyedoodle {
+    display: none;
+  }
+}
+@media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
+  .eyedoodle path:first-of-type {
+    transform-origin: 50% 50%;
+  }
+}
+
+/* Bigger crown on the commanders counter */
+.stat .crown {
+  width: 66px;
+  height: 46px;
+  top: -30px;
+  left: -18px;
+}
+@media (max-width: 700px) {
+  .stat .crown {
+    width: 50px;
+    height: 35px;
+    top: -22px;
+    left: -10px;
+  }
+}
+/* Spray paint behind each counter's number: soft mist + speckles, different per box */
+.stat {
+  overflow: visible;
+}
+.stat .spray {
+  position: absolute;
+  z-index: 0;
+  inset: 4px 10% 22% 4px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 30% 45%, rgba(255, 47, 160, 0.38), transparent 46%),
+    radial-gradient(circle at 70% 60%, rgba(25, 211, 230, 0.22), transparent 40%),
+    radial-gradient(circle at 12% 20%, #ff2fa0 0 1.4px, transparent 2px),
+    radial-gradient(circle at 82% 18%, #ff2fa0 0 1.1px, transparent 1.7px),
+    radial-gradient(circle at 90% 70%, #19d3e6 0 1.3px, transparent 1.9px),
+    radial-gradient(circle at 20% 88%, #ff2fa0 0 1px, transparent 1.6px),
+    radial-gradient(circle at 56% 8%, #19d3e6 0 1px, transparent 1.6px),
+    radial-gradient(circle at 44% 96%, #ff2fa0 0 1.5px, transparent 2.1px);
+  filter: blur(0.4px);
+  opacity: 0.85;
+}
+.stat:nth-child(2) .spray {
+  transform: scaleX(-1) rotate(8deg);
+}
+.stat.red .spray {
+  background:
+    radial-gradient(circle at 40% 50%, rgba(255, 204, 0, 0.32), transparent 46%),
+    radial-gradient(circle at 75% 35%, rgba(10, 10, 10, 0.3), transparent 38%),
+    radial-gradient(circle at 15% 25%, #ffcc00 0 1.4px, transparent 2px),
+    radial-gradient(circle at 86% 76%, #0a0a0a 0 1.3px, transparent 1.9px),
+    radial-gradient(circle at 64% 10%, #ffcc00 0 1.1px, transparent 1.7px),
+    radial-gradient(circle at 26% 90%, #0a0a0a 0 1px, transparent 1.6px);
+  transform: rotate(-6deg);
+}
+.stat b,
+.stat > span:not(.spray):not(.worn) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Eye art motion: stop-motion fire (3 drawn frames), roaming iris + blink, slow orbit of moon / heart / star / card */
+.eyedoodle .ef {
+  opacity: 0;
+  animation: ef 0.42s steps(1) infinite;
+}
+.eyedoodle .ef.f0 { animation-delay: 0s; }
+.eyedoodle .ef.f1 { animation-delay: -0.14s; }
+.eyedoodle .ef.f2 { animation-delay: -0.28s; }
+@keyframes ef {
+  0% { opacity: 1; }
+  33.3% { opacity: 0; }
+}
+.eyedoodle .eyeball {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 6s infinite;
+}
+@keyframes blink {
+  0%, 46%, 50%, 92%, 100% { transform: scaleY(1); }
+  48%, 94% { transform: scaleY(0.08); }
+}
+.eyedoodle .iris {
+  animation: look 9s steps(1) infinite;
+}
+@keyframes look {
+  0% { transform: translate(0, 0); }
+  14% { transform: translate(-16px, -3px); }
+  30% { transform: translate(-16px, 5px); }
+  44% { transform: translate(0, 0); }
+  58% { transform: translate(17px, -4px); }
+  72% { transform: translate(9px, 7px); }
+  86% { transform: translate(0, -7px); }
+}
+.eyedoodle .orbit {
+  transform-origin: 180px 120px;
+  animation: orbit 36s linear infinite;
+}
+.eyedoodle .upright {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: orbit 36s linear infinite reverse;
+}
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eyedoodle .ef,
+  .eyedoodle .eyeball,
+  .eyedoodle .iris,
+  .eyedoodle .orbit,
+  .eyedoodle .upright {
+    animation: none;
+  }
+  .eyedoodle .ef.f0 {
+    opacity: 1;
+  }
+}
