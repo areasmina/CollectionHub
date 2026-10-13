@@ -55,6 +55,46 @@ const GROUPINGS: [Grouping, string][] = [
   ['none', 'NO GROUPS'],
 ];
 
+/** GROUP box: how sections are split, plus a "show only" filter in the same picker (one less box). */
+function GroupPick({ grouping, show, onGroup, onShow }: { grouping: Grouping; show: Show; onGroup: (g: Grouping) => void; onShow: (v: Show) => void }) {
+  const tag = show === 'owned' ? ' · OWNED' : show === 'missing' ? ' · MISSING' : '';
+  return (
+    <label className="sbox pick">
+      <span className="tab">GROUP</span>
+      <select
+        value={grouping}
+        aria-label={`Group by, and which cards to show${tag ? `: ${show} only` : ''}`}
+        onChange={(e) => {
+          haptic('select');
+          const v = e.target.value;
+          if (v.startsWith('show:')) onShow(v.slice(5) as Show);
+          else onGroup(v as Grouping);
+        }}
+      >
+        <optgroup label="Group by">
+          {GROUPINGS.map(([v, t]) => (
+            <option key={v} value={v}>
+              {t}
+              {tag}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Show">
+          {SHOWS.map(([v, t]) => (
+            <option key={v} value={`show:${v}`}>
+              {show === v ? '✓ ' : '\u2003'}
+              {t}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      <span className="arrow" aria-hidden="true">
+        <span>▼</span>
+      </span>
+    </label>
+  );
+}
+
 /** Bracket estimate stamp; tap shows the reasons. */
 function BracketStat({ call }: { call: BracketCall }) {
   return (
@@ -223,10 +263,23 @@ const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30',
 /** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
 function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
+  // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
+  const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
+  const low = analysis(st).filter((a) => a.tone !== 'ok').length;
   return (
-    <aside className="dpanel" aria-label="Deck analysis">
+    <aside className={`dpanel ${fold}`} aria-label="Deck analysis">
       <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
-      <h2>ANALYSIS</h2>
+      <h2>
+        <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
+          ANALYSIS
+          <span className="dsum">
+            avg {st.avgMv.toFixed(2)} · {low ? `${low} to look at` : 'looks solid'}
+            {pricesIn && sum.missing + sum.other > 0 ? ` · ${cad(missingCost)} to complete` : ''}
+          </span>
+          <span className="pm" aria-hidden="true" />
+        </button>
+      </h2>
+      <div className="dbody">
       <div className="dsec">
         <h3>
           mana curve <small>avg {st.avgMv.toFixed(2)}</small>
@@ -288,6 +341,7 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
           {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
         </small>
       </div>
+      </div>
     </aside>
   );
 }
@@ -296,23 +350,6 @@ function DeckPanel({ st, missingCost, pricesIn, sum, s }: { st: DeckStats; missi
 /** Everything you do to the deck itself (not how its cards are shown), tucked behind one button. */
 type MenuAt = { x: number; y: number; anchor?: DOMRect }; // a point (right-click / hold) or under the DECK box
 
-function DeckButton({ open, onOpen }: { open: boolean; onOpen: (at: MenuAt | null) => void }) {
-  return (
-    <button
-      className="sbox pick deckbtn"
-      aria-label="Deck options: rename, duplicate, export, delete"
-      aria-haspopup="menu"
-      aria-expanded={open}
-      onClick={(e) => (haptic('open'), onOpen(open ? null : { x: 0, y: 0, anchor: e.currentTarget.getBoundingClientRect() }))}
-    >
-      <span className="tab">DECK</span>
-      <span className="val">OPTIONS</span>
-      <span className="arrow" aria-hidden="true">
-        <span>⋯</span>
-      </span>
-    </button>
-  );
-}
 
 function DeckMenu({ deck, at, file, onClose, onBack, onOpen }: { deck: Deck; at: MenuAt; file: (ext: string) => string; onClose: () => void; onBack: () => void; onOpen: (id: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -537,17 +574,15 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
         <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
 
-        <div className="dtools" role="toolbar" aria-label="Deck view">
-          <Pick label="GROUP" value={grouping} options={GROUPINGS} onChange={setGrouping} />
-          <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
-          <Pick label="SHOW" value={show} options={SHOWS} onChange={setShow} />
-          <span className="grow" />
-          <DeckButton open={!!deckMenu} onOpen={setDeckMenu} />
-        </div>
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} file={file} onClose={() => setDeckMenu(null)} onBack={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
           <div className="lists">
+            {/* How the cards are split and ordered, right above them */}
+            <div className="dtools" role="toolbar" aria-label="Deck view">
+              <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
+              <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+            </div>
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs], i) => {

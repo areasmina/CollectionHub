@@ -6185,34 +6185,9 @@ ul.popnote .small {
   margin-left: auto;
 }
 
-/* Deck page toolbar: group / sort / show + a DECK box (same look) that opens the deck menu */
-button.sbox.deckbtn {
-  padding: 0;
-  text-align: left;
-  cursor: pointer;
-  font: inherit;
-}
-.deckbtn .val {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  padding: 0 46px 0 10px;
-  font-family: var(--an);
-  font-size: 15px;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-}
-.deckbtn .arrow span {
-  font-size: 18px;
-  line-height: 0;
-  padding-bottom: 4px;
-}
-.dtools .deckbtn {
-  flex: 0 1 190px;
-}
-.deckbtn[aria-expanded='true'] .tab,
-.deckbtn[aria-expanded='true'] .arrow span {
-  background: var(--ink);
+/* Deck page toolbar: GROUP (with a show-only filter) + SORT, right above the cards */
+.lists > .dtools {
+  margin: 0 0 14px;
 }
 .deckmenu li > button {
   font-size: 16px;
@@ -6251,7 +6226,7 @@ details.cat {
   padding: 0 10px;
 }
 @media (max-width: 700px) {
-  /* group / sort / show / DECK: a compact 2 × 2 grid, label tag + choice on one line */
+  /* GROUP + SORT side by side, label tag + choice on one line */
   .dtools {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -6270,8 +6245,7 @@ details.cat {
     letter-spacing: 1px;
     padding: 0 6px;
   }
-  .dtools .sbox.pick select,
-  .dtools .deckbtn .val {
+  .dtools .sbox.pick select {
     width: auto;
     flex: 1;
     font-size: 13px;
@@ -6287,9 +6261,6 @@ details.cat {
     width: 18px;
     height: 18px;
     font-size: 10px;
-  }
-  .dtools .deckbtn .arrow span {
-    font-size: 13px;
   }
 }
 .deckmenu li > button {
@@ -6364,4 +6335,80 @@ details.cat {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Analysis heading is a fold toggle on phones / tablets; on desktop it's a plain heading */
+.dfold {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-shadow: inherit;
+  text-align: left;
+  pointer-events: none;
+}
+.dfold .dsum,
+.dfold .pm {
+  display: none;
+}
+@media (max-width: 999px) {
+  .dfold {
+    pointer-events: auto;
+    cursor: pointer;
+    flex-wrap: wrap;
+    position: relative;
+    padding-right: 52px;
+    min-height: 40px;
+  }
+  .dfold .pm {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    color: var(--white);
+    font-size: 24px;
+    text-shadow: none;
+  }
+  .dfold .pm::before {
+    content: '−';
+  }
+  .dpanel.closed .dfold .pm::before {
+    content: '+';
+  }
+  .dpanel.closed .dfold .pm {
+    background: var(--ink);
+    border: 2px solid var(--text);
+  }
+  .dpanel.closed .dfold .dsum {
+    display: block;
+    flex-basis: 100%;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0;
+    line-height: 1.3;
+    text-shadow: none;
+    color: var(--muted);
+  }
+  .dpanel.closed .dbody {
+    display: none;
+  }
+  .dpanel.closed h2 {
+    margin: 0;
+  }
+  .dpanel.closed {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
 }

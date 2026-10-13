@@ -82,15 +82,22 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await fits(page, ['.dhero', '.dtools', '.dpanel']);
 });
 
-const deckMenu = async (page: import('@playwright/test').Page, item: string) => {
-  const b = page.getByRole('button', { name: /^Deck options/ });
-  await b.scrollIntoViewIfNeeded();
-  await b.click();
+// The deck menu opens from the deck header: right-click with a mouse, press and hold on touch.
+const deckMenu = async (page: import('@playwright/test').Page, item?: string) => {
+  const h1 = page.locator('.dhero h1');
+  await h1.scrollIntoViewIfNeeded();
+  if (page.viewportSize()!.width >= 1200) await h1.click({ button: 'right' });
+  else {
+    const b = (await h1.boundingBox())!;
+    await h1.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: b.x + 20, clientY: b.y + 20, isPrimary: true });
+    await page.waitForTimeout(650);
+    await h1.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
+  }
   const menu = page.getByRole('menu');
   await expect(menu).toBeVisible();
   await page.waitForTimeout(250); // let the drop-in animation finish before measuring
   await fits(page, ['.deckmenu']);
-  await menu.getByRole('menuitem', { name: item }).click();
+  if (item) await menu.getByRole('menuitem', { name: item }).click();
 };
 
 test('Deck page: Delete is in the DECK menu, asks first, and removes the deck', async ({ page }) => {
@@ -113,8 +120,7 @@ test('Deck page: Rename and Duplicate', async ({ page }, info) => {
   await page.locator('.dcard').first().click();
   await page.locator('.dtools').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `test-results/deck-tools-${info.project.name}.png` });
-  await page.getByRole('button', { name: /^Deck options/ }).click();
-  await page.waitForTimeout(250);
+  await deckMenu(page);
   await page.screenshot({ path: `test-results/deck-menu-${info.project.name}.png` });
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toHaveCount(0);
@@ -168,4 +174,24 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   await copy.scrollIntoViewIfNeeded();
   await copy.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
+});
+
+test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await expect(page.locator('.dtools .sbox')).toHaveCount(2);
+  await fits(page, ['.lists > .dtools']);
+  const group = page.locator('.dtools select').first();
+  await group.selectOption('show:missing'); // every seeded card is owned
+  await expect(page.locator('details.cat')).toHaveCount(0);
+  await expect(group.locator('option:checked')).toHaveText('CARD TYPE · MISSING');
+  await group.selectOption('show:all');
+  await expect(page.locator('details.cat').first()).toBeVisible();
+  const curve = page.locator('.dpanel .curve, .dpanel .dsec').first();
+  if (info.project.name === 'desktop') await expect(curve).toBeVisible();
+  else {
+    await expect(curve).toBeHidden();
+    await page.locator('.dfold').click();
+    await expect(curve).toBeVisible();
+  }
 });
