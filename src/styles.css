@@ -4484,3 +4484,53 @@ ul.popnote .small {
   left: 6px;
   bottom: 8px;
 }
+
+/* Desktop: the three counters become one ticket stub (perforated between cells) joined to the value slip,
+   all one height, so the row reads as one receipt instead of loose boxes. Phones keep the boxes. */
+@media (min-width: 701px) {
+  .stats {
+    flex-wrap: nowrap;
+    gap: 0;
+    align-items: stretch;
+  }
+  .stats .stat {
+    flex: 0 0 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 26px;
+    transform: rotate(-0.6deg) !important;
+    border-top: 3px solid var(--text);
+    border-bottom: 3px solid var(--text);
+  }
+  .stats .stat:first-child {
+    border-left: 3px solid var(--text);
+  }
+  .stats .stat + .stat {
+    /* tear line: dashed perforation with punched holes top and bottom */
+    background-image: radial-gradient(circle at 0 0, var(--bg) 6px, transparent 6.5px), radial-gradient(circle at 0 100%, var(--bg) 6px, transparent 6.5px);
+    background-repeat: no-repeat;
+    border-left: 2px dashed var(--muted);
+  }
+  .stats .stat > .worn {
+    display: none;
+  }
+  .stats .stat b {
+    font-size: 48px;
+  }
+  .stats .stat span {
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  .stats .stat.red {
+    border-color: var(--accent);
+  }
+  .stats .slip {
+    margin-left: -2px;
+    transform: rotate(-0.6deg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
