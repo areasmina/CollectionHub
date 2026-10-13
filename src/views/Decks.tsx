@@ -29,7 +29,8 @@ function DeckNotes({ deck }: { deck: Deck }) {
   };
   return (
     <section className="decknotes gbox" aria-label="Deck note and tags">
-      <Tape style={{ top: -10, left: 24, width: 70, height: 22, transform: 'rotate(-5deg)' }} />
+      {/* straddles the paper's top edge (the section's 16px padding puts the paper's edge at y = 16) */}
+      <Tape style={{ top: 5, left: 22, width: 64, height: 22, transform: 'rotate(-5deg)' }} />
       <label className="notebook">
         <span>note</span>
         <textarea className="ruled" rows={3} placeholder="game plan, who it's for, what to swap next_" defaultValue={deck.note ?? ''} key={deck.id} onBlur={(e) => e.target.value !== (deck.note ?? '') && db.decks.update(deck.id!, { note: e.target.value })} />
