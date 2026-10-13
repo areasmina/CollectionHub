@@ -241,8 +241,9 @@ export const EyeDoodle = memo(function EyeDoodle() {
   const red = '#c9402a';
   const orange = '#e58a2b';
   const yellow = '#f2c63e';
-  const teal = '#3c8a90';
   const cream = '#f3e6c9';
+  const lid = '#a8231a'; // eye lids and lashes, red like the reference
+  const iris = '#4f86c0';
   const cx = 180;
   const cy = 134;
   const tongues = (r1: number, rLong: number, rShort: number, n: number, rot: number, wob: number) =>
@@ -281,7 +282,7 @@ export const EyeDoodle = memo(function EyeDoodle() {
     { ring: 0, at: 0, size: 1, el: <image href="/cherub.png" x="-36" y="-38" width="72" height="75" /> },
     { ring: 0, at: 180, size: 1, el: <image href="/imp.png" x="-38" y="-37" width="76" height="73" /> },
     { ring: 0, at: 60, size: 1, el: <path d="M6 -15 A16 16 0 1 0 6 15 A18 18 0 0 1 6 -15Z" fill={yellow} /> },
-    { ring: 0, at: 120, size: 0.9, el: heart },
+    { ring: 0, at: 120, size: 1, el: <image href="/chaos-heart.png" x="-19" y="-26" width="38" height="46" /> },
     { ring: 0, at: 240, size: 0.9, el: skull },
     { ring: 0, at: 300, size: 0.95, el: <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g> },
     { ring: 1, at: 20, size: 0.8, twinkle: true, el: <path d={star(10)} fill={yellow} /> },
@@ -297,6 +298,31 @@ export const EyeDoodle = memo(function EyeDoodle() {
     { rx: 104, ry: 38, tip: 14, period: 30000, dir: -1 },
   ];
   const back = useRef<SVGGElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const irisRef = useRef<SVGGElement>(null);
+  // The iris follows the mouse while it moves; after 3 s without movement (and on touch) it roams on its own.
+  useEffect(() => {
+    const svg = svgRef.current;
+    const ir = irisRef.current;
+    if (!svg || !ir) return;
+    let idle = 0;
+    const move = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      const b = svg.getBoundingClientRect();
+      const ex = b.left + (cx / 360) * b.width;
+      const ey = b.top + ((cy - 42) / 214) * b.height;
+      const dx = e.clientX - ex;
+      const dy = e.clientY - ey;
+      const d = Math.hypot(dx, dy) || 1;
+      const k = Math.min(1, d / 260);
+      ir.style.transform = `translate(${((dx / d) * 16 * k).toFixed(1)}px, ${((dy / d) * 7 * k).toFixed(1)}px)`;
+      svg.classList.add('tracking');
+      clearTimeout(idle);
+      idle = window.setTimeout(() => (svg.classList.remove('tracking'), (ir.style.transform = '')), 3000);
+    };
+    addEventListener('pointermove', move, { passive: true });
+    return () => (removeEventListener('pointermove', move), clearTimeout(idle));
+  }, []);
   const front = useRef<SVGGElement>(null);
   const nodes = useRef<(SVGGElement | null)[]>([]);
   useEffect(() => {
@@ -345,7 +371,7 @@ export const EyeDoodle = memo(function EyeDoodle() {
   }, []);
 
   return (
-    <svg className="eyedoodle" viewBox="0 42 360 214" aria-hidden="true">
+    <svg ref={svgRef} className="eyedoodle" viewBox="0 42 360 214" aria-hidden="true">
       <defs>
         <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
@@ -358,15 +384,55 @@ export const EyeDoodle = memo(function EyeDoodle() {
         <mask id="eyemask">
           <rect width="360" height="268" fill="url(#eyefade)" />
         </mask>
+        <linearGradient id="skyfade" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stopColor="#000" />
+          <stop offset="0.18" stopColor="#fff" />
+          <stop offset="0.82" stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </linearGradient>
+        <mask id="skymask">
+          <rect x="0" y="0" width="360" height="268" fill="url(#skyfade)" />
+        </mask>
         <clipPath id="eyeclip">
           <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} />
         </clipPath>
       </defs>
 
+      {/* sky: drifting clouds and a dragon flying past now and then */}
+      <g mask="url(#skymask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+        {/* drifting clouds */}
+        <g className="clouds" fill="#b9b0d8" opacity="0.35" strokeWidth="1.4">
+          <path d="M40 92 q6 -12 18 -8 q8 -12 22 -4 q14 -2 14 10 q8 4 2 10 h-58 q-8 -4 2 -8Z" />
+          <path d="M250 74 q6 -10 16 -6 q8 -10 20 -2 q12 0 12 9 q6 4 0 8 h-50 q-6 -4 2 -9Z" />
+          <path d="M150 64 q4 -8 12 -5 q6 -8 15 -2 q9 0 9 7 q5 3 0 6 h-38 q-5 -3 2 -6Z" />
+        </g>
+        {/* dragon flying across now and then (two wing frames) */}
+        <g className="dragon" fill="#4b3a78" opacity="0.75" strokeWidth="1.6">
+          <path d="M0 0 C10 -4 22 -4 32 0 L44 -2 L52 2 L44 4 C34 8 18 8 6 6 C-6 8 -16 4 -22 6 C-14 2 -8 2 0 0Z" />
+          <path d="M48 -1 l6 -5 l1 4Z" />
+          <path className="wing w0" d="M14 -2 C10 -18 18 -28 30 -32 C26 -22 30 -14 36 -10 C30 -10 24 -6 22 -2Z" />
+          <path className="wing w1" d="M14 2 C8 12 12 22 24 26 C22 18 26 12 32 8 C26 8 22 6 20 3Z" />
+          <path d="M56 1 q8 -2 14 2 q-6 2 -14 0Z" fill="#e58a2b" stroke="none" opacity="0.9" />
+        </g>
+      </g>
+
       {/* surreal mountainscape in three ridges: far (pale lilac, soft), middle (violet), near (deep blue, bold) */}
       <g mask="url(#eyemask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         <path d="M20 200 L70 150 L96 162 L132 112 L152 98 L172 116 L196 104 L222 92 L248 120 L276 108 L312 146 L344 170 L360 178 L360 268 L0 268 L0 208Z" fill="#8b7fc4" opacity="0.32" strokeWidth="1.4" />
         <path d="M152 98 l-6 10 l7 -3 l5 6 l2 -9Z M222 92 l-7 12 l8 -4 l6 6 l1 -10Z" fill={cream} opacity="0.35" stroke="none" />
+        {/* volcano: cone, glowing crater, lava runs, smoke puffing in steps */}
+        <g>
+          <path d="M226 200 L262 128 L270 124 L280 126 L288 130 L328 200Z" fill="#5c4560" strokeWidth="2" />
+          <path d="M262 128 Q275 120 288 130 Q276 134 262 128Z" fill={orange} strokeWidth="1.6" />
+          <path d="M270 128 q-6 22 -12 34 q-4 10 -10 18 M280 130 q4 18 8 30 q4 12 2 22 M275 130 q0 20 -2 40" fill="none" stroke={red} strokeWidth="2.6" />
+          <path d="M268 140 l-10 26 M286 142 l12 30 M244 176 l-6 18 M306 172 l8 20" fill="none" stroke="#2a1a30" strokeWidth="1.2" />
+          <g className="smoke" fill="#9a92a8" opacity="0.65" strokeWidth="1.4">
+            <circle className="puff p0" cx="276" cy="112" r="7" />
+            <circle className="puff p1" cx="270" cy="98" r="9" />
+            <circle className="puff p2" cx="280" cy="82" r="11" />
+          </g>
+          <path className="ember" d="M275 120 l-2 -6 l3 2 l1 -6 l2 6 l2 -3 l-1 7Z" fill={yellow} strokeWidth="1" />
+        </g>
         <path d="M0 214 L40 182 L66 192 L104 146 L124 158 L150 136 L176 170 L206 160 L238 132 L262 146 L292 128 L330 172 L360 184 L360 268 L0 268Z" fill="#5a4aa0" opacity="0.55" strokeWidth="1.8" />
         <path d="M104 146 l-7 12 l8 -4 l6 7 l2 -11Z M292 128 l-8 13 l9 -4 l6 7 l1 -12Z" fill={cream} opacity="0.5" stroke="none" />
         <g fill="none" stroke="#231a4a" strokeWidth="1.2" opacity="0.6">
@@ -378,23 +444,41 @@ export const EyeDoodle = memo(function EyeDoodle() {
         </g>
       </g>
 
+      {/* scattered twinkling stars */}
+      <g stroke={ink} strokeWidth="1.2" strokeLinejoin="round">
+          <path className="spark s0" d={`M20 66 Q20.6 69.4 24 70 Q20.6 70.6 20 74 Q19.4 70.6 16 70 Q19.4 69.4 20 66Z`} fill={cream} />
+          <path className="spark s1" d={`M46 117 Q46.5 119.5 49 120 Q46.5 120.5 46 123 Q45.5 120.5 43 120 Q45.5 119.5 46 117Z`} fill={yellow} />
+          <path className="spark s2" d={`M28 166.5 Q28.5 169.5 31.5 170 Q28.5 170.5 28 173.5 Q27.5 170.5 24.5 170 Q27.5 169.5 28 166.5Z`} fill={cream} />
+          <path className="spark s0" d={`M332 66 Q332.6 69.4 336 70 Q332.6 70.6 332 74 Q331.4 70.6 328 70 Q331.4 69.4 332 66Z`} fill={yellow} />
+          <path className="spark s1" d={`M344 125 Q344.4 127.5 347 128 Q344.4 128.4 344 131 Q343.6 128.4 341 128 Q343.6 127.5 344 125Z`} fill={cream} />
+          <path className="spark s2" d={`M318 172.5 Q318.5 175.5 321.5 176 Q318.5 176.5 318 179.5 Q317.5 176.5 314.5 176 Q317.5 175.5 318 172.5Z`} fill={yellow} />
+          <path className="spark s0" d={`M96 55 Q96.5 57.5 99 58 Q96.5 58.5 96 61 Q95.5 58.5 93 58 Q95.5 57.5 96 55Z`} fill={cream} />
+          <path className="spark s1" d={`M258 52.5 Q258.5 55.5 261.5 56 Q258.5 56.5 258 59.5 Q257.5 56.5 254.5 56 Q257.5 55.5 258 52.5Z`} fill={yellow} />
+          <path className="spark s2" d={`M70 89.5 Q70.4 91.6 72.5 92 Q70.4 92.4 70 94.5 Q69.6 92.4 67.5 92 Q69.6 91.6 70 89.5Z`} fill={cream} />
+          <path className="spark s0" d={`M300 101.5 Q300.4 103.6 302.5 104 Q300.4 104.4 300 106.5 Q299.6 104.4 297.5 104 Q299.6 103.6 300 101.5Z`} fill={yellow} />
+          <path className="spark s1" d={`M12 137.5 Q12.4 139.6 14.5 140 Q12.4 140.4 12 142.5 Q11.6 140.4 9.5 140 Q11.6 139.6 12 137.5Z`} fill={cream} />
+          <path className="spark s2" d={`M350 93.5 Q350.4 95.6 352.5 96 Q350.4 96.4 350 98.5 Q349.6 96.4 347.5 96 Q349.6 95.6 350 93.5Z`} fill={yellow} />
+          <path className="spark s0" d={`M120 209.5 Q120.4 211.6 122.5 212 Q120.4 212.4 120 214.5 Q119.6 212.4 117.5 212 Q119.6 211.6 120 209.5Z`} fill={cream} />
+          <path className="spark s1" d={`M240 211 Q240.4 213.6 243 214 Q240.4 214.4 240 217 Q239.6 214.4 237 214 Q239.6 213.6 240 211Z`} fill={yellow} />
+          </g>
+
       {/* far half of the rings: behind the fire and eye */}
       <g ref={back} className="orbs back" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round" />
 
-      <g filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+      <g className="firebeat" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {[0, 1, 2].map(fire)}
       </g>
 
-      <g className="eyeball" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+      <g className="eyeball" filter="url(#eyeink)" stroke={lid} strokeLinejoin="round" strokeLinecap="round">
         <path d={`M${cx - 48} ${cy} Q${cx} ${cy - 44} ${cx + 48} ${cy} Q${cx} ${cy + 44} ${cx - 48} ${cy}Z`} fill={cream} strokeWidth="3.4" />
         <g clipPath="url(#eyeclip)">
-          <g className="iris">
-            <circle cx={cx} cy={cy} r="19" fill={teal} strokeWidth="2.4" />
+          <g className="iris" ref={irisRef}>
+            <circle cx={cx} cy={cy} r="19" fill={iris} stroke="#1f3a66" strokeWidth="2.6" />
             {Array.from({ length: 12 }, (_, i) => {
               const a = (i / 12) * Math.PI * 2;
-              return <line key={i} x1={cx + Math.cos(a) * 9} y1={cy + Math.sin(a) * 9} x2={cx + Math.cos(a) * 17} y2={cy + Math.sin(a) * 17} strokeWidth="1.1" stroke="#1d4a4e" />;
+              return <line key={i} x1={cx + Math.cos(a) * 9} y1={cy + Math.sin(a) * 9} x2={cx + Math.cos(a) * 17} y2={cy + Math.sin(a) * 17} strokeWidth="1.1" stroke="#26507f" />;
             })}
-            <circle cx={cx} cy={cy} r="8" fill={ink} strokeWidth="1" />
+            <circle cx={cx} cy={cy} r="8" fill={ink} stroke={ink} strokeWidth="1" />
             <circle cx={cx - 5} cy={cy - 6} r="3.2" fill={cream} stroke="none" />
           </g>
         </g>
