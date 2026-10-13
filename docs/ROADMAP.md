@@ -81,7 +81,10 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
    commander-style header (commander art, ransom name, pips, price · salt · bracket under the name, owned %), grid/list,
    group by type or mana value with counts, analysis panel (cost to complete, mana curve, types, colour pips, a short
    read against the usual 35–38 lands / 9–12 ramp / 9–12 draw / 7–10 removal / 2–4 wipes; roles counted from rules
-   text). Missing: edit, rename, duplicate, create from scratch; cards the import couldn't match are dropped.
+   text). GROUP (type / mana value / owned-missing / none), SORT (mana value, name, price both ways, owned or missing
+   first) and SHOW (all / owned / missing) dropdowns, remembered per device; the commander page has SORT (EDHREC order
+   first) and SHOW too (`lib/arrange`, tested). Missing: edit, rename, duplicate, create from scratch; cards the import
+   couldn't match are dropped.
 8. ⬜ Legality and completeness: 100 cards, singleton, colour identity, banned, commander legality.
 9. 🟡 Owned vs missing is shown everywhere (colour vs greyed, TO BUY receipt); purchases not yet a separate section of a
    generated deck.

@@ -7,10 +7,11 @@ import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCa
 import { deckCsv, deckText, download } from '../lib/export';
 import { norm } from '../lib/names';
 import { cad, fetchedNote } from '../lib/prices';
+import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -42,28 +43,13 @@ function DeckNotes({ deck }: { deck: Deck }) {
 }
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
-type Grouping = 'type' | 'mv';
-const useStored = <T extends string>(key: string, fallback: T, allowed: T[]): [T, (v: T) => void] => {
-  const [v, set] = useState<T>(() => {
-    try {
-      const got = localStorage.getItem(key) as T | null;
-      return got && allowed.includes(got) ? got : fallback;
-    } catch {
-      return fallback;
-    }
-  });
-  return [
-    v,
-    (x: T) => {
-      set(x);
-      try {
-        localStorage.setItem(key, x);
-      } catch {
-        /* per-device convenience only */
-      }
-    },
-  ];
-};
+type Grouping = 'type' | 'mv' | 'own' | 'none';
+const GROUPINGS: [Grouping, string][] = [
+  ['type', 'CARD TYPE'],
+  ['mv', 'MANA VALUE'],
+  ['own', 'OWNED / MISSING'],
+  ['none', 'NO GROUPS'],
+];
 
 /** Bracket estimate stamp; tap shows the reasons. */
 function BracketStat({ call }: { call: BracketCall }) {
@@ -197,7 +183,9 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
     gameChangers().then(setGc);
   }, [deck.id]);
   const [view, setView] = useStored<'grid' | 'list'>('ch:view', 'grid', ['grid', 'list']);
-  const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', ['type', 'mv']);
+  const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
+  const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
+  const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const pricesIn = byKey.size > 0;
@@ -207,10 +195,15 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
   const ci = cmdr?.ci ?? [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
 
-  // Moxfield-style sections: by card type (commander first) or by mana value (lands last).
-  const sections = new Map<string, DeckCard[]>();
+  // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
+  const owned = (n: string) => statusOf(n, s.mine) === 'owned';
   const keyOf = (c: DeckCard) => {
     const card = cardOf(c.name);
+    if (grouping === 'none') return 'All cards';
+    if (grouping === 'own') {
+      const st = statusOf(c.name, s.mine, s.other);
+      return st === 'owned' ? 'Owned' : st === 'other' ? `In ${s.otherName}` : 'Missing';
+    }
     if (c.name === deck.commander) return 'Commander';
     if (grouping === 'type') return groupOf(card?.type);
     if (!card) return 'Other';
@@ -218,9 +211,20 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
     const mv = Math.round(card.cmc ?? 0);
     return mv >= 7 ? 'Mana value 7+' : `Mana value ${mv}`;
   };
-  const order = grouping === 'type' ? [...GROUPS] : ['Commander', ...Array.from({ length: 7 }, (_, i) => `Mana value ${i}`), 'Mana value 7+', 'Lands', 'Other'];
-  for (const k of order) sections.set(k, []);
-  const sorted = [...deck.cards].sort((a, b) => (cardOf(a.name)?.cmc ?? 0) - (cardOf(b.name)?.cmc ?? 0) || a.name.localeCompare(b.name));
+  const order =
+    grouping === 'type'
+      ? [...GROUPS]
+      : grouping === 'mv'
+        ? ['Commander', ...Array.from({ length: 7 }, (_, i) => `Mana value ${i}`), 'Mana value 7+', 'Lands', 'Other']
+        : grouping === 'own'
+          ? ['Owned', `In ${s.otherName}`, 'Missing']
+          : ['All cards'];
+  const sections = new Map<string, DeckCard[]>(order.map((k) => [k, []]));
+  const shown = deck.cards.filter((c) => shows(show, owned(c.name)));
+  const sorted = sortBy(shown, sort, (c) => {
+    const card = cardOf(c.name);
+    return { name: c.name, usd: card?.usd ? Number(card.usd) : undefined, mv: card ? (isLand(card.type) ? 99 : card.cmc) : undefined, owned: owned(c.name) };
+  });
   for (const c of sorted) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
 
@@ -292,17 +296,9 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
               LIST
             </button>
           </div>
-          <div className="viewsw" role="group" aria-label="Group cards by">
-            <button aria-pressed={grouping === 'type'} onClick={() => setGrouping('type')}>
-              TYPE
-            </button>
-            <button aria-pressed={grouping === 'mv'} aria-label="Mana value" onClick={() => setGrouping('mv')}>
-              <span className="wideonly">MANA VALUE</span>
-              <span className="narrowonly" aria-hidden="true">
-                MV
-              </span>
-            </button>
-          </div>
+          <Pick label="GROUP" value={grouping} options={GROUPINGS} onChange={setGrouping} />
+          <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+          <Pick label="SHOW" value={show} options={SHOWS} onChange={setShow} />
           <span className="grow" />
           <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
             EXPORT TEXT

@@ -7,8 +7,12 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, HeroStats, money, priceSum, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, money, priceSum, scryfallUrl, Segs, ShortAlert, usd, Pick, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
+import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
+
+// EDHREC's own order first on commander pages.
+const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -160,6 +164,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     }
   };
   const Item = view === 'grid' ? CardTile : CardLine;
+  const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
+  const [show, setShow] = useStored<Show>('ch:cshow', 'all', SHOWS.map(([v]) => v));
 
   const receipt = kind === 'average' && missing.length > 0 && (
     <aside className="receipt gbox" id="shop" aria-label="Shopping list">
@@ -241,39 +247,35 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
               </div>
             </div>
             <div className="cmeta">
-              <span className="typed">
-                {[...tags.slice(0, 3).map((t) => t.value.toUpperCase()), page?.numDecks ? `${page.numDecks.toLocaleString()} DECKS` : ''].filter(Boolean).join(' · ')}
-                {' · '}
-                <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-                  EDHREC ↗
-                </a>
-              </span>
-              {page && (
-                <span className="score">
-                  <span className="mono">
-                    NO. {no ? String(no).padStart(3, '0') : '—'}
-                    <br />
-                    {page.numDecks ? page.numDecks.toLocaleString() : '—'} EDHREC DECKS
-                  </span>
+              {tags.length > 0 && (
+                <div className="builtaround">
+                  <span>built around</span>
+                  <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more">
+                    {tags.slice(0, 24).map((t) => (
+                      <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
+                        {t.value.toUpperCase()} {t.count.toLocaleString()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <span className="score">
+                <span className="mono">
+                  NO. {no ? String(no).padStart(3, '0') : '—'}
+                  <br />
+                  {page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS ·{' '}
+                  <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+                    EDHREC ↗
+                  </a>
+                </span>
+                {page && (
                   <span className="pct">
                     <span className="bigpct">{sum.pct}%</span>
                     <RiseBars pct={sum.pct} />
                   </span>
-                </span>
-              )}
+                )}
+              </span>
             </div>
-            {tags.length > 0 && (
-              <div className="builtaround">
-                <span>built around</span>
-                <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more">
-                  {tags.slice(0, 24).map((t) => (
-                    <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-                      {t.value.toUpperCase()} {t.count.toLocaleString()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
@@ -351,13 +353,17 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         {error && <p className="error">{error}</p>}
         {!page && !error && <p className="count">Loading EDHREC data…</p>}
         {page && (
-          <div className="viewsw" role="group" aria-label="Card view">
-            <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
-              GRID
-            </button>
-            <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
-              LIST
-            </button>
+          <div className="dtools" role="toolbar" aria-label="Card view">
+            <div className="viewsw" role="group" aria-label="Card view">
+              <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+                GRID
+              </button>
+              <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+                LIST
+              </button>
+            </div>
+            <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+            <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
           </div>
         )}
         {page && (
@@ -366,6 +372,14 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             <div className="lists">
               {page.lists.map((l) => {
                 const ls = summarize(l.cards.map((c) => c.name), s.mine, s.other);
+                // A swapped-in card is one of yours, so it counts as owned for SHOW.
+                const own = (c: EdhCard) => !!swaps[c.name] || statusOf(c.name, s.mine) === 'owned';
+                const cs = sortBy(
+                  l.cards.filter((c) => shows(show, own(c))),
+                  sort,
+                  (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
+                );
+                if (!cs.length) return null;
                 return (
                   <details key={l.header} className="cat" open>
                     <summary>
@@ -377,7 +391,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                       </span>
                     </summary>
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
-                      {l.cards.map((c) => {
+                      {cs.map((c) => {
                         const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned';
                         const repl = swaps[c.name];
                         const rc = repl ? recCard.get(norm(repl)) : undefined;

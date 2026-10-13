@@ -3510,3 +3510,72 @@ ul.popnote .small {
   line-height: 1;
   transform: rotate(-4deg);
 }
+
+/* Header meta in one row: built-around chips on the left, deck count + EDHREC link + owned % on the right */
+.cright {
+  gap: 10px;
+}
+.cmeta {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px 24px;
+}
+.cmeta .builtaround {
+  flex: 1 1 auto;
+  margin: 0;
+}
+.cmeta .score {
+  flex: none;
+}
+.cmeta .mono a {
+  color: var(--text);
+  position: relative;
+}
+.cmeta .mono a::after {
+  content: '';
+  position: absolute;
+  inset: -12px -8px;
+}
+.chero {
+  padding-bottom: 14px;
+}
+@media (max-width: 899px) {
+  .cmeta {
+    flex-wrap: wrap;
+  }
+}
+
+/* Dropdowns next to GRID / LIST (group, sort, show) */
+.dtools .sbox.pick {
+  min-height: 44px;
+  flex: 0 1 230px;
+}
+.sbox.pick .tab {
+  font-size: 16px;
+  padding: 0 10px;
+}
+.sbox.pick select {
+  font-size: 15px;
+  padding: 0 44px 0 10px;
+}
+.deckgrid.after-sw {
+  margin-top: 16px;
+}
+@media (max-width: 700px) {
+  .dtools .sbox.pick {
+    flex: 1 1 100%;
+  }
+}
+.sbox.pick {
+  border-color: var(--text);
+}
+.sbox.pick .tab {
+  background: var(--accent);
+  color: #ffffff;
+}
+/* Deck header: smaller commander art so it doesn't leave a gap under the stats */
+@media (min-width: 701px) {
+  .dhero {
+    grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
+  }
+}

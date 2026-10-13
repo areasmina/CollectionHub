@@ -181,6 +181,48 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
   );
 }
 
+/** Dropdown in the Discover SORT-box style: black tab label, select, red arrow. */
+export function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
+  return (
+    <label className="sbox pick">
+      <span className="tab">{label}</span>
+      <select value={value} onChange={(e) => onChange(e.target.value as T)}>
+        {options.map(([v, t]) => (
+          <option key={v} value={v}>
+            {t}
+          </option>
+        ))}
+      </select>
+      <span className="arrow" aria-hidden="true">
+        <span>▼</span>
+      </span>
+    </label>
+  );
+}
+
+/** A choice remembered on this device (view, grouping, sort); falls back when storage is blocked. */
+export function useStored<T extends string>(key: string, fallback: T, allowed: readonly T[]): [T, (v: T) => void] {
+  const [v, set] = useState<T>(() => {
+    try {
+      const got = localStorage.getItem(key) as T | null;
+      return got && allowed.includes(got) ? got : fallback;
+    } catch {
+      return fallback;
+    }
+  });
+  return [
+    v,
+    (x: T) => {
+      set(x);
+      try {
+        localStorage.setItem(key, x);
+      } catch {
+        /* per-device convenience only */
+      }
+    },
+  ];
+}
+
 export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }: { done: number; total: number; what?: string }) => (
   <div className="progress">
     <progress value={done} max={total || 1} /> <span>{total ? `${what}: ${done} / ${total}` : 'Reading…'}</span>
