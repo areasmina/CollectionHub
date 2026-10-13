@@ -5837,3 +5837,29 @@ ul.popnote .small {
 .hero .colours button[aria-pressed='true']::after {
   content: none;
 }
+
+/* DeckMage logo, one word, xeroxed: tight tiles, toner speckle, uneven ink, a faint photocopy streak */
+.logo .brandmark .word.xerox {
+  position: relative;
+  gap: 1px;
+  filter: contrast(1.25) grayscale(0.15);
+}
+.logo .brandmark .word.xerox .lt {
+  background:
+    radial-gradient(rgba(0, 0, 0, 0.35) 0.6px, transparent 1px) 1px 2px / 3px 3px,
+    radial-gradient(rgba(0, 0, 0, 0.18) 0.9px, transparent 1.4px) 0 0 / 5px 4px,
+    linear-gradient(170deg, #f3ead6, #ddd0b2);
+  text-shadow: 0.5px 0 0 #0e0e0e, -0.4px 0.3px 0 rgba(14, 14, 14, 0.6);
+}
+.logo .brandmark .word.xerox::after {
+  /* photocopy streak + toner grain over the whole word */
+  content: '';
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 18%, rgba(0, 0, 0, 0.16) 19%, transparent 21%, transparent 63%, rgba(0, 0, 0, 0.12) 64%, transparent 65.5%);
+  mix-blend-mode: multiply;
+}
+.logo .brandmark .word.xerox .lt:nth-child(3n) {
+  filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.7)) url(#rough);
+}

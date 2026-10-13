@@ -619,7 +619,7 @@ export function ManaIcon({ c }: { c: string }) {
   );
 }
 
-/** Header logo: sketchy cream wizard hat + DECK MAGE in cream cut-out tiles with black letters (owner's logo style). */
+/** Header logo: sketchy cream wizard hat + DECKMAGE (one word) in xeroxed cream cut-out tiles with black letters (owner's logo style). */
 export function Logo() {
   const tile = (ch: string, i: number) => {
     const r = Math.sin(i * 12.9898 + 4.1) * 43758.5453;
@@ -639,11 +639,8 @@ export function Logo() {
         <path d="M14 21 l2 -1 M18 15 l1.5 -1 M21 22 l2 -0.5 M17 24 l1 -1" strokeWidth="1.8" />
         <path d="M2 12 l5 -1.5 M1 17 l5 0 M3 22 l4 -1.5" strokeWidth="1.8" />
       </svg>
-      <span className="word" aria-hidden="true">
-        {'DECK'.split('').map((c, i) => tile(c, i))}
-      </span>
-      <span className="word" aria-hidden="true">
-        {'MAGE'.split('').map((c, i) => tile(c, i + 7))}
+      <span className="word xerox" aria-hidden="true">
+        {'DECKMAGE'.split('').map((c, i) => tile(c, i))}
       </span>
     </span>
   );
