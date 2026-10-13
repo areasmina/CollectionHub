@@ -345,7 +345,7 @@ export const EyeDoodle = memo(function EyeDoodle() {
   }, []);
 
   return (
-    <svg className="eyedoodle" viewBox="0 0 360 268" aria-hidden="true">
+    <svg className="eyedoodle" viewBox="0 42 360 214" aria-hidden="true">
       <defs>
         <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
           <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
@@ -363,15 +363,19 @@ export const EyeDoodle = memo(function EyeDoodle() {
         </clipPath>
       </defs>
 
-      {/* surreal mountainscape: two blue-purple ridges, hatched, fading out */}
-      <g mask="url(#eyemask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round">
-        <path d="M0 214 L36 168 L58 178 L92 120 L114 104 L134 124 L168 176 L196 156 L222 130 L246 112 L268 132 L300 120 L330 150 L360 170 L360 268 L0 268Z" fill="#4a3f8a" opacity="0.55" strokeWidth="2" />
-        <path d="M0 236 L50 200 L84 214 L122 172 L148 190 L184 214 L226 182 L262 200 L300 176 L340 206 L360 200 L360 268 L0 268Z" fill="#2f5a8c" opacity="0.6" strokeWidth="2" />
-        <g fill="none" stroke="#17143a" strokeWidth="1.3" strokeLinecap="round" opacity="0.7">
-          <path d="M98 140 l-12 30 M110 132 l-6 40 M128 136 l10 34 M236 130 l-10 30 M250 124 l2 34 M262 140 l12 26 M116 186 l-8 22 M130 184 l6 22 M228 196 l-6 20 M296 190 l8 20" />
+      {/* surreal mountainscape in three ridges: far (pale lilac, soft), middle (violet), near (deep blue, bold) */}
+      <g mask="url(#eyemask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
+        <path d="M20 200 L70 150 L96 162 L132 112 L152 98 L172 116 L196 104 L222 92 L248 120 L276 108 L312 146 L344 170 L360 178 L360 268 L0 268 L0 208Z" fill="#8b7fc4" opacity="0.32" strokeWidth="1.4" />
+        <path d="M152 98 l-6 10 l7 -3 l5 6 l2 -9Z M222 92 l-7 12 l8 -4 l6 6 l1 -10Z" fill={cream} opacity="0.35" stroke="none" />
+        <path d="M0 214 L40 182 L66 192 L104 146 L124 158 L150 136 L176 170 L206 160 L238 132 L262 146 L292 128 L330 172 L360 184 L360 268 L0 268Z" fill="#5a4aa0" opacity="0.55" strokeWidth="1.8" />
+        <path d="M104 146 l-7 12 l8 -4 l6 7 l2 -11Z M292 128 l-8 13 l9 -4 l6 7 l1 -12Z" fill={cream} opacity="0.5" stroke="none" />
+        <g fill="none" stroke="#231a4a" strokeWidth="1.2" opacity="0.6">
+          <path d="M112 158 l-8 22 M122 164 l-2 20 M246 146 l-8 22 M256 150 l2 20 M300 140 l8 24" />
         </g>
-        <path d="M108 104 l6 -10 l6 10" fill={cream} opacity="0.7" strokeWidth="1.6" />
-        <path d="M240 112 l6 -10 l6 10" fill={cream} opacity="0.7" strokeWidth="1.6" />
+        <path d="M0 238 L34 214 L58 222 L92 196 L118 212 L150 228 L184 206 L214 220 L250 198 L282 214 L320 200 L360 222 L360 268 L0 268Z" fill="#26457e" opacity="0.8" strokeWidth="2.2" />
+        <g fill="none" stroke="#0e1838" strokeWidth="1.4" opacity="0.7">
+          <path d="M92 196 l-10 24 M100 202 l-2 22 M184 206 l-8 24 M192 210 l4 20 M250 198 l-8 26 M258 204 l6 22" />
+        </g>
       </g>
 
       {/* far half of the rings: behind the fire and eye */}

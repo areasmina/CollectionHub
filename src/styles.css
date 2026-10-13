@@ -5240,9 +5240,10 @@ ul.popnote .small {
     grid-column: 1 / -1;
   }
   .eyedoodle {
-    width: 340px;
-    height: auto;
-    margin: -22px 1% -26px 0;
+    width: auto;
+    height: 178px;
+    margin: -32px 1% -32px 0;
+    align-self: center;
   }
 }
 @media (max-width: 1099px) {
