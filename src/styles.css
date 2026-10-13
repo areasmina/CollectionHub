@@ -5833,3 +5833,7 @@ ul.popnote .small {
 .hero .colours button[aria-pressed='false'] {
   filter: saturate(0.6) brightness(0.82);
 }
+/* no tape on selected colour buttons */
+.hero .colours button[aria-pressed='true']::after {
+  content: none;
+}
