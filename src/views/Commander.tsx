@@ -1,3 +1,4 @@
+import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { statusOf, summarize } from '../lib/compare';
@@ -7,7 +8,7 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, HeroStats, money, priceSum, Segs, ShortAlert, usd, Pick, useStored, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -180,7 +181,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           return (
             <li key={c.name} className={done ? 'done' : ''}>
               <label>
-                <input type="checkbox" checked={done} onChange={() => toggleBought(c.name)} aria-label={`Got ${c.name}`} />
+                <input type="checkbox" checked={done} onChange={() => (haptic(done ? 'tap' : 'success'), toggleBought(c.name))} aria-label={`Got ${c.name}`} />
                 <span className="nm">
                   {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
                   {c.name}
@@ -251,7 +252,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
               {tags.length > 0 && (
                 <div className="builtaround">
                   <span>built around</span>
-                  <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more">
+                  <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
                     {tags.slice(0, 24).map((t) => (
                       <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
                         {t.value.toUpperCase()} {t.count.toLocaleString()}
@@ -356,10 +357,10 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         {page && (
           <div className="dtools" role="toolbar" aria-label="Card view">
             <div className="viewsw" role="group" aria-label="Card view">
-              <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+              <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
                 <GridIcon /> Grid
               </button>
-              <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+              <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
                 <ListIcon /> List
               </button>
             </div>
@@ -420,8 +421,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                                   const sc = recCard.get(norm(sub.name));
                                   return { sub, img: (sc && cardOf(sc)?.img) ?? imgOf(sc?.id), big: imgOf(sc?.id, 'normal'), owned: s.mine.get(norm(sub.name)) ?? 0 };
                                 })}
-                                onPick={(sub) => setSwap(c.name, sub)}
-                                onUndo={() => setSwap(c.name, null)}
+                                onPick={(sub) => (haptic('success'), setSwap(c.name, sub))}
+                                onUndo={() => (haptic('undo'), setSwap(c.name, null))}
                                 onClose={() => setMenuFor(null)}
                               />
                             )}

@@ -1,5 +1,6 @@
+import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { statusOf } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { fetchPage, pagePath } from '../lib/edhrec';
@@ -52,6 +53,18 @@ const binderSig = (profile: number, mine: Map<string, number>) => {
 export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
+  // Scrolling through commanders: a soft detent tick as each card comes into view (throttled in haptic()).
+  const gridRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const ul = gridRef.current;
+    if (!ul || typeof IntersectionObserver === 'undefined') return;
+    let armed = false;
+    const arm = () => (armed = true);
+    addEventListener('scroll', arm, { passive: true });
+    const io = new IntersectionObserver((es) => armed && es.some((e) => e.isIntersecting) && haptic('tick'), { rootMargin: '0px 0px -35% 0px' });
+    ul.querySelectorAll(':scope > li').forEach((li) => io.observe(li));
+    return () => (io.disconnect(), removeEventListener('scroll', arm));
+  });
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('match'); // most owned first
   const [colours, setColours] = useState<string[]>([]);
@@ -215,7 +228,7 @@ export function Discover(s: Shared) {
               </label>
               <div className="colours" role="group" aria-label="Filter by colour identity">
                 {COLOURS.map(([l, n, bar]) => (
-                  <button type="button" key={l} aria-pressed={colours.includes(l)} aria-label={n} onClick={() => toggle(l)}>
+                  <button type="button" key={l} aria-pressed={colours.includes(l)} aria-label={n} onClick={() => (haptic(colours.includes(l) ? 'tap' : 'select'), toggle(l))}>
                     <ManaIcon c={l} />
                     <b aria-hidden="true">{l}</b>
                     <i aria-hidden="true" style={{ background: bar }} />
@@ -238,7 +251,7 @@ export function Discover(s: Shared) {
         <p className="count">
           {commanders.length ? `${shown.length} of ${commanders.length} commanders in this binder.` : 'No commanders yet: import a collection in the Collection tab, or type any commander above and press Enter.'}
         </p>
-        <ul className="cgrid">
+        <ul className="cgrid" ref={gridRef}>
           {shown.map((c, i) => {
             const st = stats.get(c.key);
             const ready = st && st.pct >= 90;

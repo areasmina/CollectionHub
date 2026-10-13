@@ -1,3 +1,4 @@
+import { haptic } from '../lib/haptics';
 import { useRef, useState } from 'react';
 import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
 import { scryfallUrl, showPreview } from './shared';
@@ -27,7 +28,7 @@ function Option({ o, missing, onPick, onLook }: { o: SwapOption; missing: SubCar
         onPointerDown={(e) => {
           if (e.pointerType === 'mouse' || !o.big) return;
           held.current = false;
-          timer.current = window.setTimeout(() => ((held.current = true), showPreview(o.big!)), 350);
+          timer.current = window.setTimeout(() => ((held.current = true), haptic('open'), showPreview(o.big!)), 350);
         }}
         onPointerUp={() => (clearTimeout(timer.current), held.current && showPreview(null))}
         onPointerCancel={() => (clearTimeout(timer.current), showPreview(null))}

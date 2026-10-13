@@ -1,3 +1,4 @@
+import { haptic } from '../lib/haptics';
 import { useEffect, useRef, useState } from 'react';
 import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
@@ -81,6 +82,7 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
           setPreview(null);
           if (onPick) return onPick();
           if (href && canHover()) return void window.open(href, '_blank', 'noopener');
+          haptic('open');
           setPreview({ src: big, tap: true, href });
         }}
       />
@@ -124,7 +126,7 @@ export function useMenuPress(onMenu?: (x: number, y: number) => void) {
       start.current = { x: e.clientX, y: e.clientY };
       timer.current = window.setTimeout(() => {
         fired.current = true;
-        navigator.vibrate?.(15);
+        haptic('open');
         onMenu(start.current!.x, start.current!.y);
       }, 500);
     },
@@ -223,7 +225,7 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
       {options.map(([v, text], i) => (
-        <button key={v} role="radio" className={roman && i > 0 ? 'roman' : ''} aria-checked={value === v} onClick={() => onChange(v)}>
+        <button key={v} role="radio" className={roman && i > 0 ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}
@@ -231,12 +233,23 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
   );
 }
 
+/** onScroll for sideways chip rows: a light tick each time the row moves past another chip (scroll-snap step). */
+export function snapTick(e: React.UIEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  const step = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 120;
+  const at = Math.round(el.scrollLeft / Math.max(40, step));
+  if (Number(el.dataset.snap ?? -1) !== at) {
+    if (el.dataset.snap !== undefined) haptic('tick');
+    el.dataset.snap = String(at);
+  }
+}
+
 /** Dropdown in the Discover SORT-box style: black tab label, select, red arrow. */
 export function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
     <label className="sbox pick">
       <span className="tab">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value as T)}>
+      <select value={value} onChange={(e) => (haptic('select'), onChange(e.target.value as T))}>
         {options.map(([v, t]) => (
           <option key={v} value={v}>
             {t}

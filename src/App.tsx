@@ -1,3 +1,4 @@
+import { haptic, hapticsOn, setHaptics } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ownedMap } from './lib/compare';
@@ -35,6 +36,7 @@ export default function App() {
   const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
   const [sync, setSync] = useState(!!authReturn); // back from a sign-in redirect: show the result
   const [hubOpen, setHubOpen] = useState(false);
+  const [haptOn, setHaptOn] = useState(hapticsOn);
   const hubRef = useRef<HTMLDivElement>(null);
   const hubTimer = useRef<number>(undefined);
   const openHub = () => (clearTimeout(hubTimer.current), setHubOpen(true));
@@ -78,7 +80,7 @@ export default function App() {
         <div className={`hubslide${hubOpen ? ' open' : ''}`}>
           {/* The shadow sits on a wrapper: a clip-path on the button itself would cut its drop-shadow off. */}
           <span className="hubtabwrap">
-            <button className="hubtab" aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => setHubOpen(!hubOpen)}>
+            <button className="hubtab" aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
               {hubOpen ? '×' : '≡'}
             </button>
           </span>
@@ -89,7 +91,7 @@ export default function App() {
             {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
             <nav className="tabs hubnav" aria-label="Sections">
               {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
-                <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => ((t === 'discover' ? goDiscover() : setTab(t)), setHubOpen(false))}>
+                <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => (haptic('select'), (t === 'discover' ? goDiscover() : setTab(t)), setHubOpen(false))}>
                   {t.toUpperCase()}
                 </button>
               ))}
@@ -115,6 +117,12 @@ export default function App() {
                   </svg>
                 </button>
               </div>
+              <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHaptics(!haptOn), setHaptOn(!haptOn))}>
+                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <rect x="6" y="2" width="8" height="16" rx="2" />
+                  {haptOn ? <path d="M3 6 v8 M1 8 v4 M17 6 v8 M19 8 v4" /> : <path d="M2 2 L18 18" />}
+                </svg>
+              </button>
               <button className="iconbtn" onClick={() => (setSync(!sync), setHubOpen(false))} aria-label="Sync between devices" aria-expanded={sync}>
                 <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                   <path d="M5 15 V3 M2 6 L5 3 L8 6 M13 3 V15 M10 12 L13 15 L16 12" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -126,7 +134,7 @@ export default function App() {
       </div>
       <nav className="tabs navbar" aria-label="Sections">
         {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
-          <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => (t === 'discover' ? goDiscover() : setTab(t))}>
+          <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : setTab(t))}>
             {t.toUpperCase()}
           </button>
         ))}

@@ -1,3 +1,4 @@
+import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
 import { useEffect, useRef, useState } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
@@ -103,7 +104,7 @@ function Tally({ e }: { e: Entry }) {
     document.addEventListener('pointerdown', away);
     return () => document.removeEventListener('pointerdown', away);
   }, [edit]);
-  const set = (q: number) => db.entries.update(e.id!, { qty: Math.min(999, q) });
+  const set = (q: number) => (haptic('tap'), db.entries.update(e.id!, { qty: Math.min(999, q) }));
   const marks = e.qty <= 4 ? 'X'.repeat(e.qty) : `X${e.qty}`;
   return (
     <span ref={ref} className={`tally${edit ? ' editing' : ''}`} onClick={(ev) => ev.stopPropagation()}>
@@ -126,7 +127,7 @@ function Tally({ e }: { e: Entry }) {
           </button>
         </span>
       ) : (
-        <button className="marks" aria-label={`${e.qty} ${e.qty === 1 ? 'copy' : 'copies'} of ${e.name}. Change quantity`} onClick={() => setEdit(true)}>
+        <button className="marks" aria-label={`${e.qty} ${e.qty === 1 ? 'copy' : 'copies'} of ${e.name}. Change quantity`} onClick={() => (haptic('open'), setEdit(true))}>
           {marks}
         </button>
       )}
@@ -215,19 +216,19 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
     <>
       <div className="cardopts">
         <div className="viewsw" role="group" aria-label="Card view">
-          <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+          <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
                 <ListIcon /> List
               </button>
-          <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+          <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
                 <GridIcon /> Grid
               </button>
         </div>
         <label className="check">
-          <input type="checkbox" checked={group === 'on'} onChange={(e) => setGroup(e.target.checked ? 'on' : 'off')} /> Group by set
+          <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
         </label>
         {group === 'on' && (
           <label className="check">
-            <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => setHideEmpty(e.target.checked ? 'on' : 'off')} /> Hide sets with no cards
+            <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
           </label>
         )}
       </div>

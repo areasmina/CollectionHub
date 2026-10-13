@@ -1,3 +1,4 @@
+import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
@@ -88,7 +89,7 @@ function PickCommander({ deck, cardOf }: { deck: Deck; cardOf: (name: string) =>
       {guess ? (
         <>
           This deck has no commander yet. It looks like <mark>{guess}</mark>.{' '}
-          <button className="btn" onClick={() => setCommander(deck, guess)}>
+          <button className="btn" onClick={() => (haptic('success'), setCommander(deck, guess))}>
             SET AS COMMANDER
           </button>
         </>
@@ -138,7 +139,7 @@ function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Sha
         <ul>
           {!isCmdr && (
             <li>
-              <button onClick={act(() => setCommander(deck, c.name))}>{deck.commander ? `★ Swap commander (replaces ${deck.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
+              <button onClick={act(() => (haptic('success'), setCommander(deck, c.name)))}>{deck.commander ? `★ Swap commander (replaces ${deck.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
             </li>
           )}
           <li>
@@ -158,7 +159,7 @@ function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Sha
           {link(scryfallUrl(c.name), 'Open on Scryfall')}
           <li className="sep" />
           <li>
-            <button onClick={act(() => setFoil(deck, s.profile, c.name, !c.foil))}>
+            <button onClick={act(() => (haptic('success'), setFoil(deck, s.profile, c.name, !c.foil)))}>
               {c.foil ? 'Switch to non-foil' : '✦ Switch to foil'}
               <small>{owned ? ' · your binder copy too' : ' · deck only (not owned)'}</small>
             </button>
@@ -166,17 +167,17 @@ function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Sha
           {many && (
             <li className="qtyrow">
               <span>Copies: {c.qty}</span>
-              <button aria-label="One copy fewer" onClick={() => changeQty(deck, c.name, -1)}>
+              <button aria-label="One copy fewer" onClick={() => (haptic('tap'), changeQty(deck, c.name, -1))}>
                 −
               </button>
-              <button aria-label="One copy more" onClick={() => changeQty(deck, c.name, 1)}>
+              <button aria-label="One copy more" onClick={() => (haptic('tap'), changeQty(deck, c.name, 1))}>
                 +
               </button>
             </li>
           )}
           <li className="sep" />
           <li>
-            <button className="danger" onClick={act(async () => onToast({ text: `Removed ${c.name} from the deck`, undo: await removeFromDeck(deck, c.name) }))}>
+            <button className="danger" onClick={act(async () => (haptic('warn'), onToast({ text: `Removed ${c.name} from the deck`, undo: await removeFromDeck(deck, c.name) })))}>
               Remove from deck
             </button>
           </li>
@@ -186,6 +187,7 @@ function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Sha
                 className="danger"
                 onClick={act(async () => {
                   if (!confirm(`Take one copy of ${c.name} out of ${s.binderName}? You own ${owned}.`)) return;
+                  haptic('warn');
                   onToast({ text: `Removed one ${c.name} from ${s.binderName}`, undo: await removeOneFromBinder(s.profile, c.name, c.foil) });
                 })}
               >
@@ -421,10 +423,10 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
 
         <div className="dtools" role="toolbar" aria-label="Deck view">
           <div className="viewsw" role="group" aria-label="Card view">
-            <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+            <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
                 <GridIcon /> Grid
               </button>
-            <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+            <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
                 <ListIcon /> List
               </button>
           </div>
@@ -496,7 +498,7 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
           <div className="toast" role="status">
             <span>{toast.text}</span>
             {toast.undo && (
-              <button onClick={() => (toast.undo!(), setToast(null))}>
+              <button onClick={() => (haptic('undo'), toast.undo!(), setToast(null))}>
                 UNDO
               </button>
             )}

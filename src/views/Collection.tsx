@@ -1,3 +1,4 @@
+import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
@@ -85,7 +86,7 @@ function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Ca
       aria-label="Collection highlights"
       onMouseEnter={() => setHold(true)}
       onMouseLeave={() => setHold(false)}
-      onClick={() => setI((x) => (x + 1) % panels.length)}
+      onClick={() => (haptic('tap'), setI((x) => (x + 1) % panels.length))}
     >
       <span className="pen" aria-hidden="true" />
       <div className="twhead">
