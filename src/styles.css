@@ -6305,3 +6305,34 @@ details.cat {
   padding-left: 20px;
   line-height: 1.2;
 }
+/* Group value in each card section header: a strip of yellow tape */
+.cat > summary .gval {
+  align-self: center;
+  flex: none;
+  margin-right: 10px;
+  padding: 3px 9px 2px;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0 var(--ink);
+  clip-path: polygon(2% 0, 98% 4%, 100% 50%, 97% 100%, 1% 94%, 0 45%);
+}
+@media (max-width: 700px) {
+  .cat > summary .h {
+    font-size: 19px;
+    padding: 0 10px;
+  }
+  .cat > summary .gval {
+    font-size: 13px;
+    padding: 2px 6px 1px;
+    margin-right: 4px;
+  }
+  .cat > summary .n {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}

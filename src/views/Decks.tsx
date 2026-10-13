@@ -564,6 +564,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                       <span className="h">
                         {h} ({cs.reduce((n, c) => n + c.qty, 0)})
                       </span>
+                      {pricesIn && (
+                        <span className="gval" title="What this group's cards are worth (cheapest printings, foils at foil price)">
+                          ≈{cad(priceSum(cs.map((c) => ({ card: cardFor(c), qty: c.qty }))))}
+                        </span>
+                      )}
                       <span className="dots" aria-hidden="true" />
                       <span className="n">
                         {ls.owned}/{ls.total} owned
