@@ -1,7 +1,7 @@
 # CollectionHub roadmap: collection-first Commander plan
 
 Source: Guillermo's 15-section plan (2026-10-12). Save point before this work: tag/branch `v1-save-point` (53d02a3).
-Plan work happens on `plan/collection-first`; merged to `main` only when Guillermo approves.
+Plan work happens on a branch and is merged to `main` only when Guillermo approves (phase 3a + deck page merged 2026-10-13).
 
 Status: ✅ done · 🟡 in progress / partial · ⛔ blocked · ⬜ not started
 
@@ -44,9 +44,9 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 
 ## Priority 0: security and data safety (do first)
 
-- ⛔ **Leaked Google OAuth client secret** in `google sc.png` (committed 50fb302, private repo). File removed from the
-  branch tip; it stays in history and in `v1-save-point`. Needs Guillermo: rotate the secret in Google Cloud and paste
-  the new one into Supabase › Authentication › Google. Rewriting history (force push) only if he asks.
+- ✅ **Leaked Google OAuth client secret** in `google sc.png` (committed 50fb302, private repo): file removed from the
+  branch tip, and Guillermo rotated the secret (2026-10-13), so the copy left in history and in `v1-save-point` no longer
+  works. No history rewrite needed.
 - ✅ Sync safety (phase 3a.1): Push refuses to send an empty device over a full cloud and Pull refuses an empty cloud
   over a full device (`syncRisk`, tested). Push now inserts the new copy first and deletes the old rows (ids up to the
   previous maximum) only after everything arrived; a failure removes the half-sent rows instead. Pull keeps a backup of
