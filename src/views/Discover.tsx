@@ -166,6 +166,25 @@ export function Discover(s: Shared) {
         <section className="hero">
           <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
           <EyeDoodle />
+          {phone && (
+            <button
+              type="button"
+              className={`ftag${fOpen ? ' open' : ''}`}
+              aria-expanded={fOpen}
+              aria-controls="fflap"
+              onClick={() => (haptic('open'), setFOpen(!fOpen))}
+            >
+              <span className="string" aria-hidden="true" />
+              <span className="tagbody">
+                <span className="hole" aria-hidden="true" />
+                <b>FILTERS</b>
+                <small>{[SORTS.find(([v]) => v === sort)?.[1].split(':')[0], colours.join(' ')].filter(Boolean).join(' · ')}</small>
+                <span className="chev" aria-hidden="true">
+                  {fOpen ? '▲' : '▼'}
+                </span>
+              </span>
+            </button>
+          )}
           <p className="tagline">Your collection. Real decks. No guesswork.</p>
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
@@ -213,6 +232,7 @@ export function Discover(s: Shared) {
                 <input type="search" placeholder="commander name, Enter opens any_" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
                 <span aria-hidden="true" className="hfade fade" />
               </label>
+              <div className="flap" id="fflap">
               <label className="sbox sort">
                 <span className="tab">SORT</span>
                 <select value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -234,6 +254,7 @@ export function Discover(s: Shared) {
                     <i aria-hidden="true" style={{ background: bar }} />
                   </button>
                 ))}
+              </div>
               </div>
             </form>
             <p className="caption">
