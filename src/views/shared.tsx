@@ -46,6 +46,9 @@ export function PreviewLayer() {
   );
 }
 
+/** Shows / hides the big card preview (press and hold on touch). */
+export const showPreview = (src: string | null) => setPreview(src ? { src, tap: false } : null);
+
 /** Card image: 1 s hover preview; click opens Scryfall (mouse) or the preview with a Scryfall link (touch).
  *  `onPick` replaces the click (missing cards open their swap note instead). */
 export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: string; className?: string; name?: string; onPick?: () => void }) {
@@ -146,13 +149,13 @@ export function CardLine({
   note?: React.ReactNode;
   marker?: string; // the missing card a swap replaces
   onOpen?: () => void; // open the replacement note (hover, tap or SWAP)
-  onClose?: () => void;
+  onClose?: () => void; // kept for callers; the note closes from its own button / the backdrop
   children?: React.ReactNode; // replacement note
 }) {
   const st = statusOf(name, s.mine, s.other);
   const press = useMenuPress(onMenu);
   return (
-    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} onMouseEnter={onOpen} onMouseLeave={onClose} onClick={onOpen} {...press}>
+    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
       <Thumb src={card?.img ?? img} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="nm">{name}</span>

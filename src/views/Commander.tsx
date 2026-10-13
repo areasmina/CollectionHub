@@ -7,12 +7,13 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, HeroStats, money, priceSum, scryfallUrl, Segs, ShortAlert, usd, Pick, useStored, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, money, priceSum, Segs, ShortAlert, usd, Pick, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
 // EDHREC's own order first on commander pages.
 const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
+import { SwapNote } from './SwapNote';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -338,7 +339,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             </button>
           </div>
           <span className="hint">
-            {kind === 'average' && missing.length > 0 ? 'hover or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
+            {kind === 'average' && missing.length > 0 ? 'click or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
             <span className="cur">_</span>
             {receipt && (
               <a className="jump" href="#shop">
@@ -368,7 +369,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         )}
         {page && (
           <div className="deckgrid after-sw">
-            {menuFor && view === 'grid' && <div className="backdrop" onClick={() => setMenuFor(null)} />}
+            {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
               {page.lists.map((l) => {
                 const ls = summarize(l.cards.map((c) => c.name), s.mine, s.other);
@@ -409,53 +410,20 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >
                             {menuFor === c.name && (
-                              <div className="note-pop" role="dialog" aria-label={`Replace ${c.name}`} onClick={(e) => e.stopPropagation()}>
-                                <Tape style={{ top: -12, left: '40%', width: 90, height: 24, transform: 'rotate(4deg)' }} />
-                                <div className="nh">
-                                  <span>
-                                    {repl ? 'SWAPPED FOR ' : 'REPLACE '}
-                                    <mark>{c.name.toUpperCase()}</mark>
-                                    {repl ? '' : ' WITH ONE OF YOURS'}
-                                  </span>
-                                  <button className="close" aria-label="Close" onClick={() => setMenuFor(null)}>
-                                    <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                                      <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="3" />
-                                    </svg>
-                                  </button>
-                                </div>
-                                <a className="scrylink" href={scryfallUrl(c.name)} target="_blank" rel="noreferrer">
-                                  {c.name} on Scryfall ↗
-                                </a>
-                                <ul>
-                                  {repl && (
-                                    <li>
-                                      <button onClick={() => setSwap(c.name, null)}>
-                                        <span>
-                                          <b>UNDO SWAP</b>
-                                          <small>back to {c.name}</small>
-                                        </span>
-                                      </button>
-                                    </li>
-                                  )}
-                                  {!repl &&
-                                    suggest(c).map((sub) => {
-                                      const sc = recCard.get(norm(sub.name));
-                                      const src = (sc && cardOf(sc)?.img) ?? imgOf(sc?.id);
-                                      return (
-                                        <li key={sub.name}>
-                                          <button onClick={() => setSwap(c.name, sub.name)}>
-                                            {src && <img src={src} alt="" loading="lazy" />}
-                                            <span>
-                                              <b>{sub.name}</b>
-                                              <small>{sub.category}</small>
-                                            </span>
-                                          </button>
-                                        </li>
-                                      );
-                                    })}
-                                </ul>
-                                {!repl && suggest(c).length === 0 && <p className="small">{recs ? 'No owned card fits this slot.' : 'Loading suggestions…'}</p>}
-                              </div>
+                              <SwapNote
+                                name={c.name}
+                                missing={{ ...recInfo.get(norm(c.name)), name: c.name, type: cardOf(c)?.type ?? recInfo.get(norm(c.name))?.type, cmc: cardOf(c)?.cmc ?? recInfo.get(norm(c.name))?.cmc }}
+                                big={imgOf(c.id, 'normal')}
+                                replaced={repl}
+                                loading={!recs}
+                                options={suggest(c).map((sub) => {
+                                  const sc = recCard.get(norm(sub.name));
+                                  return { sub, img: (sc && cardOf(sc)?.img) ?? imgOf(sc?.id), big: imgOf(sc?.id, 'normal'), owned: s.mine.get(norm(sub.name)) ?? 0 };
+                                })}
+                                onPick={(sub) => setSwap(c.name, sub)}
+                                onUndo={() => setSwap(c.name, null)}
+                                onClose={() => setMenuFor(null)}
+                              />
                             )}
                           </Item>
                         );

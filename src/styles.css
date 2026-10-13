@@ -3865,3 +3865,124 @@ ul.popnote .small {
     bottom: calc(100px + env(safe-area-inset-bottom));
   }
 }
+
+/* Swap note: readable viewer (the card being replaced, or the suggestion you hover) + suggestions with reason tags */
+.swapnote .swapbody {
+  display: flex;
+  gap: 18px;
+  margin-top: 12px;
+}
+.swapnote .viewer {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.swapnote .viewer img {
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  background: #333;
+}
+.swapnote .viewer small,
+.swapnote .picks .hint {
+  font-family: var(--se);
+  font-size: 13px;
+  color: #5c5c5c;
+}
+.swapnote .picks {
+  flex: 1;
+  min-width: 0;
+}
+.swapnote .picks ul {
+  margin-top: 6px;
+}
+.swapnote li button {
+  align-items: flex-start;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+.swapnote li button img {
+  width: 64px;
+  height: 89px;
+  flex: none;
+  border-radius: 4px;
+}
+.swapnote li button:hover,
+.swapnote li button:focus-visible {
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.whys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+.whys > span {
+  font-family: var(--se);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 2px 6px;
+  background: #f4efe2;
+  border: 1px solid #141414;
+}
+.whys > span:first-child {
+  background: var(--hazard);
+}
+/* Desktop: the note is a wide centred card in both grid and list view */
+@media (min-width: 701px) {
+  .note-pop.swapnote,
+  .zgrid .note-pop.swapnote {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    width: min(760px, 94vw);
+    max-width: none;
+    max-height: 90dvh;
+    overflow: auto;
+    transform: translate(-50%, -50%) rotate(-0.8deg);
+    animation: none;
+    z-index: 46;
+  }
+}
+/* Phones: suggestions only (hold one to see it big), the card being replaced as a small strip on top */
+@media (max-width: 700px) {
+  .swapnote .swapbody {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .swapnote .viewer {
+    flex: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .swapnote .viewer img {
+    width: 74px;
+  }
+  .swapnote .viewer small {
+    flex: 1;
+  }
+  .swapnote .viewer .whys {
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 700px) {
+  .note-pop.swapnote {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    width: min(440px, 94vw);
+    max-width: none;
+    max-height: 82dvh;
+    overflow: auto;
+    transform: translate(-50%, -50%) rotate(-1deg);
+    animation: none;
+    z-index: 46;
+  }
+}

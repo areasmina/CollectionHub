@@ -27,3 +27,27 @@ export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCar
     .slice(0, n)
     .map((x) => x.c);
 }
+
+const pctOf = (n: number) => `${Math.round(n * 100)}%`;
+
+/** Why a card is in the deck: its EDHREC role, how many decks run it, synergy. */
+export function whyIn(c: SubCard): string[] {
+  const out: string[] = [];
+  if (c.category) out.push(`Role: ${c.category}`);
+  if (c.incl) out.push(`In ${pctOf(c.incl)} of decks`);
+  if (c.synergy && c.synergy >= 0.05) out.push(`+${pctOf(c.synergy)} synergy`);
+  return out;
+}
+
+/** Short tags saying why an owned card was suggested for a missing one (same reasons rankSubs scores on). */
+export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0): string[] {
+  const out: string[] = [];
+  if (missing.category && sub.category === missing.category) out.push(`Same role: ${sub.category}`);
+  const t = mainType(sub.type);
+  if (t && t === mainType(missing.type)) out.push(`${t} like it`);
+  if (sub.cmc != null && missing.cmc != null) out.push(sub.cmc === missing.cmc ? `Same mana value (${sub.cmc})` : `Mana value ${sub.cmc} (vs ${missing.cmc})`);
+  if (sub.synergy && sub.synergy >= 0.05) out.push(`+${pctOf(sub.synergy)} synergy`);
+  if (sub.incl) out.push(`In ${pctOf(sub.incl)} of decks`);
+  if (owned) out.push(`You own ×${owned}`);
+  return out;
+}

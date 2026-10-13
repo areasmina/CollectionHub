@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cad, shopUrl, toCad } from './prices';
-import { mainType, rankSubs } from './subs';
+import { mainType, rankSubs, reasonsFor, whyIn } from './subs';
 
 describe('rankSubs', () => {
   const missing = { name: 'Swords to Plowshares', category: 'Instants', type: 'Instant', cmc: 1 };
@@ -32,5 +32,24 @@ describe('prices', () => {
   it('builds the shop search link with the front face name', () => {
     expect(shopUrl("Gaea's Cradle")).toBe("https://shop.com/search/results?query=Gaea's%20Cradle&inStock=true&shipsFrom=true");
     expect(shopUrl('Fire // Ice')).toContain('query=Fire&');
+  });
+});
+
+
+describe('reasonsFor / whyIn', () => {
+  const missing = { name: 'Cultivate', category: 'Ramp', type: 'Sorcery', cmc: 3, incl: 0.62, synergy: 0.02 };
+  it('lists the matching role, type, mana value, synergy, inclusion and copies owned', () => {
+    expect(reasonsFor(missing, { name: "Kodama's Reach", category: 'Ramp', type: 'Sorcery', cmc: 3, synergy: 0.12, incl: 0.41 }, 2)).toEqual([
+      'Same role: Ramp',
+      'Sorcery like it',
+      'Same mana value (3)',
+      '+12% synergy',
+      'In 41% of decks',
+      'You own ×2',
+    ]);
+    expect(reasonsFor(missing, { name: 'Farseek', type: 'Sorcery', cmc: 2 })).toEqual(['Sorcery like it', 'Mana value 2 (vs 3)']);
+  });
+  it('says why the missing card is in the deck (tiny synergy left out)', () => {
+    expect(whyIn(missing)).toEqual(['Role: Ramp', 'In 62% of decks']);
   });
 });
