@@ -171,14 +171,14 @@ export function Discover(s: Shared) {
               type="button"
               className={`ftag${fOpen ? ' open' : ''}`}
               aria-expanded={fOpen}
-              aria-controls="fflap"
+              aria-controls="fpanel"
               onClick={() => (haptic('open'), setFOpen(!fOpen))}
             >
               <span className="string" aria-hidden="true" />
               <span className="tagbody">
                 <span className="hole" aria-hidden="true" />
                 <b>FILTERS</b>
-                <small>{[SORTS.find(([v]) => v === sort)?.[1].split(':')[0], colours.join(' ')].filter(Boolean).join(' · ')}</small>
+                <small>{[q.trim() && `"${q.trim()}"`, SORTS.find(([v]) => v === sort)?.[1].split(':')[0], colours.join(' ')].filter(Boolean).join(' · ')}</small>
                 <span className="chev" aria-hidden="true">
                   {fOpen ? '▲' : '▼'}
                 </span>

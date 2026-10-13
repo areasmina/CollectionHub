@@ -6054,3 +6054,25 @@ ul.popnote .small {
     overflow: hidden;
   }
 }
+/* Phones: the whole bar (search too) folds into the tag */
+@media (max-width: 700px) {
+  .hero .filters.shut .fpanel,
+  .hero .filters.shut .caption {
+    display: none;
+  }
+  .hero .filters .fpanel {
+    transform-origin: 50% 0;
+    animation: unfold 0.38s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  }
+  .hero .filters .flap,
+  .hero .filters.shut .flap {
+    display: flex;
+    animation: none;
+    overflow: visible;
+  }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .hero .filters .fpanel {
+    animation: none;
+  }
+}
