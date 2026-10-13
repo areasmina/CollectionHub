@@ -42,6 +42,18 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 - 🟡 Top ticker banner: Discover page only, fixed slogans, decorative (aria-hidden). Not yet on every page, no
   updates / collection insights.
 
+## Shipped 2026-10-13 (second batch)
+
+- ✅ Commander detection on deck import (`*CMDR*`, a lone legend at the start/end of the list, else the only legend
+  covering every colour; `lib/commander`, tested); NO COMMANDER bar with one-tap set; tile art fallback.
+- ✅ Deck card menu (right-click / press and hold): set or swap commander, copy name, shop / EDHREC / Scryfall, foil
+  switch kept in sync with one binder copy (`lib/deckedit`, tested), copies ±, remove from deck (UNDO), remove one copy
+  from the binder (asks, UNDO).
+- ✅ Swap note: wide readable viewer on desktop, reason tags on every suggestion (`reasonsFor` / `whyIn`, tested),
+  press and hold to read a suggestion on phones.
+- ✅ Collection by set: release year + set symbol. Foil cards: holo wash, light streaks, glare that follows the pointer.
+  Halftone on Discover art; lighter on the deck header. Card frames: scratchy sepia-grey pen line site-wide.
+
 ## Priority 0: security and data safety (do first)
 
 - ✅ **Leaked Google OAuth client secret** in `google sc.png` (committed 50fb302, private repo): file removed from the
