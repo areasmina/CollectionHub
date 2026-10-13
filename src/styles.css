@@ -4534,3 +4534,67 @@ ul.popnote .small {
     justify-content: center;
   }
 }
+
+/* Tally v2: smaller stencil spray on the card's bottom border (clear of the text box), overspray + speckles;
+   price tape lifted onto the top border so the mana cost stays readable. */
+.ctile .cart > .price {
+  top: -12px;
+  right: -10px;
+  font-size: 12px;
+  padding: 1px 8px;
+}
+.tally {
+  left: -2px;
+  bottom: -14px;
+}
+.tally .marks {
+  position: relative;
+  min-height: 40px;
+  font-family: 'Black Ops One', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0;
+  color: #ff2fa0;
+  transform: rotate(-6deg);
+  text-shadow:
+    0 0 1px #ff2fa0,
+    0 0 4px rgba(255, 47, 160, 0.75),
+    0 0 10px rgba(255, 47, 160, 0.35),
+    1.5px 1.5px 0 rgba(25, 211, 230, 0.85),
+    2px 3px 2px rgba(0, 0, 0, 0.8);
+}
+.tally .marks::after {
+  /* overspray speckles around the marks */
+  content: '';
+  position: absolute;
+  inset: 6px -4px 4px -4px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 8% 30%, #ff2fa0 0 1px, transparent 1.6px),
+    radial-gradient(circle at 92% 22%, #ff2fa0 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 84% 86%, #ff2fa0 0 0.9px, transparent 1.5px),
+    radial-gradient(circle at 18% 90%, #19d3e6 0 0.9px, transparent 1.5px),
+    radial-gradient(circle at 60% 4%, #ff2fa0 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 40% 96%, #ff2fa0 0 1px, transparent 1.6px);
+  opacity: 0.8;
+}
+.tally .marks::before {
+  /* one paint drip under the first mark */
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 28px;
+  width: 2px;
+  height: 7px;
+  border-radius: 0 0 2px 2px;
+  background: #ff2fa0;
+  box-shadow: 0 0 3px rgba(255, 47, 160, 0.7);
+  opacity: 0.85;
+}
+.tally .marks:hover,
+.tally .marks:focus-visible {
+  transform: rotate(-6deg) scale(1.1);
+}
+.tally .marks::before {
+  top: 25px;
+  height: 5px;
+}
