@@ -215,3 +215,18 @@ test('Decks list: right-click / hold a deck opens the deck menu (duplicate, shar
   // duplicating from the list opens the copy
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
 });
+
+for (const [ok, text, name] of [[true, /Buzz sent/, 'sent'], [false, /blocked/, 'blocked']] as const) {
+  test(`Haptics button: sends a test buzz and says what happened (${name})`, async ({ page }) => {
+    await page.addInitScript((v) => { (window as any).__buzz = []; navigator.vibrate = (p) => ((window as any).__buzz.push(p), v); }, ok);
+    await page.goto('/');
+    await page.locator('.hubtab').click();
+    const btn = page.getByRole('button', { name: /Haptic feedback/ });
+    await btn.click(); // on by default: this turns it off
+    await expect(page.locator('.hapnote')).toHaveText('Haptics off.');
+    await btn.click(); // turn on again: test buzz
+    await expect(page.locator('.hapnote')).toContainText(text);
+    expect(await page.evaluate(() => (window as any).__buzz.length)).toBeGreaterThan(0);
+    await fits(page, ['.hapnote']);
+  });
+}

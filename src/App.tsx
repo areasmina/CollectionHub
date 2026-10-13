@@ -16,6 +16,13 @@ const Decks = lazy(() => import('./views/Decks').then((m) => ({ default: m.Decks
 const SyncPanel = lazy(() => import('./views/SyncPanel').then((m) => ({ default: m.SyncPanel })));
 // Warm the rest once the page is idle (keeps the session fresh and makes tab switches instant).
 const SYNC_LABEL: Record<SyncStatus, string> = { off: 'not signed in', syncing: 'syncing…', synced: 'up to date', conflict: 'needs you: changed on both sides', offline: 'offline, will sync later', error: 'last sync failed' };
+// What the haptics button says after a tap: the browser handed the buzz to the phone (then the phone's own settings decide).
+const HAPTIC_NOTE = {
+  off: 'Haptics off.',
+  sent: 'Buzz sent. Felt nothing? Your phone has vibration off for apps: Android Settings → Sound & vibration → Vibration & haptics, turn on "Touch feedback" / "Touch interactions", and check silent or battery-saver mode.',
+  blocked: 'Chrome blocked the buzz. Tap anywhere on the page first, and check Chrome → Settings → Site settings, and the phone is not in silent or battery-saver mode.',
+  unsupported: 'This browser has no vibration (Firefox on Android removed it). Chrome, Samsung Internet or Edge do.',
+} as const;
 const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 2500));
 idle(() => {
   import('./views/Collection');
@@ -50,6 +57,7 @@ export default function App() {
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   const [hubOpen, setHubOpen] = useState(false);
   const [haptOn, setHaptOn] = useState(hapticsOn);
+  const [hapNote, setHapNote] = useState('');
   const hubRef = useRef<HTMLDivElement>(null);
   const hubTimer = useRef<number>(undefined);
   const openHub = () => (clearTimeout(hubTimer.current), setHubOpen(true));
@@ -131,7 +139,7 @@ export default function App() {
                   </svg>
                 </button>
               </div>
-              {hapticsSupported() && <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHaptics(!haptOn), setHaptOn(!haptOn))}>
+              {hapticsSupported() && <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHapNote(HAPTIC_NOTE[setHaptics(!haptOn)]), setHaptOn(!haptOn))}>
                 <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <rect x="6" y="2" width="8" height="16" rx="2" />
                   {haptOn ? <path d="M3 6 v8 M1 8 v4 M17 6 v8 M19 8 v4" /> : <path d="M2 2 L18 18" />}
@@ -143,6 +151,11 @@ export default function App() {
                 </svg>
               </button>
             </div>
+            {hapNote && (
+              <p className="hapnote" role="status">
+                {hapNote}
+              </p>
+            )}
           </header>
         </div>
       </div>

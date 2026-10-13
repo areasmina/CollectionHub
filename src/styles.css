@@ -6412,3 +6412,13 @@ details.cat {
     padding-bottom: 12px;
   }
 }
+/* Result of the haptics test buzz, under the hub buttons */
+.hapnote {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border: 2px dashed var(--accent);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 320px;
+}

@@ -5,14 +5,15 @@
  */
 export type Feel = 'tick' | 'tap' | 'select' | 'open' | 'success' | 'warn' | 'undo';
 
+// Lengths in ms. Many Android motors can't render anything under ~15-20 ms, so even the lightest buzz is at least that.
 const PATTERNS: Record<Feel, number | number[]> = {
-  tick: 6, // passing a snap point while scrolling
-  tap: 10, // small toggles, steppers
-  select: 14, // choosing something (a filter, a view, a tab)
-  open: [0, 18], // a long-press menu or preview opening
-  success: [12, 40, 18], // something saved / set (commander set, swap made)
-  warn: [30, 50, 30], // destructive (removed from deck / binder)
-  undo: [8, 30, 8],
+  tick: 15, // passing a snap point while scrolling
+  tap: 25, // small toggles, steppers
+  select: 30, // choosing something (a filter, a view, a tab)
+  open: [0, 40], // a long-press menu or preview opening
+  success: [30, 50, 40], // something saved / set (commander set, swap made)
+  warn: [60, 60, 60], // destructive (removed from deck / binder)
+  undo: [25, 40, 25],
 };
 const KEY = 'ch:haptics';
 
@@ -21,21 +22,38 @@ const KEY = 'ch:haptics';
 export const hapticsSupported = () =>
   typeof navigator !== 'undefined' && (typeof (navigator as Navigator & { vibrate?: unknown }).vibrate === 'function' || /iP(hone|ad|od)/.test(navigator.userAgent));
 
-export function hapticsOn() {
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stored = () => {
   try {
-    if (localStorage.getItem(KEY) === 'off') return false;
+    return localStorage.getItem(KEY);
   } catch {
-    /* storage blocked: default on */
+    return null; // storage blocked: default
   }
-  return !(typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+};
+/** Haptics are on unless the person turned them off. Until they choose, reduced motion (Android's "Remove animations",
+ *  battery saver) keeps them off by default; once they switch them on themselves, that choice wins. */
+export function hapticsOn() {
+  const v = stored();
+  if (v === 'off') return false;
+  if (v === 'on') return true;
+  return !reducedMotion();
 }
-export function setHaptics(on: boolean) {
+/** What happened to a test buzz: 'sent' (the browser handed it to the phone), 'blocked' (the browser refused it), or
+ *  'unsupported' (no Vibration API here). Whether the motor then runs is up to the phone's own vibration settings. */
+export type HapticResult = 'sent' | 'blocked' | 'unsupported';
+export function setHaptics(on: boolean): HapticResult | 'off' {
   try {
     localStorage.setItem(KEY, on ? 'on' : 'off');
   } catch {
     /* per-device convenience only */
   }
-  if (on) haptic('success');
+  if (!on) return 'off';
+  const nav = typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { vibrate?: Navigator['vibrate'] });
+  if (!nav?.vibrate) {
+    haptic('success'); // iOS: the switch tick
+    return 'unsupported';
+  }
+  return nav.vibrate(PATTERNS.success) ? 'sent' : 'blocked';
 }
 
 let iosSwitch: HTMLLabelElement | null = null;
