@@ -4061,3 +4061,15 @@ ul.popnote .small {
 .ccard:focus-visible .frame::after {
   opacity: 0.18;
 }
+
+/* Deck page header art: lighter halftone and grain than the commander page */
+.dhero .cimg .cmdrimg::after {
+  opacity: 0.45;
+}
+.dhero .cimg .cmdrimg .xg {
+  opacity: 0.2;
+}
+.dhero .cimg .cmdrimg,
+.dhero .cimg .cmdrimg:hover {
+  filter: contrast(1.12) saturate(1.12);
+}
