@@ -150,3 +150,29 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
   }
   return { matched, unmatched };
 }
+
+/** WotC's Game Changers list (Scryfall is:gamechanger), keyed by norm(name); cached a week. */
+let gcLoad: Promise<Set<string>> | null = null;
+export function gameChangers(): Promise<Set<string>> {
+  return (gcLoad ??= (async () => {
+    const hit = await db.edhrec.get('scryfall:gamechangers');
+    if (hit && Date.now() - hit.at < WEEK) return new Set(hit.data as string[]);
+    const names: string[] = [];
+    try {
+      let url: string | undefined = `${API}/cards/search?q=${encodeURIComponent('is:gamechanger')}`;
+      while (url) {
+        const page: any = await req(url, {});
+        for (const c of page.data) names.push(norm(c.name));
+        url = page.has_more ? page.next_page : undefined;
+      }
+    } catch {
+      /* offline: fall back below */
+    }
+    if (!names.length) {
+      gcLoad = null;
+      return new Set(hit ? (hit.data as string[]) : []);
+    }
+    await db.edhrec.put({ path: 'scryfall:gamechangers', data: names, at: Date.now() });
+    return new Set(names);
+  })());
+}

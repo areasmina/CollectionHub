@@ -5,12 +5,13 @@ import { statusOf, summarize } from '../lib/compare';
 import { db, type Card, type Cheap, type Deck } from '../lib/db';
 import { deckCsv, deckText, download } from '../lib/export';
 import { norm } from '../lib/names';
-import { cad, fetchedNote, PRICE_METHOD } from '../lib/prices';
-import { cheapest, resolveRows, withCheapest } from '../lib/scryfall';
+import { cad } from '../lib/prices';
+import { analyse, deckStats, estimateBracket } from '../lib/deckstats';
+import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { CardLine, priceSum, Progress, SaltCell, ShortAlert, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, Tape, Title, Xgrain } from './zine';
+import { CardLine, CardTile, HeadStats, priceSum, Progress, scryfallUrl, ShortAlert, type Shared } from './shared';
+import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -40,8 +41,39 @@ function DeckNotes({ deck }: { deck: Deck }) {
   );
 }
 
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A' };
+
+/** Header stat: estimated bracket (tap for the reasons). */
+function BracketStat({ est }: { est: ReturnType<typeof estimateBracket> | null }) {
+  return (
+    <div className="hstat bracket">
+      <span className="lbl">
+        BRACKET <small>est.</small>
+      </span>
+      {!est ? (
+        <span className="bnum">…</span>
+      ) : (
+        <details>
+          <summary aria-label={`Estimated bracket ${est.bracket}. Show why`}>
+            <span className="bnum">{ROMAN[est.bracket]}</span>
+            <small>why ▾</small>
+          </summary>
+          <ol>
+            {est.why.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+            <li className="small">estimate from the list (Game Changers, land denial, extra turns, tutors). Two-card combos aren't checked, and brackets 1 and 5 depend on how you play.</li>
+          </ol>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: () => void; short: ReturnType<typeof shortfalls> }) {
-  const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
+  const names = deck.cards.map((c) => c.name);
+  const sum = summarize(names, s.mine, s.other);
   const byKey =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ??
     new Map<string, Card>();
@@ -53,10 +85,36 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
       .then(() => cheapest(deck.cards.map((c) => c.name)))
       .catch(() => {});
   }, [deck.id]);
+  const [gcs, setGcs] = useState<Set<string> | null>(null);
+  useEffect(() => void gameChangers().then(setGcs), []);
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardOf(c.name), qty: c.qty })));
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
-  const cards = [...deck.cards].sort((a, b) => Number(b.name === deck.commander) - Number(a.name === deck.commander));
+  const st = deckStats(deck.cards, cardOf, deck.commander);
+  const est = gcs && byKey.size ? estimateBracket(names, st, gcs) : null;
+  const notes = analyse(st);
+  const cmdr = deck.commander ? cardOf(deck.commander) : undefined;
+  const ci = cmdr?.ci ?? [...new Set([...byKey.values()].flatMap((c) => c.ci))].sort((a, b) => 'WUBRG'.indexOf(a) - 'WUBRG'.indexOf(b));
+  const peak = Math.max(1, ...st.curve);
+  const pipTotal = Object.values(st.pips).reduce((n, x) => n + x, 0);
+  // Grid (card images) by default; the choice is remembered on this device.
+  const [view, setViewState] = useState<'grid' | 'list'>(() => {
+    try {
+      return localStorage.getItem('ch:deckview') === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+  const setView = (v: 'grid' | 'list') => {
+    setViewState(v);
+    try {
+      localStorage.setItem('ch:deckview', v);
+    } catch {
+      /* per-device convenience only */
+    }
+  };
+  const Item = view === 'grid' ? CardTile : CardLine;
+  const label = deck.name.slice(0, 40);
   return (
     <>
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
@@ -67,86 +125,166 @@ function DeckView({ deck, s, onBack, short }: { deck: Deck; s: Shared; onBack: (
           </svg>
           DECKS
         </button>
-        <Title text={deck.name.toUpperCase().slice(0, 40)} label={deck.name} size={deck.name.length > 24 ? 34 : 46} seed={33} />
-        {deck.commander && <p className="count">Commander: {deck.commander}</p>}
-        <section className="strip" aria-label="Deck totals">
-          <div className="cell wide">
-            <span className="lbl">COLLECTION MATCH</span>
-            <div className="match" role="img" aria-label={`${sum.pct}% owned in ${s.binderName}`}>
-              <span className="burst" aria-hidden="true" />
-              <span className="num">{sum.pct}%</span>
-              <span className="meter">
-                <span className="cells10" aria-hidden="true">
-                  {Array.from({ length: 10 }, (_, i) => (
-                    <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
-                  ))}
+
+        <section className="chero dhero">
+          <span className="worn" aria-hidden="true" />
+          <div className="cimg gbox">
+            <span className="xart cmdrimg">
+              <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
+              {cmdr?.img && (
+                <a href={scryfallUrl(cmdr.name)} target="_blank" rel="noreferrer" title="Open on Scryfall">
+                  <img src={cmdr.img.replace('/small/', '/normal/')} alt={`${cmdr.name}: open on Scryfall`} />
+                </a>
+              )}
+              <Xgrain />
+            </span>
+            <Doodles n={613} count={1} spots={[[60, 62], [-20, 4]]} />
+          </div>
+          <div className="cright">
+            <div className="ctitle static">
+              <div className="banner ht" aria-hidden="true" />
+              <h1 aria-label={deck.name}>
+                <Ransom text={label.toUpperCase()} size={label.length > 24 ? 40 : 52} seed={33} breakWords />
+              </h1>
+              <Pips ci={ci} size={30} />
+            </div>
+            <HeadStats cost={deckCost} missing={missingCost} known={byKey.size > 0} names={names} ats={deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at)}>
+              <BracketStat est={est} />
+            </HeadStats>
+            <div className="cmeta">
+              <span className="typed">
+                {[deck.commander && `COMMANDER: ${deck.commander.toUpperCase()}`, `${st.total} CARDS`, ...(deck.tags ?? []).map((t) => `#${t.toUpperCase()}`)].filter(Boolean).join(' · ')}
+              </span>
+              <span className="score">
+                <span className="mono">
+                  {sum.owned} OF {sum.total} OWNED
+                  <br />
+                  {sum.missing + sum.other} MISSING{sum.other > 0 ? ` · ${sum.other} IN ${s.otherName.toUpperCase()}` : ''}
                 </span>
-                <small>
-                  {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
-                </small>
+                <span className="pct">
+                  <span className="bigpct">{sum.pct}%</span>
+                  <RiseBars pct={sum.pct} />
+                </span>
               </span>
             </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">MISSING</span>
-            <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
-              <span className="wedge" aria-hidden="true">
-                <svg width="24" height="22" viewBox="0 0 24 22">
-                  <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-                  <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-                </svg>
-              </span>
-              <span className="amt">
-                <small>≈</small>
-                {byKey.size ? cad(missingCost) : 'CA$—'}
-              </span>
-            </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">DECK PRICE</span>
-            <span className="price tapey y1 t2 big">{byKey.size ? `≈${cad(deckCost)}` : 'CA$—'}</span>
-            <small className="fetched" title={PRICE_METHOD}>
-              cheapest printings · {fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}
-            </small>
-          </div>
-          <SaltCell names={deck.cards.map((c) => c.name)} />
-          <div className="cell">
-            <span className="lbl">EXPORT</span>
-            <div className="btnrow">
-              <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
-                TEXT
-              </button>
-              <button className="sticker" onClick={() => download(file('csv'), deckCsv(deck), 'text/csv')}>
-                CSV
-              </button>
-            </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">DELETE</span>
-            <button
-              className="stencil"
-              onClick={async () => {
-                if (confirm(`Delete deck "${deck.name}"?`)) {
-                  await db.decks.delete(deck.id!);
-                  onBack();
-                }
-              }}
-            >
-              DELETE DECK
-            </button>
+            <details className="deckmenu">
+              <summary>☰ EXPORT / DELETE</summary>
+              <div className="btnrow">
+                <button className="sticker" onClick={() => download(file('txt'), deckText(deck))}>
+                  TEXT
+                </button>
+                <button className="sticker" onClick={() => download(file('csv'), deckCsv(deck), 'text/csv')}>
+                  CSV
+                </button>
+                <button
+                  className="stencil"
+                  onClick={async () => {
+                    if (confirm(`Delete deck "${deck.name}"?`)) {
+                      await db.decks.delete(deck.id!);
+                      onBack();
+                    }
+                  }}
+                >
+                  DELETE DECK
+                </button>
+              </div>
+            </details>
           </div>
         </section>
+
         <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
-        <DeckNotes deck={deck} />
-        <div className="deckgrid">
-          <div className="lists">
-            <div className="cat">
-              <ul className="zlist">
-                {cards.map((c) => (
-                  <CardLine key={c.name} name={c.name} card={cardOf(c.name)} s={s} note={c.qty > 1 ? `×${c.qty}` : c.name === deck.commander ? 'Commander' : ''} />
-                ))}
-              </ul>
+
+        <section className="dash" aria-label="Deck breakdown">
+          <div className="dpanel">
+            <h2>MANA CURVE</h2>
+            <div className="curve" role="img" aria-label={`Mana curve, nonland cards: ${st.curve.map((n, i) => `${n} at ${i === 7 ? '7+' : i}`).join(', ')}`}>
+              {st.curve.map((n, i) => (
+                <span key={i} className="col">
+                  <b>{n || ''}</b>
+                  <span className="bar" style={{ height: `${(n / peak) * 100}%` }} />
+                  <i>{i === 7 ? '7+' : i}</i>
+                </span>
+              ))}
             </div>
+            <p className="sub">avg mana value {st.avgMv.toFixed(2)} · {st.lands} lands</p>
+          </div>
+          <div className="dpanel">
+            <h2>TYPES</h2>
+            <ul className="types">
+              {st.groups.map((g) => (
+                <li key={g.group}>
+                  <span>{g.group}</span>
+                  <span className="dots" aria-hidden="true" />
+                  <b>{g.count}</b>
+                </li>
+              ))}
+            </ul>
+            {pipTotal > 0 && (
+              <div className="pipbar" role="img" aria-label={`Coloured mana symbols: ${Object.entries(st.pips).filter(([, n]) => n).map(([c, n]) => `${c} ${n}`).join(', ')}`}>
+                {Object.entries(st.pips)
+                  .filter(([, n]) => n)
+                  .map(([c, n]) => (
+                    <span key={c} style={{ flex: n, background: PIPC[c], color: c === 'W' ? '#1a1a1a' : '#fff' }}>
+                      {c} {Math.round((n / pipTotal) * 100)}%
+                    </span>
+                  ))}
+              </div>
+            )}
+          </div>
+          <div className="dpanel analysis">
+            <h2>
+              SHORT ANALYSIS <small>estimate</small>
+            </h2>
+            <ul>
+              {est && (
+                <li className={est.bracket >= 4 ? 'high' : 'ok'}>
+                  Bracket {ROMAN[est.bracket]} (est.): {est.why[0]}.
+                </li>
+              )}
+              {notes.map((n) => (
+                <li key={n.text} className={n.tone}>
+                  {n.text}
+                </li>
+              ))}
+            </ul>
+            <p className="sub">read from card text, so counts are approximate{st.known < st.total ? ` · ${st.total - st.known} cards still loading` : ''}</p>
+          </div>
+        </section>
+
+        <DeckNotes deck={deck} />
+
+        <div className="viewsw" role="group" aria-label="Card view">
+          <button aria-pressed={view === 'grid'} onClick={() => setView('grid')}>
+            GRID
+          </button>
+          <button aria-pressed={view === 'list'} onClick={() => setView('list')}>
+            LIST
+          </button>
+        </div>
+        <div className="deckgrid after-sw">
+          <div className="lists">
+            {st.groups.map((g) => {
+              const gs = summarize(g.cards.map((c) => c.name), s.mine, s.other);
+              return (
+                <details key={g.group} className="cat" open>
+                  <summary>
+                    <span className="pm" aria-hidden="true" />
+                    <span className="h">
+                      {g.group} ({g.count})
+                    </span>
+                    <span className="dots" aria-hidden="true" />
+                    <span className="n">
+                      {gs.owned}/{gs.total} owned
+                    </span>
+                  </summary>
+                  <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
+                    {g.cards.map((c) => (
+                      <Item key={c.name} name={c.name} card={cardOf(c.name)} s={s} note={c.qty > 1 ? `×${c.qty}` : ''} />
+                    ))}
+                  </ul>
+                </details>
+              );
+            })}
           </div>
         </div>
       </main>

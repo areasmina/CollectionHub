@@ -4,10 +4,10 @@ import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, BUDGETS, fetchPage, imgOf, pagePath, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
-import { cad, fetchedNote, PRICE_METHOD, rateNote, shopUrl } from '../lib/prices';
+import { fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
-import { CardLine, CardTile, money, priceSum, SaltCell, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
+import { CardLine, CardTile, HeadStats, money, priceSum, scryfallUrl, Segs, ShortAlert, usd, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain } from './zine';
 
@@ -237,6 +237,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
               </h1>
               <Pips ci={ci} size={30} />
             </div>
+            {page && <HeadStats cost={deckCost} missing={missingCost} known={pricesIn} names={names} ats={all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at)} />}
             <div className="cmeta">
               <span className="typed">
                 {[...tags.slice(0, 3).map((t) => t.value.toUpperCase()), page?.numDecks ? `${page.numDecks.toLocaleString()} DECKS` : ''].filter(Boolean).join(' · ')}
@@ -310,32 +311,6 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
               </span>
             </div>
           </div>
-          <div className="cell">
-            <span className="lbl">MISSING</span>
-            <div className="plate" role="img" aria-label={`Warning: missing cards cost about ${pricesIn ? money(missingCost) : 'an unknown amount'}`}>
-              <span className="wedge" aria-hidden="true">
-                <svg width="24" height="22" viewBox="0 0 24 22">
-                  <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-                  <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-                </svg>
-              </span>
-              <span className="amt">
-                <small>≈</small>
-                {pricesIn ? cad(missingCost) : 'CA$—'}
-              </span>
-              <Tape style={{ right: -14, top: -12, width: 46, height: 18, transform: 'rotate(32deg)' }} />
-            </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">DECK PRICE</span>
-            <span className="price tapey y1 t2 big" aria-label={`Whole deck costs about ${pricesIn ? money(deckCost) : 'an unknown amount'}`}>
-              {pricesIn ? `≈${cad(deckCost)}` : 'CA$—'}
-            </span>
-            <small className="fetched" title={PRICE_METHOD}>
-              cheapest printings · {fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}
-            </small>
-          </div>
-          {page && <SaltCell names={names} />}
           <div className="cell">
             <span className="lbl">DECK</span>
             <button className="btn" onClick={saveDeck} disabled={!!saved || !page || kind !== 'average'}>

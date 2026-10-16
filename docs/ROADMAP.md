@@ -87,8 +87,13 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
    shown.
 2. 🟡 Pricing: provider (TCGplayer via Scryfall), rate (ECB, date), method and fetch dates shown. Missing: Scryfall's
    own update time (not in its API), original USD next to CA$.
-3. 🟡 Salt ✅ (EDHREC). Bracket estimate ⬜ (Game Changers list, two-card combos via Commander Spellbook, fast mana,
-   tutors; confidence and reasons shown).
+3. 🟡 Salt ✅ (EDHREC). Bracket estimate 🟡 on the deck page (2026-10-16, lib/deckstats, tested): Game Changers
+   (Scryfall is:gamechanger, weekly), mass land denial, extra turns, tutors, reasons on tap, labelled "est.".
+   Still missing: two-card combos via Commander Spellbook. Short analysis (lands, ramp, draw, removal, wipes, curve)
+   from oracle text, labelled as an estimate.
+   Deck page rebuilt (header like the commander page; price, missing, salt, bracket under the name; mana curve,
+   types, colour split; grid/list; cards grouped by type; export/delete in a menu). Commander page: price, missing
+   and salt moved under the name; the white strip keeps only bracket, budget, match and save.
 4. ⬜ Advanced collection search (Scryfall-style fields we actually store; no full query language).
 5. ⬜ Collection analytics + daily value snapshots (history starts at the first snapshot) — in the ≡ menu.
 6. ⬜ Deck Simulator (opening hands, mulligans, draws, exact hypergeometric odds, Monte Carlo with a seed) — in ≡.

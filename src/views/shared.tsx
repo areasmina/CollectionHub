@@ -3,7 +3,7 @@ import { statusOf } from '../lib/compare';
 import type { Card } from '../lib/db';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
-import { cad, finishUsd, rateNote, toCad } from '../lib/prices';
+import { cad, fetchedNote, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
 
 export interface Shared {
   profile: number;
@@ -187,13 +187,13 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
   </div>
 );
 
-/** Strip cell: the deck's salt (sum of EDHREC salt scores); tap/hover shows the saltiest cards. */
-export function SaltCell({ names }: { names: string[] }) {
+/** The deck's salt (sum of EDHREC salt scores); tap shows the saltiest cards. A strip cell or a header stat. */
+export function SaltCell({ names, className = 'cell salt' }: { names: string[]; className?: string }) {
   const [salt, setSalt] = useState<Map<string, number> | null>(null);
   useEffect(() => void saltMap().then(setSalt), []);
   const s = salt && deckSalt(names, salt);
   return (
-    <div className="cell salt">
+    <div className={className}>
       <span className="lbl">SALT</span>
       {!s ? (
         <span className="amt">…</span>
@@ -215,6 +215,34 @@ export function SaltCell({ names }: { names: string[] }) {
           )}
         </details>
       )}
+    </div>
+  );
+}
+/** Header stats under a commander / deck name: deck price on yellow tape, missing cost on a hazard tag, salt, extras. */
+export function HeadStats({ cost, missing, known, names, ats, children }: { cost: number; missing: number; known: boolean; names: string[]; ats: (number | undefined)[]; children?: React.ReactNode }) {
+  return (
+    <div className="hstats" aria-label="Deck price, missing cost and salt">
+      <div className="hstat">
+        <span className="lbl">DECK PRICE</span>
+        <span className="price tapey y1 t2 big" title={rateNote()} aria-label={`Whole deck costs about ${known ? money(cost) : 'an unknown amount'}`}>
+          {known ? `≈${cad(cost)}` : 'CA$—'}
+        </span>
+      </div>
+      <div className="hstat">
+        <span className="lbl">MISSING</span>
+        <span className="hazard" aria-label={`Missing cards cost about ${known ? money(missing) : 'an unknown amount'}`}>
+          <svg width="18" height="16" viewBox="0 0 24 22" aria-hidden="true">
+            <path d="M12 1 L23 21 H1 Z" fill="#0A0A0A" />
+            <path d="M12 8 V14 M12 16.5 V18" stroke="#FFCC00" strokeWidth="2.6" strokeLinecap="square" />
+          </svg>
+          {known ? `≈${cad(missing)}` : 'CA$—'}
+        </span>
+      </div>
+      {names.length > 0 && <SaltCell names={names} className="hstat salt" />}
+      {children}
+      <small className="fetched" title={PRICE_METHOD}>
+        cheapest printings · {fetchedNote(ats)}
+      </small>
     </div>
   );
 }
