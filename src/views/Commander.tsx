@@ -10,6 +10,8 @@ import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
 import { freeDeckName } from '../lib/nav';
 import { orderSections } from '../lib/sections';
+import { setArt, useArt } from '../lib/printings';
+import { ArtMenu, PrintingPicker } from './PrintingPicker';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
@@ -91,7 +93,11 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const names = [...new Set(all.map((c) => c.name))];
   const sum = summarize(names, s.mine, s.other);
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
-  const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
+  // Art picked here for a card name (kept on this device, and carried into a deck saved from this page).
+  const art = useArt();
+  const [printFor, setPrintFor] = useState<EdhCard | null>(null);
+  const [artMenu, setArtMenu] = useState<{ card: EdhCard; x: number; y: number } | null>(null);
+  const cardOf = (c: EdhCard) => art.get(norm(c.name)) ?? (c.id ? cards.get(c.id) : undefined);
   const missingCost = priceSum(missing.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
 
@@ -136,7 +142,9 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     if (!page) return;
     const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: swaps[c.name] ?? c.name, qty: c.qty ?? 1 })));
     const deckName = await freeDeckName(s.profile, `${name} (EDHREC average)`);
-    await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+    // art picked on this page goes into the saved deck
+    const withArt = (c: { name: string; qty: number }) => (art.get(norm(c.name)) ? { ...c, printing: art.get(norm(c.name))!.id } : c);
+    await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [withArt({ name, qty: 1 }), ...list.map(withArt)], updated: Date.now() });
     setSaved(deckName);
   }
 
@@ -153,7 +161,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     : [];
   const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
-  const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
+  const cmdrArt = art.get(norm(name)); // art picked for the commander leads the page too
+  const bigImg = cmdrArt?.big ?? cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
   // Grid (card images) is the default; the choice is remembered on this device.
   const [view, setViewState] = useState<'grid' | 'list'>(() => {
@@ -378,6 +387,27 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         <ShortAlert items={short} />
         {error && <p className="error">{error}</p>}
         {!page && !error && <p className="count">Loading EDHREC data…</p>}
+        {artMenu && (
+          <ArtMenu
+            name={artMenu.card.name}
+            at={artMenu}
+            custom={art.has(norm(artMenu.card.name))}
+            onPrint={() => setPrintFor(artMenu.card)}
+            onReset={() => setArt(artMenu.card.name, null)}
+            onClose={() => setArtMenu(null)}
+          />
+        )}
+        {printFor && (
+          <PrintingPicker
+            name={printFor.name}
+            current={art.get(norm(printFor.name))?.id}
+            hint="Pick the art you want to see for this card. A deck you save from this page keeps it."
+            onPick={async (p) => (await setArt(printFor.name, p), setPrintFor(null))}
+            onReset={art.has(norm(printFor.name)) ? async () => (await setArt(printFor.name, null), setPrintFor(null)) : undefined}
+            resetLabel="BACK TO THE DEFAULT ART"
+            onClose={() => setPrintFor(null)}
+          />
+        )}
         {page && (
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
@@ -440,6 +470,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                             s={s}
                             note={stat}
                             marker={repl ? c.name : undefined}
+                            onMenu={(x, y) => setArtMenu({ card: c, x, y })}
                             onOpen={swappable ? () => setMenuFor(c.name) : undefined}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >

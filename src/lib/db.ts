@@ -36,6 +36,17 @@ export interface DeckCard {
   name: string;
   qty: number;
   foil?: boolean; // the deck wants (and, when owned, your binder holds) the foil version
+  printing?: string; // Scryfall id of the printing (set + art) picked for this card in this deck; else the cheapest printing
+}
+/** One printing of a card: its Scryfall data plus where it is from and how it looks. */
+export interface Printing extends Card {
+  set: string; // set code
+  setName: string;
+  cn: string; // collector number
+  released: string; // YYYY-MM-DD
+  big?: string; // normal-size image
+  tags: string[]; // Borderless, Showcase, Promo…
+  finishes: string[]; // nonfoil, foil, etched
 }
 export interface Deck {
   id?: number;
@@ -73,11 +84,13 @@ class DB extends Dexie {
   entries!: Table<Entry, number>;
   decks!: Table<Deck, number>;
   profiles!: Table<Profile, number>;
+  printings!: Table<Printing, string>; // printings picked for decks and for Discover art (kept apart from `cards`, whose newest-by-name entry is the default art)
   edhrec!: Table<CachedPage, string>;
   constructor() {
     super('collectionhub');
     this.version(1).stores({ cards: 'id,key', entries: '++id,profile', decks: '++id,profile', profiles: 'id', edhrec: 'path' });
     this.version(2).stores({ cheap: 'key' });
+    this.version(3).stores({ printings: 'id,key' });
   }
 }
 

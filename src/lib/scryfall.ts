@@ -1,4 +1,4 @@
-import { db, type Card, type Cheap } from './db';
+import { db, type Card, type Cheap, type Printing } from './db';
 import type { Row } from './importers';
 import { norm } from './names';
 
@@ -77,6 +77,73 @@ export function toCard(c: any): Card {
 }
 
 const WEEK = 7 * 864e5;
+
+const PROMO_LABEL: Record<string, string> = { prerelease: 'Prerelease', release: 'Release promo', buyabox: 'Buy-a-box', bundle: 'Bundle', judgegift: 'Judge', gameday: 'Game day', fnm: 'FNM', datestamped: 'Date-stamped', stamped: 'Stamped', promopack: 'Promo pack', setpromo: 'Set promo', boosterfun: 'Booster fun', convention: 'Convention', arenaleague: 'Arena League', openhouse: 'Open house', draftweekend: 'Draft weekend', playerrewards: 'Rewards', glossy: 'Glossy', serialized: 'Serialized', textured: 'Textured', surgefoil: 'Surge foil', galaxyfoil: 'Galaxy foil', ravnicacity: 'Ravnica city' };
+/** What makes a printing look different from the plain one: border, frame effects, promo kind… (short labels). */
+export function tagsOf(c: any): string[] {
+  const t: string[] = [];
+  if (c.promo) t.push('Promo');
+  for (const p of c.promo_types ?? []) if (PROMO_LABEL[p]) t.push(PROMO_LABEL[p]);
+  if (c.border_color === 'borderless') t.push('Borderless');
+  else if (c.border_color && c.border_color !== 'black') t.push(`${c.border_color[0].toUpperCase()}${c.border_color.slice(1)} border`);
+  const fx: string[] = c.frame_effects ?? [];
+  if (fx.includes('showcase')) t.push('Showcase');
+  if (fx.includes('extendedart')) t.push('Extended art');
+  if (fx.includes('inverted')) t.push('Inverted');
+  if (fx.includes('etched')) t.push('Etched');
+  if (c.full_art || fx.includes('fullart')) t.push('Full art');
+  if (c.textless) t.push('Textless');
+  if (c.frame === '1993' || c.frame === '1997') t.push('Retro frame');
+  if (c.set_type === 'masterpiece') t.push('Masterpiece');
+  if (c.variation) t.push('Variant');
+  return [...new Set(t)];
+}
+
+/** A Scryfall card as one printing (set, number, both image sizes, finishes, look). */
+export function toPrinting(c: any): Printing {
+  const iu = c.image_uris ?? c.card_faces?.[0]?.image_uris;
+  return { ...toCard(c), img: iu?.small, big: iu?.normal, set: c.set, setName: c.set_name ?? c.set, cn: c.collector_number, released: c.released_at ?? '', tags: tagsOf(c), finishes: c.finishes ?? [] };
+}
+/** The plain Card (what the cache `cards` holds) of a printing. */
+export const baseCard = ({ set: _s, setName: _n, cn: _c, released: _r, big: _b, tags: _t, finishes: _f, ...card }: Printing): Card => card;
+
+/** Every paper printing of a card, newest first (one Scryfall search, cached 3 days; the old list when offline). */
+export async function printingsOf(name: string): Promise<Printing[]> {
+  const front = name.split(/\s\/\/?\s/)[0];
+  const path = 'printings:' + norm(front);
+  const hit = await db.edhrec.get(path);
+  if (hit && Date.now() - hit.at < 3 * 864e5) return hit.data as Printing[];
+  try {
+    const out: Printing[] = [];
+    let url: string | undefined = `${API}/cards/search?unique=prints&order=released&dir=desc&q=${encodeURIComponent(`!"${front.replace(/"/g, '')}" game:paper`)}`;
+    for (let page = 0; url && page < 5; page++) {
+      const j: any = await req(url, {}, 2);
+      out.push(...j.data.map(toPrinting));
+      url = j.has_more ? j.next_page : undefined;
+    }
+    if (!out.length) throw new Error(`Scryfall has no printings of ${front}`);
+    await db.edhrec.put({ path, data: out, at: Date.now() });
+    return out;
+  } catch (e) {
+    if (hit) return hit.data as Printing[];
+    throw e;
+  }
+}
+
+/** Printings picked for decks, by Scryfall id: from this device, else fetched (e.g. a deck synced from another device). */
+export async function ensurePrintings(ids: string[]): Promise<Map<string, Printing>> {
+  const uniq = [...new Set(ids)];
+  const out = new Map<string, Printing>();
+  (await db.printings.bulkGet(uniq)).forEach((p) => p && out.set(p.id, p));
+  const need = uniq.filter((id) => !out.has(id));
+  for (let i = 0; i < need.length; i += 75) {
+    const res = await post('/cards/collection', { identifiers: need.slice(i, i + 75).map((id) => ({ id })) });
+    const ps = res.data.map(toPrinting);
+    await db.printings.bulkPut(ps);
+    for (const p of ps) out.set(p.id, p);
+  }
+  return out;
+}
 
 /** Card data (prices, images) by Scryfall id: cache first, prices refreshed weekly. */
 export async function cardsByIds(ids: string[], maxAge = WEEK): Promise<Map<string, Card>> {

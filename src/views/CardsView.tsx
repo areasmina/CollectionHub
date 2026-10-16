@@ -1,8 +1,11 @@
 import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { PriceLink, priced, Thumb } from './shared';
+import { setEntryPrinting } from '../lib/printings';
+import { PrintingPicker } from './PrintingPicker';
+import { BinderMenu } from './BinderMenu';
+import { PriceLink, priced, Thumb, useMenuPress } from './shared';
 
 /** A per-device preference kept in localStorage (falls back to memory). */
 function usePref<T extends string>(key: string, initial: T): [T, (v: T) => void] {
@@ -143,21 +146,37 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>; view: string }) {
+/** A binder card: right-click or press and hold opens its menu (same as the cards in a deck). */
+function MenuLi({ onMenu, className, children }: { onMenu: (x: number, y: number) => void; className: string; children: ReactNode }) {
+  const press = useMenuPress(onMenu);
+  return (
+    <li className={`${className} hasmenu`} {...press}>
+      {children}
+    </li>
+  );
+}
+
+function Items({ list, cards, view, onEdit, onMenu }: { list: Entry[]; cards: Map<string, Card>; view: string; onEdit: (e: Entry) => void; onMenu: (e: Entry, x: number, y: number) => void }) {
   const setLine = (e: Entry) => [e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ');
+  // The set line opens the printing picker; a copy with no set yet says so.
+  const editBtn = (e: Entry, cls = '') => (
+    <button className={`${cls} editprint${e.set ? '' : ' unset'}`} onClick={(ev) => (ev.stopPropagation(), haptic('open'), onEdit(e))} aria-label={e.set ? `${e.name}: ${setLine(e)}. Change set and art` : `${e.name}: no set yet. Pick set and art`}>
+      {e.set ? setLine(e) : `+ pick set & art${e.foil ? ' · foil' : ''}`} <span aria-hidden="true">{e.set ? '✎' : ''}</span>
+    </button>
+  );
   if (view === 'grid')
     return (
       <ul className="zgrid cgrid2">
         {list.map((e) => (
-          <li key={e.id} className="ztile owned ctile">
+          <MenuLi key={e.id} className="ztile owned ctile" onMenu={(x, y) => onMenu(e, x, y)}>
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
               <Tally e={e} />
             </span>
             <span className="tname">{e.name}</span>
-            <span className="tnote">{setLine(e)}</span>
-          </li>
+            {editBtn(e, 'tnote')}
+          </MenuLi>
         ))}
       </ul>
     );
@@ -172,16 +191,16 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
       </div>
       <ul className="crows">
         {list.map((e) => (
-          <li key={e.id} className="crow">
+          <MenuLi key={e.id} className="crow" onMenu={(x, y) => onMenu(e, x, y)}>
             <QtyEdit e={e} />
             <Thumb src={cards.get(e.cardId)?.img} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} />
             <span className="cn">
               <b>{e.name}</b>
-              <span>{setLine(e)}</span>
+              {editBtn(e)}
             </span>
             <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
             <RemoveBtn e={e} />
-          </li>
+          </MenuLi>
         ))}
       </ul>
     </>
@@ -197,6 +216,10 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
   const [limit, setLimit] = useState(100);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const sets = useSets(group === 'on');
+  const [edit, setEdit] = useState<Entry | null>(null); // the copy whose set + art is being picked
+  const [menu, setMenu] = useState<{ id: number; x: number; y: number } | null>(null); // right-click / hold menu
+  const openMenu = (e: Entry, x: number, y: number) => setMenu({ id: e.id!, x, y });
+  const menuEntry = menu && entries.find((x) => x.id === menu.id); // live: the copies stepper updates it
 
   const bySet = new Map<string, Entry[]>();
   for (const e of entries) {
@@ -252,20 +275,31 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
                     {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onEdit={setEdit} onMenu={openMenu} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
         </div>
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onEdit={setEdit} onMenu={openMenu} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)
             </button>
           )}
         </>
+      )}
+      {menu && menuEntry && <BinderMenu e={menuEntry} card={cards.get(menuEntry.cardId)} at={menu} onPrint={() => setEdit(menuEntry)} onClose={() => setMenu(null)} />}
+      {edit && (
+        <PrintingPicker
+          name={edit.name}
+          current={edit.set ? edit.cardId : undefined}
+          foil={edit.foil}
+          hint={edit.set ? `${edit.qty} in this binder · now ${edit.set.toUpperCase()} #${edit.cn ?? '?'}` : `${edit.qty} in this binder · no set yet: pick the one in your hand`}
+          onPick={async (p) => (await setEntryPrinting(edit, p), setEdit(null))}
+          onClose={() => setEdit(null)}
+        />
       )}
     </>
   );

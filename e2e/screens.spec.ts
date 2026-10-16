@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fits, mockWorld, seed } from './mock';
+import { fits, mockWorld, seed, SOL, unassign } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -253,4 +253,123 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await sw.getByRole('button', { name: 'Grid view' }).click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/commander-sections.png' });
+});
+
+// Right-click with a mouse, press and hold on touch.
+const holdOrRight = async (page: import('@playwright/test').Page, el: import('@playwright/test').Locator) => {
+  if (page.viewportSize()!.width >= 1200) return el.click({ button: 'right' });
+  const b = (await el.boundingBox())!;
+  await el.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: b.x + 20, clientY: b.y + 30, isPrimary: true });
+  await page.waitForTimeout(650);
+  await el.dispatchEvent('pointerup', { pointerType: 'touch', isPrimary: true });
+};
+const solTile = async (page: import('@playwright/test').Page) => {
+  const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
+  await expect(async () => {
+    await tile.scrollIntoViewIfNeeded({ timeout: 2000 });
+    expect(await tile.boundingBox()).not.toBeNull();
+  }).toPass();
+  return tile;
+};
+const pickBorderless = async (page: import('@playwright/test').Page) => {
+  const dlg = page.getByRole('dialog', { name: /Pick the printing of Sol Ring/ });
+  await expect(dlg).toBeVisible();
+  await expect(dlg.locator('.ppgrid li')).toHaveCount(4); // only Sol Ring's own printings, not every set
+  await dlg.getByRole('button', { name: /\(LTR\) #281/ }).click();
+  await expect(dlg.locator('.ppbig')).toContainText('The Lord of the Rings'); // the preview follows the tap
+  await expect(dlg.locator('.ppbig img')).toHaveAttribute('src', new RegExp(SOL.borderless));
+  await page.waitForTimeout(250);
+  await fits(page, ['.printpick']);
+  return dlg;
+};
+
+test('Binder: pick the set + art of a copy, starting from one with no set', async ({ page }, info) => {
+  await unassign(page, 'Sol Ring');
+  await go(page, 'collection');
+  const tile = page.locator('.ctile', { hasText: 'Sol Ring' });
+  const btn = tile.locator('.editprint');
+  await expect(btn).toHaveClass(/unset/);
+  await expect(btn).toContainText('pick set & art');
+  await btn.click();
+  const dlg = await pickBorderless(page);
+  await page.screenshot({ path: `test-results/picker-${info.project.name}.png` });
+  await dlg.getByRole('button', { name: 'USE THIS PRINTING' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(btn).not.toHaveClass(/unset/);
+  await expect(btn).toContainText('LTR 281');
+  await expect(tile.locator('img').first()).toHaveAttribute('src', new RegExp(SOL.borderless));
+});
+
+test('Deck: pin a printing for a card (art + price follow), then back to the cheapest', async ({ page }) => {
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  const tile = await solTile(page);
+  await expect(tile).toContainText('CA$2.07'); // cheapest printing: 1.50 USD
+  await holdOrRight(page, tile);
+  await page.locator('.cardmenu').getByRole('button', { name: /Change set \/ art/ }).click();
+  const dlg = await pickBorderless(page);
+  await dlg.getByRole('button', { name: 'USE THIS PRINTING' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(tile.locator('img').first()).toHaveAttribute('src', new RegExp(SOL.borderless));
+  await expect(tile).toContainText('CA$16.56'); // that printing: 12.00 USD
+  // reopen: it is marked as in use, and can go back to the default
+  await holdOrRight(page, tile);
+  await page.locator('.cardmenu').getByRole('button', { name: /Change set \/ art/ }).click();
+  await expect(page.getByRole('dialog').locator('.ppcur')).toBeVisible();
+  await page.getByRole('button', { name: 'BACK TO CHEAPEST PRINTING' }).click();
+  await expect(tile).toContainText('CA$2.07');
+});
+
+test('Discover: pick art for a card; a deck saved from the page keeps it', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  const tile = await solTile(page);
+  await holdOrRight(page, tile);
+  await expect(page.getByRole('menu', { name: 'Sol Ring options' })).toBeVisible();
+  await page.getByRole('menuitem', { name: /Change set \/ art/ }).click();
+  const dlg = await pickBorderless(page);
+  await dlg.getByRole('button', { name: 'USE THIS PRINTING' }).click();
+  await expect(dlg).toBeHidden();
+  await expect(tile.locator('img').first()).toHaveAttribute('src', new RegExp(SOL.borderless));
+  await page.getByRole('button', { name: 'SAVE AS DECK' }).click();
+  await page.locator('.decklink', { hasText: 'SAVED' }).click();
+  await expect(page.locator('.dhero h1')).toBeVisible();
+  const saved = await solTile(page);
+  await expect(saved.locator('img').first()).toHaveAttribute('src', new RegExp(SOL.borderless));
+});
+
+test('Binder: right-click / hold a card opens the same menu as in a deck', async ({ page }) => {
+  await go(page, 'collection');
+  const tiles = page.locator('.ctile', { hasText: 'Sol Ring' });
+  await expect(tiles).toHaveCount(1);
+  const open = async () => {
+    await holdOrRight(page, tiles.first());
+    const menu = page.getByRole('menu', { name: 'Sol Ring options' });
+    await expect(menu).toBeVisible();
+    await page.waitForTimeout(250);
+    await fits(page, ['.cardmenu']);
+    return menu;
+  };
+  // copies stepper (2 → 3), menu stays open
+  let menu = await open();
+  await expect(menu).toContainText('Copies: 2');
+  await menu.getByRole('button', { name: 'One copy more' }).click();
+  await expect(menu).toContainText('Copies: 3');
+  await expect(tiles.first().locator('.marks')).toHaveAttribute('aria-label', /^3 copies/);
+  // one of the three becomes a foil: two entries now
+  await menu.getByRole('menuitem', { name: /Switch one copy to foil/ }).click();
+  await expect(tiles).toHaveCount(2);
+  // set + art opens the picker
+  menu = await open();
+  await menu.getByRole('menuitem', { name: /Change set \/ art/ }).click();
+  await expect(page.getByRole('dialog', { name: /Pick the printing of Sol Ring/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Close' }).click();
+  // remove asks first
+  page.once('dialog', (d) => d.dismiss());
+  menu = await open();
+  await menu.getByRole('menuitem', { name: /Remove from this binder/ }).click();
+  await expect(tiles).toHaveCount(2);
+  page.once('dialog', (d) => d.accept());
+  menu = await open();
+  await menu.getByRole('menuitem', { name: /Remove from this binder/ }).click();
+  await expect(tiles).toHaveCount(1);
 });

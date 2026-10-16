@@ -18,6 +18,26 @@ const sc = (c: (typeof cards)[number]) => ({
   object: 'card', id: c.id, name: c.name, type_line: c.type, oracle_text: c.text, color_identity: c.ci, mana_cost: c.mana, cmc: c.cmc, set: 'tst', collector_number: '1',
   image_uris: { small: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg` }, prices: { usd: c.usd, usd_foil: (Number(c.usd) * 2).toFixed(2) }, legalities: { commander: 'legal' },
 });
+/** Sol Ring has four printings in the fake Scryfall: a borderless one at 12.00 (the one the tests pick), the cheapest at 1.50… */
+export const SOL = {
+  borderless: 'a0000001-1111-2222-3333-000000000001',
+  cheap: 'a0000002-1111-2222-3333-000000000002',
+  alpha: 'a0000003-1111-2222-3333-000000000003',
+  promo: 'a0000004-1111-2222-3333-000000000004',
+};
+const solPrints = () => {
+  const sol = cards.find((c) => c.name === 'Sol Ring')!;
+  const mk = (id: string, set: string, set_name: string, cn: string, released_at: string, usd: string, extra: object = {}) => ({
+    ...sc(sol), id, set, set_name, collector_number: cn, released_at, prices: { usd, usd_foil: (Number(usd) * 2).toFixed(2) }, finishes: ['nonfoil', 'foil'],
+    image_uris: { small: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, normal: `https://cards.scryfall.io/normal/front/0/0/${id}.jpg` }, ...extra,
+  });
+  return [
+    mk(SOL.borderless, 'ltr', 'The Lord of the Rings: Tales of Middle-earth', '281', '2023-06-23', '12.00', { border_color: 'borderless', frame_effects: ['showcase'] }),
+    mk(SOL.cheap, 'c21', 'Commander 2021', '263', '2021-04-23', '1.50'),
+    mk(SOL.alpha, 'lea', 'Limited Edition Alpha', '270', '1993-08-05', '2500.00', { frame: '1993', finishes: ['nonfoil'] }),
+    mk(SOL.promo, 'plst', 'The List', '12', '2022-09-09', '3.00', { promo: true, promo_types: ['prerelease'] }),
+  ];
+};
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkqGcAAAIEAQAhVzR2AAAAAElFTkSuQmCC', 'base64');
 
 export async function mockWorld(page: Page) {
@@ -28,11 +48,14 @@ export async function mockWorld(page: Page) {
     const u = new URL(r.request().url());
     if (u.pathname === '/cards/collection') {
       const ids = JSON.parse(r.request().postData() ?? '{}').identifiers ?? [];
-      return r.fulfill({ json: { data: ids.map((i: any) => (i.id ? cards.find((c) => c.id === i.id) : byName.get((i.name ?? '').toLowerCase()))).filter(Boolean).map(sc), not_found: [] } });
+      const pr = solPrints();
+      return r.fulfill({ json: { data: ids.map((i: any) => (i.id ? pr.find((c) => c.id === i.id) ?? (cards.find((c) => c.id === i.id) && sc(cards.find((c) => c.id === i.id)!)) : byName.get((i.name ?? '').toLowerCase()) && sc(byName.get((i.name ?? '').toLowerCase())!))).filter(Boolean), not_found: [] } });
     }
     if (u.pathname === '/sets') return r.fulfill({ json: { data: [{ code: 'tst', name: 'Test Set', released_at: '2024-01-01', set_type: 'core', digital: false }] } });
     const names = [...(u.searchParams.get('q') ?? '').matchAll(/!"([^"]+)"/g)].map((m) => m[1].toLowerCase());
-    return r.fulfill({ json: { data: names.map((n) => byName.get(n)).filter(Boolean).map(sc), has_more: false } });
+    // unique=prints: every printing (only Sol Ring has several here)
+    const prints = u.searchParams.get('unique') === 'prints';
+    return r.fulfill({ json: { data: names.flatMap((n) => (prints && n === 'sol ring' ? solPrints() : byName.has(n) ? [sc(byName.get(n)!)] : [])), has_more: false } });
   });
   const deck = { cards: { Creatures: [['Lotus Cobra', 1]], Artifacts: [['Sol Ring', 1]], Sorceries: [['Cultivate', 1]], Enchantments: [['Rhystic Study', 1]], Instants: [['Counterspell', 1]], Lands: [['Forest', 10], ['Island', 10]] } };
   const json = { container: { json_dict: { card: { id: cards[0].id, color_identity: ['G', 'U'], num_decks: 4321 }, cardlists: [{ header: 'Top Cards', cardviews: cards.slice(1, 6).map((c) => ({ name: c.name, id: c.id, num_decks: 1000, potential_decks: 4000, synergy: 0.2 })) }] } }, panels: { taglinks: [{ slug: 'landfall', value: 'Landfall', count: 2100 }, { slug: 'ramp', value: 'Ramp', count: 900 }] } };
@@ -74,4 +97,25 @@ export async function fits(page: Page, selectors: string[]) {
     if (!boxes.length) throw new Error(`nothing matches ${sel}`);
     for (const [l, r, w] of boxes) if (w > 0 && (l < -2 || r > vw + 2)) throw new Error(`${sel} spills off the screen (${Math.round(l)}–${Math.round(r)}px on a ${vw}px screen)`);
   }
+}
+
+/** Blank the set of a binder card (as if imported without one). */
+export async function unassign(page: Page, name: string) {
+  await page.evaluate(async (n) => {
+    const db: IDBDatabase = await new Promise((ok, no) => {
+      const q = indexedDB.open('collectionhub');
+      q.onsuccess = () => ok(q.result);
+      q.onerror = no;
+    });
+    const tx = db.transaction('entries', 'readwrite');
+    const st = tx.objectStore('entries');
+    st.openCursor().onsuccess = (ev) => {
+      const cur = (ev.target as IDBRequest<IDBCursorWithValue | null>).result;
+      if (!cur) return;
+      if (cur.value.name === n) cur.update({ ...cur.value, set: undefined, cn: undefined });
+      cur.continue();
+    };
+    await new Promise((ok) => (tx.oncomplete = ok));
+  }, name);
+  await page.reload();
 }

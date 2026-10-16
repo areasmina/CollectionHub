@@ -4,14 +4,16 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { changeQty, removeFromDeck, removeOneFromBinder, setFoil } from '../lib/deckedit';
-import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
+import { db, type Card, type Cheap, type Deck, type DeckCard, type Printing } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
 import { norm, slug } from '../lib/names';
 import { cad, fetchedNote, shopUrl } from '../lib/prices';
 import { guessCommander } from '../lib/commander';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
-import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { cheapest, ensurePrintings, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { setDeckPrinting } from '../lib/printings';
+import { PrintingPicker } from './PrintingPicker';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, takeDeck } from '../lib/nav';
@@ -146,7 +148,7 @@ function PickCommander({ deck, cardOf }: { deck: Deck; cardOf: (name: string) =>
 export const setCommander = (deck: Deck, name: string) => db.decks.update(deck.id!, { commander: name, updated: Date.now() });
 
 /** Card menu (right-click / press and hold): commander, links, foil, copies, remove from deck or binder. */
-function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Shared; at: { card: DeckCard; x: number; y: number }; owned: number; onClose: () => void; onToast: (t: { text: string; undo?: () => unknown }) => void }) {
+function CardMenu({ deck, s, at, owned, onClose, onToast, onPrint }: { deck: Deck; s: Shared; at: { card: DeckCard; x: number; y: number }; owned: number; onClose: () => void; onToast: (t: { text: string; undo?: () => unknown }) => void; onPrint: (c: DeckCard) => void }) {
   const c = deck.cards.find((x) => x.name === at.card.name) ?? at.card; // live: + / − update the count
   const ref = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
@@ -184,6 +186,12 @@ function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Sha
               <button onClick={act(() => (haptic('success'), setCommander(deck, c.name)))}>{deck.commander ? `★ Swap commander (replaces ${deck.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
             </li>
           )}
+          <li>
+            <button onClick={act(() => (haptic('open'), onPrint(c)))}>
+              ◧ Change set / art
+              <small>{c.printing ? ' · pinned for this deck' : ' · pick the exact printing'}</small>
+            </button>
+          </li>
           <li>
             <button
               onClick={() =>
@@ -498,7 +506,18 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
   const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
   // Foil deck cards are priced at the foil price of the printing on file.
-  const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
+  // A card with a printing picked for this deck shows that printing's art and uses its price; the rest use the cheapest printing.
+  const pinIds = deck.cards.flatMap((c) => (c.printing ? [c.printing] : []));
+  const pins = useLiveQuery(async () => new Map((await db.printings.bulkGet(pinIds)).filter((p): p is Printing => !!p).map((p) => [p.id, p])), [deck]) ?? new Map<string, Printing>();
+  useEffect(() => {
+    // e.g. a deck synced from another device: its printings are fetched once
+    if (pinIds.some((id) => !pins.has(id))) ensurePrintings(pinIds).catch(() => {});
+  }, [deck, pins.size]);
+  const cardFor = (c: DeckCard) => {
+    const base = (c.printing ? pins.get(c.printing) : undefined) ?? cardOf(c.name);
+    return c.foil ? atFinish(base, true) : base;
+  };
+  const [printFor, setPrintFor] = useState<DeckCard | null>(null);
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardFor(c), qty: c.qty })));
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
@@ -513,7 +532,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
-  const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
+  const cmdrPin = deck.cards.find((c) => c.name === deck.commander)?.printing;
+  const cmdr = (cmdrPin ? pins.get(cmdrPin) : undefined) ?? (deck.commander ? byKey.get(norm(deck.commander)) : undefined);
   const ci = cmdr?.ci ?? [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
 
   // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
@@ -671,7 +691,19 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <DeckPanel deck={deck} st={st} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
           </div>
         </div>
-        {menu && <CardMenu deck={deck} s={s} at={menu} owned={s.mine.get(norm(menu.card.name)) ?? 0} onClose={() => setMenu(null)} onToast={setToast} />}
+        {menu && <CardMenu deck={deck} s={s} at={menu} owned={s.mine.get(norm(menu.card.name)) ?? 0} onClose={() => setMenu(null)} onToast={setToast} onPrint={setPrintFor} />}
+        {printFor && (
+          <PrintingPicker
+            name={printFor.name}
+            current={printFor.printing}
+            foil={printFor.foil}
+            hint="The art and price this deck uses for the card. Your binder keeps its own printing."
+            onPick={async (p) => (await setDeckPrinting(deck, printFor.name, p), setToast({ text: `${printFor.name}: ${p.setName} #${p.cn}` }), setPrintFor(null))}
+            onReset={printFor.printing ? async () => (await setDeckPrinting(deck, printFor.name, null), setPrintFor(null)) : undefined}
+            resetLabel="BACK TO CHEAPEST PRINTING"
+            onClose={() => setPrintFor(null)}
+          />
+        )}
         {toast && (
           <div className="toast" role="status">
             <span>{toast.text}</span>
@@ -691,6 +723,16 @@ export function Decks(s: Shared) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
   const cmdrs =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? '')).filter(Boolean)).toArray()).map((c) => [c.key, c])), [decks]) ?? new Map<string, Card>();
+  // Decks whose commander has a printing picked: that art leads the tile.
+  const leadPins =
+    useLiveQuery(async () => {
+      const want = decks.flatMap((d) => {
+        const id = d.cards.find((c) => c.name === d.commander)?.printing;
+        return id ? [[d.id!, id] as const] : [];
+      });
+      const ps = await db.printings.bulkGet(want.map(([, id]) => id));
+      return new Map(want.flatMap(([did], i) => (ps[i] ? [[did, ps[i]!] as const] : [])));
+    }, [decks]) ?? new Map<number, Printing>();
   // Deck prices from cards already cached here (a deck opened once has them all).
   const allNames = decks.flatMap((d) => d.cards.map((c) => norm(c.name)));
   const priced =
@@ -752,7 +794,7 @@ export function Decks(s: Shared) {
           {decks.map((d, i) => {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
             // No commander set: show the deck's most expensive card instead of a blank tile.
-            const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
+            const lead = leadPins.get(d.id!) ?? (d.commander ? cmdrs.get(norm(d.commander)) : undefined);
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
             const art = d.commander ?? c?.name ?? '';
             return (

@@ -6422,3 +6422,285 @@ details.cat {
   line-height: 1.4;
   max-width: 320px;
 }
+
+/* ---------- printing picker: choose the set + art of one card ---------- */
+.printback {
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.72);
+}
+.printpick {
+  position: fixed;
+  z-index: 91;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(860px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 16px 0;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 8px 8px 0 var(--accent), 0 0 0 3px var(--ink);
+  outline: none;
+  animation: printin 0.18s ease-out;
+}
+@keyframes printin {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 14px));
+  }
+}
+.printpick h2 {
+  margin: 0 52px 2px 0;
+  font-family: var(--an);
+  font-size: 28px;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.printpick .close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 44px;
+  height: 44px;
+  background: var(--ink);
+  color: var(--white);
+  border: 0;
+}
+.ppsub {
+  margin: 0 52px 10px 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: #4a4a4a;
+}
+.ppbig {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.ppbig img {
+  flex: none;
+  width: min(280px, 44vw);
+  aspect-ratio: 488 / 680;
+  object-fit: cover;
+  border-radius: 4.5%;
+  background: #cfcab9;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.ppinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-family: var(--se);
+  font-size: 15px;
+}
+.ppinfo b {
+  font-family: var(--an);
+  font-size: 22px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.ppprice {
+  align-self: flex-start;
+  padding: 2px 8px;
+  background: var(--hazard);
+  font-family: var(--an);
+  font-size: 20px;
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: rotate(-1.5deg);
+}
+.ppprice small {
+  font-family: var(--se);
+  font-size: 13px;
+}
+.ppfin {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #4a4a4a;
+}
+.pptags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.pptags i {
+  padding: 2px 7px;
+  border: 2px solid var(--ink);
+  background: #fff;
+  font-family: var(--an);
+  font-style: normal;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.ppcur {
+  align-self: flex-start;
+  padding: 2px 8px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--an);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.ppfilter {
+  width: 100%;
+  min-height: 44px;
+  margin: 0 0 10px;
+  padding: 0 12px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--se);
+  font-size: 16px;
+}
+.ppgrid {
+  list-style: none;
+  margin: 0;
+  padding: 4px 2px 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
+.ppgrid li {
+  min-width: 0;
+}
+.ppgrid button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 6px 5px;
+  border: 3px solid transparent;
+  background: #fff;
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+}
+.ppgrid button img {
+  width: 100%;
+  aspect-ratio: 488 / 680;
+  object-fit: cover;
+  border-radius: 4.5%;
+  background: #cfcab9;
+}
+.ppgrid button.sel {
+  border-color: var(--accent);
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.pcap {
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.pyr {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: #4a4a4a;
+}
+.ppgrid em {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 1px 5px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--an);
+  font-style: normal;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.ppnone {
+  grid-column: 1 / -1;
+  font-family: var(--se);
+}
+.ppbar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 -16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--paper);
+  border-top: 2px dashed #9a9a9a;
+}
+.ppbar .btn {
+  flex: 1 1 200px;
+}
+.printpick .error {
+  color: #b00c18;
+}
+@media (max-width: 700px) {
+  .printpick {
+    width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+    padding: 16px 12px 0;
+  }
+  .printpick h2 {
+    font-size: 24px;
+  }
+  .ppbar {
+    margin: 0 -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .ppbig img {
+    width: min(190px, 46vw);
+  }
+  .ppgrid {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 8px;
+  }
+  .ppinfo b {
+    font-size: 19px;
+  }
+}
+/* the set line under a binder card: tap to pick the printing; empty ones stand out */
+.editprint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.editprint:hover,
+.editprint:focus-visible {
+  color: var(--accent);
+}
+.editprint.unset {
+  padding: 3px 8px;
+  border: 2px dashed var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: var(--an);
+  font-size: 13px;
+}
+.ppfoilp {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: #4a4a4a;
+}
+.ppfoilp:empty {
+  display: none;
+}
