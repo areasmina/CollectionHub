@@ -6422,3 +6422,44 @@ details.cat {
   line-height: 1.4;
   max-width: 320px;
 }
+
+/* Missing cards: a dotted frame on top of the black-and-white look. Cards in a combo complete in this deck: purple frame. */
+.ztile.missing .timg,
+.zrow.missing > .thumb {
+  opacity: 1;
+  background: transparent;
+}
+.ztile.missing .timg img {
+  opacity: 0.45;
+}
+.zrow.missing > .thumb img {
+  opacity: 0.62;
+}
+.ztile.missing .timg,
+.zrow.missing > .thumb {
+  outline: 3px dotted var(--text);
+  outline-offset: 3px;
+}
+.ztile.combo .timg,
+.zrow.combo > .thumb {
+  outline: 3px solid #a24bff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(162, 75, 255, 0.25), 4px 4px 0 var(--ink);
+}
+.ztile.combo.missing .timg,
+.zrow.combo.missing > .thumb {
+  outline-style: dotted;
+}
+.combotag {
+  align-self: flex-start;
+  font-family: var(--an);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  background: #a24bff;
+  color: #fff;
+  transform: rotate(-1.5deg);
+}
+.ztile .combotag {
+  margin: -2px 12px 0;
+}

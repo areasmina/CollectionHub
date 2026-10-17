@@ -58,7 +58,9 @@ export function SwapNote({
   onPick,
   onUndo,
   onClose,
+  empty = 'No owned card fits this slot.',
 }: {
+  empty?: string; // shown when there are no suggestions
   name: string;
   missing: SubCard;
   big?: string;
@@ -122,7 +124,7 @@ export function SwapNote({
                   <Option key={o.sub.name} o={o} missing={missing} onPick={() => onPick(o.sub.name)} onLook={setLook} />
                 ))}
               </ul>
-              {options.length === 0 && <p className="small">{loading ? 'Loading suggestions…' : 'No owned card fits this slot.'}</p>}
+              {options.length === 0 && <p className="small">{loading ? 'Loading suggestions…' : empty}</p>}
             </>
           )}
         </div>

@@ -52,3 +52,19 @@ export async function removeOneFromBinder(profile: number, name: string, foil?: 
   else await db.entries.delete(e.id!);
   return async () => void (await db.entries.put(e));
 }
+
+/** The deck list with one card replaced by another (same count, normal finish); a card already in the deck gets the copies added. */
+export function swapCards(cards: Deck['cards'], from: string, to: string): Deck['cards'] {
+  const old = cards.find((c) => c.name === from);
+  if (!old || from === to) return cards;
+  const there = cards.find((c) => norm(c.name) === norm(to));
+  if (there) return cards.filter((c) => c.name !== from).map((c) => (c === there ? { ...c, qty: c.qty + old.qty } : c));
+  return cards.map((c) => (c.name === from ? { name: to, qty: c.qty } : c));
+}
+
+/** Swaps a card in the deck; returns an undo that puts the deck back as it was. */
+export async function swapInDeck(deck: Deck, from: string, to: string) {
+  const before = deck.cards;
+  await saveDeck(deck, swapCards(before, from, to));
+  return () => saveDeck(deck, before);
+}

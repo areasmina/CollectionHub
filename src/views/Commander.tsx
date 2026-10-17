@@ -8,6 +8,7 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
+import { comboIndex, comboNote, deckCombos, type Combo } from '../lib/combos';
 import { freeDeckName } from '../lib/nav';
 import { orderSections } from '../lib/sections';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
@@ -114,6 +115,20 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     const sc = cardOf(c);
     return rankSubs({ name: c.name, category: info?.category, type: sc?.type ?? info?.type, cmc: sc?.cmc ?? info?.cmc }, candidates);
   };
+
+  // Combos complete in the deck as shown (swaps applied), from Commander Spellbook.
+  const [combos, setCombos] = useState<Combo[]>([]);
+  const shownNames = names.map((n) => swaps[n] ?? n);
+  const comboKey = shownNames.join('|');
+  useEffect(() => {
+    let live = true;
+    setCombos([]);
+    if (kind === 'average' && shownNames.length) deckCombos(name, shownNames).then((c) => live && setCombos(c));
+    return () => {
+      live = false;
+    };
+  }, [comboKey, kind]);
+  const inCombo = comboIndex(combos);
 
   async function setSwap(missingName: string, replacement: string | null) {
     const p = (await db.profiles.get(s.profile))!;
@@ -364,7 +379,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             )}
           </div>
           <span className="hint">
-            {kind === 'average' && missing.length > 0 ? 'click or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
+            {kind === 'average' ? 'click or tap any card to swap in one of yours · dotted frame = missing · purple = in a combo' : 'every card here is in your binder'}
             <span className="cur">_</span>
             {receipt && (
               <a className="jump" href="#shop">
@@ -427,7 +442,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                     )}
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => {
-                        const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned' && norm(c.name) !== norm(name);
+                        // Any card but the commander can be swapped for one of yours, owned or not.
+                        const swappable = kind === 'average' && norm(c.name) !== norm(name);
                         const repl = swaps[c.name];
                         const rc = repl ? recCard.get(norm(repl)) : undefined;
                         const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
@@ -440,6 +456,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                             s={s}
                             note={stat}
                             marker={repl ? c.name : undefined}
+                            combo={inCombo.has(norm(repl ?? c.name)) ? comboNote(repl ?? c.name, inCombo.get(norm(repl ?? c.name))) : undefined}
                             onOpen={swappable ? () => setMenuFor(c.name) : undefined}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >

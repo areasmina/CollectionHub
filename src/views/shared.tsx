@@ -153,9 +153,11 @@ export function CardLine({
   onClose,
   onMenu,
   foil,
+  combo,
   children,
 }: {
   onMenu?: (x: number, y: number) => void; // card menu (right-click / press and hold)
+  combo?: string; // part of a combo complete in this deck: purple frame, this text as the tooltip
   foil?: boolean; // foil copy: the image gets a sheen
   name: string;
   img?: string;
@@ -170,7 +172,7 @@ export function CardLine({
   const st = statusOf(name, s.mine, s.other);
   const press = useMenuPress(onMenu);
   return (
-    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
+    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}${combo ? ' combo' : ''}`} title={combo} onClick={onOpen} {...press}>
       <Thumb src={card?.img ?? img} className={`thumb xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="nm">{name}</span>
@@ -181,6 +183,7 @@ export function CardLine({
         </span>
         {marker && <span className="swapmark">↔ for {marker}</span>}
         {st === 'other' && <span className="tagother">in {s.otherName}</span>}
+        {combo && <span className="combotag">∞ COMBO</span>}
       </span>
       <span className="acts">
         {onOpen && (
@@ -196,12 +199,12 @@ export function CardLine({
 }
 
 /** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
-export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
+export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foil, combo, children }: Parameters<typeof CardLine>[0]) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
   return (
-    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
+    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}${combo ? ' combo' : ''}`} title={combo} onClick={onOpen} {...press}>
       <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="tname">
         {name}

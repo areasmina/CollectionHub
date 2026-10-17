@@ -254,3 +254,50 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/commander-sections.png' });
 });
+
+test('Deck page: swap any card, dotted frame on missing cards, purple frame on combo cards', async ({ page }) => {
+  // Counterspell becomes missing; Lotus Cobra leaves the deck so it can be swapped in (EDHREC recommends it, you own it).
+  await page.route(/backend\.commanderspellbook\.com/, (r) =>
+    r.fulfill({ json: { results: { included: [{ uses: [{ card: { name: 'Sol Ring' } }, { card: { name: 'Cultivate' } }], produces: [{ feature: { name: 'Infinite mana' } }] }] } } }),
+  );
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => {
+      const q = indexedDB.open('collectionhub');
+      q.onsuccess = () => ok(q.result);
+    });
+    const tx = db.transaction(['entries', 'decks'], 'readwrite');
+    const es = tx.objectStore('entries');
+    es.getAll().onsuccess = (e) => ((e.target as IDBRequest).result as any[]).filter((x) => x.name === 'Counterspell').forEach((x) => es.delete(x.id));
+    const ds = tx.objectStore('decks');
+    ds.getAll().onsuccess = (e) => ((e.target as IDBRequest).result as any[]).forEach((d) => ds.put({ ...d, cards: d.cards.filter((c: any) => c.name !== 'Lotus Cobra') }));
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  const missing = page.locator('.ztile', { hasText: 'Counterspell' }).first();
+  await expect(missing).toHaveClass(/missing/);
+  await expect(missing.locator('.timg')).toHaveCSS('outline-style', 'dotted');
+  const sol = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
+  await expect(sol).toHaveClass(/combo/);
+  await expect(sol.locator('.timg')).toHaveCSS('outline-style', 'solid');
+  await expect(page.locator('.ztile', { hasText: 'Rhystic Study' }).first()).not.toHaveClass(/combo|missing/);
+  // an owned card opens the swap note too, with your cards that fit
+  await sol.scrollIntoViewIfNeeded();
+  await sol.getByRole('button', { name: 'Swap Sol Ring' }).click();
+  const note = page.locator('.swapnote');
+  await expect(note).toBeVisible();
+  await note.getByRole('button', { name: /Lotus Cobra/ }).click();
+  await expect(page.locator('.toast')).toContainText('Swapped Sol Ring for Lotus Cobra');
+  await expect(page.locator('.ztile', { hasText: 'Lotus Cobra' })).toHaveCount(1);
+  await page.locator('.toast').getByRole('button', { name: 'UNDO' }).click();
+  await expect(page.locator('.ztile', { hasText: 'Sol Ring' })).toHaveCount(1);
+});
+
+test('Commander page: owned cards can be swapped too', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
+  await expect(tile).toHaveClass(/owned/);
+  await tile.scrollIntoViewIfNeeded();
+  await tile.getByRole('button', { name: 'Swap Sol Ring' }).click();
+  await expect(page.locator('.swapnote')).toBeVisible();
+});

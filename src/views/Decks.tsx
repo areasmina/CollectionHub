@@ -3,7 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
-import { changeQty, removeFromDeck, removeOneFromBinder, setFoil } from '../lib/deckedit';
+import { changeQty, removeFromDeck, removeOneFromBinder, setFoil, swapInDeck } from '../lib/deckedit';
+import { comboIndex, comboNote, deckCombos, type Combo } from '../lib/combos';
+import { fetchPage, imgOf, pagePath, type EdhPage } from '../lib/edhrec';
+import { rankSubs, type SubCard } from '../lib/subs';
+import { SwapNote } from './SwapNote';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
@@ -11,7 +15,7 @@ import { norm, slug } from '../lib/names';
 import { cad, fetchedNote, shopUrl } from '../lib/prices';
 import { guessCommander } from '../lib/commander';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
-import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, takeDeck } from '../lib/nav';
@@ -510,6 +514,53 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  // Swap any card (owned or not) for one of yours that EDHREC recommends for this commander.
+  const [swapFor, setSwapFor] = useState<string | null>(null);
+  const [recs, setRecs] = useState<{ page: EdhPage; cards: Map<string, Card> } | null>(null);
+  const [recsFailed, setRecsFailed] = useState(false);
+  useEffect(() => {
+    if (!swapFor || recs || recsFailed || !deck.commander) return;
+    fetchPage(pagePath('commander', slug(deck.commander)))
+      .then(async (page) => {
+        const want = page.lists.flatMap((l) => l.cards.map((c) => c.id)).filter(Boolean) as string[];
+        setRecs({ page, cards: new Map() });
+        setRecs({ page, cards: await cardsByIds(want).catch(() => new Map<string, Card>()) });
+      })
+      .catch(() => setRecsFailed(true));
+  }, [swapFor, deck.commander]);
+  const META = /^(new cards|top cards|high synergy|high lift|game changers)/i;
+  const recInfo = new Map<string, SubCard & { id?: string }>();
+  for (const l of recs?.page.lists ?? [])
+    for (const c of l.cards) {
+      const sc = c.id ? recs!.cards.get(c.id) : undefined;
+      const prev = recInfo.get(norm(c.name));
+      if (!prev || (!prev.category && !META.test(l.header)))
+        recInfo.set(norm(c.name), { name: c.name, id: c.id, category: META.test(l.header) ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
+    }
+  const inDeck = new Set(deck.cards.map((c) => norm(c.name)));
+  const candidates = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !inDeck.has(norm(c.name)));
+  const slotOf = (name: string): SubCard => {
+    const info = recInfo.get(norm(name));
+    const card = cardOf(name);
+    return { ...info, name, type: card?.type ?? info?.type, cmc: card?.cmc ?? info?.cmc };
+  };
+  const pickSwap = async (from: string, to: string) => {
+    haptic('success');
+    setSwapFor(null);
+    const undo = await swapInDeck(deck, from, to);
+    setToast({ text: `Swapped ${from} for ${to}`, undo });
+  };
+  // Combos complete in this deck, from Commander Spellbook.
+  const [combos, setCombos] = useState<Combo[]>([]);
+  const comboKey = deck.cards.map((c) => c.name).join('|');
+  useEffect(() => {
+    let live = true;
+    deckCombos(deck.commander, deck.cards.map((c) => c.name)).then((c) => live && setCombos(c));
+    return () => {
+      live = false;
+    };
+  }, [comboKey, deck.commander]);
+  const inCombo = comboIndex(combos);
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
@@ -612,6 +663,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
+          {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className="lists">
             {/* How the cards are split and ordered, right above them */}
             <div className="dtools" role="toolbar" aria-label="Deck view">
@@ -651,17 +703,43 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                       </div>
                     )}
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
-                      {cs.map((c) => (
-                        <Item
-                          key={c.name}
-                          name={c.name}
-                          card={cardFor(c)}
-                          s={s}
-                          note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
-                          onMenu={(x, y) => setMenu({ card: c, x, y })}
-                          foil={c.foil}
-                        />
-                      ))}
+                      {cs.map((c) => {
+                        const swappable = !deck.commander || norm(c.name) !== norm(deck.commander);
+                        return (
+                          <Item
+                            key={c.name}
+                            name={c.name}
+                            card={cardFor(c)}
+                            s={s}
+                            note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
+                            onMenu={(x, y) => setMenu({ card: c, x, y })}
+                            onOpen={swappable ? () => setSwapFor(c.name) : undefined}
+                            combo={inCombo.has(norm(c.name)) ? comboNote(c.name, inCombo.get(norm(c.name))) : undefined}
+                            foil={c.foil}
+                          >
+                            {swapFor === c.name && (
+                              <SwapNote
+                                name={c.name}
+                                missing={slotOf(c.name)}
+                                big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
+                                loading={!!deck.commander && !recsFailed && !(recs && recs.cards.size)}
+                                options={
+                                  deck.commander
+                                    ? rankSubs(slotOf(c.name), candidates).map((sub) => {
+                                        const id = recInfo.get(norm(sub.name))?.id;
+                                        return { sub, img: (id && recs?.cards.get(id)?.img) || imgOf(id), big: imgOf(id, 'normal'), owned: s.mine.get(norm(sub.name)) ?? 0 };
+                                      })
+                                    : []
+                                }
+                                onPick={(sub) => pickSwap(c.name, sub)}
+                                onUndo={() => setSwapFor(null)}
+                                onClose={() => setSwapFor(null)}
+                                empty={!deck.commander ? 'Set a commander first: suggestions come from EDHREC for that commander.' : recsFailed ? 'Could not reach EDHREC for suggestions.' : undefined}
+                              />
+                            )}
+                          </Item>
+                        );
+                      })}
                     </ul>
                   </details>
                 );
