@@ -254,3 +254,32 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/commander-sections.png' });
 });
+
+test('Reload: commander stats come back from the device, no EDHREC requests', async ({ page }) => {
+  await expect(page.locator('.ccard[aria-label*="% owned"]').first()).toBeVisible();
+  await page.waitForTimeout(500); // let the save land
+  const asked: string[] = [];
+  page.on('request', (r) => r.url().includes('json.edhrec.com/pages/average-decks') && asked.push(r.url()));
+  await page.reload();
+  await expect(page.locator('.ccard[aria-label*="% owned"]').first()).toBeVisible();
+  await expect(page.locator('.progress', { hasText: 'Checking EDHREC' })).toHaveCount(0);
+  expect(asked).toEqual([]);
+});
+
+test('Commander page: an old saved page shows at once even when EDHREC is down', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.chero h1')).toBeVisible();
+  // Age every saved page past a day, cut EDHREC off, reopen.
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const st = db.transaction('edhrec', 'readwrite').objectStore('edhrec');
+    const all: any[] = await new Promise((ok) => (st.getAll().onsuccess = (e: any) => ok(e.target.result)));
+    for (const r of all) st.put({ ...r, at: r.at - 3 * 864e5 });
+  });
+  await page.unroute(/json\.edhrec\.com/);
+  await page.route(/json\.edhrec\.com/, (r) => r.abort());
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.chero h1')).toBeVisible();
+  await expect(page.locator('.hstats .price')).toBeVisible();
+});

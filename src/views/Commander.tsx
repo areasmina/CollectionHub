@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, BUDGETS, fetchPage, imgOf, pagePath, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, BUDGETS, imgOf, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
@@ -44,9 +44,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const bought = new Set(profile?.bought ?? []);
 
   useEffect(() => {
-    fetchPage(pagePath('commander', slug))
-      .then((p) => setTags(p.tags))
-      .catch(() => setTags([]));
+    showPage(pagePath('commander', slug), (p) => setTags(p.tags)).catch(() => setTags([]));
   }, [slug]);
   useEffect(() => {
     let live = true;
@@ -54,13 +52,11 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     setRecs(null);
     setError('');
     setMenuFor(null);
-    fetchPage(path)
-      .then((p) => live && setPage(p))
-      .catch((e) => live && setError(e.message));
+    // Saved pages show at once; pages over a day old are refreshed quietly behind them.
+    showPage(path, (p) => live && setPage(p)).catch((e) => live && setError(e.message));
     if (kind === 'average')
-      fetchPage(pagePath('commander', slug, bracket, tag, budget))
-        .catch(() => fetchPage(pagePath('commander', slug)))
-        .then((p) => live && setRecs(p))
+      showPage(pagePath('commander', slug, bracket, tag, budget), (p) => live && setRecs(p))
+        .catch(() => showPage(pagePath('commander', slug), (p) => live && setRecs(p)))
         .catch(() => {});
     return () => {
       live = false;
