@@ -266,6 +266,14 @@ export function Collection({ profile, name }: { profile: number; name: string })
                 REPLACE BINDER
               </button>
             </div>
+            {/* Emptying the binder lives with the other whole-binder actions (folded away), not above the card search. */}
+            <button style={{ marginTop: 12 }} className="stencil" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 1 L15 14 H1 Z M8 6 V9.5 M8 11.5 V12" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              RESET BINDER
+            </button>
+
             {busy && <Progress {...busy} />}
             {error && <p className="error">{error}</p>}
             {result && <ImportReport r={result} />}
@@ -284,12 +292,6 @@ export function Collection({ profile, name }: { profile: number; name: string })
             </button>
             <button className="sticker" style={{ transform: 'rotate(1.5deg)' }} disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
               EXPORT TEXT
-            </button>
-            <button className="stencil" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M8 1 L15 14 H1 Z M8 6 V9.5 M8 11.5 V12" fill="none" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              RESET BINDER
             </button>
           </div>
 

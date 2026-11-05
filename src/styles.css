@@ -6430,3 +6430,69 @@ details.cat {
   font: 11px/1.3 var(--mono, 'Space Mono', monospace);
   color: #ffcc00;
 }
+
+/* Phones: less scrolling before the cards. The eye art is a smaller band, and the commander page's settings strip
+   puts two controls per row (bracket | budget, missing | save) with lower switches. */
+@media (max-width: 700px) {
+  .hero .eyedoodle {
+    width: min(70%, 260px);
+    margin: -10px auto -14px;
+  }
+  .strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 12px;
+    padding: 14px 12px 12px;
+  }
+  .strip .cell.wide {
+    grid-column: 1 / -1;
+  }
+  .strip .segs {
+    height: 46px;
+  }
+  .strip .segs button {
+    font-size: 15px;
+  }
+  .strip .cell > .lbl {
+    font-size: 16px;
+  }
+}
+
+/* Discover, first run: three taped steps and one button to the import box. */
+.welcome {
+  margin: 22px 0 10px;
+}
+.welcome ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px 18px;
+}
+.welcome li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 16px 16px;
+  background: var(--white);
+  color: var(--ink);
+}
+.welcome li b {
+  font-family: var(--an);
+  font-size: 20px;
+  line-height: 1.05;
+}
+.welcome li span:last-child {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.welcome .wn {
+  font-family: var(--an);
+  font-size: 34px;
+  line-height: 1;
+  color: var(--accent);
+}
+.welcome .btn {
+  margin-top: 6px;
+}

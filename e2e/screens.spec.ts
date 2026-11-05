@@ -268,7 +268,7 @@ test('Reload: commander stats come back from the device, no EDHREC requests', as
 
 test('Commander page: an old saved page shows at once even when EDHREC is down', async ({ page }) => {
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.chero h1')).toBeVisible();
+  await expect(page.locator('.hstats .price')).toBeVisible(); // its EDHREC pages are saved by now
   // Age every saved page past a day, cut EDHREC off, reopen.
   await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));

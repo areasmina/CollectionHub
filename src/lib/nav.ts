@@ -17,6 +17,11 @@ export const takeDeck = (exists: (name: string) => boolean) => {
 };
 export const onOpenDeck = (f: () => void) => (addEventListener(EVENT, f), () => removeEventListener(EVENT, f));
 
+/** "Go import cards": the app switches to Collection, where the import box opens for an empty binder. */
+const COLL = 'ch:opencollection';
+export const openCollection = () => dispatchEvent(new Event(COLL));
+export const onOpenCollection = (f: () => void) => (addEventListener(COLL, f), () => removeEventListener(COLL, f));
+
 /** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
 export async function freeDeckName(profile: number, want: string, except?: number) {
   const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));

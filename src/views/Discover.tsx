@@ -7,6 +7,7 @@ import { db, type Card } from '../lib/db';
 import { cachedPage, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
+import { openCollection } from '../lib/nav';
 import { Progress, usd, type Shared } from './shared';
 import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
@@ -39,6 +40,33 @@ type Cmdr = Card & { added?: number };
 // IndexedDB read when switching pages. Old EDHREC pages are re-downloaded quietly after everything is shown.
 const REFRESH_MS = 7 * 864e5;
 let memo: { profile: number; sig: string; map: Map<string, SavedStat> } | null = null;
+
+/** First run (or a binder with no legends yet): three taped steps instead of an empty page. */
+function Welcome({ empty }: { empty: boolean }) {
+  const steps: [string, string][] = [
+    ['IMPORT YOUR CARDS', 'ManaBox CSV, Moxfield / Archidekt text or a plain list. Nothing leaves this device.'],
+    ['SEE WHAT YOU CAN BUILD', 'Every commander you own, ranked by how much of its deck is already in your binder.'],
+    ['OPEN ONE, SWAP FROM YOUR BINDER', 'Missing cards get stand-ins you own. Buy only what\'s worth it.'],
+  ];
+  return (
+    <section className="welcome" aria-label="Getting started">
+      <ol>
+        {steps.map(([h, p], i) => (
+          <li key={h} className="gbox" style={{ transform: `rotate(${[-1.2, 0.8, -0.5][i]}deg)` }}>
+            <Tape style={{ top: -12, left: 18, width: 70, height: 22, transform: `rotate(${[-8, 6, -4][i]}deg)` }} />
+            <span className="wn">{i + 1}</span>
+            <b>{h}</b>
+            <span>{p}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="count">{empty ? 'Your binder is empty.' : 'No commanders in this binder yet.'} You can also type any commander in the search above and press Enter.</p>
+      <button className="btn" onClick={() => (haptic('select'), openCollection())}>
+        IMPORT YOUR CARDS →
+      </button>
+    </section>
+  );
+}
 
 export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
@@ -178,7 +206,7 @@ export function Discover(s: Shared) {
       </div>
       <main>
         <section className="hero">
-          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
+          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} />
           <EyeDoodle />
           {phone && (
             <button
@@ -283,9 +311,11 @@ export function Discover(s: Shared) {
         {sort === 'added' && data?.undated && (
           <p className="count">Cards imported before dates were recorded have no date, so they're listed last. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
         )}
-        <p className="count">
-          {commanders.length ? `${shown.length} of ${commanders.length} commanders in this binder.` : 'No commanders yet: import a collection in the Collection tab, or type any commander above and press Enter.'}
-        </p>
+        {commanders.length ? (
+          <p className="count">{`${shown.length} of ${commanders.length} commanders in this binder.`}</p>
+        ) : (
+          data && <Welcome empty={s.mine.size === 0} />
+        )}
         <ul className="cgrid" ref={gridRef}>
           {shown.map((c, i) => {
             const st = stats.get(c.key);
