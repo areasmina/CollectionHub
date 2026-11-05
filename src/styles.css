@@ -6600,3 +6600,92 @@ details.cat {
     grid-column: 1 / -1;
   }
 }
+
+/* Swap window round 2: every card swappable, search your binder, pins (always in / never use) */
+.swapbtn.quiet {
+  border-style: solid;
+  border-width: 2px;
+  min-width: 44px;
+  padding: 0 8px;
+  font-size: 18px;
+  opacity: 0.75;
+}
+.swapbtn.quiet:hover,
+.swapbtn.quiet:focus-visible {
+  opacity: 1;
+}
+.swapnote .nh .was {
+  font-family: var(--se);
+  font-size: 13px;
+}
+.swapnote .undo {
+  background: var(--hazard) !important;
+}
+.swapnote .swapq {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+}
+.swapnote .swapq input {
+  font-family: var(--se);
+  font-size: 16px; /* 16px: phones don't zoom in on focus */
+  min-height: 44px;
+  padding: 0 12px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+.swapnote .swapq input:focus-visible {
+  outline: none;
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.swapnote ul.found {
+  margin-top: 8px;
+}
+.swapnote .pinrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--ink);
+}
+.swapnote .pinrow button {
+  font-family: var(--an);
+  font-size: 15px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+}
+.swapnote .pinrow button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--white);
+  transform: rotate(-2deg);
+}
+.swapnote .pinrow button:disabled {
+  opacity: 0.4;
+}
+.swapnote .pinrow small {
+  font-family: var(--se);
+  font-size: 12px;
+  color: #5c5c5c;
+}
+.pinchip {
+  background: none;
+  border: 1px dashed currentColor;
+  color: inherit;
+  font: inherit;
+  padding: 0 6px;
+  margin: 0 3px 3px 0;
+  min-height: 28px;
+  cursor: pointer;
+}
+.pinchip:hover,
+.pinchip:focus-visible {
+  border-style: solid;
+  color: var(--accent);
+}

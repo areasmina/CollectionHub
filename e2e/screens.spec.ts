@@ -283,3 +283,41 @@ test('Commander page: an old saved page shows at once even when EDHREC is down',
   await expect(page.locator('.chero h1')).toBeVisible();
   await expect(page.locator('.hstats .price')).toBeVisible();
 });
+
+test('Swap window: every card swaps, search your binder, undo, pins', async ({ page }, info) => {
+  // One more card in the binder that the deck doesn't use.
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '{T}: Add one mana.', ci: [], img: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, usd: '0.50', cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload(); // Dexie's query cache doesn't see writes made outside it
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await expect(note).toBeVisible();
+  await expect(note.getByText('top 3 from your binder')).toBeVisible();
+  await fits(page, ['.swapnote']);
+  await note.getByRole('searchbox', { name: 'Search your binder' }).fill('signet');
+  await page.screenshot({ path: `test-results/swap-window-${info.project.name}.png` });
+  await note.locator('ul.found button', { hasText: 'Arcane Signet' }).click();
+  await expect(page.locator('.swapmark', { hasText: '↔ for Sol Ring' })).toBeVisible();
+  // Pin the new card in, then undo the swap from its window
+  await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
+  await page.getByRole('dialog', { name: 'Swap Arcane Signet' }).getByRole('button', { name: '📌 ALWAYS IN' }).click();
+  await expect(page.locator('.pinchip', { hasText: 'Arcane Signet' })).toBeVisible();
+  await page.locator('.pinchip', { hasText: 'Arcane Signet' }).click();
+  await expect(page.locator('.pinchip')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
+  await page.getByRole('button', { name: /UNDO/ }).click();
+  await expect(page.locator('.swapmark', { hasText: 'for Sol Ring' })).toHaveCount(0);
+  // Never use: no other card of yours fits, so Sol Ring stays, marked, and the pin can be taken off
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: '💀 NEVER USE' }).click();
+  await expect(page.locator('.pinchip', { hasText: 'Sol Ring' })).toBeVisible();
+  await page.locator('.pinchip', { hasText: 'Sol Ring' }).click();
+  await expect(page.locator('.pinchip')).toHaveCount(0);
+});

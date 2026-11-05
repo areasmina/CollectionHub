@@ -97,7 +97,7 @@ export async function push() {
   // New rows go in first; the old ones are removed only once everything arrived, so a failed push never empties the cloud.
   const old = { cards: await maxId('cards', uid), decks: await maxId('decks', uid) };
   // `extras` (swaps, shopping-list checks) and `added` need supabase/migrations/002_extras.sql; without it they stay on this device.
-  const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [] } }));
+  const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [], pins: p.pins ?? {} } }));
   let migrated = true;
   let { error } = await supabase!.from('profiles').upsert(profileRows);
   if (error?.code === 'PGRST204') {
@@ -175,7 +175,7 @@ export async function pull() {
     for (const p of profiles) {
       const local = await db.profiles.get(p.slot);
       // Without the extras column, keep this device's swaps and checks.
-      await db.profiles.put({ id: p.slot, name: p.name, swaps: p.extras?.swaps ?? local?.swaps, bought: p.extras?.bought ?? local?.bought });
+      await db.profiles.put({ id: p.slot, name: p.name, swaps: p.extras?.swaps ?? local?.swaps, bought: p.extras?.bought ?? local?.bought, pins: p.extras?.pins ?? local?.pins });
     }
     await db.entries.clear();
     await db.decks.clear();

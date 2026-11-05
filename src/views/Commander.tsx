@@ -8,6 +8,7 @@ import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, type SubCard } from '../lib/subs';
+import { arrange, noPins, pinOf, togglePin, type PinSide } from '../lib/pins';
 import { freeDeckName } from '../lib/nav';
 import { orderSections } from '../lib/sections';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
@@ -42,6 +43,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const path = pagePath(kind, slug, bracket, tag, budget);
   const profile = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
   const swaps = profile?.swaps?.[path] ?? {};
+  const pins = profile?.pins?.[name] ?? noPins();
   const bought = new Set(profile?.bought ?? []);
 
   useEffect(() => {
@@ -101,8 +103,15 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const missingCost = priceSum(missing.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
 
-  // Replacement candidates: owned cards EDHREC recommends for this commander that the deck doesn't already use.
-  const inDeck = new Set([...names, ...Object.values(swaps)].map(norm));
+  // Your binder in this commander's colours (the swap window's search, and pinned cards' types).
+  const binder =
+    useLiveQuery(async () => {
+      const es = await db.entries.where('profile').equals(s.profile).toArray();
+      const m = new Map<string, Card>();
+      for (const c of await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])) if (c?.legal && !m.has(c.key)) m.set(c.key, c);
+      return [...m.values()];
+    }, [s.profile]) ?? [];
+  const never = new Set(pins.out.map(norm));
   const recInfo = new Map<string, SubCard>();
   // A card's category is its type list (Creatures, Mana Artifacts…), not the highlight lists (Top Cards, High Lift…) that come first.
   const META = /^(new cards|top cards|high synergy|high lift|game changers)/i;
@@ -113,12 +122,34 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
       // Highlight lists aren't a role: such a card is matched on type and mana value instead.
       if (!prev || (!prev.category && !META.test(l.header))) recInfo.set(norm(c.name), { name: c.name, category: META.test(l.header) ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
     }
-  const candidates = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !inDeck.has(norm(c.name)));
+  // Replacement candidates: owned cards EDHREC recommends for this commander, minus the ones you never use.
+  const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
   const recCard = new Map((recs?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
-  const suggest = (c: EdhCard) => {
+  const slotInfo = (c: EdhCard): SubCard => {
     const info = recInfo.get(norm(c.name));
     const sc = cardOf(c);
-    return rankSubs({ name: c.name, category: info?.category, type: sc?.type ?? info?.type, cmc: sc?.cmc ?? info?.cmc }, candidates);
+    return { ...info, name: c.name, type: sc?.type ?? info?.type, cmc: sc?.cmc ?? info?.cmc };
+  };
+  const byName = new Map(all.map((c) => [c.name, c]));
+  const binderType = new Map(binder.map((c) => [c.key, c.type]));
+  // The deck after your swaps and pins (slot = EDHREC's card).
+  const eff = arrange(
+    [...byName.values()].map((c) => ({ name: c.name, qty: c.qty ?? 1, type: slotInfo(c).type, incl: recInfo.get(norm(c.name))?.incl })),
+    swaps,
+    pins,
+    (slot, used) => rankSubs(slotInfo(byName.get(slot)!), owned.filter((o) => !used.has(norm(o.name))), 1)[0]?.name,
+    { commander: name, typeOf: (n) => binderType.get(norm(n)) },
+  );
+  const nameIn = (c: EdhCard) => eff.get(c.name)?.name ?? c.name;
+  const inDeck = new Set([...eff.values()].map((x) => norm(x.name)));
+  const candidates = owned.filter((c) => !inDeck.has(norm(c.name)));
+  const suggest = (c: EdhCard) => rankSubs(slotInfo(c), candidates);
+  const binderCard = new Map(binder.map((c) => [c.key, c]));
+  const optionOf = (sub: SubCard) => {
+    const sc = recCard.get(norm(sub.name));
+    const bc = binderCard.get(norm(sub.name));
+    const img = (sc && cardOf(sc)?.img) ?? bc?.img ?? imgOf(sc?.id);
+    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0 };
   };
 
   async function setSwap(missingName: string, replacement: string | null) {
@@ -127,6 +158,11 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     if (replacement) deck[missingName] = replacement;
     else delete deck[missingName];
     await db.profiles.update(s.profile, { swaps: { ...(p.swaps ?? {}), [path]: deck } });
+    setMenuFor(null);
+  }
+  async function setPin(card: string, side: PinSide) {
+    const p = (await db.profiles.get(s.profile))!;
+    await db.profiles.update(s.profile, { pins: { ...(p.pins ?? {}), [name]: togglePin(p.pins?.[name] ?? noPins(), card, side) } });
     setMenuFor(null);
   }
   async function toggleBought(cardName: string) {
@@ -140,7 +176,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
 
   async function saveDeck() {
     if (!page) return;
-    const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: swaps[c.name] ?? c.name, qty: c.qty ?? 1 })));
+    const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
     const deckName = await freeDeckName(s.profile, `${name} (EDHREC average)`);
     await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
     setSaved(deckName);
@@ -155,7 +191,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const mine = decks.filter((d) => d.commander === name).sort((a, b) => b.updated - a.updated);
   const thisDeck = `this ${name.split(' // ')[0]} deck`;
   const short = page
-    ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: swaps[c.name] ?? c.name, qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
+    ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
     : [];
   const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
@@ -198,7 +234,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                 <span className="nm">
                   {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
                   {c.name}
-                  {swaps[c.name] && <small> · using {swaps[c.name]} for now</small>}
+                  {nameIn(c) !== c.name && <small> · using {nameIn(c)} for now</small>}
                 </span>
               </label>
               <span className="pr">
@@ -359,7 +395,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             )}
           </div>
           <span className="hint">
-            {kind === 'average' && missing.length > 0 ? 'click or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
+            {kind === 'average' ? (missing.length > 0 ? 'tap any card to swap it · missing ones first' : 'every card here is yours · tap one to swap or pin it') : 'every card here is in your binder'}
             <span className="cur">_</span>
             {receipt && (
               <a className="jump" href="#shop">
@@ -369,6 +405,18 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             )}
             {/* Your decks with this commander sit on this full-width line, so the DECK cell stays as short as the
                 others (a long list there left an empty band across the whole strip). */}
+            {pins.in.length + pins.out.length > 0 && (
+              <span className="pinsline">
+                {' · '}pins:{' '}
+                {(['in', 'out'] as const).flatMap((side) =>
+                  pins[side].map((n) => (
+                    <button key={side + n} className="pinchip" onClick={() => (haptic('undo'), setPin(n, side))} aria-label={`Unpin ${n}`} title="Tap to unpin">
+                      {side === 'in' ? '📌' : '💀'} {n} ×
+                    </button>
+                  )),
+                )}
+              </span>
+            )}
             {mine.length > 0 && !saved && (
               <span className="mydecks">
                 {' · '}your deck{mine.length > 1 ? 's' : ''}:{' '}
@@ -397,7 +445,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
               </div>
               {sections.map((l, i) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
-                const own = (c: EdhCard) => !!swaps[c.name] || statusOf(c.name, s.mine) === 'owned';
+                const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
                 const cs = sortBy(
                   l.cards.filter((c) => shows(show, own(c))),
                   sort,
@@ -435,35 +483,47 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                     )}
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => {
-                        const swappable = kind === 'average' && statusOf(c.name, s.mine) !== 'owned' && norm(c.name) !== norm(name);
-                        const repl = swaps[c.name];
+                        // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.
+                        const swappable = kind === 'average' && norm(c.name) !== norm(name);
+                        const slot = eff.get(c.name);
+                        const repl = slot && slot.name !== c.name ? slot.name : undefined;
                         const rc = repl ? recCard.get(norm(repl)) : undefined;
+                        const bc = repl && !rc ? binderCard.get(norm(repl)) : undefined;
+                        const now = repl ?? c.name;
+                        const pin = pinOf(pins, now);
+                        const mark = repl ? `${slot!.why === 'pin' ? '📌' : slot!.why === 'never' ? '💀' : '↔'} for ${c.name}` : pin === 'in' ? '📌 always in' : pin === 'out' ? '💀 no card of yours fits' : undefined;
                         const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
                         return (
                           <Item
                             key={c.name}
-                            name={repl ?? c.name}
-                            img={imgOf(rc?.id ?? c.id)}
-                            card={rc ? cardOf(rc) : repl ? undefined : cardOf(c)}
+                            name={now}
+                            img={bc?.img ?? imgOf(rc?.id ?? c.id)}
+                            card={rc ? cardOf(rc) : bc ?? (repl ? undefined : cardOf(c))}
                             s={s}
                             note={stat}
                             marker={repl ? c.name : undefined}
+                            markText={mark}
+                            quiet={statusOf(now, s.mine) === 'owned'}
                             onOpen={swappable ? () => setMenuFor(c.name) : undefined}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >
                             {menuFor === c.name && (
                               <SwapNote
                                 name={c.name}
-                                missing={{ ...recInfo.get(norm(c.name)), name: c.name, type: cardOf(c)?.type ?? recInfo.get(norm(c.name))?.type, cmc: cardOf(c)?.cmc ?? recInfo.get(norm(c.name))?.cmc }}
+                                missing={slotInfo(c)}
                                 big={imgOf(c.id, 'normal')}
                                 replaced={repl}
                                 loading={!recs}
-                                options={suggest(c).map((sub) => {
-                                  const sc = recCard.get(norm(sub.name));
-                                  return { sub, img: (sc && cardOf(sc)?.img) ?? imgOf(sc?.id), big: imgOf(sc?.id, 'normal'), owned: s.mine.get(norm(sub.name)) ?? 0 };
-                                })}
+                                options={suggest(c).map(optionOf)}
+                                pool={binder
+                                  .filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key) && b.key !== norm(name))
+                                  .map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }))}
+                                pin={pin}
+                                canPinIn={statusOf(now, s.mine) === 'owned'}
+                                cmdr={label}
                                 onPick={(sub) => (haptic('success'), setSwap(c.name, sub))}
                                 onUndo={() => (haptic('undo'), setSwap(c.name, null))}
+                                onPin={(side) => setPin(now, side)}
                                 onClose={() => setMenuFor(null)}
                               />
                             )}

@@ -149,12 +149,16 @@ export function CardLine({
   s,
   note,
   marker,
+  markText,
+  quiet,
   onOpen,
   onClose,
   onMenu,
   foil,
   children,
 }: {
+  markText?: string; // what the marker line says (default "↔ for <marker>")
+  quiet?: boolean; // your own card: a small swap button instead of the loud one
   onMenu?: (x: number, y: number) => void; // card menu (right-click / press and hold)
   foil?: boolean; // foil copy: the image gets a sheen
   name: string;
@@ -179,13 +183,13 @@ export function CardLine({
           {note}
           {st === 'missing' && <span className="sr">(missing)</span>}
         </span>
-        {marker && <span className="swapmark">↔ for {marker}</span>}
+        {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
         {st === 'other' && <span className="tagother">in {s.otherName}</span>}
       </span>
       <span className="acts">
         {onOpen && (
-          <button className="swapbtn" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Undo swap for ${marker}` : `Swap ${name}`}>
-            ↺ SWAP
+          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
+            {quiet ? '⇄' : '↺ SWAP'}
           </button>
         )}
         <PriceLink card={card} plain={st === 'owned' && !marker} />
@@ -196,7 +200,7 @@ export function CardLine({
 }
 
 /** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
-export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
+export function CardTile({ name, img, card, s, note, marker, markText, quiet, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
@@ -208,12 +212,12 @@ export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foi
         {st === 'missing' && <span className="sr">(missing)</span>}
       </span>
       {note && <span className="tnote">{note}</span>}
-      {marker && <span className="swapmark">↔ for {marker}</span>}
+      {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
       {st === 'other' && <span className="tagother">in {s.otherName}</span>}
       <span className="tacts">
         {onOpen && (
-          <button className="swapbtn" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Undo swap for ${marker}` : `Swap ${name}`}>
-            ↺ SWAP
+          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
+            {quiet ? '⇄' : '↺ SWAP'}
           </button>
         )}
         <PriceLink card={card} plain={st === 'owned' && !marker} />
