@@ -6495,3 +6495,57 @@ details.cat {
 .welcome .btn {
   margin-top: 6px;
 }
+
+/* ---------- Fit pass (Nov 2026): phones and wide screens ---------- */
+/* Doodles never sit on top of a commander's name. */
+.ccard .nm {
+  position: relative;
+  z-index: 3;
+}
+@media (max-width: 700px) {
+  /* Discover: two commanders per row instead of one card per screen. */
+  .cgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 12px;
+    margin-top: 18px;
+  }
+  .ccard {
+    padding: 10px 9px 9px;
+    box-shadow: 4px 4px 0 #000;
+  }
+  .ccard .nm {
+    font-size: 12.5px;
+    gap: 4px;
+  }
+  .ccard .nm .pips {
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+  .ccard .badge {
+    font-size: 10.5px;
+    padding: 1px 5px;
+  }
+  .ccard .foot {
+    padding-top: 6px;
+  }
+  .ccard .mono {
+    font-size: 9px;
+  }
+  .ccard .pct {
+    font-size: 22px;
+  }
+  /* Small cards: the marker doodles would sit on the text, so they stay on the wider layouts. */
+  .ccard .doodle {
+    display: none;
+  }
+  /* Commander page: the card image no longer fills the first screen. */
+  .chero .cimg {
+    width: min(165px, 44vw);
+  }
+}
+/* Doodles stay under a card's text (name, tags, numbers). */
+.ccard .foot,
+.ccard .badge {
+  position: relative;
+  z-index: 3;
+}

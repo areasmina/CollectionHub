@@ -144,10 +144,11 @@ export function Doodles({ n, count, spots, paper }: { n: number; count: number; 
 }
 
 /** Card doodles chosen from the card index: 0–2 per card. */
+// Spots sit over the card art only: never on the name, the tag or the numbers.
 export function CardDoodles({ i }: { i: number }) {
   const n = (i + 1) * 37;
   const count = srnd(n) < 0.25 ? 0 : srnd(n + 9) < 0.7 ? 1 : 2;
-  return <Doodles n={n} count={count} spots={[[52, 36], [-8, 26], [58, 52], [-10, 58], [40, -6], [62, 70]]} />;
+  return <Doodles n={n} count={count} spots={[[52, 30], [-8, 30], [58, 44], [-10, 46], [6, 20], [62, 18]]} />;
 }
 
 /** Page background: speed-line rays, light streaks, torn red halftone sheet with a cream edge, five big doodles. */
