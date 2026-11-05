@@ -1,6 +1,7 @@
 import { haptic, hapticsOn, hapticsSupported, setHaptics } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { CardSpin } from './views/CardSpin';
 import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
@@ -173,7 +174,7 @@ export default function App() {
       )}
       <PreviewLayer />
       {tab === 'discover' && <Discover key={home} {...shared} />}
-      <Suspense fallback={<p className="count pageload">Loading…</p>}>
+      <Suspense fallback={<CardSpin page />}>
         {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
         {tab === 'decks' && <Decks {...shared} />}
       </Suspense>
