@@ -351,6 +351,7 @@ test('One card menu: ⋯ / right-click on commander page and Collection cards, s
   await expect(m.getByRole('button', { name: /Swap…/ })).toBeVisible();
   await expect(m.getByRole('button', { name: '💀 Never use' })).toBeVisible();
   await expect(m.getByText('also in:')).toBeVisible();
+  await page.waitForTimeout(300); // the menu drops in with a small tilt first
   await fits(page, ['.cardmenu']);
   await m.getByRole('button', { name: /Swap…/ }).click();
   await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();
