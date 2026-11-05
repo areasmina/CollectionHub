@@ -37,12 +37,42 @@ const store = {
 
 // When this device last changed a binder or deck (0 = nothing unsynced).
 const DIRTY = 'ch:sync:dirty';
-// The cloud copy's version (its profiles.updated_at, ms) this device last matched. 0 = never synced here.
-const LAST = 'ch:sync:last';
+// The cloud copy's version (a save counter on the sync server) this device last matched. 0 = never synced here.
+const LAST = 'ch:code:last';
+// The old sign-in sync's version (its profiles.updated_at, ms), only read when moving to a sync code.
+const LEGACY_LAST = 'ch:sync:last';
+const CODE = 'ch:sync:code';
 export const dirtyAt = () => store.get(DIRTY);
 export const clearDirty = (upTo: number) => dirtyAt() <= upTo && store.set(DIRTY, null);
 export const lastVersion = () => store.get(LAST);
 export const setLastVersion = (v: number | null) => store.set(LAST, v);
+export const legacyLastVersion = () => store.get(LEGACY_LAST);
+export const setLegacyLastVersion = (v: number | null) => store.set(LEGACY_LAST, v);
+
+/** This device's sync code ('' = sync off). Kept in localStorage: it's the key to the cloud copy. */
+export function syncCode() {
+  try {
+    return localStorage.getItem(CODE) || '';
+  } catch {
+    return '';
+  }
+}
+export function setSyncCode(c: string | null) {
+  try {
+    if (c) localStorage.setItem(CODE, c);
+    else localStorage.removeItem(CODE);
+  } catch {
+    /* private mode: sync can't stay on after a reload */
+  }
+}
+/** Whether this device is still signed in to the old (Supabase) sync, read without loading Supabase. */
+export function hasLegacySession() {
+  try {
+    return !!import.meta.env.VITE_SUPABASE_URL && Object.keys(localStorage).some((k) => /^sb-.*-auth-token$/.test(k));
+  } catch {
+    return false;
+  }
+}
 
 const changeSubs = new Set<() => void>();
 export const onLocalChange = (f: () => void) => (changeSubs.add(f), () => void changeSubs.delete(f));

@@ -1,0 +1,15 @@
+# CollectionHub sync: stores one encrypted snapshot per sync code. Deploy once: `npx wrangler deploy` in this folder.
+name = "collectionhub-sync"
+main = "sync.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# One Durable Object per sync code (free plan: SQLite-backed objects). Strongly consistent, so a save can safely say
+# "replace version N" and be refused when another device saved first.
+[[durable_objects.bindings]]
+name = "BOX"
+class_name = "SyncBox"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SyncBox"]
