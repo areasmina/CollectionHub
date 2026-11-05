@@ -6732,7 +6732,7 @@ details.cat {
   flex: 0 0 200px;
   scroll-snap-align: start;
 }
-.shelf li button {
+.shelf li > button:not(.dlight) {
   width: 100%;
   text-align: left;
   display: flex;
@@ -6744,8 +6744,8 @@ details.cat {
   padding: 8px;
   box-shadow: 5px 5px 0 var(--accent);
 }
-.shelf li button:hover,
-.shelf li button:focus-visible {
+.shelf li > button:not(.dlight):hover,
+.shelf li > button:not(.dlight):focus-visible {
   transform: rotate(-1.5deg);
 }
 .shelf .art {
@@ -6901,8 +6901,11 @@ details.cat {
 .shelf li > .dlight,
 .dgrid li.dtile > .dlight {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 14px;
+  right: 14px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
   z-index: 4;
 }
 .shelf li.off > button,
@@ -6916,7 +6919,9 @@ details.cat {
   color: #2bd65a;
 }
 .cmeta > .dlight {
-  margin-right: 10px;
+  align-self: flex-start;
+  width: auto;
+  margin: 8px 8px 0 0;
 }
 
 /* Forging zone: the spinning card says you're tuning this deck; leaving asks to save */
@@ -7175,4 +7180,28 @@ details.cat {
 }
 .toast {
   bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+/* Spacing pass: a card tile keeps name, mark and one action row (swap + price); ⋯ sits on the card's corner */
+.ztile.hasmenu {
+  position: relative;
+}
+.ztile .tacts {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.ztile .tacts > .morebtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  min-width: 40px;
+  min-height: 40px;
+  background: var(--ink);
+  color: var(--white);
+  border-color: var(--white);
+  opacity: 0.9;
+}
+.ztile .tacts > .price {
+  margin-left: auto;
 }
