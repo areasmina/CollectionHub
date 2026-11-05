@@ -26,7 +26,7 @@ import './styles.css';
 const startSW = () => registerSW({ immediate: true });
 // (Supabase is loaded only on that return; every other visit skips it at startup.)
 if (authReturn?.ok)
-  import('./lib/sync')
+  import('./lib/legacysync')
     .then(({ supabase }) => supabase?.auth.getSession())
     .catch(() => {})
     .finally(startSW);

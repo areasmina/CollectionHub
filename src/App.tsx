@@ -5,17 +5,18 @@ import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
+import { codeFromHash } from './lib/synccode';
 import { onOpenDeck } from './lib/nav';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
 
-// Pages other than Discover, and sync (Supabase), load on first use so the first open is quick.
+// Pages other than Discover, and the sync panel, load on first use so the first open is quick.
 const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
 const Decks = lazy(() => import('./views/Decks').then((m) => ({ default: m.Decks })));
 const SyncPanel = lazy(() => import('./views/SyncPanel').then((m) => ({ default: m.SyncPanel })));
 // Warm the rest once the page is idle (keeps the session fresh and makes tab switches instant).
-const SYNC_LABEL: Record<SyncStatus, string> = { off: 'not signed in', syncing: 'syncing…', synced: 'up to date', conflict: 'needs you: changed on both sides', offline: 'offline, will sync later', error: 'last sync failed' };
+const SYNC_LABEL: Record<SyncStatus, string> = { off: 'sync off', syncing: 'syncing…', synced: 'up to date', conflict: 'needs you: changed on both sides', offline: 'offline, will sync later', error: 'last sync failed' };
 // What the haptics button says after a tap: the browser handed the buzz to the phone (then the phone's own settings decide).
 const HAPTIC_NOTE = {
   off: 'Haptics off.',
@@ -27,10 +28,13 @@ const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCa
 idle(() => {
   import('./views/Collection');
   import('./views/Decks');
-  if (import.meta.env.VITE_SUPABASE_URL) import('./lib/autosync').then((m) => m.startAutoSync());
+  import('./lib/autosync').then((m) => m.startAutoSync());
 });
 
 type Tab = 'discover' | 'collection' | 'decks';
+// Opened with a sync link (…/#sync/<code>): offer to link this device. The code is taken out of the address bar right away.
+const incomingCode = typeof location !== 'undefined' ? codeFromHash(location.hash) : '';
+if (incomingCode) history.replaceState(null, '', location.pathname + location.search);
 const store = {
   get: (k: string) => {
     try {
@@ -53,7 +57,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
-  const [sync, setSync] = useState(!!authReturn);
+  const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   const [hubOpen, setHubOpen] = useState(false);
   const [haptOn, setHaptOn] = useState(hapticsOn);
@@ -168,7 +172,7 @@ export default function App() {
       </nav>
       {sync && (
         <Suspense fallback={null}>
-          <SyncPanel onClose={() => setSync(false)} />
+          <SyncPanel onClose={() => setSync(false)} incoming={incomingCode} />
         </Suspense>
       )}
       <PreviewLayer />

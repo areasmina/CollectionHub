@@ -1,5 +1,5 @@
-import { cloudVersion, currentUser, pull, push, sameAsCloud, supabase } from './sync';
-import { clearDirty, dirtyAt, lastVersion, onLocalChange, setLastVersion, setSyncState } from './syncstate';
+import { ChangedElsewhere, CodeGone, cloudVersion, pull, push, sameAsCloud } from './sync';
+import { clearDirty, dirtyAt, lastVersion, onLocalChange, setLastVersion, setSyncState, syncCode } from './syncstate';
 
 /** Keeps this device and the cloud in step on its own:
  *  - this device changed and the cloud didn't → push (a few seconds after the last edit)
@@ -15,15 +15,13 @@ export function syncSoon(ms = 4000) {
 }
 
 export async function syncNow() {
-  if (!supabase) return;
   if (running) return void (again = true);
   running = true;
   try {
+    if (!syncCode()) return setSyncState({ status: 'off', msg: '' });
     if (!navigator.onLine) return setSyncState({ status: 'offline', msg: '' });
-    const user = await currentUser();
-    if (!user) return setSyncState({ status: 'off', msg: '' });
     setSyncState({ status: 'syncing', msg: '' });
-    const cloud = await cloudVersion(user.id);
+    const cloud = await cloudVersion();
     const last = lastVersion();
     const dirty = dirtyAt();
     const cloudChanged = cloud !== last;
@@ -34,15 +32,17 @@ export async function syncNow() {
       if (same) {
         setLastVersion(cloud || null);
         clearDirty(started);
-        if (!cloud && localCount) await push();
-      } else if (!cloudCount) await push();
+        if (!cloud && localCount) await push({ base: 0 });
+      } else if (!cloudCount) await push({ base: cloud });
       else if (!localCount) await pull();
       else return setSyncState({ status: 'conflict', msg: last ? 'Changed on this device and in the cloud.' : 'This device and the cloud hold different binders or decks.' });
     } else if (cloudChanged) await pull();
     else if (dirty) await push();
     setSyncState({ status: 'synced', at: Date.now(), msg: '' });
   } catch (e) {
-    setSyncState({ status: navigator.onLine ? 'error' : 'offline', msg: (e as Error).message });
+    // Another device saved a moment ago: check again right away (pull, or ask when both changed).
+    if (e instanceof ChangedElsewhere) again = true;
+    else setSyncState({ status: e instanceof CodeGone || navigator.onLine ? 'error' : 'offline', msg: (e as Error).message });
   } finally {
     running = false;
     if (again) {
@@ -54,7 +54,7 @@ export async function syncNow() {
 
 let started = false;
 export function startAutoSync() {
-  if (!supabase || started) return;
+  if (started) return;
   started = true;
   onLocalChange(() => syncSoon());
   addEventListener('online', () => syncSoon(500));
@@ -65,12 +65,5 @@ export function startAutoSync() {
   });
   // A quiet check while the app stays open, for edits made on another device.
   setInterval(() => document.visibilityState === 'visible' && syncSoon(0), 3 * 60_000);
-  supabase.auth.onAuthStateChange((e) => {
-    if (e === 'SIGNED_IN') syncSoon(300);
-    if (e === 'SIGNED_OUT') {
-      setLastVersion(null);
-      setSyncState({ status: 'off', msg: '' });
-    }
-  });
   syncSoon(500);
 }
