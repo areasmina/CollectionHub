@@ -5,7 +5,7 @@ import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
-import { onOpenCollection, onOpenDeck } from './lib/nav';
+import { onOpenCollection, onOpenDeck, onOpenDeckList } from './lib/nav';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
@@ -31,6 +31,8 @@ idle(() => {
 });
 
 type Tab = 'discover' | 'collection' | 'decks';
+// Two sections: DECKS (commanders you can build + your decks, and the Forge) and COLLECTION.
+const NAV: [Tab, string][] = [['discover', 'DECKS'], ['collection', 'COLLECTION']];
 const store = {
   get: (k: string) => {
     try {
@@ -70,6 +72,7 @@ export default function App() {
     return () => document.removeEventListener('pointerdown', off);
   }, [hubOpen]);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
+  const here = (t: Tab) => tab === t || (t === 'discover' && tab === 'decks');
   const goDiscover = () => (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
@@ -89,6 +92,7 @@ export default function App() {
   }, [theme]);
   useEffect(() => store.set('ch:tab', tab), [tab]);
   useEffect(() => onOpenDeck(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
+  useEffect(() => onOpenDeckList(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
   useEffect(() => onOpenCollection(() => (setTab('collection'), setHubOpen(false), window.scrollTo(0, 0))), []);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
@@ -108,14 +112,14 @@ export default function App() {
             </button>
           </span>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
-            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Discover">
+            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Decks">
               <Logo />
             </button>
             {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
             <nav className="tabs hubnav" aria-label="Sections">
-              {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
-                <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => (haptic('select'), (t === 'discover' ? goDiscover() : setTab(t)), setHubOpen(false))}>
-                  {t.toUpperCase()}
+              {NAV.map(([t, label]) => (
+                <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), (t === 'discover' ? goDiscover() : setTab(t)), setHubOpen(false))}>
+                  {label}
                 </button>
               ))}
             </nav>
@@ -161,9 +165,9 @@ export default function App() {
         </div>
       </div>
       <nav className="tabs navbar" aria-label="Sections">
-        {(['discover', 'collection', 'decks'] as Tab[]).map((t) => (
-          <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : setTab(t))}>
-            {t.toUpperCase()}
+        {NAV.map(([t, label]) => (
+          <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : setTab(t))}>
+            {label}
           </button>
         ))}
       </nav>

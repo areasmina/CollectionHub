@@ -22,6 +22,11 @@ const COLL = 'ch:opencollection';
 export const openCollection = () => dispatchEvent(new Event(COLL));
 export const onOpenCollection = (f: () => void) => (addEventListener(COLL, f), () => removeEventListener(COLL, f));
 
+/** "All my decks": the app opens the saved-decks page (list + add a deck). */
+const LIST = 'ch:opendecklist';
+export const openDeckList = () => dispatchEvent(new Event(LIST));
+export const onOpenDeckList = (f: () => void) => (addEventListener(LIST, f), () => removeEventListener(LIST, f));
+
 /** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
 export async function freeDeckName(profile: number, want: string, except?: number) {
   const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));

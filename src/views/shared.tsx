@@ -8,6 +8,18 @@ import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
 
+/** Every legal card in a binder, one per name (live). */
+export function useBinder(profile: number) {
+  return (
+    useLiveQuery(async () => {
+      const es = await db.entries.where('profile').equals(profile).toArray();
+      const m = new Map<string, Card>();
+      for (const c of await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])) if (c?.legal && !m.has(c.key)) m.set(c.key, c);
+      return [...m.values()];
+    }, [profile]) ?? []
+  );
+}
+
 export interface Shared {
   profile: number;
   mine: Map<string, number>;

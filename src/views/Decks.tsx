@@ -3,7 +3,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
-import { changeQty, removeFromDeck, removeOneFromBinder, setFoil } from '../lib/deckedit';
+import { changeQty, removeFromDeck, removeOneFromBinder, replaceInDeck, savePin, setFoil } from '../lib/deckedit';
+import { noPins, pinOf } from '../lib/pins';
+import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
+import { pagePath, showPage, type EdhPage } from '../lib/edhrec';
+import { SwapNote, type SwapOption } from './SwapNote';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
@@ -15,7 +19,7 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -516,6 +520,40 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
   const ci = cmdr?.ci ?? [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
 
+  // The Forge: tap any card for the swap window (top 3 of your cards EDHREC plays with this commander, a search over
+  // your binder in the deck's colours, pins). A swap changes this deck at once, with an undo.
+  const [swapFor, setSwapFor] = useState<string | null>(null);
+  const [recs, setRecs] = useState<EdhPage | null>(null);
+  useEffect(() => {
+    let live = true;
+    setRecs(null);
+    if (deck.commander) showPage(pagePath('commander', slug(deck.commander)), (p) => live && setRecs(p)).catch(() => {});
+    return () => void (live = false);
+  }, [deck.commander]);
+  const binder = useBinder(s.profile);
+  const binderCard = new Map(binder.map((c) => [c.key, c]));
+  const prof = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
+  const pins = (deck.commander && prof?.pins?.[deck.commander]) || noPins();
+  const never = new Set(pins.out.map(norm));
+  const inDeck = new Set(deck.cards.map((c) => norm(c.name)));
+  const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)));
+  const candidates = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !inDeck.has(norm(c.name)) && !never.has(norm(c.name)));
+  const slotInfo = (name: string): SubCard => {
+    const card = cardOf(name);
+    return { ...recInfo.get(norm(name)), name, type: card?.type, cmc: card?.cmc };
+  };
+  const optionOf = (sub: SubCard): SwapOption => {
+    const img = binderCard.get(norm(sub.name))?.img;
+    return { sub, img, big: img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0 };
+  };
+  const forgePool = () =>
+    binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));
+  async function swapIn(from: string, to: string) {
+    haptic('success');
+    setSwapFor(null);
+    setToast({ text: `Swapped ${from} for ${to}`, undo: await replaceInDeck(deck, from, to) });
+  }
+
   // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
   const owned = (n: string) => statusOf(n, s.mine) === 'owned';
   const keyOf = (c: DeckCard) => {
@@ -612,7 +650,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
+          {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className="lists">
+            <p className="forgehint">
+              <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
+            </p>
             {/* How the cards are split and ordered, right above them */}
             <div className="dtools" role="toolbar" aria-label="Deck view">
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
@@ -660,7 +702,27 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                           note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
                           onMenu={(x, y) => setMenu({ card: c, x, y })}
                           foil={c.foil}
-                        />
+                          quiet={owned(c.name)}
+                          onOpen={c.name === deck.commander || BASICS.has(norm(c.name)) ? undefined : () => setSwapFor(c.name)}
+                        >
+                          {swapFor === c.name && (
+                            <SwapNote
+                              name={c.name}
+                              missing={slotInfo(c.name)}
+                              big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
+                              options={rankSubs(slotInfo(c.name), candidates).map(optionOf)}
+                              pool={forgePool()}
+                              loading={!!deck.commander && !recs}
+                              pin={pinOf(pins, c.name)}
+                              canPinIn={owned(c.name)}
+                              cmdr={(deck.commander ?? deck.name).split(' // ')[0]}
+                              onPick={(to) => swapIn(c.name, to)}
+                              onUndo={() => setSwapFor(null)}
+                              onPin={deck.commander ? (side) => (savePin(s.profile, deck.commander!, c.name, side), setSwapFor(null)) : undefined}
+                              onClose={() => setSwapFor(null)}
+                            />
+                          )}
+                        </Item>
                       ))}
                     </ul>
                   </details>
@@ -740,7 +802,7 @@ export function Decks(s: Shared) {
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
       <main>
         <section style={{ display: 'inline-block', marginTop: 24 }}>
-          <Title text="DECKS" label="Decks" size={72} seed={33} />
+          <Title text="MY DECKS" label="My decks" size={72} seed={33} />
         </section>
         <p className="count" style={{ color: 'var(--text)' }}>
           {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}

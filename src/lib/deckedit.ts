@@ -1,5 +1,6 @@
 import { db, type Deck, type Entry } from './db';
 import { norm } from './names';
+import { noPins, togglePin, type PinSide } from './pins';
 
 /**
  * Moves one owned copy of a card to the other finish (foil <-> non-foil), so the binder matches the deck.
@@ -51,4 +52,18 @@ export async function removeOneFromBinder(profile: number, name: string, foil?: 
   if (e.qty > 1) await db.entries.update(e.id!, { qty: e.qty - 1 });
   else await db.entries.delete(e.id!);
   return async () => void (await db.entries.put(e));
+}
+
+/** Puts `to` in the deck in place of `from` (same copies, no foil); returns an undo. */
+export async function replaceInDeck(deck: Deck, from: string, to: string) {
+  const before = deck.cards;
+  const has = before.some((c) => norm(c.name) === norm(to));
+  await saveDeck(deck, has ? before.filter((c) => c.name !== from) : before.map((c) => (c.name === from ? { name: to, qty: c.qty } : c)));
+  return () => saveDeck(deck, before);
+}
+
+/** Pins a card for every deck of a commander (📌 always in / 💀 never use); the same side again un-pins it. */
+export async function savePin(profile: number, commander: string, card: string, side: PinSide) {
+  const p = (await db.profiles.get(profile))!;
+  await db.profiles.update(profile, { pins: { ...(p.pins ?? {}), [commander]: togglePin(p.pins?.[commander] ?? noPins(), card, side) } });
 }

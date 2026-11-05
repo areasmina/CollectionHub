@@ -6689,3 +6689,118 @@ details.cat {
   border-style: solid;
   color: var(--accent);
 }
+
+/* Decks home: your saved decks on a shelf above the commanders you can build */
+.shelf {
+  margin: 18px 0 8px;
+}
+.shelfhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shelfhead h2 {
+  font-family: var(--an);
+  font-size: 26px;
+  font-weight: 400;
+  margin: 0;
+  background: var(--accent);
+  color: var(--white);
+  padding: 0 10px;
+  transform: skewX(-8deg);
+}
+.shelfhead .link {
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-family: var(--se);
+  font-size: 14px;
+  text-decoration: underline;
+  min-height: 44px;
+}
+.shelf ul.shelfrow {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0 0 10px;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+.shelf li {
+  flex: 0 0 200px;
+  scroll-snap-align: start;
+}
+.shelf li button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  padding: 8px;
+  box-shadow: 5px 5px 0 var(--accent);
+}
+.shelf li button:hover,
+.shelf li button:focus-visible {
+  transform: rotate(-1.5deg);
+}
+.shelf .art {
+  display: block;
+  aspect-ratio: 16 / 10;
+  background: #333;
+  overflow: hidden;
+}
+.shelf .art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shelf li b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shelf li small {
+  font-family: var(--se);
+  font-size: 12px;
+}
+.count .canbuild {
+  font-family: var(--an);
+  font-weight: 400;
+  background: var(--hazard);
+  color: var(--ink);
+  padding: 0 8px;
+  margin-right: 6px;
+}
+@media (max-width: 700px) {
+  .shelf li {
+    flex-basis: 156px;
+  }
+}
+
+/* The Forge: deck page hint + the commander page's FORGE IT button */
+.forgehint {
+  font-family: var(--se);
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.forgehint b {
+  font-family: var(--an);
+  font-weight: 400;
+  background: var(--ink);
+  color: var(--hazard);
+  padding: 1px 8px;
+  margin-right: 8px;
+}
+.btn.forge {
+  background: var(--accent);
+  color: var(--white);
+}

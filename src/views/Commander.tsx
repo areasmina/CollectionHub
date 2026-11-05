@@ -7,11 +7,12 @@ import { BRACKETS, BUDGETS, DEFAULT_BRACKET, imgOf, NoPage, pagePath, showPage, 
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
-import { rankSubs, type SubCard } from '../lib/subs';
-import { arrange, noPins, pinOf, togglePin, type PinSide } from '../lib/pins';
-import { freeDeckName } from '../lib/nav';
+import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
+import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
+import { savePin } from '../lib/deckedit';
+import { freeDeckName, openDeck } from '../lib/nav';
 import { orderSections } from '../lib/sections';
-import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useStored, type Shared } from './shared';
+import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -103,25 +104,10 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const missingCost = priceSum(missing.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
 
-  // Your binder in this commander's colours (the swap window's search, and pinned cards' types).
-  const binder =
-    useLiveQuery(async () => {
-      const es = await db.entries.where('profile').equals(s.profile).toArray();
-      const m = new Map<string, Card>();
-      for (const c of await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])) if (c?.legal && !m.has(c.key)) m.set(c.key, c);
-      return [...m.values()];
-    }, [s.profile]) ?? [];
+  // Your binder (the swap window's search, and pinned cards' types).
+  const binder = useBinder(s.profile);
   const never = new Set(pins.out.map(norm));
-  const recInfo = new Map<string, SubCard>();
-  // A card's category is its type list (Creatures, Mana Artifacts…), not the highlight lists (Top Cards, High Lift…) that come first.
-  const META = /^(new cards|top cards|high synergy|high lift|game changers)/i;
-  for (const l of recs?.lists ?? [])
-    for (const c of l.cards) {
-      const sc = cardOf(c);
-      const prev = recInfo.get(norm(c.name));
-      // Highlight lists aren't a role: such a card is matched on type and mana value instead.
-      if (!prev || (!prev.category && !META.test(l.header))) recInfo.set(norm(c.name), { name: c.name, category: META.test(l.header) ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
-    }
+  const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
   // Replacement candidates: owned cards EDHREC recommends for this commander, minus the ones you never use.
   const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
   const recCard = new Map((recs?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
@@ -161,8 +147,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     setMenuFor(null);
   }
   async function setPin(card: string, side: PinSide) {
-    const p = (await db.profiles.get(s.profile))!;
-    await db.profiles.update(s.profile, { pins: { ...(p.pins ?? {}), [name]: togglePin(p.pins?.[name] ?? noPins(), card, side) } });
+    await savePin(s.profile, name, card, side);
     setMenuFor(null);
   }
   async function toggleBought(cardName: string) {
@@ -180,6 +165,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     const deckName = await freeDeckName(s.profile, `${name} (EDHREC average)`);
     await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
     setSaved(deckName);
+    haptic('success');
+    openDeck(deckName);
   }
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
@@ -386,11 +373,11 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             <span className="lbl">DECK</span>
             {saved ? (
               <DeckLink name={saved}>
-                <span className="btn">SAVED ✓ OPEN →</span>
+                <span className="btn">OPEN IN THE FORGE →</span>
               </DeckLink>
             ) : (
-              <button className="btn" onClick={saveDeck} disabled={!page || kind !== 'average'}>
-                SAVE AS DECK
+              <button className="btn forge" onClick={saveDeck} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
+                ⚒ FORGE IT
               </button>
             )}
           </div>
