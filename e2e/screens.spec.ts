@@ -390,3 +390,38 @@ test('Deck light: active decks mark their cards in use in Collection; off frees 
   await page.locator('.shelf .dlight').first().click();
   await expect(sol.locator('.inuse')).toHaveCount(1);
 });
+
+test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)', async ({ page }, info) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  const swap = async () => {
+    await page.locator('.ccard').first().click();
+    await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
+    await expect(page.locator('.forgebar')).toContainText('FORGING');
+  };
+  await swap();
+  await page.screenshot({ path: `test-results/forging-${info.project.name}.png` });
+  await page.locator('.backlink').click();
+  const ask = page.getByRole('alertdialog', { name: 'Save this deck?' });
+  await expect(ask).toBeVisible();
+  await page.screenshot({ path: `test-results/forging-ask-${info.project.name}.png` });
+  await ask.getByRole('button', { name: 'KEEP FORGING' }).click();
+  await expect(page.locator('.forgebar')).toBeVisible();
+  await page.locator('.backlink').click();
+  await ask.getByRole('button', { name: 'NO, DISCARD' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+  await swap();
+  await page.locator('.backlink').click();
+  await ask.getByRole('button', { name: 'YES, SAVE' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+  await go(page, 'collection');
+  await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
+});

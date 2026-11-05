@@ -6918,3 +6918,96 @@ details.cat {
 .cmeta > .dlight {
   margin-right: 10px;
 }
+
+/* Forging zone: the spinning card says you're tuning this deck; leaving asks to save */
+.forgebar {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--white);
+  border: 3px solid var(--hazard);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.forgebar img,
+.leavenote img {
+  image-rendering: pixelated;
+  flex: none;
+}
+.forgebar .ft {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+}
+.forgebar .ft b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--hazard);
+  letter-spacing: 1px;
+}
+.forgebar .ft small {
+  font-family: var(--se);
+  font-size: 13px;
+}
+.forgebar .btn {
+  min-height: 44px;
+  margin: 0;
+  font-size: 16px;
+  padding: 0 14px;
+}
+.backdrop.leaveback {
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.7);
+}
+.note-pop.leavenote {
+  position: fixed;
+  z-index: 71;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  max-width: none;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  transform: translate(-50%, -50%) rotate(-1deg);
+  animation: none;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .forgebar .ft {
+    flex: 1 1 calc(100% - 70px);
+  }
+  .forgebar .btn {
+    flex: 1 1 0;
+  }
+}
+.leavenote img {
+  display: block;
+  margin: 0 auto 8px;
+}
+.leavenote .nh {
+  justify-content: center;
+}
+.leavenote .leavebtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.leavenote .btn {
+  margin: 0;
+  min-height: 48px;
+}
+.leavenote .btn.secondary {
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: none;
+}

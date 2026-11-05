@@ -33,3 +33,8 @@ export async function freeDeckName(profile: number, want: string, except?: numbe
   if (!taken.has(want.toLowerCase())) return want;
   for (let i = 2; ; i++) if (!taken.has(`${want} ${i}`.toLowerCase())) return `${want} ${i}`;
 }
+
+/** A screen with unsaved work (the forging zone) can hold the app before it leaves: true = go on. */
+let guard: (() => Promise<boolean>) | null = null;
+export const setLeaveGuard = (g: (() => Promise<boolean>) | null) => void (guard = g);
+export const canLeave = () => (guard ? guard() : Promise.resolve(true));

@@ -5,7 +5,7 @@ import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
-import { onOpenCollection, onOpenDeck, onOpenDeckList } from './lib/nav';
+import { canLeave, onOpenCollection, onOpenDeck, onOpenDeckList } from './lib/nav';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
@@ -73,7 +73,8 @@ export default function App() {
   }, [hubOpen]);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
   const here = (t: Tab) => tab === t || (t === 'collection' && tab === 'decks');
-  const goDiscover = () => (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0));
+  const goDiscover = () => void canLeave().then((ok) => ok && (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0)));
+  const goTab = (t: Tab) => void canLeave().then((ok) => ok && setTab(t));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
   const other = profile === 1 ? 2 : 1;
@@ -118,7 +119,7 @@ export default function App() {
             {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
             <nav className="tabs hubnav" aria-label="Sections">
               {NAV.map(([t, label]) => (
-                <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), (t === 'discover' ? goDiscover() : setTab(t)), setHubOpen(false))}>
+                <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), (t === 'discover' ? goDiscover() : goTab(t)), setHubOpen(false))}>
                   {label}
                 </button>
               ))}
@@ -166,7 +167,7 @@ export default function App() {
       </div>
       <nav className="tabs navbar" aria-label="Sections">
         {NAV.map(([t, label]) => (
-          <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : setTab(t))}>
+          <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : goTab(t))}>
             {label}
           </button>
         ))}

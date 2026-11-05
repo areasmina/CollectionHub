@@ -1,6 +1,6 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, BUDGETS, DEFAULT_BRACKET, imgOf, NoPage, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
@@ -10,7 +10,7 @@ import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
-import { freeDeckName, openDeck } from '../lib/nav';
+import { canLeave, freeDeckName, openDeck, setLeaveGuard } from '../lib/nav';
 import { orderSections } from '../lib/sections';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
@@ -29,7 +29,8 @@ const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III', '4': 'I
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
 
-export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
+export function CommanderView({ name, s, onBack: back, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
+  const onBack = () => void canLeave().then((ok) => ok && back());
   const slug = toSlug(name);
   const [kind, setKind] = useState<'commander' | 'average'>(SHOW_AS_COMMANDER ? 'commander' : 'average');
   const [bracket, setBracket] = useState(DEFAULT_BRACKET);
@@ -167,15 +168,39 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     await db.profiles.update(s.profile, { bought: [...set] });
   }
 
-  async function saveDeck() {
+  async function saveDeck(open = true) {
     if (!page) return;
     const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
-    const deckName = await freeDeckName(s.profile, `${name} (EDHREC average)`);
+    const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
     await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+    await clearSwaps(); // the forge is done: the deck is yours now
     setSaved(deckName);
     haptic('success');
-    openDeck(deckName);
+    if (open) openDeck(deckName);
   }
+  async function clearSwaps() {
+    const p = (await db.profiles.get(s.profile))!;
+    const { [path]: _, ...rest } = p.swaps ?? {};
+    await db.profiles.update(s.profile, { swaps: rest });
+  }
+
+  // The forging zone: your first swap on this deck starts it; leaving asks whether to keep the deck.
+  const changes = Object.keys(swaps).length;
+  const forging = kind === 'average' && changes > 0;
+  const [leaving, setLeaving] = useState<((go: boolean) => void) | null>(null);
+  const live = useRef({ forging, saveDeck, clearSwaps });
+  live.current = { forging, saveDeck, clearSwaps };
+  useEffect(() => {
+    setLeaveGuard(() => (live.current.forging ? new Promise<boolean>((go) => (haptic('warn'), setLeaving(() => go))) : Promise.resolve(true)));
+    return () => setLeaveGuard(null);
+  }, []);
+  const leave = async (choice: 'save' | 'drop' | 'stay') => {
+    const go = leaving!;
+    setLeaving(null);
+    if (choice === 'save') await live.current.saveDeck(false);
+    if (choice === 'drop') (haptic('undo'), await live.current.clearSwaps());
+    go(choice !== 'stay');
+  };
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
   const toBuyCost = priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
@@ -384,7 +409,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                 <span className="btn">OPEN IN THE FORGE →</span>
               </DeckLink>
             ) : (
-              <button className="btn forge" onClick={saveDeck} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
+              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
                 ⚒ FORGE IT
               </button>
             )}
@@ -426,6 +451,50 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           </span>
         </section>
 
+        {forging && (
+          <div className="forgebar" role="status">
+            <img src="/card-spin.webp" alt="" width={46} height={67} aria-hidden="true" />
+            <span className="ft">
+              <b>⚒ FORGING</b>
+              <small>
+                {changes} {changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save
+              </small>
+            </span>
+            <button className="btn forge" onClick={() => saveDeck()}>
+              SAVE DECK
+            </button>
+            <button className="btn ink" onClick={() => (haptic('undo'), clearSwaps())}>
+              DISCARD
+            </button>
+          </div>
+        )}
+        {leaving && (
+          <>
+            <div className="backdrop leaveback" onClick={() => leave('stay')} />
+            <div className="note-pop leavenote" role="alertdialog" aria-label="Save this deck?" onClick={(e) => e.stopPropagation()}>
+              <img src="/card-spin.webp" alt="" width={70} height={102} aria-hidden="true" />
+              <div className="nh">
+                <span>
+                  SAVE THIS <mark>DECK?</mark>
+                </span>
+              </div>
+              <p className="small">
+                You made {changes} {changes === 1 ? 'swap' : 'swaps'} to {label}. Save it to your decks to keep tuning it in the Forge.
+              </p>
+              <div className="leavebtns">
+                <button className="btn forge" onClick={() => leave('save')}>
+                  YES, SAVE
+                </button>
+                <button className="btn ink" onClick={() => leave('drop')}>
+                  NO, DISCARD
+                </button>
+                <button className="btn secondary" onClick={() => leave('stay')}>
+                  KEEP FORGING
+                </button>
+              </div>
+            </div>
+          </>
+        )}
         <ShortAlert items={short} />
         {ctx && (
           <CardMenu
