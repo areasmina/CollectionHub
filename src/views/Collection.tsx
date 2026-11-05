@@ -301,7 +301,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
             <span aria-hidden="true" className="fade" />
           </label>
 
-          <CardsView entries={shown} cards={cards} />
+          <CardsView entries={shown} cards={cards} profile={profile} binderName={name} />
         </section>
       </main>
     </>

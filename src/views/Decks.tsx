@@ -3,11 +3,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
-import { changeQty, removeFromDeck, removeOneFromBinder, replaceInDeck, savePin, setFoil } from '../lib/deckedit';
+import { replaceInDeck, savePin, setCommander } from '../lib/deckedit';
 import { noPins, pinOf } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { pagePath, showPage, type EdhPage } from '../lib/edhrec';
 import { SwapNote, type SwapOption } from './SwapNote';
+import { CardMenu } from './CardMenu';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
@@ -147,106 +148,8 @@ function PickCommander({ deck, cardOf }: { deck: Deck; cardOf: (name: string) =>
 }
 
 /** Make a deck card the commander (the previous one stays in the deck as a normal card). */
-export const setCommander = (deck: Deck, name: string) => db.decks.update(deck.id!, { commander: name, updated: Date.now() });
 
 /** Card menu (right-click / press and hold): commander, links, foil, copies, remove from deck or binder. */
-function CardMenu({ deck, s, at, owned, onClose, onToast }: { deck: Deck; s: Shared; at: { card: DeckCard; x: number; y: number }; owned: number; onClose: () => void; onToast: (t: { text: string; undo?: () => unknown }) => void }) {
-  const c = deck.cards.find((x) => x.name === at.card.name) ?? at.card; // live: + / − update the count
-  const ref = useRef<HTMLDivElement>(null);
-  const [copied, setCopied] = useState(false);
-  // Keep the note on screen: open left / up when the click is near the right / bottom edge.
-  const [pos, setPos] = useState({ left: at.x, top: at.y });
-  useLayoutEffect(() => {
-    const r = ref.current!.getBoundingClientRect();
-    setPos({ left: Math.max(8, Math.min(at.x, innerWidth - r.width - 8)), top: Math.max(8, Math.min(at.y, innerHeight - r.height - 8)) });
-  }, [at.x, at.y]);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    addEventListener('keydown', key);
-    addEventListener('scroll', onClose, { passive: true });
-    return () => (removeEventListener('keydown', key), removeEventListener('scroll', onClose));
-  }, []);
-  const isCmdr = c.name === deck.commander;
-  const many = c.qty > 1 || BASICS.has(norm(c.name));
-  const act = (f: () => unknown) => () => (f(), onClose());
-  const link = (href: string, text: string) => (
-    <li>
-      <a href={href} target="_blank" rel="noreferrer" onClick={onClose}>
-        {text} ↗
-      </a>
-    </li>
-  );
-  return (
-    <>
-      <div className="backdrop menuback" onClick={onClose} onContextMenu={(e) => (e.preventDefault(), onClose())} />
-      <div ref={ref} className="cardmenu" role="menu" aria-label={`${c.name} options`} style={pos}>
-        <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
-        <div className="mh">{c.name}</div>
-        <ul>
-          {!isCmdr && (
-            <li>
-              <button onClick={act(() => (haptic('success'), setCommander(deck, c.name)))}>{deck.commander ? `★ Swap commander (replaces ${deck.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
-            </li>
-          )}
-          <li>
-            <button
-              onClick={() =>
-                navigator.clipboard
-                  ?.writeText(c.name)
-                  .then(() => setCopied(true))
-                  .then(() => setTimeout(onClose, 600))
-              }
-            >
-              {copied ? 'Copied ✓' : 'Copy card name'}
-            </button>
-          </li>
-          {link(shopUrl(c.name), 'Open in shop')}
-          {link(`https://edhrec.com/${isCmdr ? 'commanders' : 'cards'}/${slug(c.name.split(' // ')[0])}`, 'Open on EDHREC')}
-          {link(scryfallUrl(c.name), 'Open on Scryfall')}
-          <li className="sep" />
-          <li>
-            <button onClick={act(() => (haptic('success'), setFoil(deck, s.profile, c.name, !c.foil)))}>
-              {c.foil ? 'Switch to non-foil' : '✦ Switch to foil'}
-              <small>{owned ? ' · your binder copy too' : ' · deck only (not owned)'}</small>
-            </button>
-          </li>
-          {many && (
-            <li className="qtyrow">
-              <span>Copies: {c.qty}</span>
-              <button aria-label="One copy fewer" onClick={() => (haptic('tap'), changeQty(deck, c.name, -1))}>
-                −
-              </button>
-              <button aria-label="One copy more" onClick={() => (haptic('tap'), changeQty(deck, c.name, 1))}>
-                +
-              </button>
-            </li>
-          )}
-          <li className="sep" />
-          <li>
-            <button className="danger" onClick={act(async () => (haptic('warn'), onToast({ text: `Removed ${c.name} from the deck`, undo: await removeFromDeck(deck, c.name) })))}>
-              Remove from deck
-            </button>
-          </li>
-          {owned > 0 && !BASICS.has(norm(c.name)) && (
-            <li>
-              <button
-                className="danger"
-                onClick={act(async () => {
-                  if (!confirm(`Take one copy of ${c.name} out of ${s.binderName}? You own ${owned}.`)) return;
-                  haptic('warn');
-                  onToast({ text: `Removed one ${c.name} from ${s.binderName}`, undo: await removeOneFromBinder(s.profile, c.name, c.foil) });
-                })}
-              >
-                Remove from binder <small>(you own {owned})</small>
-              </button>
-            </li>
-          )}
-        </ul>
-      </div>
-    </>
-  );
-}
-
 /** Mana curve: non-land cards by mana value (7 = 7+). */
 function Curve({ curve }: { curve: number[] }) {
   const max = Math.max(1, ...curve);
@@ -733,7 +636,20 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <DeckPanel deck={deck} st={st} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
           </div>
         </div>
-        {menu && <CardMenu deck={deck} s={s} at={menu} owned={s.mine.get(norm(menu.card.name)) ?? 0} onClose={() => setMenu(null)} onToast={setToast} />}
+        {menu && (
+          <CardMenu
+            name={menu.card.name}
+            at={menu}
+            profile={s.profile}
+            binderName={s.binderName}
+            owned={s.mine.get(norm(menu.card.name)) ?? 0}
+            deck={deck}
+            onSwap={menu.card.name === deck.commander || BASICS.has(norm(menu.card.name)) ? undefined : () => setSwapFor(menu.card.name)}
+            pin={deck.commander ? { side: pinOf(pins, menu.card.name), canIn: owned(menu.card.name), onPin: (side) => savePin(s.profile, deck.commander!, menu.card.name, side) } : undefined}
+            onClose={() => setMenu(null)}
+            onToast={setToast}
+          />
+        )}
         {toast && (
           <div className="toast" role="status">
             <span>{toast.text}</span>

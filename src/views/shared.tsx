@@ -204,6 +204,21 @@ export function CardLine({
             {quiet ? '⇄' : '↺ SWAP'}
           </button>
         )}
+        {onMenu && (
+          <button
+            className="morebtn"
+            aria-label={`More for ${name}`}
+            title="More (right-click or hold works too)"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              haptic('open');
+              onMenu(r.left, r.bottom);
+            }}
+          >
+            ⋯
+          </button>
+        )}
         <PriceLink card={card} plain={st === 'owned' && !marker} />
       </span>
       {children}
@@ -230,6 +245,21 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
         {onOpen && (
           <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
             {quiet ? '⇄' : '↺ SWAP'}
+          </button>
+        )}
+        {onMenu && (
+          <button
+            className="morebtn"
+            aria-label={`More for ${name}`}
+            title="More (right-click or hold works too)"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              haptic('open');
+              onMenu(r.left, r.bottom);
+            }}
+          >
+            ⋯
           </button>
         )}
         <PriceLink card={card} plain={st === 'owned' && !marker} />

@@ -225,18 +225,10 @@ export function Discover(s: Shared) {
     .filter((c) => colours.every((col) => c.ci.includes(col)))
     .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name));
   const toggle = (col: string) => setColours((cs) => (cs.includes(col) ? cs.filter((x) => x !== col) : [...cs, col]));
-  const tick = ['★ WHAT CAN YOU BUILD WITH WHAT YOU OWN?', '★ OWN IT · BUILD IT · SLEEVE IT', '★ MISSING CARDS GET SWAPPED FROM YOUR BINDER'];
 
   return (
     <>
       <PageDecor seed={501} rays="46% 30%" sheet={{ side: 'right', top: 560, rot: -6 }} />
-      <div className="ticker" aria-hidden="true">
-        <span>
-          {[...tick, ...tick].map((t, i) => (
-            <span key={i}>{t}</span>
-          ))}
-        </span>
-      </div>
       <main>
         <section className="hero">
           <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} />

@@ -67,3 +67,13 @@ export async function savePin(profile: number, commander: string, card: string, 
   const p = (await db.profiles.get(profile))!;
   await db.profiles.update(profile, { pins: { ...(p.pins ?? {}), [commander]: togglePin(p.pins?.[commander] ?? noPins(), card, side) } });
 }
+
+export const setCommander = (deck: Deck, name: string) => db.decks.update(deck.id!, { commander: name, updated: Date.now() });
+
+/** Adds one copy of a card to a deck; returns an undo. */
+export async function addToDeck(deck: Deck, name: string) {
+  const before = deck.cards;
+  const has = before.find((c) => norm(c.name) === norm(name));
+  await saveDeck(deck, has ? before.map((c) => (c === has ? { ...c, qty: c.qty + 1 } : c)) : [...before, { name, qty: 1 }]);
+  return () => saveDeck(deck, before);
+}

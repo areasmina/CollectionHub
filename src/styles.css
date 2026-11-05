@@ -6804,3 +6804,61 @@ details.cat {
   background: var(--accent);
   color: var(--white);
 }
+
+/* One card menu everywhere: add-to-deck list, "also in" decks */
+.cardmenu {
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+}
+.cardmenu ul.sub {
+  margin: 0 0 4px 16px;
+  border-left: 2px dashed #9a9a9a;
+}
+.cardmenu li.using {
+  padding: 6px 8px;
+  font-family: var(--se);
+  font-size: 14px;
+}
+.cardmenu .inl {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  min-height: 32px;
+}
+.cardmenu li > button:disabled {
+  opacity: 0.45;
+}
+.morebtn {
+  background: transparent;
+  color: var(--text);
+  border: 2px solid var(--text);
+  min-width: 44px;
+  min-height: 40px;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.75;
+}
+.morebtn:hover,
+.morebtn:focus-visible {
+  opacity: 1;
+}
+.ztile.ctile > .morebtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  background: var(--ink);
+  color: var(--white);
+  border-color: var(--white);
+  min-height: 36px;
+  min-width: 40px;
+}
+@media (max-width: 700px) {
+  .cardmenu {
+    width: calc(100vw - 32px);
+    transform: none;
+  }
+}

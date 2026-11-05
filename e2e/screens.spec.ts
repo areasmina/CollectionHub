@@ -343,3 +343,20 @@ test('Decks home + Forge: my decks shelf, FORGE IT opens the deck, swap from the
   await page.locator('.shelf li button').first().click();
   await expect(page.locator('.forgehint')).toBeVisible();
 });
+
+test('One card menu: ⋯ / right-click on commander page and Collection cards, same items', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'More for Sol Ring' }).click();
+  const m = page.getByRole('menu', { name: 'Sol Ring options' });
+  await expect(m.getByRole('button', { name: /Swap…/ })).toBeVisible();
+  await expect(m.getByRole('button', { name: '💀 Never use' })).toBeVisible();
+  await expect(m.getByText('also in:')).toBeVisible();
+  await fits(page, ['.cardmenu']);
+  await m.getByRole('button', { name: /Swap…/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();
+  await go(page, 'collection');
+  await page.locator('li', { hasText: 'Sol Ring' }).first().click({ button: 'right' });
+  const c = page.getByRole('menu', { name: 'Sol Ring options' });
+  await expect(c.getByRole('button', { name: /Remove one from binder/ })).toBeVisible();
+  await expect(c.getByRole('button', { name: /Swap…/ })).toHaveCount(0);
+});

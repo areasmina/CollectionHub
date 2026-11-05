@@ -19,6 +19,7 @@ import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arr
 // EDHREC's own order first on commander pages.
 const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
 import { SwapNote } from './SwapNote';
+import { CardMenu, type Toast } from './CardMenu';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -41,6 +42,13 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [ctx, setCtx] = useState<{ slot: string; name: string; x: number; y: number } | null>(null); // card menu
+  const [toast, setToast] = useState<Toast | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
   const path = pagePath(kind, slug, bracket, tag, budget);
   const profile = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
   const swaps = profile?.swaps?.[path] ?? {};
@@ -419,6 +427,29 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
         </section>
 
         <ShortAlert items={short} />
+        {ctx && (
+          <CardMenu
+            name={ctx.name}
+            at={ctx}
+            profile={s.profile}
+            binderName={s.binderName}
+            owned={s.mine.get(norm(ctx.name)) ?? 0}
+            onSwap={kind === 'average' && norm(ctx.slot) !== norm(name) ? () => setMenuFor(ctx.slot) : undefined}
+            pin={norm(ctx.slot) !== norm(name) ? { side: pinOf(pins, ctx.name), canIn: statusOf(ctx.name, s.mine) === 'owned', onPin: (side) => setPin(ctx.name, side) } : undefined}
+            onClose={() => setCtx(null)}
+            onToast={setToast}
+          />
+        )}
+        {toast && (
+          <div className="toast" role="status">
+            <span>{toast.text}</span>
+            {toast.undo && (
+              <button onClick={() => (haptic('undo'), toast.undo!(), setToast(null))}>
+                UNDO
+              </button>
+            )}
+          </div>
+        )}
         {error && <p className="error">{error}</p>}
         {!page && !error && <p className="count">Loading EDHREC data…</p>}
         {page && (
@@ -492,6 +523,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                             markText={mark}
                             quiet={statusOf(now, s.mine) === 'owned'}
                             onOpen={swappable ? () => setMenuFor(c.name) : undefined}
+                            onMenu={(x, y) => setCtx({ slot: c.name, name: now, x, y })}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >
                             {menuFor === c.name && (
