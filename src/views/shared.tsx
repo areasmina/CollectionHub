@@ -226,8 +226,8 @@ export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foi
 export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void; roman?: boolean }) {
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
-      {options.map(([v, text], i) => (
-        <button key={v} role="radio" className={roman && i > 0 ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
+      {options.map(([v, text]) => (
+        <button key={v} role="radio" className={roman ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}

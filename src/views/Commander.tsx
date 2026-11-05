@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, BUDGETS, imgOf, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, BUDGETS, DEFAULT_BRACKET, imgOf, NoPage, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
@@ -29,7 +29,8 @@ const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.c
 export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const slug = toSlug(name);
   const [kind, setKind] = useState<'commander' | 'average'>(SHOW_AS_COMMANDER ? 'commander' : 'average');
-  const [bracket, setBracket] = useState('');
+  const [bracket, setBracket] = useState(DEFAULT_BRACKET);
+  const [noBracket, setNoBracket] = useState(false); // EDHREC has no page for this bracket: showing all brackets
   const [budget, setBudget] = useState('');
   const [tag, setTag] = useState('');
   const [page, setPage] = useState<EdhPage | null>(null);
@@ -53,9 +54,18 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
     setError('');
     setMenuFor(null);
     // Saved pages show at once; pages over a day old are refreshed quietly behind them.
-    showPage(path, (p) => live && setPage(p)).catch((e) => live && setError(e.message));
+    // No page for this bracket (thin commanders): the same view across all brackets, said under the bracket switch.
+    setNoBracket(false);
+    showPage(path, (p) => live && setPage(p))
+      .catch((e) => {
+        if (!(e instanceof NoPage) || !bracket) throw e;
+        if (live) setNoBracket(true);
+        return showPage(pagePath(kind, slug, '', tag, budget), (p) => live && setPage(p));
+      })
+      .catch((e) => live && setError(e.message));
     if (kind === 'average')
       showPage(pagePath('commander', slug, bracket, tag, budget), (p) => live && setRecs(p))
+        .catch(() => showPage(pagePath('commander', slug, '', tag, budget), (p) => live && setRecs(p)))
         .catch(() => showPage(pagePath('commander', slug), (p) => live && setRecs(p)))
         .catch(() => {});
     return () => {
@@ -296,6 +306,7 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
           <div className="cell">
             <span className="lbl">BRACKET</span>
             <Segs label="Bracket" value={bracket} options={BRACKETS.map(([v, t]) => [v, ROMAN[t] ?? t.toUpperCase()])} onChange={setBracket} roman />
+            {noBracket && <small className="bnote">No EDHREC decks for bracket {ROMAN[BRACKETS.find(([v]) => v === bracket)?.[1] ?? '']}: showing all brackets</small>}
           </div>
           <div className="cell">
             <span className="lbl">BUDGET</span>

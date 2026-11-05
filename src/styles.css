@@ -6422,3 +6422,11 @@ details.cat {
   line-height: 1.4;
   max-width: 320px;
 }
+
+/* Bracket fallback note under the bracket switch (no EDHREC page for that bracket). */
+.strip .bnote {
+  display: block;
+  margin-top: 6px;
+  font: 11px/1.3 var(--mono, 'Space Mono', monospace);
+  color: #ffcc00;
+}
