@@ -361,3 +361,21 @@ test('One card menu: ⋯ / right-click on commander page and Collection cards, s
   await expect(c.getByRole('button', { name: /Remove one from binder/ })).toBeVisible();
   await expect(c.getByRole('button', { name: /Swap…/ })).toHaveCount(0);
 });
+
+test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'drag is for a mouse; touch taps');
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await note.locator('.picks button', { hasText: 'Arcane Signet' }).dragTo(note.locator('.viewer'));
+  await expect(page.locator('.swapmark', { hasText: '↔ for Sol Ring' })).toBeVisible();
+});

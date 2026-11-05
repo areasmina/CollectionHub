@@ -6862,3 +6862,10 @@ details.cat {
     transform: none;
   }
 }
+.swapnote .viewer.dropover img {
+  outline: 4px dashed var(--accent);
+  outline-offset: 4px;
+}
+.swapnote li button[draggable='true'] {
+  cursor: grab;
+}

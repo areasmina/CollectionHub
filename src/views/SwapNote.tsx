@@ -1,14 +1,12 @@
-import { haptic } from "../lib/haptics";
-import { useRef, useState } from "react";
-import { searchCards, type PinSide } from "../lib/pins";
-import { reasonsFor, whyIn, type SubCard } from "../lib/subs";
-import { scryfallUrl, showPreview } from "./shared";
-import { Tape } from "./zine";
+import { haptic } from '../lib/haptics';
+import { useRef, useState } from 'react';
+import { searchCards, type PinSide } from '../lib/pins';
+import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
+import { scryfallUrl, showPreview } from './shared';
+import { Tape } from './zine';
 
 // Hover preview only with a real mouse: a tap on a phone also fires a fake hover.
-const mouse = () =>
-  typeof matchMedia === "function" &&
-  matchMedia("(hover: hover) and (pointer: fine)").matches;
+const mouse = () => typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 export interface SwapOption {
   sub: SubCard;
@@ -18,42 +16,24 @@ export interface SwapOption {
 }
 
 /** A suggestion row: hover (mouse) shows it in the viewer; press and hold (touch) shows it full screen; tap swaps. */
-function Option({
-  o,
-  missing,
-  onPick,
-  onLook,
-}: {
-  o: SwapOption;
-  missing: SubCard;
-  onPick: () => void;
-  onLook: (src?: string) => void;
-}) {
+function Option({ o, missing, onPick, onLook }: { o: SwapOption; missing: SubCard; onPick: () => void; onLook: (src?: string) => void }) {
   const timer = useRef<number>(undefined);
   const held = useRef(false);
   return (
     <li>
       <button
+        draggable={mouse()}
+        onDragStart={(e) => (e.dataTransfer.setData('text/x-card', o.sub.name), (e.dataTransfer.effectAllowed = 'move'), onLook(o.big))}
         onClick={() => (held.current ? (held.current = false) : onPick())}
-        onPointerEnter={(e) =>
-          e.pointerType === "mouse" && mouse() && onLook(o.big)
-        }
-        onFocus={(e) =>
-          mouse() && e.target.matches(":focus-visible") && onLook(o.big)
-        }
+        onPointerEnter={(e) => e.pointerType === 'mouse' && mouse() && onLook(o.big)}
+        onFocus={(e) => mouse() && e.target.matches(':focus-visible') && onLook(o.big)}
         onContextMenu={(e) => e.preventDefault()}
         onPointerDown={(e) => {
-          if (e.pointerType === "mouse" || !o.big) return;
+          if (e.pointerType === 'mouse' || !o.big) return;
           held.current = false;
-          timer.current = window.setTimeout(
-            () => ((held.current = true), haptic("open"), showPreview(o.big!)),
-            350,
-          );
+          timer.current = window.setTimeout(() => ((held.current = true), haptic('open'), showPreview(o.big!)), 350);
         }}
-        onPointerUp={() => (
-          clearTimeout(timer.current),
-          held.current && showPreview(null)
-        )}
+        onPointerUp={() => (clearTimeout(timer.current), held.current && showPreview(null))}
         onPointerCancel={() => (clearTimeout(timer.current), showPreview(null))}
       >
         {o.img && <img src={o.img} alt="" loading="lazy" />}
@@ -106,7 +86,8 @@ export function SwapNote({
   onClose: () => void;
 }) {
   const [look, setLook] = useState<string | undefined>();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState('');
+  const [over, setOver] = useState(false); // a card dragged over the slot
   const shown = look ?? big;
   const why = whyIn(missing);
   const now = replaced ?? name;
@@ -117,29 +98,16 @@ export function SwapNote({
     6,
     (o) => o.sub.name,
   );
-  const row = (o: SwapOption) => (
-    <Option
-      key={o.sub.name}
-      o={o}
-      missing={missing}
-      onPick={() => (setQ(""), onPick(o.sub.name))}
-      onLook={setLook}
-    />
-  );
+  const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
   return (
-    <div
-      className="note-pop swapnote"
-      role="dialog"
-      aria-label={`Swap ${now}`}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="note-pop swapnote" role="dialog" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
       <Tape
         style={{
           top: -12,
-          left: "40%",
+          left: '40%',
           width: 90,
           height: 24,
-          transform: "rotate(4deg)",
+          transform: 'rotate(4deg)',
         }}
       />
       <div className="nh">
@@ -149,24 +117,24 @@ export function SwapNote({
         </span>
         <button className="close" aria-label="Close" onClick={onClose}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-            <path
-              d="M2 2 L12 12 M12 2 L2 12"
-              stroke="currentColor"
-              strokeWidth="3"
-            />
+            <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="3" />
           </svg>
         </button>
       </div>
       <div className="swapbody">
-        <div className="viewer" onMouseLeave={() => setLook(undefined)}>
+        <div
+          className={`viewer${over ? ' dropover' : ''}`}
+          onMouseLeave={() => setLook(undefined)}
+          onDragOver={(e) => e.dataTransfer.types.includes('text/x-card') && (e.preventDefault(), setOver(true))}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => {
+            const card = e.dataTransfer.getData('text/x-card');
+            setOver(false);
+            if (card) (e.preventDefault(), haptic('success'), setQ(''), onPick(card));
+          }}
+        >
           {shown && <img src={shown} alt="" />}
-          <small>
-            {look
-              ? `↔ instead of ${now}`
-              : replaced
-                ? `EDHREC’s card for this slot`
-                : "why it’s in the deck"}
-          </small>
+          <small>{look ? `↔ instead of ${now}` : replaced ? `EDHREC’s card for this slot` : 'why it’s in the deck'}</small>
           {!look && why.length > 0 && (
             <span className="whys">
               {why.map((r) => (
@@ -174,12 +142,7 @@ export function SwapNote({
               ))}
             </span>
           )}
-          <a
-            className="scrylink"
-            href={scryfallUrl(now)}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className="scrylink" href={scryfallUrl(now)} target="_blank" rel="noreferrer">
             {now} on Scryfall ↗
           </a>
         </div>
@@ -198,59 +161,26 @@ export function SwapNote({
           )}
           <small className="hint">
             top 3 from your binder
-            {mouse() ? " · hover to read one" : " · hold one to read it"}
+            {mouse() ? ' · hover to read one, click or drag it onto the card' : ' · hold one to read it'}
           </small>
           <ul>{options.map(row)}</ul>
-          {options.length === 0 && (
-            <p className="small">
-              {loading
-                ? "Loading suggestions…"
-                : "No card of yours fits this slot by role. Search below."}
-            </p>
-          )}
+          {options.length === 0 && <p className="small">{loading ? 'Loading suggestions…' : 'No card of yours fits this slot by role. Search below.'}</p>}
           <label className="swapq">
             <span className="hint">or pick any card of yours</span>
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="search your binder…"
-              aria-label="Search your binder"
-              autoComplete="off"
-            />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search your binder…" aria-label="Search your binder" autoComplete="off" />
           </label>
-          {q.trim().length >= 2 &&
-            (found.length ? (
-              <ul className="found">{found.map(row)}</ul>
-            ) : (
-              <p className="small">
-                No card of yours in these colours matches “{q}”.
-              </p>
-            ))}
+          {q.trim().length >= 2 && (found.length ? <ul className="found">{found.map(row)}</ul> : <p className="small">No card of yours in these colours matches “{q}”.</p>)}
           {onPin && (
-            <div
-              className="pinrow"
-              role="group"
-              aria-label={`Pins for every ${cmdr} deck`}
-            >
+            <div className="pinrow" role="group" aria-label={`Pins for every ${cmdr} deck`}>
               <button
-                aria-pressed={pin === "in"}
-                disabled={!canPinIn && pin !== "in"}
-                title={canPinIn ? "" : "Only cards you own can be pinned in"}
-                onClick={() => (
-                  haptic(pin === "in" ? "undo" : "success"),
-                  onPin("in")
-                )}
+                aria-pressed={pin === 'in'}
+                disabled={!canPinIn && pin !== 'in'}
+                title={canPinIn ? '' : 'Only cards you own can be pinned in'}
+                onClick={() => (haptic(pin === 'in' ? 'undo' : 'success'), onPin('in'))}
               >
                 📌 ALWAYS IN
               </button>
-              <button
-                aria-pressed={pin === "out"}
-                onClick={() => (
-                  haptic(pin === "out" ? "undo" : "success"),
-                  onPin("out")
-                )}
-              >
+              <button aria-pressed={pin === 'out'} onClick={() => (haptic(pin === 'out' ? 'undo' : 'success'), onPin('out'))}>
                 💀 NEVER USE
               </button>
               <small>for every {cmdr} deck</small>
