@@ -1,67 +1,69 @@
-import { createClient } from '@supabase/supabase-js';
 import { db, type Deck, type Entry, type Profile } from './db';
 import { resolveRows } from './scryfall';
+import { cleanCode, keysFor, newCode, seal, unseal, type Keys } from './synccode';
+import { clearDirty, lastVersion, quietly, setLastVersion, setSyncCode, syncCode } from './syncstate';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-import { authReturn } from './authreturn';
-import { clearDirty, quietly, setLastVersion } from './syncstate';
-export { authReturn };
+/** Device sync with a sync code (no account): this device's binders and decks go up as one encrypted snapshot to the
+ *  CollectionHub sync Worker (worker/sync.js). The Worker only sees a hash of the code and bytes it can't read. */
+export const SYNC_URL = ((import.meta.env.VITE_SYNC_URL as string | undefined) || 'https://collectionhub-sync.areasmina.workers.dev').replace(/\/$/, '');
 
-/** null when sync isn't configured; the app works fully without it. */
-export const supabase = url && key
-  ? createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } })
-  : null;
-
-// Phones pause timers in the background: on return, refresh the token right away instead of waiting.
-if (supabase && typeof document !== 'undefined')
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      supabase.auth.startAutoRefresh();
-      supabase.auth.getSession();
-    }
-  });
-
-/** The signed-in user from the saved session (works offline; a network hiccup doesn't look like a sign-out). */
-export async function currentUser() {
-  const { data } = await supabase!.auth.getSession();
-  return data.session?.user ?? null;
+/** Another device saved since this device's last sync (the save was refused, nothing was lost). */
+export class ChangedElsewhere extends Error {}
+/** The code was replaced with a new one on another device ("Change code"), or turned off there. */
+export class CodeGone extends Error {
+  constructor() {
+    super('This sync code was changed on another device. Turn off sync here and link this device with the new code.');
+  }
 }
 
-/** Whether a sign-in provider (google, github) is switched on in Supabase (public settings endpoint). */
-export async function providerEnabled(provider: string) {
+export interface Snapshot {
+  app: 'collectionhub';
+  fmt: 1;
+  at: number;
+  profiles: Profile[];
+  entries: Entry[];
+  decks: Deck[];
+}
+
+let cached: { code: string; keys: Keys } | null = null;
+async function keys(code = syncCode()) {
+  if (!code) throw new Error('Sync is off on this device.');
+  if (cached?.code !== code) cached = { code, keys: await keysFor(code) };
+  return cached.keys;
+}
+
+async function call(id: string, path = '', init: RequestInit = {}) {
+  let r: Response;
   try {
-    const r = await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key! } });
-    return !!(await r.json()).external?.[provider];
+    r = await fetch(`${SYNC_URL}/v1/${id}${path}`, { cache: 'no-store', ...init });
   } catch {
-    return true; // can't tell: let Supabase answer
+    throw new Error("Couldn't reach the sync service.");
   }
+  if (r.status === 410) throw new CodeGone();
+  return r;
+}
+const failed = async (r: Response) => new Error(r.status === 413 ? 'Your binders and decks are too big to sync (over 10 MB).' : `Sync service answered ${r.status}.`);
+
+/** The cloud copy's version: 0 when nothing was saved under this code yet. */
+export async function cloudVersion(code?: string) {
+  const r = await call((await keys(code)).id, '/version');
+  if (!r.ok) throw await failed(r);
+  return ((await r.json()) as { v: number }).v;
 }
 
-export const signIn = (email: string) =>
-  supabase!.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
-
-async function userId() {
-  const user = await currentUser();
-  if (!user) throw new Error('Sign in first.');
-  return user.id;
+async function download(code?: string): Promise<{ v: number; snap: Snapshot } | null> {
+  const k = await keys(code);
+  const r = await call(k.id);
+  if (r.status === 404) return null;
+  if (!r.ok) throw await failed(r);
+  const snap = await unseal<Snapshot>(new Uint8Array(await r.arrayBuffer()), k);
+  if (snap?.app !== 'collectionhub' || !Array.isArray(snap.entries)) throw new Error("The cloud copy isn't a CollectionHub snapshot.");
+  return { v: Number(r.headers.get('X-Version')), snap };
 }
 
-async function selectAll(table: string) {
-  const rows: any[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase!.from(table).select('*').range(from, from + 999);
-    if (error) throw error;
-    rows.push(...data);
-    if (data.length < 1000) return rows;
-  }
-}
-
-async function insertAll(table: string, rows: object[]) {
-  for (let i = 0; i < rows.length; i += 500) {
-    const { error } = await supabase!.from(table).insert(rows.slice(i, i + 500));
-    if (error) throw error;
-  }
+async function snapshot(): Promise<Snapshot> {
+  const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
+  return { app: 'collectionhub', fmt: 1, at: Date.now(), profiles, entries, decks };
 }
 
 /** Why a sync would destroy data, or null when it's safe. Counts are card entries + decks. */
@@ -70,80 +72,28 @@ export function syncRisk(dir: 'push' | 'pull', local: number, cloud: number): st
   if (dir === 'pull' && cloud === 0 && local > 0) return 'The cloud copy is empty, so Pull would erase this device. Push from this device first (nothing was changed).';
   return null;
 }
+const size = (s: Pick<Snapshot, 'entries' | 'decks'>) => s.entries.length + s.decks.length;
 
-const count = async (table: string, uid: string) => {
-  const { count: n, error } = await supabase!.from(table).select('id', { count: 'exact', head: true }).eq('user_id', uid);
-  if (error) throw error;
-  return n ?? 0;
-};
-// Rows get increasing ids: everything at or below this id belongs to the previous push.
-const maxId = async (table: string, uid: string) => {
-  const { data, error } = await supabase!.from(table).select('id').eq('user_id', uid).order('id', { ascending: false }).limit(1);
-  if (error) throw error;
-  return (data?.[0]?.id as number | undefined) ?? 0;
-};
-const dropRows = async (table: string, uid: string, op: 'lte' | 'gt', id: number) => {
-  const { error } = await supabase!.from(table).delete().eq('user_id', uid)[op]('id', id);
-  if (error) throw error;
-};
-
-// shortcut: whole snapshot per account, last push wins; upgrade to per-row merging if two devices edit offline at once.
-export async function push() {
+/** Saves this device's copy. `base` = the cloud version it replaces (default: the one this device last matched);
+ *  `force` replaces whatever is there now ("Keep this device"). */
+export async function push(opts: { base?: number; force?: boolean; code?: string } = {}) {
   const started = Date.now();
-  const uid = await userId();
-  const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
-  const risk = syncRisk('push', entries.length + decks.length, (await count('cards', uid)) + (await count('decks', uid)));
-  if (risk) throw new Error(risk);
-  // New rows go in first; the old ones are removed only once everything arrived, so a failed push never empties the cloud.
-  const old = { cards: await maxId('cards', uid), decks: await maxId('decks', uid) };
-  // `extras` (swaps, shopping-list checks) and `added` need supabase/migrations/002_extras.sql; without it they stay on this device.
-  const profileRows = profiles.map((p) => ({ user_id: uid, slot: p.id, name: p.name, extras: { swaps: p.swaps ?? {}, bought: p.bought ?? [] } }));
-  let migrated = true;
-  let { error } = await supabase!.from('profiles').upsert(profileRows);
-  if (error?.code === 'PGRST204') {
-    migrated = false;
-    ({ error } = await supabase!.from('profiles').upsert(profileRows.map(({ extras: _, ...r }) => r)));
+  const k = await keys(opts.code);
+  const snap = await snapshot();
+  let base = opts.base ?? lastVersion();
+  if (opts.force || (!size(snap) && base === 0)) {
+    base = await cloudVersion(opts.code);
+    const cloud = base ? await download(opts.code) : null;
+    const risk = syncRisk('push', size(snap), cloud ? size(cloud.snap) : 0);
+    if (risk) throw new Error(risk);
   }
-  if (error) throw error;
-  try {
-  await insertAll(
-    'cards',
-    entries.map((e) => ({
-      user_id: uid,
-      slot: e.profile,
-      card_id: e.cardId,
-      name: e.name,
-      qty: e.qty,
-      set_code: e.set ?? null,
-      collector_number: e.cn ?? null,
-      foil: !!e.foil,
-      ...(migrated && e.added ? { added: new Date(e.added).toISOString() } : {}),
-    })),
-  );
-  // Deck note + tags need supabase/migrations/003_deck_extras.sql; without it they stay on this device.
-  const deckRows = decks.map((d) => ({ user_id: uid, slot: d.profile, name: d.name, commander: d.commander ?? null, cards: d.cards, updated_at: new Date(d.updated).toISOString(), extras: { note: d.note ?? '', tags: d.tags ?? [] } }));
-  try {
-    await insertAll('decks', deckRows);
-  } catch (e) {
-    if ((e as { code?: string }).code !== 'PGRST204') throw e;
-    migrated = false;
-    await insertAll('decks', deckRows.map(({ extras: _, ...r }) => r));
-  }
-  } catch (e) {
-    // Undo the half-finished push: the previous copy is still complete.
-    await dropRows('cards', uid, 'gt', old.cards).catch(() => {});
-    await dropRows('decks', uid, 'gt', old.decks).catch(() => {});
-    throw e;
-  }
-  if (old.cards) await dropRows('cards', uid, 'lte', old.cards);
-  if (old.decks) await dropRows('decks', uid, 'lte', old.decks);
-  // Stamping the version last tells other devices the new copy is complete.
-  const version = new Date().toISOString();
-  const { error: stampErr } = await supabase!.from('profiles').update({ updated_at: version }).eq('user_id', uid);
-  if (stampErr) throw stampErr;
-  setLastVersion(Date.parse(version));
+  const r = await call(k.id, '', { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'X-Base-Version': String(base) }, body: (await seal(snap, k)) as BodyInit });
+  if (r.status === 409) throw new ChangedElsewhere('Changed on another device since the last sync.');
+  if (!r.ok) throw await failed(r);
+  const { v } = (await r.json()) as { v: number };
+  setLastVersion(v);
   clearDirty(started);
-  return { cards: entries.length, decks: decks.length, migrated };
+  return { cards: snap.entries.length, decks: snap.decks.length, v };
 }
 
 /** This device's binders and decks as they were before the last Pull. */
@@ -162,55 +112,71 @@ export async function undoPull() {
   return { cards: b.entries.length, decks: b.decks.length };
 }
 
-export async function pull() {
+/** Replaces this device's binders and decks with the cloud copy (the old ones are kept for Undo). */
+export async function pull(code?: string) {
   const started = Date.now();
-  const uid = await userId();
-  const version = await cloudVersion(uid);
-  const [profiles, cards, decks] = await Promise.all([selectAll('profiles'), selectAll('cards'), selectAll('decks')]);
+  const got = await download(code);
   const local = { profiles: await db.profiles.toArray(), entries: await db.entries.toArray(), decks: await db.decks.toArray() };
-  const risk = syncRisk('pull', local.entries.length + local.decks.length, cards.length + decks.length);
+  const risk = syncRisk('pull', size(local), got ? size(got.snap) : 0);
   if (risk) throw new Error(risk);
+  if (!got) return { cards: 0, decks: 0 };
+  const { snap, v } = got;
   await db.edhrec.put({ path: BACKUP, data: local, at: Date.now() });
-  await quietly(() => db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
-    for (const p of profiles) {
-      const local = await db.profiles.get(p.slot);
-      // Without the extras column, keep this device's swaps and checks.
-      await db.profiles.put({ id: p.slot, name: p.name, swaps: p.extras?.swaps ?? local?.swaps, bought: p.extras?.bought ?? local?.bought });
-    }
-    await db.entries.clear();
-    await db.decks.clear();
-    await db.entries.bulkAdd(
-      cards.map((c) => ({ profile: c.slot, cardId: c.card_id, name: c.name, qty: c.qty, set: c.set_code ?? undefined, cn: c.collector_number ?? undefined, foil: c.foil, added: c.added ? Date.parse(c.added) : undefined })),
-    );
-    await db.decks.bulkAdd(decks.map((d) => ({ profile: d.slot, name: d.name, commander: d.commander ?? undefined, cards: d.cards, updated: Date.parse(d.updated_at), note: d.extras?.note || undefined, tags: d.extras?.tags?.length ? d.extras.tags : undefined })));
-  }));
-  setLastVersion(version);
+  await quietly(() =>
+    db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
+      await Promise.all([db.profiles.clear(), db.entries.clear(), db.decks.clear()]);
+      await db.profiles.bulkAdd(snap.profiles);
+      await db.entries.bulkAdd(snap.entries);
+      await db.decks.bulkAdd(snap.decks);
+    }),
+  );
+  setLastVersion(v);
   clearDirty(started);
   // Card details (type, colours, image) come from Scryfall's cache on this device.
-  await resolveRows(cards.map((c) => ({ name: c.name, qty: 1, id: c.card_id })), () => {});
-  return { cards: cards.length, decks: decks.length };
-}
-
-/** The cloud copy's version: when it was last pushed (ms), 0 when nothing was pushed yet. */
-export async function cloudVersion(uid: string) {
-  const { data, error } = await supabase!.from('profiles').select('updated_at').eq('user_id', uid).order('updated_at', { ascending: false }).limit(1);
-  if (error) throw error;
-  return data?.[0]?.updated_at ? Date.parse(data[0].updated_at) : 0;
+  await resolveRows(snap.entries.map((e) => ({ name: e.name, qty: 1, id: e.cardId })), () => {});
+  return { cards: snap.entries.length, decks: snap.decks.length };
 }
 
 /** Card and deck fingerprints, the same for this device and the cloud when they hold the same binders and decks. */
-const deckKey = (slot: number, name: string, commander: string | null | undefined, cards: Deck['cards']) =>
-  `${slot}|${name}|${commander ?? ''}|${cards.map((c) => `${c.name}:${c.qty}:${c.foil ? 1 : 0}`).join(',')}`;
-const fingerprint = (cards: string[], decks: string[]) => [...cards].sort().join('\n') + '\n--\n' + [...decks].sort().join('\n');
+const deckKey = (d: Deck) => `${d.profile}|${d.name}|${d.commander ?? ''}|${d.cards.map((c) => `${c.name}:${c.qty}:${c.foil ? 1 : 0}`).join(',')}`;
+export const fingerprint = (s: Pick<Snapshot, 'entries' | 'decks'>) =>
+  [...s.entries.map((e) => `${e.profile}|${e.cardId}|${e.qty}|${e.foil ? 1 : 0}`)].sort().join('\n') + '\n--\n' + s.decks.map(deckKey).sort().join('\n');
 export async function sameAsCloud() {
-  const [cards, decks, entries, local] = await Promise.all([selectAll('cards'), selectAll('decks'), db.entries.toArray(), db.decks.toArray()]);
-  const cloud = fingerprint(
-    cards.map((c) => `${c.slot}|${c.card_id}|${c.qty}|${c.foil ? 1 : 0}`),
-    decks.map((d) => deckKey(d.slot, d.name, d.commander, d.cards)),
-  );
-  const mine = fingerprint(
-    entries.map((e) => `${e.profile}|${e.cardId}|${e.qty}|${e.foil ? 1 : 0}`),
-    local.map((d) => deckKey(d.profile, d.name, d.commander, d.cards)),
-  );
-  return { same: cloud === mine, cloudCount: cards.length + decks.length, localCount: entries.length + local.length };
+  const [cloud, entries, decks] = await Promise.all([download(), db.entries.toArray(), db.decks.toArray()]);
+  const mine = { entries, decks };
+  const theirs = cloud?.snap ?? { entries: [], decks: [] };
+  return { same: fingerprint(theirs) === fingerprint(mine), cloudCount: size(theirs), localCount: size(mine) };
+}
+
+// ---- turning sync on and off ----
+
+/** First device: a new code, this device's copy goes up. */
+export async function turnOn() {
+  const code = newCode();
+  await push({ base: 0, code });
+  setSyncCode(code);
+  return code;
+}
+/** Another device: checks the code exists, then automatic sync takes over (pulls onto an empty device, else asks). */
+export async function link(raw: string) {
+  const code = cleanCode(raw);
+  if (!code) throw new Error("That doesn't look like a sync code (20 letters and numbers).");
+  if (!(await cloudVersion(code))) throw new Error("We couldn't find that sync code. Check it on the device that shows it.");
+  setLastVersion(null);
+  setSyncCode(code);
+  return code;
+}
+/** A new code for the same data (if the old one was shared by mistake). The old code stops working everywhere. */
+export async function changeCode() {
+  const old = syncCode();
+  const fresh = newCode();
+  await push({ base: 0, code: fresh });
+  setSyncCode(fresh);
+  await call((await keysFor(old)).id, '', { method: 'DELETE' }).catch(() => {});
+  return fresh;
+}
+/** This device stops syncing; its binders and decks stay here, the cloud copy stays for the other devices. */
+export function turnOff() {
+  setSyncCode(null);
+  setLastVersion(null);
 }
