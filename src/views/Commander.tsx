@@ -10,7 +10,7 @@ import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
-import { canLeave, freeDeckName, openDeck, setLeaveGuard } from '../lib/nav';
+import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections } from '../lib/sections';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
@@ -31,6 +31,11 @@ const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.c
 
 export function CommanderView({ name, s, onBack: back, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const onBack = () => void canLeave().then((ok) => ok && back());
+  // The pill menu's back arrow goes back to the commander list.
+  useEffect(() => {
+    setBack(onBack);
+    return () => void setBack(null);
+  }, []);
   const slug = toSlug(name);
   const [kind, setKind] = useState<'commander' | 'average'>(SHOW_AS_COMMANDER ? 'commander' : 'average');
   const [bracket, setBracket] = useState(DEFAULT_BRACKET);

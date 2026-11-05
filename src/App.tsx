@@ -5,7 +5,7 @@ import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
-import { canLeave, onOpenCollection, onOpenDeck, onOpenDeckList } from './lib/nav';
+import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDeckList } from './lib/nav';
 import { codeFromHash } from './lib/synccode';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
@@ -71,10 +71,13 @@ export default function App() {
   // A tap outside the drawer closes it.
   useEffect(() => {
     if (!hubOpen) return;
-    const off = (e: PointerEvent) => !hubRef.current?.contains(e.target as Node) && setHubOpen(false);
+    // (the pill's hub button toggles it itself)
+    const off = (e: PointerEvent) => !hubRef.current?.contains(e.target as Node) && !(e.target as Element).closest?.('.pillhub') && setHubOpen(false);
     document.addEventListener('pointerdown', off);
     return () => document.removeEventListener('pointerdown', off);
   }, [hubOpen]);
+  const [backFn, setBackFn] = useState<(() => void) | null>(null);
+  useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
   const here = (t: Tab) => tab === t || (t === 'collection' && tab === 'decks');
   const goDiscover = () => void canLeave().then((ok) => ok && (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0)));
@@ -107,15 +110,9 @@ export default function App() {
     <div className="stage">
       <ZineDefs />
       {/* The HUB drawer (logo, binder, theme, sync) stays tucked under a red strip until hovered, focused or tapped. */}
-      <div className="hubwrap" ref={hubRef} onPointerEnter={(e) => e.pointerType === 'mouse' && openHub()} onPointerLeave={(e) => e.pointerType === 'mouse' && closeHubSoon()} onFocus={(e) => (e.target as HTMLElement).matches(':focus-visible') && openHub()} onBlur={(e) => !hubRef.current?.contains(e.relatedTarget as Node) && setHubOpen(false)}>
+      <div className="hubwrap" ref={hubRef} onBlur={(e) => !hubRef.current?.contains(e.relatedTarget as Node) && setHubOpen(false)}>
         <div className="hubstrip" aria-hidden="true" />
         <div className={`hubslide${hubOpen ? ' open' : ''}`}>
-          {/* The shadow sits on a wrapper: a clip-path on the button itself would cut its drop-shadow off. */}
-          <span className="hubtabwrap">
-            <button className={`hubtab${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
-              {hubOpen ? '×' : '≡'}
-            </button>
-          </span>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
             <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Discover">
               <Logo />
@@ -169,12 +166,26 @@ export default function App() {
           </header>
         </div>
       </div>
-      <nav className="tabs navbar" aria-label="Sections">
-        {NAV.map(([t, label]) => (
-          <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : goTab(t))}>
-            {label}
-          </button>
-        ))}
+      {/* The pill menu, phones and desktop alike: back (when there's somewhere to go back to), the two sections, and the hub
+          (binder, theme, sync). */}
+      <nav className="pillnav" aria-label="Sections">
+        <div className="pill">
+          {backFn && (
+            <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
+              <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="3" />
+              </svg>
+            </button>
+          )}
+          {NAV.map(([t, label]) => (
+            <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : goTab(t), setHubOpen(false))}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <button className={`pillhub${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
+          {hubOpen ? '×' : '≡'}
+        </button>
       </nav>
       {sync && (
         <Suspense fallback={null}>

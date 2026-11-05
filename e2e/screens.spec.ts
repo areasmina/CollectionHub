@@ -220,7 +220,7 @@ for (const [ok, text, name] of [[true, /Buzz sent/, 'sent'], [false, /blocked/, 
   test(`Haptics button: sends a test buzz and says what happened (${name})`, async ({ page }) => {
     await page.addInitScript((v) => { (window as any).__buzz = []; navigator.vibrate = (p) => ((window as any).__buzz.push(p), v); }, ok);
     await page.goto('/');
-    await page.locator('.hubtab').click();
+    await page.locator('.pillhub').click();
     const btn = page.getByRole('button', { name: /Haptic feedback/ });
     await btn.click(); // on by default: this turns it off
     await expect(page.locator('.hapnote')).toHaveText('Haptics off.');
@@ -324,7 +324,7 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
 });
 
 test('My decks in Collection + Forge: FORGE IT opens the deck, swap window in the Forge', async ({ page }) => {
-  await expect(page.getByRole('navigation', { name: 'Sections' }).last().getByRole('button')).toHaveText(['DISCOVER', 'COLLECTION']);
+  await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'COLLECTION']);
   await expect(page.locator('.shelf')).toHaveCount(0); // Discover stays commanders only
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: '⚒ FORGE IT' }).click();
@@ -424,4 +424,18 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
   await expect(page.locator('.ccard').first()).toBeVisible();
   await go(page, 'collection');
   await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
+});
+
+test('Pill menu: back arrow only where there is somewhere to go back to', async ({ page }, info) => {
+  const pill = page.locator('.pillnav');
+  await expect(pill).toBeVisible();
+  await expect(pill.locator('.pback')).toHaveCount(0);
+  await page.locator('.ccard').first().click();
+  await expect(pill.getByRole('button', { name: 'Back' })).toBeVisible();
+  await page.screenshot({ path: `test-results/pill-${info.project.name}.png` });
+  await pill.getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+  await expect(pill.locator('.pback')).toHaveCount(0);
+  await pill.locator('.pillhub').click();
+  await expect(page.locator('.hubslide')).toHaveClass(/open/);
 });

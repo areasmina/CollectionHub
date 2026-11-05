@@ -7045,3 +7045,134 @@ details.cat {
 .syncstate.conflict .row {
   margin-top: 10px;
 }
+
+/* ---------- Pill menu (phones and desktop): back · DISCOVER · COLLECTION + the hub button; the hub is a sheet above it ---------- */
+.stage {
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+}
+.pillnav {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+}
+.pillnav .pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  background: var(--ink);
+  border: 3px solid var(--white);
+  border-radius: 999px;
+  box-shadow: 5px 5px 0 var(--accent);
+  min-width: 0;
+}
+.pillnav .pill button {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 17px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.pillnav .pill button[aria-current='page'] {
+  background: var(--accent);
+  transform: skewX(-8deg);
+}
+.pillnav .pill button:focus-visible,
+.pillnav .pillhub:focus-visible {
+  outline: 3px solid var(--hazard);
+  outline-offset: 2px;
+}
+.pillnav .pback {
+  width: 48px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hazard) !important;
+}
+.pillhub {
+  position: relative;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid var(--white);
+  background: var(--accent);
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.pillhub.alert::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--hazard);
+  border: 2px solid var(--ink);
+}
+@media (max-width: 420px) {
+  .pillnav .pill button {
+    padding: 0 12px;
+    font-size: 15px;
+  }
+}
+/* The hub (logo, binder, theme, haptics, sync): a sheet that rises above the pill */
+.hubstrip,
+.hubnav {
+  display: none !important;
+}
+.hubwrap {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.hubslide {
+  position: absolute;
+  top: auto;
+  left: 50%;
+  right: auto;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  width: min(620px, calc(100vw - 32px));
+  transform: translate(-50%, 24px);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.18s, visibility 0s 0.22s;
+}
+.hubslide.open {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.18s;
+}
+.hubslide .hubinner {
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 3px solid var(--text);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.hubslide .hubinner .righthead {
+  margin-left: 0;
+}
+.toast {
+  bottom: calc(96px + env(safe-area-inset-bottom));
+}

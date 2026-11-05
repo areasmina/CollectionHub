@@ -19,7 +19,7 @@ import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arr
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
-import { freeDeckName, onOpenDeck, takeDeck } from '../lib/nav';
+import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
@@ -387,6 +387,10 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
 
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
+  useEffect(() => {
+    setBack(onBack);
+    return () => void setBack(null);
+  }, [deck.id]);
   const byKey =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ??
     new Map<string, Card>();
@@ -698,6 +702,11 @@ export function Decks(s: Shared) {
 
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
+  // The list page sits under Collection: the pill's back arrow goes there (the deck page sets its own).
+  useEffect(() => {
+    if (!deck) setBack(openCollection);
+    return () => void setBack(null);
+  }, [!!deck]);
   if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
 
   async function add() {

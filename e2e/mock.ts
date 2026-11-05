@@ -46,7 +46,7 @@ export async function mockWorld(page: Page) {
 /** A binder with every mock card (some foil) and one saved deck. */
 export async function seed(page: Page) {
   await page.goto('/');
-  await page.waitForSelector('.hubtab', { state: 'attached' });
+  await page.waitForSelector('.pillhub', { state: 'attached' });
   await page.evaluate(async (cs) => {
     const db: IDBDatabase = await new Promise((ok, no) => {
       const q = indexedDB.open('collectionhub');
