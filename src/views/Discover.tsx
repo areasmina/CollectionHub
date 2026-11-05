@@ -6,42 +6,9 @@ const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m
 import { db, type Card } from '../lib/db';
 import { cachedPage, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
-import { norm, slug } from '../lib/names';
-import { openCollection, openDeck, openDeckList } from '../lib/nav';
-import { summarize } from '../lib/compare';
+import { slug } from '../lib/names';
+import { openCollection } from '../lib/nav';
 import { Progress, usd, type Shared } from './shared';
-
-/** Your saved decks, newest first: one tap opens the deck in the Forge. */
-function MyDecks({ s }: { s: Shared }) {
-  const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
-  const arts = useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? ''))).toArray()).map((c) => [c.key, c.img])), [decks]) ?? new Map<string, string | undefined>();
-  if (!decks.length) return null;
-  return (
-    <section className="shelf" aria-label="My decks">
-      <div className="shelfhead">
-        <h2>MY DECKS ({decks.length})</h2>
-        <button className="link" onClick={() => (haptic('tap'), openDeckList())}>
-          ALL · ADD A LIST →
-        </button>
-      </div>
-      <ul className="shelfrow">
-        {decks.slice(0, 12).map((d) => {
-          const pct = summarize(d.cards.map((c) => c.name), s.mine, s.other).pct;
-          const img = arts.get(norm(d.commander ?? ''));
-          return (
-            <li key={d.id}>
-              <button onClick={() => (haptic('open'), openDeck(d.name))} aria-label={`${d.name}, ${pct}% owned: open in the Forge`}>
-                <span className="art">{img && <img src={img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}</span>
-                <b>{d.name}</b>
-                <small>{pct}% owned · ⚒ forge</small>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
 import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
@@ -336,10 +303,9 @@ export function Discover(s: Shared) {
         {sort === 'added' && data?.undated && (
           <p className="count">Cards imported before dates were recorded have no date, so they're listed last. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
         )}
-        <MyDecks s={s} />
         {commanders.length ? (
           <p className="count">
-            <b className="canbuild">CAN BUILD</b> {`${shown.length} of ${commanders.length} commanders in this binder.`}
+            {`${shown.length} of ${commanders.length} commanders in this binder.`}
           </p>
         ) : (
           data && <Welcome empty={s.mine.size === 0} />

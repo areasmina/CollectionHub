@@ -6,6 +6,8 @@ import { db, type Card, type Entry } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
 import { cad, toCad } from '../lib/prices';
 import { CardsView } from './CardsView';
+import { MyDecks } from './MyDecks';
+import type { Shared } from './shared';
 import { isCommander } from './Discover';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
@@ -118,7 +120,7 @@ function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Ca
   );
 }
 
-export function Collection({ profile, name }: { profile: number; name: string }) {
+export function Collection({ profile, name, s }: { profile: number; name: string; s: Shared }) {
   const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
   const entries = list ?? [];
   // Import folds away; it opens by itself for an empty binder (and stays open while an import runs).
@@ -224,6 +226,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
           </p>
         )}
 
+        <MyDecks s={s} />
         <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
           <summary>
             <span className="stripe" aria-hidden="true" />

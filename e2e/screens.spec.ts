@@ -323,23 +323,22 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
   await expect(page.locator('.pinchip')).toHaveCount(0);
 });
 
-test('Decks home + Forge: my decks shelf, FORGE IT opens the deck, swap from the binder with undo', async ({ page }) => {
-  await expect(page.getByRole('navigation', { name: 'Sections' }).last().getByRole('button')).toHaveText(['DECKS', 'COLLECTION']);
-  await expect(page.locator('.shelf li')).toHaveCount(1);
-  await fits(page, ['.shelf']);
+test('My decks in Collection + Forge: FORGE IT opens the deck, swap window in the Forge', async ({ page }) => {
+  await expect(page.getByRole('navigation', { name: 'Sections' }).last().getByRole('button')).toHaveText(['DISCOVER', 'COLLECTION']);
+  await expect(page.locator('.shelf')).toHaveCount(0); // Discover stays commanders only
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: '⚒ FORGE IT' }).click();
   await expect(page.locator('.forgehint')).toBeVisible();
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
   await expect(note.getByRole('button', { name: '📌 ALWAYS IN' })).toBeVisible();
-  // Every card of the binder is already in this deck: nothing to search for
   await note.getByRole('searchbox', { name: 'Search your binder' }).fill('cob');
   await expect(note.getByText(/No card of yours/).last()).toBeVisible();
   await note.getByRole('button', { name: 'Close' }).click();
-  // The shelf on the Decks home opens the deck too
-  await go(page, 'discover');
+  // My decks sit on the Collection page and open the deck too
+  await go(page, 'collection');
   await expect(page.locator('.shelf li')).toHaveCount(2);
+  await fits(page, ['.shelf']);
   await page.locator('.shelf li button').first().click();
   await expect(page.locator('.forgehint')).toBeVisible();
 });

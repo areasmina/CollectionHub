@@ -31,8 +31,8 @@ idle(() => {
 });
 
 type Tab = 'discover' | 'collection' | 'decks';
-// Two sections: DECKS (commanders you can build + your decks, and the Forge) and COLLECTION.
-const NAV: [Tab, string][] = [['discover', 'DECKS'], ['collection', 'COLLECTION']];
+// Two sections: DISCOVER (commanders you can build) and COLLECTION (your cards, your decks and the Forge).
+const NAV: [Tab, string][] = [['discover', 'DISCOVER'], ['collection', 'COLLECTION']];
 const store = {
   get: (k: string) => {
     try {
@@ -72,7 +72,7 @@ export default function App() {
     return () => document.removeEventListener('pointerdown', off);
   }, [hubOpen]);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
-  const here = (t: Tab) => tab === t || (t === 'discover' && tab === 'decks');
+  const here = (t: Tab) => tab === t || (t === 'collection' && tab === 'decks');
   const goDiscover = () => (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
@@ -112,7 +112,7 @@ export default function App() {
             </button>
           </span>
           <header id="hub" className="top hubinner" inert={!hubOpen}>
-            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Decks">
+            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Discover">
               <Logo />
             </button>
             {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
@@ -179,7 +179,7 @@ export default function App() {
       <PreviewLayer />
       {tab === 'discover' && <Discover key={home} {...shared} />}
       <Suspense fallback={<p className="count pageload">Loading…</p>}>
-        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} />}
+        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} s={shared} />}
         {tab === 'decks' && <Decks {...shared} />}
       </Suspense>
       <footer className="credits">
