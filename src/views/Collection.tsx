@@ -6,6 +6,8 @@ import { db, type Card, type Entry } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
 import { cad, toCad } from '../lib/prices';
 import { CardsView } from './CardsView';
+import { MyDecks } from './MyDecks';
+import type { Shared } from './shared';
 import { isCommander } from './Discover';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
@@ -118,7 +120,7 @@ function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Ca
   );
 }
 
-export function Collection({ profile, name }: { profile: number; name: string }) {
+export function Collection({ profile, name, s }: { profile: number; name: string; s: Shared }) {
   const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
   const entries = list ?? [];
   // Import folds away; it opens by itself for an empty binder (and stays open while an import runs).
@@ -224,6 +226,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
           </p>
         )}
 
+        <MyDecks s={s} />
         <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
           <summary>
             <span className="stripe" aria-hidden="true" />
@@ -266,6 +269,14 @@ export function Collection({ profile, name }: { profile: number; name: string })
                 REPLACE BINDER
               </button>
             </div>
+            {/* Emptying the binder lives with the other whole-binder actions (folded away), not above the card search. */}
+            <button style={{ marginTop: 12 }} className="stencil" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
+              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M8 1 L15 14 H1 Z M8 6 V9.5 M8 11.5 V12" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              RESET BINDER
+            </button>
+
             {busy && <Progress {...busy} />}
             {error && <p className="error">{error}</p>}
             {result && <ImportReport r={result} />}
@@ -285,12 +296,6 @@ export function Collection({ profile, name }: { profile: number; name: string })
             <button className="sticker" style={{ transform: 'rotate(1.5deg)' }} disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
               EXPORT TEXT
             </button>
-            <button className="stencil" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M8 1 L15 14 H1 Z M8 6 V9.5 M8 11.5 V12" fill="none" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              RESET BINDER
-            </button>
           </div>
 
           <label className="sbox dark" style={{ marginTop: 18 }}>
@@ -299,7 +304,7 @@ export function Collection({ profile, name }: { profile: number; name: string })
             <span aria-hidden="true" className="fade" />
           </label>
 
-          <CardsView entries={shown} cards={cards} />
+          <CardsView entries={shown} cards={cards} profile={profile} binderName={name} />
         </section>
       </main>
     </>

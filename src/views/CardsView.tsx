@@ -2,7 +2,37 @@ import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
 import { useEffect, useRef, useState } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { PriceLink, priced, Thumb } from './shared';
+import { PriceLink, priced, Thumb, useMenuPress } from './shared';
+import { CardMenu, type Toast } from './CardMenu';
+import { norm } from '../lib/names';
+import { inUse } from '../lib/copies';
+import { useLiveQuery } from 'dexie-react-hooks';
+
+type MenuFn = (e: Entry, x: number, y: number) => void;
+/** A card row / tile with the card menu: right-click, press and hold, or its ⋯ button. */
+function MenuLi({ e, onMenu, className, children }: { e: Entry; onMenu?: MenuFn; className: string; children: React.ReactNode }) {
+  const press = useMenuPress(onMenu && ((x, y) => onMenu(e, x, y)));
+  return (
+    <li className={`${className}${onMenu ? ' hasmenu' : ''}`} {...press}>
+      {children}
+      {onMenu && (
+        <button
+          className="morebtn"
+          aria-label={`More for ${e.name}`}
+          title="More (right-click or hold works too)"
+          onClick={(ev) => {
+            ev.stopPropagation();
+            const r = ev.currentTarget.getBoundingClientRect();
+            haptic('open');
+            onMenu(e, r.left, r.bottom);
+          }}
+        >
+          ⋯
+        </button>
+      )}
+    </li>
+  );
+}
 
 /** A per-device preference kept in localStorage (falls back to memory). */
 function usePref<T extends string>(key: string, initial: T): [T, (v: T) => void] {
@@ -143,13 +173,22 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>; view: string }) {
+function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]> }) {
+  // In your active decks: a small mark under the name ("in 2 decks", the deck names on hover).
+  const useMark = (e: Entry) => {
+    const ds = used?.get(norm(e.name));
+    return ds?.length ? (
+      <span className="inuse" title={`In ${ds.join(', ')}`}>
+        ● in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
+      </span>
+    ) : null;
+  };
   const setLine = (e: Entry) => [e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ');
   if (view === 'grid')
     return (
       <ul className="zgrid cgrid2">
         {list.map((e) => (
-          <li key={e.id} className="ztile owned ctile">
+          <MenuLi key={e.id} e={e} onMenu={onMenu} className="ztile owned ctile">
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
@@ -157,7 +196,8 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
             </span>
             <span className="tname">{e.name}</span>
             <span className="tnote">{setLine(e)}</span>
-          </li>
+            {useMark(e)}
+          </MenuLi>
         ))}
       </ul>
     );
@@ -172,16 +212,17 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
       </div>
       <ul className="crows">
         {list.map((e) => (
-          <li key={e.id} className="crow">
+          <MenuLi key={e.id} e={e} onMenu={onMenu} className="crow">
             <QtyEdit e={e} />
             <Thumb src={cards.get(e.cardId)?.img} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} />
             <span className="cn">
               <b>{e.name}</b>
               <span>{setLine(e)}</span>
+              {useMark(e)}
             </span>
             <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
             <RemoveBtn e={e} />
-          </li>
+          </MenuLi>
         ))}
       </ul>
     </>
@@ -189,7 +230,18 @@ function Items({ list, cards, view }: { list: Entry[]; cards: Map<string, Card>;
 }
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
-export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
+export function CardsView({ entries, cards, profile, binderName }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string }) {
+  const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
+  const [toast, setToast] = useState<Toast | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
+  const decks = useLiveQuery(() => (profile ? db.decks.where('profile').equals(profile).toArray() : []), [profile]) ?? [];
+  const used = inUse(decks);
+  const onMenu: MenuFn | undefined = profile ? (e, x, y) => setMenu({ e, x, y }) : undefined;
+  const owned = (name: string) => entries.filter((x) => norm(x.name) === norm(name)).reduce((n, x) => n + x.qty, 0);
   // Always opens in grid; LIST switches for this visit only.
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [group, setGroup] = usePref<'on' | 'off'>('ch:collgroup', 'off');
@@ -214,6 +266,19 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
 
   return (
     <>
+      {menu && profile && (
+        <CardMenu name={menu.e.name} at={menu} profile={profile} binderName={binderName ?? 'your binder'} owned={owned(menu.e.name)} onClose={() => setMenu(null)} onToast={setToast} />
+      )}
+      {toast && (
+        <div className="toast" role="status">
+          <span>{toast.text}</span>
+          {toast.undo && (
+            <button onClick={() => (haptic('undo'), toast.undo!(), setToast(null))}>
+              UNDO
+            </button>
+          )}
+        </div>
+      )}
       <div className="cardopts">
         <div className="viewsw" role="group" aria-label="Card view">
           <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
@@ -252,14 +317,14 @@ export function CardsView({ entries, cards }: { entries: Entry[]; cards: Map<str
                     {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
         </div>
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)

@@ -220,7 +220,7 @@ for (const [ok, text, name] of [[true, /Buzz sent/, 'sent'], [false, /blocked/, 
   test(`Haptics button: sends a test buzz and says what happened (${name})`, async ({ page }) => {
     await page.addInitScript((v) => { (window as any).__buzz = []; navigator.vibrate = (p) => ((window as any).__buzz.push(p), v); }, ok);
     await page.goto('/');
-    await page.locator('.hubtab').click();
+    await page.locator('.pillhub').click();
     const btn = page.getByRole('button', { name: /Haptic feedback/ });
     await btn.click(); // on by default: this turns it off
     await expect(page.locator('.hapnote')).toHaveText('Haptics off.');
@@ -253,4 +253,189 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await sw.getByRole('button', { name: 'Grid view' }).click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.screenshot({ path: 'test-results/commander-sections.png' });
+});
+
+test('Reload: commander stats come back from the device, no EDHREC requests', async ({ page }) => {
+  await expect(page.locator('.ccard[aria-label*="% owned"]').first()).toBeVisible();
+  await page.waitForTimeout(500); // let the save land
+  const asked: string[] = [];
+  page.on('request', (r) => r.url().includes('json.edhrec.com/pages/average-decks') && asked.push(r.url()));
+  await page.reload();
+  await expect(page.locator('.ccard[aria-label*="% owned"]').first()).toBeVisible();
+  await expect(page.locator('.progress', { hasText: 'Checking EDHREC' })).toHaveCount(0);
+  expect(asked).toEqual([]);
+});
+
+test('Commander page: an old saved page shows at once even when EDHREC is down', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.hstats .price')).toBeVisible(); // its EDHREC pages are saved by now
+  // Age every saved page past a day, cut EDHREC off, reopen.
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const st = db.transaction('edhrec', 'readwrite').objectStore('edhrec');
+    const all: any[] = await new Promise((ok) => (st.getAll().onsuccess = (e: any) => ok(e.target.result)));
+    for (const r of all) st.put({ ...r, at: r.at - 3 * 864e5 });
+  });
+  await page.unroute(/json\.edhrec\.com/);
+  await page.route(/json\.edhrec\.com/, (r) => r.abort());
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.chero h1')).toBeVisible();
+  await expect(page.locator('.hstats .price')).toBeVisible();
+});
+
+test('Swap window: every card swaps, search your binder, undo, pins', async ({ page }, info) => {
+  // One more card in the binder that the deck doesn't use.
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '{T}: Add one mana.', ci: [], img: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, usd: '0.50', cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload(); // Dexie's query cache doesn't see writes made outside it
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await expect(note).toBeVisible();
+  await expect(note.getByText('top 3 from your binder')).toBeVisible();
+  // Arcane Signet: yours, played with this commander on EDHREC, not in the deck: first of the top 3
+  await expect(note.locator('.picks > ul:not(.found) button').first()).toContainText('Arcane Signet');
+  await fits(page, ['.swapnote']);
+  await page.screenshot({ path: `test-results/swap-top3-${info.project.name}.png` });
+  await note.locator('.picks > ul:not(.found) button', { hasText: 'Arcane Signet' }).click();
+  await expect(page.locator('.swapmark', { hasText: '↔ for Sol Ring' })).toBeVisible();
+  // Pin the new card in, then undo the swap from its window
+  await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
+  await page.getByRole('dialog', { name: 'Swap Arcane Signet' }).getByRole('button', { name: '📌 ALWAYS IN' }).click();
+  await expect(page.locator('.pinchip', { hasText: 'Arcane Signet' })).toBeVisible();
+  await page.locator('.pinchip', { hasText: 'Arcane Signet' }).click();
+  await expect(page.locator('.pinchip')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
+  await page.getByRole('button', { name: /UNDO/ }).click();
+  await expect(page.locator('.swapmark', { hasText: 'for Sol Ring' })).toHaveCount(0);
+  // Never use: no other card of yours fits, so Sol Ring stays, marked, and the pin can be taken off
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: '💀 NEVER USE' }).click();
+  await expect(page.locator('.pinchip', { hasText: 'Sol Ring' })).toBeVisible();
+  await page.locator('.pinchip', { hasText: 'Sol Ring' }).click();
+  await expect(page.locator('.pinchip')).toHaveCount(0);
+});
+
+test('My decks in Collection + Forge: FORGE IT opens the deck, swap window in the Forge', async ({ page }) => {
+  await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'COLLECTION']);
+  await expect(page.locator('.shelf')).toHaveCount(0); // Discover stays commanders only
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: '⚒ FORGE IT' }).click();
+  await expect(page.locator('.forgehint')).toBeVisible();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await expect(note.getByRole('button', { name: '📌 ALWAYS IN' })).toBeVisible();
+  await note.getByRole('searchbox', { name: 'Search your binder' }).fill('cob');
+  await expect(note.getByText(/No card of yours/).last()).toBeVisible();
+  await note.getByRole('button', { name: 'Close' }).click();
+  // My decks sit on the Collection page and open the deck too
+  await go(page, 'collection');
+  await expect(page.locator('.shelf li')).toHaveCount(2);
+  await fits(page, ['.shelf']);
+  await page.locator('.shelf li button').first().click();
+  await expect(page.locator('.forgehint')).toBeVisible();
+});
+
+test('One card menu: ⋯ / right-click on commander page and Collection cards, same items', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'More for Sol Ring' }).click();
+  const m = page.getByRole('menu', { name: 'Sol Ring options' });
+  await expect(m.getByRole('button', { name: /Swap…/ })).toBeVisible();
+  await expect(m.getByRole('button', { name: '💀 Never use' })).toBeVisible();
+  await expect(m.getByText('also in:')).toBeVisible();
+  await page.waitForTimeout(300); // the menu drops in with a small tilt first
+  await fits(page, ['.cardmenu']);
+  await m.getByRole('button', { name: /Swap…/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();
+  await go(page, 'collection');
+  await page.locator('li', { hasText: 'Sol Ring' }).first().click({ button: 'right' });
+  const c = page.getByRole('menu', { name: 'Sol Ring options' });
+  await expect(c.getByRole('button', { name: /Remove one from binder/ })).toBeVisible();
+  await expect(c.getByRole('button', { name: /Swap…/ })).toHaveCount(0);
+});
+
+test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'drag is for a mouse; touch taps');
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await note.locator('.picks button', { hasText: 'Arcane Signet' }).dragTo(note.locator('.viewer'));
+  await expect(page.locator('.swapmark', { hasText: '↔ for Sol Ring' })).toBeVisible();
+});
+
+test('Deck light: active decks mark their cards in use in Collection; off frees them', async ({ page }, info) => {
+  await go(page, 'collection');
+  const sol = page.locator('li', { hasText: 'Sol Ring' }).first();
+  await expect(sol.locator('.inuse')).toHaveText('● in 1 deck');
+  await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
+  await page.locator('.shelf .dlight').first().click();
+  await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);
+  await expect(sol.locator('.inuse')).toHaveCount(0);
+  await page.locator('.shelf .dlight').first().click();
+  await expect(sol.locator('.inuse')).toHaveCount(1);
+});
+
+test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)', async ({ page }, info) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  const swap = async () => {
+    await page.locator('.ccard').first().click();
+    await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
+    await expect(page.locator('.forgebar')).toContainText('FORGING');
+  };
+  await swap();
+  await page.screenshot({ path: `test-results/forging-${info.project.name}.png` });
+  await page.locator('.backlink').click();
+  const ask = page.getByRole('alertdialog', { name: 'Save this deck?' });
+  await expect(ask).toBeVisible();
+  await page.screenshot({ path: `test-results/forging-ask-${info.project.name}.png` });
+  await ask.getByRole('button', { name: 'KEEP FORGING' }).click();
+  await expect(page.locator('.forgebar')).toBeVisible();
+  await page.locator('.backlink').click();
+  await ask.getByRole('button', { name: 'NO, DISCARD' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+  await swap();
+  await page.locator('.backlink').click();
+  await ask.getByRole('button', { name: 'YES, SAVE' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+  await go(page, 'collection');
+  await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
+});
+
+test('Pill menu: back arrow only where there is somewhere to go back to', async ({ page }, info) => {
+  const pill = page.locator('.pillnav');
+  await expect(pill).toBeVisible();
+  await expect(pill.locator('.pback')).toHaveCount(0);
+  await page.locator('.ccard').first().click();
+  await expect(pill.getByRole('button', { name: 'Back' })).toBeVisible();
+  await page.screenshot({ path: `test-results/pill-${info.project.name}.png` });
+  await pill.getByRole('button', { name: 'Back' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+  await expect(pill.locator('.pback')).toHaveCount(0);
+  await pill.locator('.pillhub').click();
+  await expect(page.locator('.hubslide')).toHaveClass(/open/);
 });

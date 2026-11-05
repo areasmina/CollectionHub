@@ -6329,8 +6329,7 @@ details.cat {
   text-decoration: none;
 }
 .mydecks {
-  display: block;
-  margin-top: 6px;
+  display: inline;
   font-family: 'Space Mono', monospace;
   font-size: 12px;
   text-transform: uppercase;
@@ -6423,6 +6422,601 @@ details.cat {
   max-width: 320px;
 }
 
+/* Bracket fallback note under the bracket switch (no EDHREC page for that bracket). */
+.strip .bnote {
+  display: block;
+  margin-top: 6px;
+  font: 11px/1.3 var(--mono, 'Space Mono', monospace);
+  color: #ffcc00;
+}
+
+/* Phones: less scrolling before the cards. The eye art is a smaller band, and the commander page's settings strip
+   puts two controls per row (bracket | budget, missing | save) with lower switches. */
+@media (max-width: 700px) {
+  .hero .eyedoodle {
+    width: min(70%, 260px);
+    margin: -10px auto -14px;
+  }
+  .strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 12px;
+    padding: 14px 12px 12px;
+  }
+  .strip .cell.wide {
+    grid-column: 1 / -1;
+  }
+  .strip .segs {
+    height: 46px;
+  }
+  .strip .segs button {
+    font-size: 15px;
+  }
+  .strip .cell > .lbl {
+    font-size: 16px;
+  }
+}
+
+/* Discover, first run: three taped steps and one button to the import box. */
+.welcome {
+  margin: 22px 0 10px;
+}
+.welcome ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px 18px;
+}
+.welcome li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 16px 16px;
+  background: var(--white);
+  color: var(--ink);
+}
+.welcome li b {
+  font-family: var(--an);
+  font-size: 20px;
+  line-height: 1.05;
+}
+.welcome li span:last-child {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.welcome .wn {
+  font-family: var(--an);
+  font-size: 34px;
+  line-height: 1;
+  color: var(--accent);
+}
+.welcome .btn {
+  margin-top: 6px;
+}
+
+/* ---------- Fit pass (Nov 2026): phones and wide screens ---------- */
+/* Doodles never sit on top of a commander's name. */
+.ccard .nm {
+  position: relative;
+  z-index: 3;
+}
+@media (max-width: 700px) {
+  /* Discover: two commanders per row instead of one card per screen. */
+  .cgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 12px;
+    margin-top: 18px;
+  }
+  .ccard {
+    padding: 10px 9px 9px;
+    box-shadow: 4px 4px 0 #000;
+  }
+  .ccard .nm {
+    font-size: 12.5px;
+    gap: 4px;
+  }
+  .ccard .nm .pips {
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+  .ccard .badge {
+    font-size: 10.5px;
+    padding: 1px 5px;
+  }
+  .ccard .foot {
+    padding-top: 6px;
+  }
+  .ccard .mono {
+    font-size: 9px;
+  }
+  .ccard .pct {
+    font-size: 22px;
+  }
+  /* Small cards: the marker doodles would sit on the text, so they stay on the wider layouts. */
+  .ccard .doodle {
+    display: none;
+  }
+  /* Commander page: the card image no longer fills the first screen. */
+  .chero .cimg {
+    width: min(165px, 44vw);
+  }
+}
+/* Doodles stay under a card's text (name, tags, numbers). */
+.ccard .foot,
+.ccard .badge {
+  position: relative;
+  z-index: 3;
+}
+
+/* Copies warning: title and summary on one line (it was a tall band holding one sentence). */
+.shortalert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+}
+.shortalert > details,
+.shortalert > ul {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.shortalert summary {
+  min-height: 36px;
+}
+
+/* Desktop / tablet commander page: room to breathe. */
+@media (min-width: 900px) {
+  /* Header: tags get their own full row (they wrap, none hidden behind a fade); the number + % sit above them, right. */
+  .cmeta {
+    flex-wrap: wrap;
+    row-gap: 14px;
+  }
+  .cmeta .score {
+    order: -1;
+    margin-left: auto;
+  }
+  .cmeta .builtaround {
+    flex: 1 1 100%;
+  }
+  .chero .hscroll {
+    flex-wrap: wrap;
+    overflow: visible;
+    mask-image: none;
+    padding: 2px 0 4px;
+    row-gap: 10px;
+  }
+  /* Settings strip: even columns with air between them, match gets the extra width. */
+  .strip {
+    grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(260px, 1.6fr) minmax(170px, 1fr) minmax(190px, 1fr);
+    gap: 18px 30px;
+    padding: 24px 28px 18px;
+  }
+  .strip .cell.wide {
+    grid-column: auto;
+  }
+  .strip .hint {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Swap window round 2: every card swappable, search your binder, pins (always in / never use) */
+.swapbtn.quiet {
+  border-style: solid;
+  border-width: 2px;
+  min-width: 44px;
+  padding: 0 8px;
+  font-size: 18px;
+  opacity: 0.75;
+}
+.swapbtn.quiet:hover,
+.swapbtn.quiet:focus-visible {
+  opacity: 1;
+}
+.swapnote .nh .was {
+  font-family: var(--se);
+  font-size: 13px;
+}
+.swapnote .undo {
+  background: var(--hazard) !important;
+}
+.swapnote .swapq {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+}
+.swapnote .swapq input {
+  font-family: var(--se);
+  font-size: 16px; /* 16px: phones don't zoom in on focus */
+  min-height: 44px;
+  padding: 0 12px;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+.swapnote .swapq input:focus-visible {
+  outline: none;
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.swapnote ul.found {
+  margin-top: 8px;
+}
+.swapnote .pinrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--ink);
+}
+.swapnote .pinrow button {
+  font-family: var(--an);
+  font-size: 15px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+}
+.swapnote .pinrow button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--white);
+  transform: rotate(-2deg);
+}
+.swapnote .pinrow button:disabled {
+  opacity: 0.4;
+}
+.swapnote .pinrow small {
+  font-family: var(--se);
+  font-size: 12px;
+  color: #5c5c5c;
+}
+.pinchip {
+  background: none;
+  border: 1px dashed currentColor;
+  color: inherit;
+  font: inherit;
+  padding: 0 6px;
+  margin: 0 3px 3px 0;
+  min-height: 28px;
+  cursor: pointer;
+}
+.pinchip:hover,
+.pinchip:focus-visible {
+  border-style: solid;
+  color: var(--accent);
+}
+
+/* Decks home: your saved decks on a shelf above the commanders you can build */
+.shelf {
+  margin: 18px 0 8px;
+}
+.shelfhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shelfhead h2 {
+  font-family: var(--an);
+  font-size: 26px;
+  font-weight: 400;
+  margin: 0;
+  background: var(--accent);
+  color: var(--white);
+  padding: 0 10px;
+  transform: skewX(-8deg);
+}
+.shelfhead .link {
+  background: none;
+  border: 0;
+  color: var(--text);
+  font-family: var(--se);
+  font-size: 14px;
+  text-decoration: underline;
+  min-height: 44px;
+}
+.shelf ul.shelfrow {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0 0 10px;
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+.shelf li {
+  flex: 0 0 200px;
+  scroll-snap-align: start;
+}
+.shelf li > button:not(.dlight) {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  padding: 8px;
+  box-shadow: 5px 5px 0 var(--accent);
+}
+.shelf li > button:not(.dlight):hover,
+.shelf li > button:not(.dlight):focus-visible {
+  transform: rotate(-1.5deg);
+}
+.shelf .art {
+  display: block;
+  aspect-ratio: 16 / 10;
+  background: #333;
+  overflow: hidden;
+}
+.shelf .art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shelf li b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shelf li small {
+  font-family: var(--se);
+  font-size: 12px;
+}
+.count .canbuild {
+  font-family: var(--an);
+  font-weight: 400;
+  background: var(--hazard);
+  color: var(--ink);
+  padding: 0 8px;
+  margin-right: 6px;
+}
+@media (max-width: 700px) {
+  .shelf li {
+    flex-basis: 156px;
+  }
+}
+
+/* The Forge: deck page hint + the commander page's FORGE IT button */
+.forgehint {
+  font-family: var(--se);
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.forgehint b {
+  font-family: var(--an);
+  font-weight: 400;
+  background: var(--ink);
+  color: var(--hazard);
+  padding: 1px 8px;
+  margin-right: 8px;
+}
+.btn.forge {
+  background: var(--accent);
+  color: var(--white);
+}
+
+/* One card menu everywhere: add-to-deck list, "also in" decks */
+.cardmenu {
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+}
+.cardmenu ul.sub {
+  margin: 0 0 4px 16px;
+  border-left: 2px dashed #9a9a9a;
+}
+.cardmenu li.using {
+  padding: 6px 8px;
+  font-family: var(--se);
+  font-size: 14px;
+}
+.cardmenu .inl {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  min-height: 32px;
+}
+.cardmenu li > button:disabled {
+  opacity: 0.45;
+}
+.morebtn {
+  background: transparent;
+  color: var(--text);
+  border: 2px solid var(--text);
+  min-width: 44px;
+  min-height: 40px;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.75;
+}
+.morebtn:hover,
+.morebtn:focus-visible {
+  opacity: 1;
+}
+.ztile.ctile > .morebtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  background: var(--ink);
+  color: var(--white);
+  border-color: var(--white);
+  min-height: 36px;
+  min-width: 40px;
+}
+@media (max-width: 700px) {
+  .cardmenu {
+    width: calc(100vw - 32px);
+    transform: none;
+  }
+}
+.swapnote .viewer.dropover img {
+  outline: 4px dashed var(--accent);
+  outline-offset: 4px;
+}
+.swapnote li button[draggable='true'] {
+  cursor: grab;
+}
+
+/* Deck light: active (green) / put away (grey); Collection marks cards used by active decks */
+.dlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  background: var(--ink);
+  color: var(--white);
+  border: 2px solid var(--white);
+  font-family: var(--an);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+.dlight i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6b6b6b;
+}
+.dlight.on i {
+  background: #2bd65a;
+  box-shadow: 0 0 8px #2bd65a;
+}
+.shelf li,
+.dgrid li.dtile {
+  position: relative;
+}
+.shelf li > .dlight,
+.dgrid li.dtile > .dlight {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 12px;
+  z-index: 4;
+}
+.shelf li.off > button,
+.dgrid li.dtile.off > .dcard {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+.inuse {
+  font-family: var(--se);
+  font-size: 12px;
+  color: #2bd65a;
+}
+.cmeta > .dlight {
+  align-self: flex-start;
+  width: auto;
+  margin: 8px 8px 0 0;
+}
+
+/* Forging zone: the spinning card says you're tuning this deck; leaving asks to save */
+.forgebar {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--white);
+  border: 3px solid var(--hazard);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.forgebar img,
+.leavenote img {
+  image-rendering: pixelated;
+  flex: none;
+}
+.forgebar .ft {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+}
+.forgebar .ft b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--hazard);
+  letter-spacing: 1px;
+}
+.forgebar .ft small {
+  font-family: var(--se);
+  font-size: 13px;
+}
+.forgebar .btn {
+  min-height: 44px;
+  margin: 0;
+  font-size: 16px;
+  padding: 0 14px;
+}
+.backdrop.leaveback {
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.7);
+}
+.note-pop.leavenote {
+  position: fixed;
+  z-index: 71;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  max-width: none;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  transform: translate(-50%, -50%) rotate(-1deg);
+  animation: none;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .forgebar .ft {
+    flex: 1 1 calc(100% - 70px);
+  }
+  .forgebar .btn {
+    flex: 1 1 0;
+  }
+}
+.leavenote img {
+  display: block;
+  margin: 0 auto 8px;
+}
+.leavenote .nh {
+  justify-content: center;
+}
+.leavenote .leavebtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.leavenote .btn {
+  margin: 0;
+  min-height: 48px;
+}
+.leavenote .btn.secondary {
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: none;
+}
+
 /* Sync code: big, easy to read aloud and select in one tap */
 .synccode {
   margin: 10px 0 4px;
@@ -6455,4 +7049,218 @@ details.cat {
 }
 .syncstate.conflict .row {
   margin-top: 10px;
+}
+
+/* ---------- Pill menu (phones and desktop): back · DISCOVER · COLLECTION + the hub button; the hub is a sheet above it ---------- */
+.stage {
+  padding-bottom: calc(110px + env(safe-area-inset-bottom));
+}
+.pillnav {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+}
+.pillnav .pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  background: var(--ink);
+  border: 3px solid var(--white);
+  border-radius: 999px;
+  box-shadow: 5px 5px 0 var(--accent);
+  min-width: 0;
+}
+.pillnav .pill button {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 17px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.pillnav .pill button[aria-current='page'] {
+  background: var(--accent);
+  transform: skewX(-8deg);
+}
+.pillnav .pill button:focus-visible,
+.pillnav .pillhub:focus-visible {
+  outline: 3px solid var(--hazard);
+  outline-offset: 2px;
+}
+.pillnav .pback {
+  width: 48px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hazard) !important;
+}
+.pillhub {
+  position: relative;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid var(--white);
+  background: var(--accent);
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.pillhub.alert::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--hazard);
+  border: 2px solid var(--ink);
+}
+@media (max-width: 420px) {
+  .pillnav .pill button {
+    padding: 0 12px;
+    font-size: 15px;
+  }
+}
+/* The hub (logo, binder, theme, haptics, sync): a sheet that rises above the pill */
+.hubstrip,
+.hubnav {
+  display: none !important;
+}
+.hubwrap {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  pointer-events: none;
+}
+.hubslide {
+  position: absolute;
+  top: auto;
+  left: 50%;
+  right: auto;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  width: min(620px, calc(100vw - 32px));
+  transform: translate(-50%, 24px);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.18s, visibility 0s 0.22s;
+}
+.hubslide.open {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.18s;
+}
+.hubslide .hubinner {
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--bg);
+  border: 3px solid var(--text);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.hubslide .hubinner .righthead {
+  margin-left: 0;
+}
+.toast {
+  bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+/* Spacing pass: a card tile keeps name, mark and one action row (swap + price); ⋯ sits on the card's corner */
+.ztile.hasmenu {
+  position: relative;
+}
+.ztile .tacts {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.ztile .tacts > .morebtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  min-width: 40px;
+  min-height: 40px;
+  background: var(--ink);
+  color: var(--white);
+  border-color: var(--white);
+  opacity: 0.9;
+}
+.ztile .tacts > .price {
+  margin-left: auto;
+}
+
+/* Spacing scale (4 · 8 · 12 · 16 · 24 · 32 · 48): new and touched rules use these, not one-off numbers. */
+:root {
+  --sp1: 4px;
+  --sp2: 8px;
+  --sp3: 12px;
+  --sp4: 16px;
+  --sp5: 24px;
+  --sp6: 32px;
+  --sp7: 48px;
+}
+.shelf {
+  margin: var(--sp5) 0 var(--sp2);
+}
+.shelf ul.shelfrow {
+  gap: var(--sp4);
+  margin-top: var(--sp3);
+}
+.forgehint {
+  margin: var(--sp4) 0;
+}
+@media (max-width: 700px) {
+  /* Phone commander hero: smaller card, tighter padding, so the deck starts on the first screen */
+  .chero {
+    padding: var(--sp3) var(--sp3) var(--sp4);
+    gap: var(--sp3);
+  }
+  .chero .cimg {
+    width: min(132px, 36vw);
+    margin-top: var(--sp2);
+  }
+  .ctitle {
+    padding: var(--sp4) var(--sp2) var(--sp4) var(--sp3);
+  }
+}
+
+/* Loading card: the black-and-white pixel card spin from card-hunt (CardSpin.tsx) */
+.cardspin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 0;
+}
+.cardspin.pageload {
+  min-height: 60vh;
+}
+.cardspin img {
+  display: block;
+  width: 92px;
+  height: 134px;
+  image-rendering: pixelated;
+  filter: drop-shadow(4px 4px 0 var(--accent));
+}
+.cardspin .count {
+  margin: 0;
+  font-family: var(--se);
 }

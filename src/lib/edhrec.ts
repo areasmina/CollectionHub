@@ -1,7 +1,10 @@
 import { db } from './db';
 import { norm } from './names';
 
-export const BRACKETS: [string, string][] = [['', 'All'], ['exhibition', '1'], ['core', '2'], ['upgraded', '3'], ['optimized', '4'], ['cedh', '5']];
+// Brackets 1 (Exhibition) and 2 (Core) are left out on purpose (owner's call, Nov 2026): nobody here builds for them and
+// their EDHREC pages are thin; All stays. A commander without data for the chosen bracket falls back to All, with a note.
+export const BRACKETS: [string, string][] = [['', 'All'], ['upgraded', '3'], ['optimized', '4'], ['cedh', '5']];
+export const DEFAULT_BRACKET = 'upgraded';
 export const BUDGETS: [string, string][] = [['', 'Any'], ['budget', '$'], ['expensive', '$$$']];
 
 export interface EdhCard {
@@ -33,9 +36,16 @@ const DAY = 864e5;
 export class NoPage extends Error {}
 let nextSlot = 0;
 
-export async function fetchPage(path: string): Promise<EdhPage> {
+/** The saved copy of a page, however old (null if never fetched): lets a view show something at once. */
+export async function cachedPage(path: string): Promise<{ page: EdhPage; at: number } | null> {
+  const hit = await db.edhrec.get(path).catch(() => undefined);
+  return hit ? { page: parsePage(hit.data), at: hit.at } : null;
+}
+
+/** A page from the cache when younger than maxAge (default a day), else from EDHREC (stale copy if EDHREC can't answer). */
+export async function fetchPage(path: string, maxAge = DAY): Promise<EdhPage> {
   const hit = await db.edhrec.get(path);
-  if (hit && Date.now() - hit.at < DAY) return parsePage(hit.data);
+  if (hit && Date.now() - hit.at < maxAge) return parsePage(hit.data);
   // Be polite: at most ~3 page requests a second (e.g. when ranking every commander).
   const start = Math.max(nextSlot, Date.now());
   nextSlot = start + 350;
@@ -54,6 +64,21 @@ export async function fetchPage(path: string): Promise<EdhPage> {
   const data = await r.json();
   await db.edhrec.put({ path, data, at: Date.now() });
   return parsePage(data);
+}
+
+/**
+ * Show the saved copy at once, then the fresh one when the saved copy is over a day old (fetched quietly).
+ * Rejects only when there is nothing to show at all.
+ */
+export async function showPage(path: string, onPage: (p: EdhPage) => void): Promise<void> {
+  const hit = await cachedPage(path);
+  if (hit) onPage(hit.page);
+  if (hit && Date.now() - hit.at < DAY) return;
+  try {
+    onPage(await fetchPage(path));
+  } catch (e) {
+    if (!hit) throw e;
+  }
 }
 
 export function parsePage(j: any): EdhPage {

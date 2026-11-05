@@ -1,12 +1,14 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { CardSpin } from './CardSpin';
 
 const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m.CommanderView })));
-import { statusOf } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { fetchPage, pagePath } from '../lib/edhrec';
+import { cachedPage, fetchPage, NoPage, pagePath } from '../lib/edhrec';
+import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
+import { openCollection } from '../lib/nav';
 import { Progress, usd, type Shared } from './shared';
 import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
@@ -34,22 +36,38 @@ const TAPES: React.CSSProperties[] = [
 ];
 
 type Cmdr = Card & { added?: number };
-/** Per commander, from EDHREC's average deck: share owned, cards missing, EDHREC decks. */
-type Stat = { pct: number; missing: number; decks?: number } | null;
 
-// Results survive page switches: recomputed only when the binder's contents change or after a day.
-const CACHE_MS = 864e5;
-let statsCache: { sig: string; at: number; map: Map<string, Stat> } = { sig: '', at: 0, map: new Map() };
-const binderSig = (profile: number, mine: Map<string, number>) => {
-  // Which cards are owned is what matters (quantities don't change % owned); order-independent sum of name hashes.
-  let sum = 0;
-  for (const k of mine.keys()) {
-    let h = 0;
-    for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
-    sum = (sum + (h >>> 0)) % 4294967296;
-  }
-  return `${profile}|${mine.size}|${sum}`;
-};
+// Stats are saved on the device per binder (lib/cmdrstats), so a reload shows them at once; this copy also skips the
+// IndexedDB read when switching pages. Old EDHREC pages are re-downloaded quietly after everything is shown.
+const REFRESH_MS = 7 * 864e5;
+let memo: { profile: number; sig: string; map: Map<string, SavedStat> } | null = null;
+
+/** First run (or a binder with no legends yet): three taped steps instead of an empty page. */
+function Welcome({ empty }: { empty: boolean }) {
+  const steps: [string, string][] = [
+    ['IMPORT YOUR CARDS', 'ManaBox CSV, Moxfield / Archidekt text or a plain list. Nothing leaves this device.'],
+    ['SEE WHAT YOU CAN BUILD', 'Every commander you own, ranked by how much of its deck is already in your binder.'],
+    ['OPEN ONE, SWAP FROM YOUR BINDER', 'Missing cards get stand-ins you own. Buy only what\'s worth it.'],
+  ];
+  return (
+    <section className="welcome" aria-label="Getting started">
+      <ol>
+        {steps.map(([h, p], i) => (
+          <li key={h} className="gbox" style={{ transform: `rotate(${[-1.2, 0.8, -0.5][i]}deg)` }}>
+            <Tape style={{ top: -12, left: 18, width: 70, height: 22, transform: `rotate(${[-8, 6, -4][i]}deg)` }} />
+            <span className="wn">{i + 1}</span>
+            <b>{h}</b>
+            <span>{p}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="count">{empty ? 'Your binder is empty.' : 'No commanders in this binder yet.'} You can also type any commander in the search above and press Enter.</p>
+      <button className="btn" onClick={() => (haptic('select'), openCollection())}>
+        IMPORT YOUR CARDS →
+      </button>
+    </section>
+  );
+}
 
 export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
@@ -72,13 +90,18 @@ export function Discover(s: Shared) {
   const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
   const phone = window.innerWidth <= 700;
   const sig = binderSig(s.profile, s.mine);
-  const [stats, setStatsState] = useState<Map<string, Stat>>(() => (statsCache.sig === sig && Date.now() - statsCache.at < CACHE_MS ? statsCache.map : new Map()));
-  const setStats = (f: (m: Map<string, Stat>) => Map<string, Stat>) =>
-    setStatsState((m) => {
-      const next = f(m);
-      statsCache = { sig, at: statsCache.sig === sig ? statsCache.at : Date.now(), map: next };
-      return next;
-    });
+  // Saved stats of this binder (from memory, else from the device); shown even while a changed binder is recounted.
+  const [saved, setSaved] = useState<{ profile: number; sig: string; map: Map<string, SavedStat> } | null>(() => (memo?.profile === s.profile ? memo : null));
+  useEffect(() => {
+    if (memo?.profile === s.profile) return setSaved(memo);
+    let live = true;
+    setSaved(null);
+    loadStats(s.profile).then((r) => live && setSaved((memo = { profile: s.profile, ...r })));
+    return () => {
+      live = false;
+    };
+  }, [s.profile]);
+  const stats = new Map([...(saved?.map ?? [])].map(([k, v]) => [k, v.stat]));
   const data = useLiveQuery(async () => {
     const entries = await db.entries.where('profile').equals(s.profile).toArray();
     const cards = await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))]);
@@ -95,39 +118,53 @@ export function Discover(s: Shared) {
   }, [s.profile]);
   const commanders = data?.commanders ?? [];
 
-  // Stats for every commander, loaded in the background (EDHREC pages are paced and cached a day).
-  const pending = commanders.filter((c) => !stats.has(c.key)).sort((a, b) => a.name.localeCompare(b.name));
-  // Binder changed (import, quantity edit, other binder picked): start over.
+  // Stats for every commander. First recount from pages already on the device (fast, no network), then fetch missing
+  // or old pages from EDHREC one by one (paced, cached), saving as it goes. Paused while a commander is open.
+  const work = saved && data ? plan(commanders.map((c) => c.key), saved.map, saved.sig === sig, Date.now(), REFRESH_MS) : null;
+  // The progress bar counts only commanders with nothing to show yet or a recount under way; old pages refresh silently.
+  const pending = work ? new Set([...work.recount, ...work.refresh.filter((k) => !saved!.map.has(k))]).size : commanders.length;
   useEffect(() => {
-    if (statsCache.sig !== sig || Date.now() - statsCache.at >= CACHE_MS) {
-      statsCache = { sig, at: Date.now(), map: new Map() };
-      setStatsState(new Map());
-    }
-  }, [sig]);
-  useEffect(() => {
-    if (!pending.length || open) return;
+    if (!saved || !data || !work || open || (!work.recount.length && !work.refresh.length)) return;
     let live = true;
+    const profile = s.profile;
+    const byKey = new Map(commanders.map((c) => [c.key, c]));
+    const map = saved.sig === sig ? new Map(saved.map) : new Map([...saved.map].filter(([k]) => byKey.has(k)));
+    const put = (k: string, v: SavedStat) => {
+      map.set(k, v);
+      memo = { profile, sig, map: new Map(map) };
+      setSaved(memo);
+    };
     (async () => {
-      for (const c of pending) {
+      const refresh = new Set(work.refresh);
+      for (const k of work.recount) {
         if (!live) return;
-        const st: Stat = await fetchPage(pagePath('average', slug(c.name)))
-          .then((p) => {
-            const names = [...new Set(p.lists.flatMap((l) => l.cards.map((x) => x.name)))];
-            const missing = names.filter((n) => statusOf(n, s.mine) !== 'owned').length;
-            return { pct: names.length ? Math.round((100 * (names.length - missing)) / names.length) : 0, missing, decks: p.numDecks };
-          })
-          .catch(() => null);
-        if (live) setStats((m) => new Map(m).set(c.key, st));
+        const hit = await cachedPage(pagePath('average', slug(byKey.get(k)!.name)));
+        if (hit) put(k, { stat: statOf(hit.page, s.mine), at: hit.at });
+        else refresh.add(k);
+      }
+      if (live) await saveStats(profile, sig, map);
+      for (const k of [...refresh].sort((a, b) => byKey.get(a)!.name.localeCompare(byKey.get(b)!.name))) {
+        if (!live) return;
+        const path = pagePath('average', slug(byKey.get(k)!.name));
+        // No EDHREC page = null; offline or an error: keep what's shown and try again next time.
+        const stat = await fetchPage(path, REFRESH_MS)
+          .then((p) => statOf(p, s.mine))
+          .catch((e) => (e instanceof NoPage ? null : undefined));
+        if (!live) return;
+        if (stat !== undefined) put(k, { stat, at: Date.now() });
+        else continue;
+        await saveStats(profile, sig, map);
       }
     })();
     return () => {
       live = false;
+      saveStats(profile, sig, map);
     };
-  }, [commanders.length, s.mine, open]);
+  }, [saved?.profile, saved ? saved.sig === sig : false, sig, commanders.length, open, !!data]);
 
   if (open)
     return (
-      <Suspense fallback={<p className="count pageload">Loading…</p>}>
+      <Suspense fallback={<CardSpin page />}>
         <CommanderView name={open} s={s} no={openNo} onBack={() => setOpen(null)} />
       </Suspense>
     );
@@ -156,21 +193,13 @@ export function Discover(s: Shared) {
     .filter((c) => colours.every((col) => c.ci.includes(col)))
     .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name));
   const toggle = (col: string) => setColours((cs) => (cs.includes(col) ? cs.filter((x) => x !== col) : [...cs, col]));
-  const tick = ['★ WHAT CAN YOU BUILD WITH WHAT YOU OWN?', '★ OWN IT · BUILD IT · SLEEVE IT', '★ MISSING CARDS GET SWAPPED FROM YOUR BINDER'];
 
   return (
     <>
       <PageDecor seed={501} rays="46% 30%" sheet={{ side: 'right', top: 560, rot: -6 }} />
-      <div className="ticker" aria-hidden="true">
-        <span>
-          {[...tick, ...tick].map((t, i) => (
-            <span key={i}>{t}</span>
-          ))}
-        </span>
-      </div>
       <main>
         <section className="hero">
-          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 64 : 44} seed={7} />
+          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} />
           <EyeDoodle />
           {phone && (
             <button
@@ -271,13 +300,17 @@ export function Discover(s: Shared) {
           </div>
         </section>
 
-        {pending.length > 0 && commanders.length > 0 && <Progress done={commanders.length - pending.length} total={commanders.length} what="Checking EDHREC average decks" />}
+        {pending > 0 && commanders.length > 0 && <Progress done={commanders.length - pending} total={commanders.length} what="Checking EDHREC average decks" />}
         {sort === 'added' && data?.undated && (
           <p className="count">Cards imported before dates were recorded have no date, so they're listed last. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
         )}
-        <p className="count">
-          {commanders.length ? `${shown.length} of ${commanders.length} commanders in this binder.` : 'No commanders yet: import a collection in the Collection tab, or type any commander above and press Enter.'}
-        </p>
+        {commanders.length ? (
+          <p className="count">
+            {`${shown.length} of ${commanders.length} commanders in this binder.`}
+          </p>
+        ) : (
+          data && <Welcome empty={s.mine.size === 0} />
+        )}
         <ul className="cgrid" ref={gridRef}>
           {shown.map((c, i) => {
             const st = stats.get(c.key);
@@ -299,7 +332,8 @@ export function Discover(s: Shared) {
                       {c.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}
                     </span>
                   </span>
-                  <span className="own">{st ? `Own ${st.pct}% of the deck. ${st.missing} cards missing.` : st === null ? 'No EDHREC deck yet.' : 'Checking EDHREC…'}</span>
+                  {/* The % and battery below say how much is owned; the tag says what's left (no sentence repeating both). */}
+                  {!st && <span className="own">{st === null ? 'No EDHREC deck yet.' : 'Checking EDHREC…'}</span>}
                   {st && <span className={`badge${ready ? ' ready' : ''}`}>{ready ? '[READY TO SLEEVE!]' : `[${st.missing} TO BUY]`}</span>}
                   <span className="foot">
                     <span className="mono">

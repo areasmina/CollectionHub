@@ -51,3 +51,23 @@ export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0): string[] 
   if (owned) out.push(`You own ×${owned}`);
   return out;
 }
+
+// Highlight lists aren't a role (Top Cards, High Lift…): a card's category is its type list (Creatures, Mana Artifacts…).
+const META = /^(new cards|top cards|high synergy|high lift|game changers)/i;
+/** What EDHREC says about each recommended card (key = norm(name)): its role list, how many decks play it, synergy. */
+export function recInfoOf(
+  lists: { header: string; cards: { name: string; synergy?: number; decks?: number; potential?: number }[] }[],
+  key: (name: string) => string,
+  cardOf: (c: { name: string }) => { type?: string; cmc?: number } | undefined,
+): Map<string, SubCard> {
+  const out = new Map<string, SubCard>();
+  for (const l of lists)
+    for (const c of l.cards) {
+      const prev = out.get(key(c.name));
+      const meta = META.test(l.header);
+      if (prev && (prev.category || meta)) continue;
+      const sc = cardOf(c);
+      out.set(key(c.name), { name: c.name, category: meta ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
+    }
+  return out;
+}

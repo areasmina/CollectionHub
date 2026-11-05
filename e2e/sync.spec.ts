@@ -27,7 +27,7 @@ function fakeCloud() {
     });
 }
 const openSync = async (page: Page) => {
-  await page.locator('.hubtab').click();
+  await page.locator('.pillhub').click();
   await page.locator('.syncbtn').click();
   await expect(page.getByRole('heading', { name: 'SYNC BETWEEN DEVICES' })).toBeVisible();
 };

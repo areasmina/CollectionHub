@@ -2,11 +2,40 @@ import { haptic } from '../lib/haptics';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { statusOf } from '../lib/compare';
-import { db, type Card } from '../lib/db';
+import { db, type Card, type Deck } from '../lib/db';
 import { openDeck } from '../lib/nav';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
+
+/** Every legal card in a binder, one per name (live). */
+export function useBinder(profile: number) {
+  return (
+    useLiveQuery(async () => {
+      const es = await db.entries.where('profile').equals(profile).toArray();
+      const m = new Map<string, Card>();
+      for (const c of await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])) if (c?.legal && !m.has(c.key)) m.set(c.key, c);
+      return [...m.values()];
+    }, [profile]) ?? []
+  );
+}
+
+/** A deck's light: on = active (its cards count as in use in your binder), off = put away. */
+export function DeckLight({ deck }: { deck: Deck }) {
+  const on = !deck.inactive;
+  return (
+    <button
+      className={`dlight${on ? ' on' : ''}`}
+      aria-pressed={on}
+      aria-label={`${deck.name}: ${on ? 'active, tap to put it away' : 'put away, tap to make it active'}`}
+      title={on ? 'Active: its cards count as in use in your binder' : 'Put away: its cards are free in your binder'}
+      onClick={(e) => (e.stopPropagation(), haptic(on ? 'tap' : 'success'), db.decks.update(deck.id!, { inactive: on ? true : undefined }))}
+    >
+      <i aria-hidden="true" />
+      {on ? 'ACTIVE' : 'OFF'}
+    </button>
+  );
+}
 
 export interface Shared {
   profile: number;
@@ -149,12 +178,16 @@ export function CardLine({
   s,
   note,
   marker,
+  markText,
+  quiet,
   onOpen,
   onClose,
   onMenu,
   foil,
   children,
 }: {
+  markText?: string; // what the marker line says (default "↔ for <marker>")
+  quiet?: boolean; // your own card: a small swap button instead of the loud one
   onMenu?: (x: number, y: number) => void; // card menu (right-click / press and hold)
   foil?: boolean; // foil copy: the image gets a sheen
   name: string;
@@ -179,13 +212,28 @@ export function CardLine({
           {note}
           {st === 'missing' && <span className="sr">(missing)</span>}
         </span>
-        {marker && <span className="swapmark">↔ for {marker}</span>}
+        {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
         {st === 'other' && <span className="tagother">in {s.otherName}</span>}
       </span>
       <span className="acts">
         {onOpen && (
-          <button className="swapbtn" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Undo swap for ${marker}` : `Swap ${name}`}>
-            ↺ SWAP
+          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
+            {quiet ? '⇄' : '↺ SWAP'}
+          </button>
+        )}
+        {onMenu && (
+          <button
+            className="morebtn"
+            aria-label={`More for ${name}`}
+            title="More (right-click or hold works too)"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              haptic('open');
+              onMenu(r.left, r.bottom);
+            }}
+          >
+            ⋯
           </button>
         )}
         <PriceLink card={card} plain={st === 'owned' && !marker} />
@@ -196,7 +244,7 @@ export function CardLine({
 }
 
 /** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
-export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
+export function CardTile({ name, img, card, s, note, marker, markText, quiet, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
@@ -208,12 +256,27 @@ export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foi
         {st === 'missing' && <span className="sr">(missing)</span>}
       </span>
       {note && <span className="tnote">{note}</span>}
-      {marker && <span className="swapmark">↔ for {marker}</span>}
+      {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
       {st === 'other' && <span className="tagother">in {s.otherName}</span>}
       <span className="tacts">
         {onOpen && (
-          <button className="swapbtn" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Undo swap for ${marker}` : `Swap ${name}`}>
-            ↺ SWAP
+          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
+            {quiet ? '⇄' : '↺ SWAP'}
+          </button>
+        )}
+        {onMenu && (
+          <button
+            className="morebtn"
+            aria-label={`More for ${name}`}
+            title="More (right-click or hold works too)"
+            onClick={(e) => {
+              e.stopPropagation();
+              const r = e.currentTarget.getBoundingClientRect();
+              haptic('open');
+              onMenu(r.left, r.bottom);
+            }}
+          >
+            ⋯
           </button>
         )}
         <PriceLink card={card} plain={st === 'owned' && !marker} />
@@ -226,8 +289,8 @@ export function CardTile({ name, img, card, s, note, marker, onOpen, onMenu, foi
 export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void; roman?: boolean }) {
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
-      {options.map(([v, text], i) => (
-        <button key={v} role="radio" className={roman && i > 0 ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
+      {options.map(([v, text]) => (
+        <button key={v} role="radio" className={roman && v ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}

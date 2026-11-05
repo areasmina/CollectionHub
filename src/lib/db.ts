@@ -46,12 +46,14 @@ export interface Deck {
   updated: number;
   note?: string;
   tags?: string[];
+  inactive?: boolean; // light off: a deck you're not playing now; its cards don't count as in use
 }
 export interface Profile {
   id: number;
   name: string;
   swaps?: Record<string, Record<string, string>>; // deck path -> missing card -> owned replacement
   bought?: string[]; // shopping list: card keys checked off
+  pins?: Record<string, { in: string[]; out: string[] }>; // commander -> always in / never use
 }
 export interface CachedPage {
   path: string;

@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs';
 
 // Screen checks: the real app in a real browser at phone, tablet and desktop sizes, with Scryfall / EDHREC mocked
 // (e2e/mock.ts), so they run offline and give the same result every time. `npm run test:screens`.
-const local = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'; // preinstalled in Claude's cloud sessions
-const launchOptions = existsSync(local) ? { executablePath: local } : {};
+// Chromium preinstalled in Claude's cloud sessions (a link to whichever version is installed there).
+const local = ['/opt/pw-browsers/chromium', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find((p) => existsSync(p));
+const launchOptions = local ? { executablePath: local } : {};
 
 export default defineConfig({
   testDir: 'e2e',
