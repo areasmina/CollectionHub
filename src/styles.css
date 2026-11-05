@@ -6549,3 +6549,54 @@ details.cat {
   position: relative;
   z-index: 3;
 }
+
+/* Copies warning: title and summary on one line (it was a tall band holding one sentence). */
+.shortalert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+}
+.shortalert > details,
+.shortalert > ul {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.shortalert summary {
+  min-height: 36px;
+}
+
+/* Desktop / tablet commander page: room to breathe. */
+@media (min-width: 900px) {
+  /* Header: tags get their own full row (they wrap, none hidden behind a fade); the number + % sit above them, right. */
+  .cmeta {
+    flex-wrap: wrap;
+    row-gap: 14px;
+  }
+  .cmeta .score {
+    order: -1;
+    margin-left: auto;
+  }
+  .cmeta .builtaround {
+    flex: 1 1 100%;
+  }
+  .chero .hscroll {
+    flex-wrap: wrap;
+    overflow: visible;
+    mask-image: none;
+    padding: 2px 0 4px;
+    row-gap: 10px;
+  }
+  /* Settings strip: even columns with air between them, match gets the extra width. */
+  .strip {
+    grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(260px, 1.6fr) minmax(170px, 1fr) minmax(190px, 1fr);
+    gap: 18px 30px;
+    padding: 24px 28px 18px;
+  }
+  .strip .cell.wide {
+    grid-column: auto;
+  }
+  .strip .hint {
+    grid-column: 1 / -1;
+  }
+}
