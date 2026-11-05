@@ -316,7 +316,6 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
             <span className="lbl">COLLECTION MATCH</span>
             <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
               <span className="burst" aria-hidden="true" />
-              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
               <span className="meter">
                 <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
                   {Array.from({ length: 10 }, (_, i) => (
@@ -324,8 +323,8 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                   ))}
                 </span>
                 <small>
-                  You own {sum.owned} of {sum.total}
-                  {page?.numDecks ? ` · ${page.numDecks.toLocaleString()} EDHREC decks` : ''}
+                  {/* The % itself is in the header; this line says what it's made of. */}
+                  You own {sum.owned} of {sum.total} cards
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>

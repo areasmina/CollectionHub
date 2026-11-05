@@ -307,7 +307,8 @@ export function Discover(s: Shared) {
                       {c.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}
                     </span>
                   </span>
-                  <span className="own">{st ? `Own ${st.pct}% of the deck. ${st.missing} cards missing.` : st === null ? 'No EDHREC deck yet.' : 'Checking EDHREC…'}</span>
+                  {/* The % and battery below say how much is owned; the tag says what's left (no sentence repeating both). */}
+                  {!st && <span className="own">{st === null ? 'No EDHREC deck yet.' : 'Checking EDHREC…'}</span>}
                   {st && <span className={`badge${ready ? ' ready' : ''}`}>{ready ? '[READY TO SLEEVE!]' : `[${st.missing} TO BUY]`}</span>}
                   <span className="foot">
                     <span className="mono">
