@@ -6437,8 +6437,8 @@ details.cat {
 }
 .cardspin img {
   display: block;
-  width: 94px;
-  height: 140px;
+  width: 92px;
+  height: 134px;
   image-rendering: pixelated;
   filter: drop-shadow(4px 4px 0 var(--accent));
 }
