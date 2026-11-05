@@ -357,17 +357,6 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                 SAVE AS DECK
               </button>
             )}
-            {mine.length > 0 && !saved && (
-              <span className="mydecks">
-                your deck{mine.length > 1 ? 's' : ''}:{' '}
-                {mine.map((d, i) => (
-                  <span key={d.id}>
-                    {i > 0 && ', '}
-                    <DeckLink name={d.name} />
-                  </span>
-                ))}
-              </span>
-            )}
           </div>
           <span className="hint">
             {kind === 'average' && missing.length > 0 ? 'click or tap a missing card to swap in one of yours' : 'every card here is in your binder'}
@@ -377,6 +366,19 @@ export function CommanderView({ name, s, onBack, no }: { name: string; s: Shared
                 {' '}
                 · shopping list ({toBuy.length}) ↓
               </a>
+            )}
+            {/* Your decks with this commander sit on this full-width line, so the DECK cell stays as short as the
+                others (a long list there left an empty band across the whole strip). */}
+            {mine.length > 0 && !saved && (
+              <span className="mydecks">
+                {' · '}your deck{mine.length > 1 ? 's' : ''}:{' '}
+                {mine.map((d, i) => (
+                  <span key={d.id}>
+                    {i > 0 && ', '}
+                    <DeckLink name={d.name} />
+                  </span>
+                ))}
+              </span>
             )}
           </span>
         </section>

@@ -6329,8 +6329,7 @@ details.cat {
   text-decoration: none;
 }
 .mydecks {
-  display: block;
-  margin-top: 6px;
+  display: inline;
   font-family: 'Space Mono', monospace;
   font-size: 12px;
   text-transform: uppercase;
