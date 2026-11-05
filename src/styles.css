@@ -6869,3 +6869,52 @@ details.cat {
 .swapnote li button[draggable='true'] {
   cursor: grab;
 }
+
+/* Deck light: active (green) / put away (grey); Collection marks cards used by active decks */
+.dlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  background: var(--ink);
+  color: var(--white);
+  border: 2px solid var(--white);
+  font-family: var(--an);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+.dlight i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6b6b6b;
+}
+.dlight.on i {
+  background: #2bd65a;
+  box-shadow: 0 0 8px #2bd65a;
+}
+.shelf li,
+.dgrid li.dtile {
+  position: relative;
+}
+.shelf li > .dlight,
+.dgrid li.dtile > .dlight {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+}
+.shelf li.off > button,
+.dgrid li.dtile.off > .dcard {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+.inuse {
+  font-family: var(--se);
+  font-size: 12px;
+  color: #2bd65a;
+}
+.cmeta > .dlight {
+  margin-right: 10px;
+}

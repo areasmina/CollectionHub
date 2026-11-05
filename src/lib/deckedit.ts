@@ -68,6 +68,9 @@ export async function savePin(profile: number, commander: string, card: string, 
   await db.profiles.update(profile, { pins: { ...(p.pins ?? {}), [commander]: togglePin(p.pins?.[commander] ?? noPins(), card, side) } });
 }
 
+/** Deck light on / off (active decks mark their cards as in use in the binder). */
+export const setActive = (deck: Deck, on: boolean) => db.decks.update(deck.id!, { inactive: on ? undefined : true });
+
 export const setCommander = (deck: Deck, name: string) => db.decks.update(deck.id!, { commander: name, updated: Date.now() });
 
 /** Adds one copy of a card to a deck; returns an undo. */

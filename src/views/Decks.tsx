@@ -20,7 +20,7 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -528,6 +528,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               </div>
             </div>
             <div className="cmeta">
+              <DeckLight deck={deck} />
               <span className="typed">
                 {[deck.commander ? `COMMANDER: ${deck.commander.split(' // ')[0].toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
               </span>
@@ -734,7 +735,8 @@ export function Decks(s: Shared) {
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
             const art = d.commander ?? c?.name ?? '';
             return (
-              <li key={d.id}>
+              <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`}>
+                <DeckLight deck={d} />
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
                   {i === 0 && <Doodles n={433} count={2} spots={[[64, 50], [70, -8]]} paper />}
                   <span className="rule" aria-hidden="true" />

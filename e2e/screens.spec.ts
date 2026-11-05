@@ -378,3 +378,15 @@ test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ pa
   await note.locator('.picks button', { hasText: 'Arcane Signet' }).dragTo(note.locator('.viewer'));
   await expect(page.locator('.swapmark', { hasText: '↔ for Sol Ring' })).toBeVisible();
 });
+
+test('Deck light: active decks mark their cards in use in Collection; off frees them', async ({ page }, info) => {
+  await go(page, 'collection');
+  const sol = page.locator('li', { hasText: 'Sol Ring' }).first();
+  await expect(sol.locator('.inuse')).toHaveText('● in 1 deck');
+  await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
+  await page.locator('.shelf .dlight').first().click();
+  await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);
+  await expect(sol.locator('.inuse')).toHaveCount(0);
+  await page.locator('.shelf .dlight').first().click();
+  await expect(sol.locator('.inuse')).toHaveCount(1);
+});

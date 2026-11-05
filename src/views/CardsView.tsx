@@ -5,6 +5,8 @@ import { db, type Card, type Entry } from '../lib/db';
 import { PriceLink, priced, Thumb, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
 import { norm } from '../lib/names';
+import { inUse } from '../lib/copies';
+import { useLiveQuery } from 'dexie-react-hooks';
 
 type MenuFn = (e: Entry, x: number, y: number) => void;
 /** A card row / tile with the card menu: right-click, press and hold, or its ⋯ button. */
@@ -171,7 +173,16 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view, onMenu }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn }) {
+function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]> }) {
+  // In your active decks: a small mark under the name ("in 2 decks", the deck names on hover).
+  const useMark = (e: Entry) => {
+    const ds = used?.get(norm(e.name));
+    return ds?.length ? (
+      <span className="inuse" title={`In ${ds.join(', ')}`}>
+        ● in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
+      </span>
+    ) : null;
+  };
   const setLine = (e: Entry) => [e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ');
   if (view === 'grid')
     return (
@@ -185,6 +196,7 @@ function Items({ list, cards, view, onMenu }: { list: Entry[]; cards: Map<string
             </span>
             <span className="tname">{e.name}</span>
             <span className="tnote">{setLine(e)}</span>
+            {useMark(e)}
           </MenuLi>
         ))}
       </ul>
@@ -206,6 +218,7 @@ function Items({ list, cards, view, onMenu }: { list: Entry[]; cards: Map<string
             <span className="cn">
               <b>{e.name}</b>
               <span>{setLine(e)}</span>
+              {useMark(e)}
             </span>
             <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
             <RemoveBtn e={e} />
@@ -225,6 +238,8 @@ export function CardsView({ entries, cards, profile, binderName }: { entries: En
     const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  const decks = useLiveQuery(() => (profile ? db.decks.where('profile').equals(profile).toArray() : []), [profile]) ?? [];
+  const used = inUse(decks);
   const onMenu: MenuFn | undefined = profile ? (e, x, y) => setMenu({ e, x, y }) : undefined;
   const owned = (name: string) => entries.filter((x) => norm(x.name) === norm(name)).reduce((n, x) => n + x.qty, 0);
   // Always opens in grid; LIST switches for this visit only.
@@ -302,14 +317,14 @@ export function CardsView({ entries, cards, profile, binderName }: { entries: En
                     {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
         </div>
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)

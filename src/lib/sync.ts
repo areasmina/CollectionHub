@@ -121,7 +121,7 @@ export async function push() {
     })),
   );
   // Deck note + tags need supabase/migrations/003_deck_extras.sql; without it they stay on this device.
-  const deckRows = decks.map((d) => ({ user_id: uid, slot: d.profile, name: d.name, commander: d.commander ?? null, cards: d.cards, updated_at: new Date(d.updated).toISOString(), extras: { note: d.note ?? '', tags: d.tags ?? [] } }));
+  const deckRows = decks.map((d) => ({ user_id: uid, slot: d.profile, name: d.name, commander: d.commander ?? null, cards: d.cards, updated_at: new Date(d.updated).toISOString(), extras: { note: d.note ?? '', tags: d.tags ?? [], inactive: !!d.inactive } }));
   try {
     await insertAll('decks', deckRows);
   } catch (e) {
@@ -182,7 +182,7 @@ export async function pull() {
     await db.entries.bulkAdd(
       cards.map((c) => ({ profile: c.slot, cardId: c.card_id, name: c.name, qty: c.qty, set: c.set_code ?? undefined, cn: c.collector_number ?? undefined, foil: c.foil, added: c.added ? Date.parse(c.added) : undefined })),
     );
-    await db.decks.bulkAdd(decks.map((d) => ({ profile: d.slot, name: d.name, commander: d.commander ?? undefined, cards: d.cards, updated: Date.parse(d.updated_at), note: d.extras?.note || undefined, tags: d.extras?.tags?.length ? d.extras.tags : undefined })));
+    await db.decks.bulkAdd(decks.map((d) => ({ profile: d.slot, name: d.name, commander: d.commander ?? undefined, cards: d.cards, updated: Date.parse(d.updated_at), note: d.extras?.note || undefined, tags: d.extras?.tags?.length ? d.extras.tags : undefined, inactive: d.extras?.inactive || undefined })));
   }));
   setLastVersion(version);
   clearDirty(started);

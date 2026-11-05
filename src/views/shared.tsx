@@ -2,7 +2,7 @@ import { haptic } from '../lib/haptics';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { statusOf } from '../lib/compare';
-import { db, type Card } from '../lib/db';
+import { db, type Card, type Deck } from '../lib/db';
 import { openDeck } from '../lib/nav';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
@@ -17,6 +17,23 @@ export function useBinder(profile: number) {
       for (const c of await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])) if (c?.legal && !m.has(c.key)) m.set(c.key, c);
       return [...m.values()];
     }, [profile]) ?? []
+  );
+}
+
+/** A deck's light: on = active (its cards count as in use in your binder), off = put away. */
+export function DeckLight({ deck }: { deck: Deck }) {
+  const on = !deck.inactive;
+  return (
+    <button
+      className={`dlight${on ? ' on' : ''}`}
+      aria-pressed={on}
+      aria-label={`${deck.name}: ${on ? 'active, tap to put it away' : 'put away, tap to make it active'}`}
+      title={on ? 'Active: its cards count as in use in your binder' : 'Put away: its cards are free in your binder'}
+      onClick={(e) => (e.stopPropagation(), haptic(on ? 'tap' : 'success'), db.decks.update(deck.id!, { inactive: on ? true : undefined }))}
+    >
+      <i aria-hidden="true" />
+      {on ? 'ACTIVE' : 'OFF'}
+    </button>
   );
 }
 
