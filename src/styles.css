@@ -7205,3 +7205,38 @@ details.cat {
 .ztile .tacts > .price {
   margin-left: auto;
 }
+
+/* Spacing scale (4 · 8 · 12 · 16 · 24 · 32 · 48): new and touched rules use these, not one-off numbers. */
+:root {
+  --sp1: 4px;
+  --sp2: 8px;
+  --sp3: 12px;
+  --sp4: 16px;
+  --sp5: 24px;
+  --sp6: 32px;
+  --sp7: 48px;
+}
+.shelf {
+  margin: var(--sp5) 0 var(--sp2);
+}
+.shelf ul.shelfrow {
+  gap: var(--sp4);
+  margin-top: var(--sp3);
+}
+.forgehint {
+  margin: var(--sp4) 0;
+}
+@media (max-width: 700px) {
+  /* Phone commander hero: smaller card, tighter padding, so the deck starts on the first screen */
+  .chero {
+    padding: var(--sp3) var(--sp3) var(--sp4);
+    gap: var(--sp3);
+  }
+  .chero .cimg {
+    width: min(132px, 36vw);
+    margin-top: var(--sp2);
+  }
+  .ctitle {
+    padding: var(--sp4) var(--sp2) var(--sp4) var(--sp3);
+  }
+}

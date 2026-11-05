@@ -31,6 +31,8 @@ const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.c
 
 export function CommanderView({ name, s, onBack: back, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const onBack = () => void canLeave().then((ok) => ok && back());
+  // Phones: a smaller ransom name, so the hero doesn't fill the first screen.
+  const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
   // The pill menu's back arrow goes back to the commander list.
   useEffect(() => {
     setBack(onBack);
@@ -315,7 +317,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             <div className="ctitle" onClick={onBack} title="Back to Discover">
               <div className="banner ht" aria-hidden="true" />
               <h1 aria-label={label}>
-                <Ransom text={label.toUpperCase()} size={label.length > 28 ? 44 : 54} seed={11} />
+                <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 30 : 36) : label.length > 28 ? 44 : 54} seed={11} />
               </h1>
               <div className="namerow">
                 <Pips ci={ci} size={30} />
