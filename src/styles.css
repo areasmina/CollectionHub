@@ -7240,3 +7240,27 @@ details.cat {
     padding: var(--sp4) var(--sp2) var(--sp4) var(--sp3);
   }
 }
+
+/* Loading card: the black-and-white pixel card spin from card-hunt (CardSpin.tsx) */
+.cardspin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 0;
+}
+.cardspin.pageload {
+  min-height: 60vh;
+}
+.cardspin img {
+  display: block;
+  width: 92px;
+  height: 134px;
+  image-rendering: pixelated;
+  filter: drop-shadow(4px 4px 0 var(--accent));
+}
+.cardspin .count {
+  margin: 0;
+  font-family: var(--se);
+}

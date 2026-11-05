@@ -1,6 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState } from 'react';
+import { CardSpin } from './CardSpin';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, BUDGETS, DEFAULT_BRACKET, imgOf, NoPage, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
@@ -527,7 +528,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         )}
         {error && <p className="error">{error}</p>}
-        {!page && !error && <p className="count">Loading EDHREC data…</p>}
+        {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}

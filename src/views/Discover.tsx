@@ -1,6 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { CardSpin } from './CardSpin';
 
 const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m.CommanderView })));
 import { db, type Card } from '../lib/db';
@@ -163,7 +164,7 @@ export function Discover(s: Shared) {
 
   if (open)
     return (
-      <Suspense fallback={<p className="count pageload">Loading…</p>}>
+      <Suspense fallback={<CardSpin page />}>
         <CommanderView name={open} s={s} no={openNo} onBack={() => setOpen(null)} />
       </Suspense>
     );
