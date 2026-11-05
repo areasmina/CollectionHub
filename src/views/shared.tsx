@@ -227,7 +227,7 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
       {options.map(([v, text]) => (
-        <button key={v} role="radio" className={roman ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
+        <button key={v} role="radio" className={roman && v ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}

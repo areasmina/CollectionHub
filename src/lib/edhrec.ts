@@ -1,9 +1,9 @@
 import { db } from './db';
 import { norm } from './names';
 
-// Bracket 1 (Exhibition) and "All" are left out on purpose (owner's call, Nov 2026): almost nobody builds for 1 and its
-// EDHREC pages are thin. A commander without data for the chosen bracket falls back to its all-brackets page, with a note.
-export const BRACKETS: [string, string][] = [['core', '2'], ['upgraded', '3'], ['optimized', '4'], ['cedh', '5']];
+// Brackets 1 (Exhibition) and 2 (Core) are left out on purpose (owner's call, Nov 2026): nobody here builds for them and
+// their EDHREC pages are thin; All stays. A commander without data for the chosen bracket falls back to All, with a note.
+export const BRACKETS: [string, string][] = [['', 'All'], ['upgraded', '3'], ['optimized', '4'], ['cedh', '5']];
 export const DEFAULT_BRACKET = 'upgraded';
 export const BUDGETS: [string, string][] = [['', 'Any'], ['budget', '$'], ['expensive', '$$$']];
 
