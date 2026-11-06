@@ -13,6 +13,8 @@ import { killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
 import { pagePath, showPage, type EdhPage } from '../lib/edhrec';
+import { allocate } from '../lib/allocation';
+import { inUseChip } from '../brain/chips';
 import { SwapNote, type SwapOption } from './SwapNote';
 import { CardMenu } from './CardMenu';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
@@ -528,10 +530,15 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     const card = cardOf(name);
     return { ...recInfo.get(norm(name)), name, type: card?.type, cmc: card?.cmc };
   };
+  // Copies your other decks use: the swap window's "in <deck>" chip.
+  const others = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [];
+  const alloc = allocate(others, s.mine);
+  const deckCol = new Map(others.map((d) => [d.name, deckColour(d)]));
   const optionOf = (sub: SubCard): SwapOption => {
     const bc = binderCard.get(norm(sub.name));
     const img = bc?.img;
-    return { sub, img, big: img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text };
+    const use = inUseChip(alloc, sub.name, (d) => d === deck.name);
+    return { sub, img, big: img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text, inUse: use && { ...use, colour: deckCol.get(use.deck) } };
   };
   const forgePool = () =>
     binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));

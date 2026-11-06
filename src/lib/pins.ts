@@ -33,7 +33,7 @@ export interface SlotIn {
 /** What fills a slot: `why` says what changed it (your swap, a never-use pin, an always-in pin). */
 export interface Slot {
   name: string;
-  why?: 'swap' | 'never' | 'pin';
+  why?: 'swap' | 'never' | 'pin' | 'auto'; // auto = OWNED ONLY's stand-in for a card you don't own
 }
 
 const BASIC = /^(Plains|Island|Swamp|Mountain|Forest|Wastes)$|^Snow-Covered /;

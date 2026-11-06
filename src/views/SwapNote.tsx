@@ -16,6 +16,7 @@ export interface SwapOption {
   big?: string; // readable image
   owned: number;
   text?: string; // rules text (Oracle + reminder text), for the search
+  inUse?: { text: string; lock: boolean; colour?: string }; // "in Atraxa" / "held by Atraxa" (only when another deck uses it)
 }
 
 /** A suggestion row: hover (mouse) shows it in the viewer; press and hold (touch) shows it full screen; tap swaps. */
@@ -52,6 +53,13 @@ function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; mis
               <span key={r}>{r}</span>
             ))}
           </span>
+          {o.inUse && (
+            <span className="inchip" style={o.inUse.colour ? ({ '--dc': o.inUse.colour } as React.CSSProperties) : undefined}>
+              <i aria-hidden="true" />
+              {o.inUse.lock && <span aria-label="reserved">🔒</span>}
+              {o.inUse.text}
+            </span>
+          )}
         </span>
       </button>
     </li>
