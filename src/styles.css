@@ -8506,3 +8506,348 @@ details.cat {
   text-wrap: balance;
   transform: rotate(-2deg);
 }
+
+/* ===== Design brief round (Nov 6): sticky slim bar · one loud price · colour meanings · plain sections · nav · hero ===== */
+
+/* 1. One slim settings bar that stays in reach: POWER · BUDGET · what's missing · FORGE IT */
+.slimbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin-top: var(--sp5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp2) var(--sp4);
+  padding: var(--sp2) var(--sp3);
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.slimbar .cell {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp2);
+}
+.slimbar .cell > .lbl {
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.slimbar .segs button {
+  min-height: 36px;
+  padding: 0 var(--sp3);
+  font-size: 15px;
+}
+.slimbar .bnote {
+  flex-basis: 100%;
+}
+.slimbar .forgecell {
+  margin-left: auto;
+}
+.slimbar .btn.forge,
+.slimbar .forgecell .btn {
+  min-height: 40px;
+  padding: var(--sp1) var(--sp4);
+  font-size: 18px;
+}
+@media (max-width: 700px) {
+  .slimbar {
+    gap: var(--sp2);
+    padding: var(--sp2);
+  }
+  .slimbar .cell > .lbl {
+    display: none; /* the MIN · MED · MAX and ANY · $ · $$$ buttons say what they are */
+  }
+  .slimbar .segs button {
+    min-height: 34px;
+    padding: 0 var(--sp2);
+    font-size: 14px;
+  }
+  .slimbar .btn.forge,
+  .slimbar .forgecell .btn {
+    min-height: 36px;
+    font-size: 15px;
+  }
+}
+/* the strip below keeps the match bar (shown once), built around and the line of notes */
+.strip {
+  margin-top: var(--sp4);
+}
+.strip .cell.wide {
+  grid-column: 1 / -1;
+}
+.strip .hint .tip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+}
+.strip .hint .tipx {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0 var(--sp1);
+  min-height: 28px;
+}
+.strip .hint .tipx:hover {
+  opacity: 1;
+}
+
+/* 2. One loud price: the missing cost is the only price on yellow tape; totals are quiet grey text */
+.misscost {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp1);
+  padding: 3px 10px 2px;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-decoration: none;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0 var(--ink);
+  clip-path: polygon(2% 0, 98% 4%, 100% 50%, 97% 100%, 1% 94%, 0 45%);
+}
+.misscost small {
+  font-family: var(--se);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+a.misscost:hover {
+  text-decoration: underline;
+}
+.dpanel .misscost {
+  align-self: flex-start;
+  margin: var(--sp1) 0 var(--sp2);
+}
+.hstats .price.quiet {
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  transform: none;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 13px;
+  color: var(--muted);
+  align-self: center;
+  white-space: nowrap;
+}
+.cat > summary .gval {
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  transform: none;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+/* a card's own price: always on missing cards, on hover / focus for the ones you own */
+.ztile.owned .tacts > .price,
+.ztile.owned .tacts > a.price {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ztile.owned:hover .tacts > .price,
+.ztile.owned:focus-within .tacts > .price {
+  opacity: 1;
+}
+
+/* 3. Colour meanings: yellow = money, hazard stripes = real warnings. Decorative stripes turn red / black. */
+.stripe {
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, var(--ink) 8px 16px);
+}
+
+/* 4. Deck sections: no white boxes. A plain header row on the grid, and the cards of small sections sit side
+   by side, so a 1-card section no longer leaves a row of empty width. */
+.deckgrid > .lists {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: var(--sp6);
+  row-gap: var(--sp4);
+}
+.deckgrid > .lists > .dtools {
+  flex: 1 1 100%;
+}
+.deckgrid > .lists > details.cat {
+  flex: 1 1 auto;
+  min-width: min(100%, 280px);
+  max-width: 100%;
+  background: none;
+  border: 0;
+}
+.deckgrid > .lists > details.cat:has(> ul.zlist) {
+  flex-basis: 100%;
+}
+.cat > summary {
+  background: none;
+  color: var(--text);
+  min-height: 36px;
+  padding: 0 0 var(--sp1);
+  border-bottom: 2px solid var(--text);
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+}
+.cat > summary .pm,
+.cat[open] > summary .pm {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  background: none;
+  color: var(--text);
+}
+.cat > summary .pm::before,
+.cat[open] > summary .pm::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: none;
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: translate(-50%, -70%) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.cat:not([open]) > summary .pm::before {
+  transform: translate(-70%, -50%) rotate(-45deg);
+}
+.cat > summary .pm::after,
+.cat[open] > summary .pm::after {
+  display: none;
+}
+.cat > summary .h {
+  font-size: 20px;
+}
+.cat > summary .n {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0;
+}
+.deckgrid > .lists > details.cat > ul.zgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 14px;
+  padding: var(--sp3) 0 0;
+}
+.deckgrid > .lists > details.cat > ul.zgrid > li {
+  flex: 0 0 148px;
+  width: 148px;
+}
+.deckgrid > .lists > details.cat > ul.zlist {
+  padding-top: var(--sp2);
+}
+@media (max-width: 700px) {
+  .deckgrid > .lists {
+    column-gap: var(--sp4);
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid > li {
+    flex-basis: calc(50% - 7px);
+    width: calc(50% - 7px);
+  }
+  .cat > summary {
+    grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  }
+  .cat > summary .h {
+    font-size: 18px;
+  }
+}
+
+/* 5. Floating nav: the page leaves room for it, and it slides away while you scroll down */
+.stage {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+.pillnav {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.pillnav.away {
+  transform: translate(-50%, calc(100% + 24px + env(safe-area-inset-bottom)));
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav {
+    transition: none;
+  }
+}
+
+/* 6. Clean hero: rank · decks · EDHREC on one small meta line under it */
+.cmetaline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp1) var(--sp3);
+  margin: var(--sp2) var(--sp1) 0;
+  font-family: var(--se);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.cmetaline > * + *::before {
+  content: '·';
+  margin-right: var(--sp3);
+  color: var(--muted);
+}
+.cmetaline a {
+  color: var(--text);
+}
+.cmetaline {
+  justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
+}
+@media (max-width: 700px) {
+  /* phones: two card columns across the page, so two small sections sit side by side */
+  .deckgrid > .lists > details.cat {
+    min-width: 0;
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid > li {
+    flex-basis: calc((100vw - 46px) / 2);
+    width: calc((100vw - 46px) / 2);
+  }
+  .cat > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--sp2);
+  }
+  .cat > summary .h {
+    flex: 1 1 auto;
+  }
+  .cat > summary .gval,
+  .cat > summary .n {
+    min-width: 0;
+  }
+}
+/* a section header never sets its section's width: the cards do (so two 1-card sections can share a row) */
+.deckgrid > .lists > details.cat > summary {
+  width: 0;
+  min-width: 100%;
+}
+.cmetaline > * + *::before {
+  display: inline-block;
+}
+@media (max-width: 700px) {
+  .deckgrid > .lists {
+    container-type: inline-size;
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid {
+    column-gap: var(--sp4);
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid > li {
+    flex-basis: calc((100cqw - var(--sp4)) / 2 - 0.5px);
+    width: calc((100cqw - var(--sp4)) / 2 - 0.5px);
+  }
+}
+@media (max-width: 700px) {
+  /* name on the first line, price · owned under it, lined up with the name */
+  .cat > summary .h {
+    flex: 1 1 calc(100% - 30px);
+  }
+  .cat > summary .h + * {
+    margin-left: 26px;
+  }
+}

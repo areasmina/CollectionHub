@@ -240,6 +240,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
+  // The swap tip shows on the first visit only: seen once, it stays off from the next visit on.
+  const [tip, setTip] = useStored<'show' | 'off'>('ch:swaptip', 'show', ['show', 'off']);
+  useEffect(() => () => setTip('off'), []); // eslint-disable-line react-hooks/exhaustive-deps
   const toBuyCost = priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const pricesIn = cards.size > 0;
   // If you built this deck too: owned cards your saved decks already use up (saved decks of this commander are the same deck).
@@ -346,14 +349,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <h1 aria-label={label}>
                 <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 30 : 36) : label.length > 28 ? 44 : 54} seed={11} />
               </h1>
-              {/* Rank and deck count, stamped right after the name (the header below it stays clean) */}
-              <p className="cstamp" onClick={(e) => e.stopPropagation()}>
-                <b>NO.{no ? String(no).padStart(3, '0') : '—'}</b>
-                <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
-                <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-                  EDHREC ↗
-                </a>
-              </p>
               <div className="namerow">
                 <Pips ci={ci} size={30} />
                 {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
@@ -362,15 +357,18 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        <section className="strip" aria-label="Filters and totals">
-          <Tape style={{ top: -12, left: -14, width: 84, height: 24, transform: 'rotate(-24deg)' }} />
-          <Tape style={{ top: -10, right: 60, width: 84, height: 24, transform: 'rotate(5deg)' }} />
-          {SHOW_AS_COMMANDER && (
-            <div className="cell">
-              <span className="lbl">VIEW</span>
-              <Segs label="View" value={kind} options={[['commander', 'AS CMDR'], ['average', 'AVERAGE']]} onChange={(v) => setKind(v as typeof kind)} />
-            </div>
-          )}
+        {/* Rank, deck count and EDHREC on one small meta line under the hero (the commander zone stays clean) */}
+        <p className="cmetaline">
+          <span>NO.{no ? String(no).padStart(3, '0') : '—'}</span>
+          <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
+          <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+            EDHREC ↗
+          </a>
+        </p>
+
+        {/* One slim bar that stays in reach while you scroll the cards: POWER, BUDGET, what's missing (the one loud
+            price, on yellow tape) and FORGE IT. */}
+        <section className="slimbar" aria-label="Deck settings">
           <div className="cell">
             <span className="lbl">POWER</span>
             <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), `Bracket ${b}`])} onChange={setBracket} />
@@ -380,6 +378,33 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             <span className="lbl">BUDGET</span>
             <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
           </div>
+          {receipt && pricesIn && toBuyCost > 0 && (
+            <a className="misscost" href="#shop" aria-label={`${toBuy.length} cards to buy, about ${money(toBuyCost)}: show the list`}>
+              <small>{toBuy.length} MISSING</small> ≈{cad(toBuyCost)}
+            </a>
+          )}
+          <div className="cell forgecell">
+            {saved ? (
+              <DeckLink name={saved}>
+                <span className="btn">OPEN IN THE FORGE →</span>
+              </DeckLink>
+            ) : (
+              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
+                ⚒ FORGE IT
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="strip" aria-label="Collection match and themes">
+          <Tape style={{ top: -12, left: -14, width: 84, height: 24, transform: 'rotate(-24deg)' }} />
+          <Tape style={{ top: -10, right: 60, width: 84, height: 24, transform: 'rotate(5deg)' }} />
+          {SHOW_AS_COMMANDER && (
+            <div className="cell">
+              <span className="lbl">VIEW</span>
+              <Segs label="View" value={kind} options={[['commander', 'AS CMDR'], ['average', 'AVERAGE']]} onChange={(v) => setKind(v as typeof kind)} />
+            </div>
+          )}
           <div className="cell wide">
             <span className="lbl">COLLECTION MATCH</span>
             <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
@@ -398,19 +423,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               {/* The % sits inside the red burst on the right, so the bar runs clean from the left. */}
               <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
-          </div>
-          {/* No MISSING plate: the TO BUY receipt lists the same cards with their total (no repeat). */}
-          <div className="cell">
-            <span className="lbl">DECK</span>
-            {saved ? (
-              <DeckLink name={saved}>
-                <span className="btn">OPEN IN THE FORGE →</span>
-              </DeckLink>
-            ) : (
-              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
-                ⚒ FORGE IT
-              </button>
-            )}
           </div>
             {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
             {tags.length > 0 && (
@@ -433,9 +445,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             )}
           <span className={`hint${short.length ? ' warn' : ''}`}>
             <ShortAlert items={short} inline />
-            {kind === 'average' ? (missing.length > 0 ? 'tap any card to swap it · missing ones first' : 'every card here is yours · tap one to swap or pin it') : 'every card here is in your binder'}
-            <span className="cur">_</span>
-            {receipt && (
+            {/* A one-time tip: shown on the first visit, then gone (✕ hides it at once) */}
+            {tip !== 'off' && (
+              <span className="tip">
+                {kind === 'average' ? (missing.length > 0 ? 'tip: tap any card to swap it · missing ones first' : 'tip: tap any card to swap or pin it') : 'every card here is in your binder'}
+                <span className="cur">_</span>
+                <button className="tipx" aria-label="Hide this tip" onClick={() => (haptic('tap'), setTip('off'))}>
+                  ✕
+                </button>
+              </span>
+            )}
+            {receipt && !(pricesIn && toBuyCost > 0) && (
               <a className="jump" href="#shop">
                 {' '}
                 · {toBuy.length} to buy{pricesIn ? ` ≈${money(toBuyCost)}` : ''} ↓

@@ -127,7 +127,8 @@ export function PriceLink({ card, plain, tape }: { card?: Card; plain?: boolean;
   let h = 0;
   for (const ch of tape ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const cls = `price${plain ? ' plain' : ''}${tape ? ` tapey y${h % 5} t${(h >> 3) % 4}` : ''}`;
-  return card?.buy && card.usd ? (
+  if (!card?.usd) return null; // basics and unpriced cards: no "≈CA$—"
+  return card.buy ? (
     <a className={cls} href={card.buy} target="_blank" rel="noreferrer" title={rateNote()} onClick={(e) => e.stopPropagation()}>
       {usd(card)}
     </a>
@@ -368,9 +369,12 @@ export function HeroStats({ price, fetched, names, children }: { price?: number;
   return (
     <div className="hstats" onClick={(e) => e.stopPropagation()}>
       {/* How the price is worked out stays in the tooltip, not as a line under the header */}
-      <span className="price tapey y1 t0 big" title={`${PRICE_METHOD} ${fetched}`} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
-        <small className="wideonly">DECK</small> {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
-      </span>
+      {/* One loud price per page (what's missing); the deck's total is quiet grey text, how it's worked out in the tooltip */}
+      {price !== undefined && (
+        <span className="price quiet" title={`${PRICE_METHOD} ${fetched}`} aria-label={`Whole deck costs about ${cad(price)}`}>
+          deck ≈{cad(price)}
+        </span>
+      )}
       <SaltStat names={names} />
       {children}
     </div>
@@ -381,15 +385,16 @@ export function HeroStats({ price, fetched, names, children }: { price?: number;
 export function SaltStat({ names }: { names: string[] }) {
   const [salt, setSalt] = useState<Map<string, number> | null>(null);
   useEffect(() => void saltMap().then(setSalt), []);
-  const s = salt && deckSalt(names, salt);
+  const s = salt && salt.size > 0 ? deckSalt(names, salt) : null;
+  if (!s) return null; // unknown salt (loading, or EDHREC's list unreachable): show nothing rather than "…"
   return (
     <details className="scrap salt">
-      <summary aria-label={s ? `Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards` : 'Salt loading'}>
+      <summary aria-label={`Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards`}>
         <span className="k">SALT</span>
-        <span className="amt">{s ? s.total.toFixed(1) : '…'}</span>
-        {s && s.top.length > 0 && <span className="caret" aria-hidden="true">▾</span>}
+        <span className="amt">{s.total.toFixed(1)}</span>
+        {s.top.length > 0 && <span className="caret" aria-hidden="true">▾</span>}
       </summary>
-      {s && (
+      {(
         <ul className="popnote">
           {s.top.map((c) => (
             <li key={c.name}>

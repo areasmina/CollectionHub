@@ -250,21 +250,17 @@ function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st
       </div>
       <div className="dsec">
         <h3>to complete</h3>
-        <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
-          <span className="wedge" aria-hidden="true">
-            <svg width="24" height="22" viewBox="0 0 24 22">
-              <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-              <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-            </svg>
-          </span>
-          <span className="amt">
-            <small>≈</small>
-            {pricesIn ? cad(missingCost) : 'CA$—'}
-          </span>
-        </div>
-        <small className="fetched">
-          {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
-        </small>
+        {/* Missing cost = money, so yellow tape (no hazard stripes: nothing is wrong). Nothing missing: a quiet line. */}
+        {sum.missing + sum.other > 0 ? (
+          <>
+            <span className="misscost" role="img" aria-label={`Missing cards cost about ${pricesIn ? cad(missingCost) : 'an unknown amount'}`}>
+              <small>{sum.missing + sum.other} MISSING</small> {pricesIn ? `≈${cad(missingCost)}` : 'price unknown'}
+            </span>
+            {sum.other > 0 && <small className="fetched">{sum.other} of them in {s.otherName}</small>}
+          </>
+        ) : (
+          <small className="fetched">Nothing missing: every card is yours.</small>
+        )}
       </div>
       <div className="dsec dnotes">
         <h3>note &amp; tags</h3>

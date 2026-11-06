@@ -56,3 +56,26 @@ test('Title answer: deck count tucked behind the title, tagline under BUILD (wid
   await fits(page, ['.hero']);
   await page.locator('.hero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
 });
+
+test('Design brief: sticky slim bar, quiet totals, meta line, small sections side by side, nav hides on scroll', async ({ page }, info) => {
+  await page.locator('.ccard').first().click();
+  const bar = page.locator('.slimbar');
+  await expect(bar.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
+  await expect(bar.locator('.forgecell')).toBeVisible();
+  expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
+  await expect(page.locator('.cmetaline')).toContainText('DECKS');
+  // the deck total is quiet text, not yellow tape; section totals too
+  expect(await page.locator('.hstats .price').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  expect(await page.locator('.cat > summary .gval').first().evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  // the sample has 1-card sections: the first two share a row
+  const [a, b] = await Promise.all([page.locator('details.cat').nth(0).boundingBox(), page.locator('details.cat').nth(1).boundingBox()]);
+  expect(Math.abs(a!.y - b!.y)).toBeLessThan(4);
+  await fits(page, ['.slimbar', '.lists']);
+  // scroll down: the bar sticks to the top, the nav slides away; scroll up: the nav is back
+  await page.mouse.wheel(0, 900);
+  await expect(page.locator('.pillnav.away')).toHaveCount(1);
+  expect(Math.round((await bar.boundingBox())!.y)).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: `test-results/brief-scrolled-${info.project.name}.png` });
+  await page.mouse.wheel(0, -300);
+  await expect(page.locator('.pillnav.away')).toHaveCount(0);
+});
