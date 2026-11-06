@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { commanders, decksOf, reconstruct, strategy } from './measure';
+import { commanders, decksOf, reconstruct, strategy, strategyStack } from './measure';
 import baseline from './baseline.json';
+import { themeOf } from '../../src/brain/themes';
 
 /**
  * Brain tests (ui-review §12) on 48 real public decks (4 commanders). Floors sit a little under the measured baseline
@@ -9,7 +10,7 @@ import baseline from './baseline.json';
  */
 export const STRATEGIES: [string, string, (m: { type: string; text: string }) => boolean][] = [
   ['Doctor Doom, King of Latveria', 'Villains', (m) => /\bVillain\b/.test(m.type)],
-  ['Doctor Doom, King of Latveria', 'Discard', (m) => /\bdiscard/i.test(m.text)],
+  ['Doctor Doom, King of Latveria', 'Discard', themeOf('Discard').test],
   ["Trostani, Selesnya's Voice", 'Lifegain', (m) => /gain(s)? (\d+|x|that much) life|whenever you gain life/i.test(m.text)],
   ['Yuriko, the Tiger\'s Shadow', 'Ninjas', (m) => /\bNinja\b/.test(m.type) || /ninjutsu/i.test(m.text)],
 ];
@@ -37,4 +38,12 @@ describe('strategy: a less popular archetype gives a different deck from the sam
       expect(s.fitThemed).toBeGreaterThan(s.fitBase); // more cards of the strategy
       expect(s.surfaced.length).toBeGreaterThanOrEqual(3); // owned cards the popular build missed
     });
+});
+
+describe('strategy stack: two themes at once', () => {
+  it('Doom Discard + Connive favours cards that help both', () => {
+    const both = strategyStack('Doctor Doom, King of Latveria', [themeOf('Discard'), themeOf('Connive')]);
+    const connive = themeOf('Connive').test;
+    expect(both.cards.filter((c) => connive(c)).length).toBeGreaterThan(both.baseConnive);
+  });
 });
