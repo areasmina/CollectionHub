@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, BUDGETS, DEFAULT_BRACKET, imgOf, NoPage, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, BUDGETS, DEFAULT_BRACKET, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
@@ -51,6 +51,18 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [allTags, setAllTags] = useState(false);
   const [page, setPage] = useState<EdhPage | null>(null);
   const [recs, setRecs] = useState<EdhPage | null>(null); // EDHREC recommendations behind an average deck
+  // EDHREC's With card / Without card: suggestions come from decks that do / don't run those cards
+  const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
+  const [cfDraft, setCfDraft] = useState({ inc: '', exc: '' });
+  const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean } | null>(null);
+  useEffect(() => {
+    setFiltered(null);
+    if (!recs || (!cf.inc.length && !cf.exc.length)) return;
+    let live = true;
+    void fetchFiltered(pagePath('commander', slug, bracket, tag, budget), cf, recs).then((r) => live && setFiltered(r));
+    return () => void (live = false);
+  }, [recs, cf, slug, bracket, tag, budget]);
+  const sugg = filtered?.page ?? recs;
   const [tags, setTags] = useState<EdhPage['tags']>([]);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -126,11 +138,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
   // Your binder (the swap window's search, and pinned cards' types).
   const binder = useBinder(s.profile);
-  const never = new Set(pins.out.map(norm));
-  const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
+  const never = new Set([...pins.out, ...cf.exc].map(norm));
+  const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
   // Replacement candidates: owned cards EDHREC recommends for this commander, minus the ones you never use.
   const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
-  const recCard = new Map((recs?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
+  const recCard = new Map((sugg?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
   const slotInfo = (c: EdhCard): SubCard => {
     const info = recInfo.get(norm(c.name));
     const sc = cardOf(c);
@@ -550,6 +562,49 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <div className="fbody">
                     <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
                     <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                    {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
+                    <form
+                      className="cfilter"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        haptic('select');
+                        setCf({ inc: cfDraft.inc.trim() ? [cfDraft.inc.trim()] : [], exc: cfDraft.exc.trim() ? [cfDraft.exc.trim()] : [] });
+                      }}
+                    >
+                      <label className="sbox">
+                        <span className="tab">WITH</span>
+                        <input list="cfnames" value={cfDraft.inc} onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })} placeholder="card in the deck_" aria-label="With card" />
+                      </label>
+                      <label className="sbox">
+                        <span className="tab">WITHOUT</span>
+                        <input list="cfnames" value={cfDraft.exc} onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })} placeholder="card left out_" aria-label="Without card" />
+                      </label>
+                      <datalist id="cfnames">
+                        {[...recCard.values()].slice(0, 300).map((c) => (
+                          <option key={c.name} value={c.name} />
+                        ))}
+                      </datalist>
+                      <div className="cfbtns">
+                        <button className="btn">APPLY</button>
+                        {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                          <button type="button" className="btn secondary" onClick={() => (haptic('undo'), setCf({ inc: [], exc: [] }), setCfDraft({ inc: '', exc: '' }))}>
+                            CLEAR
+                          </button>
+                        )}
+                      </div>
+                      {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                        <p className="small cfnote" role="status">
+                          {!filtered
+                            ? 'Asking EDHREC…'
+                            : filtered.applied
+                              ? `Suggestions from ${filtered.page.numDecks?.toLocaleString()} EDHREC decks${cf.inc.length ? ` with ${cf.inc.join(', ')}` : ''}${cf.exc.length ? ` without ${cf.exc.join(', ')}` : ''}.`
+                              : `EDHREC didn't filter this page from the app${cf.exc.length ? `; ${cf.exc.join(', ')} is left out of your suggestions` : ''}.`}{' '}
+                          <a href={filterWebUrl(pagePath('commander', slug, bracket, tag, budget), cf)} target="_blank" rel="noreferrer">
+                            Open filtered on EDHREC ↗
+                          </a>
+                        </p>
+                      )}
+                    </form>
                   </div>
                 </details>
                 <div className="viewsw mini" role="group" aria-label="Card view">

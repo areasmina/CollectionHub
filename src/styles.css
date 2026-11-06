@@ -8290,3 +8290,23 @@ details.cat {
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
+
+/* FILTERS sheet: With card / Without card (EDHREC) */
+.cfilter {
+  display: grid;
+  gap: var(--sp2);
+  margin-top: var(--sp2);
+  padding-top: var(--sp2);
+  border-top: 1px dashed #9a9a9a;
+}
+.cfilter .cfbtns {
+  display: flex;
+  gap: var(--sp2);
+}
+.cfilter .btn {
+  min-height: 40px;
+  margin: 0;
+}
+.cfilter .cfnote {
+  margin: 0;
+}

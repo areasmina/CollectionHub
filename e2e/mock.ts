@@ -20,6 +20,9 @@ const sc = (c: (typeof cards)[number]) => ({
 });
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkqGcAAAIEAQAhVzR2AAAAAElFTkSuQmCC', 'base64');
 
+/** The fake EDHREC commander page (deck count can be changed, e.g. to fake a filtered page). */
+export const edhJson = (numDecks: number) => ({ container: { json_dict: { card: { id: cards[0].id, color_identity: ['G', 'U'], num_decks: numDecks }, cardlists: [{ header: 'Top Cards', cardviews: cards.slice(1, 6).map((c) => ({ name: c.name, id: c.id, num_decks: 1000, potential_decks: 4000, synergy: 0.2 })) }, { header: 'Mana Artifacts', cardviews: [{ name: 'Arcane Signet', id: 'aaaaaaaa-1111-2222-3333-000000000099', num_decks: 800, potential_decks: 4000, synergy: 0.1 }] }] } }, panels: { taglinks: [{ slug: 'landfall', value: 'Landfall', count: 2100 }, { slug: 'ramp', value: 'Ramp', count: 900 }, ...['Lands Matter', 'Tokens', 'Card Draw', 'Counters', 'Control', 'Midrange', 'Elementals', 'Big Mana'].map((v, i) => ({ slug: v.toLowerCase().replace(/ /g, '-'), value: v, count: 800 - i * 60 }))] } });
+
 export async function mockWorld(page: Page) {
   await page.route(/cards\.scryfall\.io|svgs\.scryfall\.io/, (r) => r.fulfill({ body: PNG, contentType: 'image/png' }));
   await page.route(/frankfurter/, (r) => r.fulfill({ json: { rates: { CAD: 1.38 }, date: '2026-10-12' } }));
@@ -35,7 +38,7 @@ export async function mockWorld(page: Page) {
     return r.fulfill({ json: { data: names.map((n) => byName.get(n)).filter(Boolean).map(sc), has_more: false } });
   });
   const deck = { cards: { Creatures: [['Lotus Cobra', 1]], Artifacts: [['Sol Ring', 1]], Sorceries: [['Cultivate', 1]], Enchantments: [['Rhystic Study', 1]], Instants: [['Counterspell', 1]], Lands: [['Forest', 10], ['Island', 10]] } };
-  const json = { container: { json_dict: { card: { id: cards[0].id, color_identity: ['G', 'U'], num_decks: 4321 }, cardlists: [{ header: 'Top Cards', cardviews: cards.slice(1, 6).map((c) => ({ name: c.name, id: c.id, num_decks: 1000, potential_decks: 4000, synergy: 0.2 })) }, { header: 'Mana Artifacts', cardviews: [{ name: 'Arcane Signet', id: 'aaaaaaaa-1111-2222-3333-000000000099', num_decks: 800, potential_decks: 4000, synergy: 0.1 }] }] } }, panels: { taglinks: [{ slug: 'landfall', value: 'Landfall', count: 2100 }, { slug: 'ramp', value: 'Ramp', count: 900 }, ...['Lands Matter', 'Tokens', 'Card Draw', 'Counters', 'Control', 'Midrange', 'Elementals', 'Big Mana'].map((v, i) => ({ slug: v.toLowerCase().replace(/ /g, '-'), value: v, count: 800 - i * 60 }))] } };
+  const json = edhJson(4321);
   await page.route(/json\.edhrec\.com/, (r) => {
     const u = r.request().url();
     if (u.includes('/top/salt')) return u.includes('salt--') ? r.fulfill({ status: 404, body: '' }) : r.fulfill({ json: { cardviews: [{ name: 'Rhystic Study', salt: 2.7 }] } });

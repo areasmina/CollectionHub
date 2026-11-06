@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fits, mockWorld, seed } from './mock';
+import { edhJson, fits, mockWorld, seed } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -269,7 +269,7 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(2);
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(4);
   await fits(page, ['.lists > .dtools']);
   const sw = page.locator('.dtools .viewsw.mini');
   await expect(sw).toBeVisible();
@@ -535,4 +535,20 @@ test('My decks shelf: a long deck name never makes its tile bigger', async ({ pa
   await expect(page.locator('.shelf li')).toHaveCount(2);
   const ws = await page.locator('.shelf li').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
   expect(new Set(ws).size).toBe(1);
+});
+
+test('EDHREC With / Without card: self-testing filter, honest fallback', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await page.locator('.fsheet > summary').click();
+  // 1) EDHREC ignores the filter (same deck count): we say so and leave the card out locally
+  await page.getByLabel('Without card').fill('Sol Ring');
+  await page.getByRole('button', { name: 'APPLY' }).click();
+  await expect(page.locator('.cfnote')).toContainText("EDHREC didn't filter");
+  await expect(page.locator('.cfnote a')).toHaveAttribute('href', /edhrec\.com\/commanders\/.*\?f=out%3DSol%20Ring/);
+  // 2) EDHREC filters (deck count changes): suggestions come from those decks
+  await page.route(/json\.edhrec\.com\/pages\/commanders\/.*\?f=/, (r) => r.fulfill({ json: edhJson(529) }));
+  await page.getByRole('button', { name: 'CLEAR' }).click();
+  await page.getByLabel('With card').fill('Rhystic Study');
+  await page.getByRole('button', { name: 'APPLY' }).click();
+  await expect(page.locator('.cfnote')).toContainText('Suggestions from 529 EDHREC decks with Rhystic Study');
 });

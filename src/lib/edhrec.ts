@@ -130,3 +130,37 @@ export function deckSalt(names: string[], salt: Map<string, number>) {
   hits.sort((a, b) => b.salt - a.salt);
   return { total: hits.reduce((n, c) => n + c.salt, 0), top: hits.slice(0, 5) };
 }
+
+/** EDHREC's With card / Without card filter (web address verified: ?f=in=<Card>). Several cards are joined with ";"
+ *  (not verified). */
+export interface CardFilter {
+  inc: string[];
+  exc: string[];
+}
+export const filterQuery = (f: CardFilter) => [...f.inc.map((n) => `in=${n}`), ...f.exc.map((n) => `out=${n}`)].join(';');
+export const filterWebUrl = (path: string, f: CardFilter) => `https://edhrec.com/${path}?f=${encodeURIComponent(filterQuery(f))}`;
+
+/**
+ * A commander page filtered to decks with / without cards. Self-testing: EDHREC's JSON may ignore the filter, so the
+ * answer counts as filtered only when its deck count differs from the unfiltered page. `applied: false` = not filtered
+ * (the caller says so and links to EDHREC's own filtered page). Cached like other pages, by path + filter.
+ */
+export async function fetchFiltered(path: string, f: CardFilter, base: EdhPage): Promise<{ page: EdhPage; applied: boolean }> {
+  const q = filterQuery(f);
+  const key = `${path}?f=${q}`;
+  const hit = await db.edhrec.get(key).catch(() => undefined);
+  let data = hit && Date.now() - hit.at < DAY ? hit.data : null;
+  if (!data) {
+    const start = Math.max(nextSlot, Date.now());
+    nextSlot = start + 350;
+    if (start > Date.now()) await new Promise((r) => setTimeout(r, start - Date.now()));
+    const r = await fetch(`https://json.edhrec.com/pages/${path}.json?f=${encodeURIComponent(q)}`).catch(() => null);
+    if (!r?.ok) return { page: base, applied: false };
+    data = await r.json().catch(() => null);
+    if (!data) return { page: base, applied: false };
+    await db.edhrec.put({ path: key, data, at: Date.now() });
+  }
+  const page = parsePage(data);
+  const applied = page.numDecks != null && base.numDecks != null && page.numDecks !== base.numDecks;
+  return { page: applied ? page : base, applied };
+}
