@@ -9376,3 +9376,51 @@ a.misscost:hover {
 .slimbar .segs button {
   white-space: nowrap;
 }
+
+/* Cross-device round (brief items 16–20) */
+/* 16. The floating pill nav never covers the end of a page (welcome step 3 on phones) */
+main {
+  padding-bottom: calc(var(--sp6, 48px) + 96px);
+}
+/* 17–18. Decoration never sits behind text: the empty-binder line sits on paper, the credits and the tagline on ink */
+.welcome .count {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  max-width: 62ch;
+  background: var(--paper, #f4efe4);
+  color: #141414;
+  padding: var(--sp2, 8px) var(--sp3, 12px);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+}
+.welcome {
+  position: relative;
+  z-index: 2;
+}
+.credits {
+  z-index: 3;
+  background: var(--bg);
+  margin-bottom: 120px; /* clear of the pill nav */
+}
+.hero .tagline {
+  position: relative;
+  z-index: 3;
+}
+.hero .titlewrap > .tagline.tunder {
+  background: var(--ink, #0a0a0a);
+  padding: 2px 8px;
+  width: max-content;
+  max-width: 100%;
+}
+/* 19. With nothing to filter, only the search shows (no FILTERS heading, sort or colours) */
+.filters.bare .fhead {
+  display: none;
+}
+/* 20. Tablets: the eye on the logo, behind the letters, kept to the title's height */
+@media (min-width: 701px) and (max-width: 1024px) {
+  .titlewrap > .eyedoodle {
+    width: 46%;
+    left: 74%;
+    top: 50%;
+  }
+}

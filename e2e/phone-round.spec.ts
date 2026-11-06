@@ -50,7 +50,11 @@ test('Title answer: deck count tucked behind the title, tagline under BUILD (wid
   await expect(page.locator('.tagline')).toHaveCount(1);
   if (info.project.name !== 'phone') {
     const [tag, build] = await Promise.all([page.locator('.tagline.tunder').boundingBox(), page.locator('.ztitle .rword').nth(3).boundingBox()]);
-    expect(Math.abs(tag!.x - build!.x)).toBeLessThan(16);
+    // under BUILD, slid left only as far as needed to stay on one line inside the title
+    const wrap = (await page.locator('.hero .titlewrap').boundingBox())!;
+    expect(tag!.x).toBeLessThan(build!.x + 16);
+    expect(tag!.x + tag!.width).toBeLessThanOrEqual(wrap.x + wrap.width + 2);
+    expect(tag!.height).toBeLessThan(40); // one line
     expect(tag!.y).toBeGreaterThan(build!.y + build!.height - 12);
   }
   await fits(page, ['.hero']);
