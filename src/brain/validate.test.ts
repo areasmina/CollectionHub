@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import { landColours, readiness } from './validate';
+
+type C = { type: string; text: string; cmc?: number; mana?: string; ci: string[]; legal: boolean };
+const cards: Record<string, C> = {
+  Cmdr: { type: 'Legendary Creature — Human', text: '', cmc: 3, mana: '{1}{U}{B}', ci: ['U', 'B'], legal: true },
+  Island: { type: 'Basic Land — Island', text: '({T}: Add {U}.)', ci: ['U'], legal: true },
+  Swamp: { type: 'Basic Land — Swamp', text: '({T}: Add {B}.)', ci: ['B'], legal: true },
+  'Sol Ring': { type: 'Artifact', text: '{T}: Add {C}{C}.', cmc: 1, mana: '{1}', ci: [], legal: true },
+  'Mana Crypt': { type: 'Artifact', text: '{T}: Add {C}{C}.', cmc: 0, mana: '{0}', ci: [], legal: false },
+  Kaya: { type: 'Legendary Planeswalker — Kaya', text: '', cmc: 7, mana: '{3}{W}{W}{B}{B}', ci: ['W', 'B'], legal: true },
+  Bear: { type: 'Creature — Bear', text: '', cmc: 2, mana: '{1}{B}', ci: ['B'], legal: true },
+};
+const cardOf = (n: string) => cards[n.replace(/ \d+$/, '')] ?? cards.Bear;
+const deck = (extra: [string, number][] = []) => [
+  { name: 'Cmdr', qty: 1 },
+  { name: 'Island', qty: 18 },
+  { name: 'Swamp', qty: 18 },
+  { name: 'Sol Ring', qty: 1 },
+  ...Array.from({ length: 62 - extra.reduce((n, [, q]) => n + q, 0) }, (_, i) => ({ name: `Bear ${i}`, qty: 1 })),
+  ...extra.map(([name, qty]) => ({ name, qty })),
+];
+
+describe('readiness', () => {
+  it('a legal 100 with weak roles is "not ready", with every check stated', () => {
+    const r = readiness({ deck: deck(), cardOf, commander: 'Cmdr', identity: ['U', 'B'] });
+    expect(r.checks.find((c) => c.key === 'cards')).toMatchObject({ ok: true, value: '100' });
+    expect(r.checks.filter((c) => c.kind === 'rules').every((c) => c.ok)).toBe(true);
+    expect(r.checks.find((c) => c.key === 'lands')).toMatchObject({ ok: true, value: '36' });
+    expect(r.checks.find((c) => c.key === 'colours')).toMatchObject({ ok: true, value: 'U 18' });
+    expect(r.checks.find((c) => c.key === 'draw')!.ok).toBe(false);
+    expect(r.verdict).toBe('not ready');
+  });
+  it('banned, doubled and off-colour cards make it "not legal" and name the cards', () => {
+    const r = readiness({ deck: deck([['Mana Crypt', 1], ['Kaya', 1], ['Sol Ring', 1]]), cardOf, commander: 'Cmdr', identity: ['U', 'B'] });
+    expect(r.verdict).toBe('not legal');
+    expect(r.checks.find((c) => c.key === 'legal')!.cards).toEqual(['Mana Crypt']);
+    expect(r.checks.find((c) => c.key === 'identity')!.cards).toEqual(['Kaya']);
+    expect(r.checks.find((c) => c.key === 'singleton')!.cards).toEqual(['Sol Ring']);
+  });
+});
+
+describe('landColours', () => {
+  it('reads basic types, Add text, any-colour lands and fetches', () => {
+    expect([...landColours({ type: 'Land — Island Swamp', text: '' })].sort()).toEqual(['B', 'U']);
+    expect([...landColours({ type: 'Land', text: '{T}: Add {R} or {G}.' })].sort()).toEqual(['G', 'R']);
+    expect(landColours({ type: 'Land', text: '{T}: Add one mana of any color.' }).size).toBe(5);
+    expect([...landColours({ type: 'Land', text: '{T}, Pay 1 life, Sacrifice this land: Search your library for a Plains or Island card, put it onto the battlefield.' })].sort()).toEqual(['U', 'W']);
+  });
+});
+
+import { bracketFit } from './validate';
+describe('bracketFit', () => {
+  const call = (o: Partial<Parameters<typeof bracketFit>[0]>) => ({ bracket: 2 as const, reasons: [], gameChangers: [], mld: [], extraTurns: [], tutors: [], combos: [], combosChecked: true, ...o });
+  it('fits, over with the cause, under', () => {
+    expect(bracketFit(call({ bracket: 3, gameChangers: ['Rhystic Study'] }), 3).fit).toBe('fits');
+    const o = bracketFit(call({ bracket: 4, combos: [{ cards: ['Thassa\'s Oracle', 'Demonic Consultation'], early: true, mv: 2, id: 'x' }] }), 3);
+    expect(o).toMatchObject({ fit: 'over', est: 4 });
+    expect(o.over[0]).toContain('early two-card combo');
+    expect(bracketFit(call({ bracket: 2 }), 4).fit).toBe('under');
+    expect(bracketFit(call({ bracket: 4 }), 5).fit).toBe('fits');
+  });
+});
+
+import { whyCard } from './why';
+import { setBrainData } from './data';
+describe('whyCard', () => {
+  it('states how it got in, its job with the source, combos and what cutting it breaks', () => {
+    setBrainData({ combos: new Map([['basalt monolith', [{ cards: ['Kinnan, Bonder Prodigy', 'Basalt Monolith'], infinite: true, relevant: true, definite: true, mv: 5, id: 'k1', tag: 'R', mustBeCommander: [true, false] }]], ['kinnan, bonder prodigy', []]]) as never });
+    const cardOf = (n: string) => ({ 'Basalt Monolith': { type: 'Artifact', text: '{T}: Add {C}{C}{C}.', cmc: 3, mana: '{3}' }, 'Kinnan, Bonder Prodigy': { type: 'Legendary Creature', text: '', cmc: 2, mana: '{G}{U}' } })[n];
+    const w = whyCard({ name: 'Basalt Monolith', ctx: { deck: [{ name: 'Kinnan, Bonder Prodigy', qty: 1 }, { name: 'Basalt Monolith', qty: 1 }], cardOf: cardOf as never, commander: 'Kinnan, Bonder Prodigy', bracket: 4, aggression: 'hungry' }, rec: { name: 'Basalt Monolith', incl: 0.6 } });
+    expect(w.how).toBe('edhrec');
+    expect(w.headline).toContain('60%');
+    expect(w.roles.map((r) => r.role)).toContain('ramp');
+    expect(w.combos).toEqual([{ with: 'Kinnan, Bonder Prodigy', early: false, allowed: true }]);
+    expect(w.notes.join(' ')).toContain('breaks Kinnan, Bonder Prodigy + Basalt Monolith');
+    setBrainData({ combos: null as never });
+  });
+});
