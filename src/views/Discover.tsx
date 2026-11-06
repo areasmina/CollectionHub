@@ -89,6 +89,8 @@ export function Discover(s: Shared) {
   const [colours, setColours] = useState<string[]>([]);
   const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
   const phone = window.innerWidth <= 700;
+  // up to tablets the eye sits on the logo (behind the letters) instead of taking a third of the first screen
+  const eyeOnLogo = window.innerWidth <= 1024;
   // The tagline lines up under the word BUILD: measured from the title's 4th cut-out word, kept in step on resize.
   const underObs = useRef<ResizeObserver | null>(null);
   const underBuild = (el: HTMLParagraphElement | null) => {
@@ -101,9 +103,12 @@ export function Discover(s: Shared) {
       if (!word) return;
       const w = wrap.getBoundingClientRect();
       const b = word.getBoundingClientRect();
-      el.style.left = `${Math.round(b.left - w.left)}px`;
+      // one line when it fits the title's width: slid left as far as needed so its end stays on the slash
+      el.style.whiteSpace = 'nowrap';
+      el.style.maxWidth = `${Math.round(w.width - 8)}px`;
+      const left = Math.max(0, Math.min(b.left - w.left, w.width - el.offsetWidth - 8));
+      el.style.left = `${Math.round(left)}px`;
       el.style.top = `${Math.round(b.bottom - w.top + 6)}px`;
-      el.style.maxWidth = `${Math.max(160, Math.round(w.width - (b.left - w.left) - 8))}px`;
     };
     place();
     underObs.current = new ResizeObserver(place);
@@ -212,6 +217,7 @@ export function Discover(s: Shared) {
     .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()))
     .filter((c) => colours.every((col) => c.ci.includes(col)))
     .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name));
+  const empty = commanders.length === 0; // nothing to sort or filter yet
   const toggle = (col: string) => setColours((cs) => (cs.includes(col) ? cs.filter((x) => x !== col) : [...cs, col]));
 
   return (
@@ -225,22 +231,23 @@ export function Discover(s: Shared) {
             label="What can I build?"
             size={phone ? 50 : 44}
             seed={7}
-            behind={phone ? <EyeDoodle bare /> : undefined}
+            behind={eyeOnLogo ? <EyeDoodle bare /> : undefined}
             after={
-              commanders.length > 0 && (
-                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
-                // It tucks in behind the letters; on wider screens the tagline sits under the word BUILD.
-                <>
+              <>
+                {/* wider screens: the tagline sits under the word BUILD (empty binder too) */}
                 {!phone && <p className="tagline tunder" ref={underBuild}>Your collection. Real decks. No guesswork.</p>}
+                {commanders.length > 0 && (
+                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
+                // It tucks in behind the letters.
                 <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
                   <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
                 </p>
-                </>
-              )
+                )}
+              </>
             }
           />
-          {!phone && <EyeDoodle />}
-          {phone && (
+          {!eyeOnLogo && <EyeDoodle />}
+          {phone && !empty && (
             <button
               type="button"
               className={`ftag${fOpen ? ' open' : ''}`}
@@ -259,8 +266,10 @@ export function Discover(s: Shared) {
               </span>
             </button>
           )}
-          {(phone || commanders.length === 0) && <p className="tagline">Your collection. Real decks. No guesswork.</p>}
-          <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
+          {phone && <p className="tagline">Your collection. Real decks. No guesswork.</p>}
+          {/* Same controls at every width (phones fold them behind the FILTERS tag). With nothing to filter yet, only the
+              search shows, open, at every width. */}
+          <div className={`filters${phone && !fOpen && !empty ? ' shut' : ''}${empty ? ' bare' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>
                 <path d="M4 22 C40 8 70 26 104 14 S168 4 196 16 L208 6 L214 20 C226 12 240 14 256 4 L250 24 C220 30 196 22 170 30 S80 26 60 32 S20 30 4 22 Z" fill="currentColor" />
@@ -300,7 +309,7 @@ export function Discover(s: Shared) {
                 <input type="search" placeholder="commander_" aria-label="Search commander" title="Type a name; Enter opens it" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
                 <span aria-hidden="true" className="hfade fade" />
               </label>
-              <div className="flap" id="fflap">
+              {!empty && (<div className="flap" id="fflap">
               <label className="sbox sort">
                 <span className="tab">SORT</span>
                 <select value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -323,7 +332,7 @@ export function Discover(s: Shared) {
                   </button>
                 ))}
               </div>
-              </div>
+              </div>)}
             </form>
           </div>
         </section>
