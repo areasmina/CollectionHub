@@ -83,3 +83,11 @@ export function haptic(feel: Feel = 'tap') {
   if (nav?.vibrate) nav.vibrate(PATTERNS[feel]);
   else if (nav && /iP(hone|ad|od)/.test(nav.userAgent)) iosTick();
 }
+
+// What the haptics button says after a tap: the browser handed the buzz to the phone (then the phone's own settings decide).
+export const HAPTIC_NOTE = {
+  off: 'Haptics off.',
+  sent: 'Buzz sent. Felt nothing? Your phone has vibration off for apps: Android Settings → Sound & vibration → Vibration & haptics, turn on "Touch feedback" / "Touch interactions", and check silent or battery-saver mode.',
+  blocked: 'Chrome blocked the buzz. Tap anywhere on the page first, and check Chrome → Settings → Site settings, and the phone is not in silent or battery-saver mode.',
+  unsupported: 'This browser has no vibration (Firefox on Android removed it). Chrome, Samsung Internet or Edge do.',
+} as const;

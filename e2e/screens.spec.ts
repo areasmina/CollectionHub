@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, edhJson, fits, mockWorld, seed } from './mock';
+import { addSignet, edhJson, fits, mockWorld, seed, opts, dash } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -56,8 +56,11 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
 
 test('Collection: counters, widget, grid tiles with tally marks', async ({ page }) => {
   await go(page, 'collection');
+  await expect(page.locator('details.dash')).not.toHaveAttribute('open', ''); // the collection comes first
+  await expect(page.locator('details.dash .dsum')).toContainText('cards');
+  await dash(page);
   await expect(page.locator('.stats .stat')).toHaveCount(3);
-  await expect(page.locator('.topwidget')).toBeVisible();
+  await expect(page.locator('.topwidget')).toHaveCount(0); // decks row replaced the top 3
   await expect(page.locator('.ctile').first()).toBeVisible();
   // no name title outside the card; the copy pips sit on the card and show once it's selected (tap / focus / hover)
   await expect(page.locator('.ctile > .tname').first()).toHaveCSS('width', '1px');
@@ -71,7 +74,7 @@ test('Collection: counters, widget, grid tiles with tally marks', async ({ page 
   const n = Number(await t.locator('.tstep b').innerText());
   await t.locator('.tstep button').last().click();
   await expect(t.locator('.tstep b')).toHaveText(String(n + 1));
-  await fits(page, ['.stats', '.ctile', '.topwidget']);
+  await fits(page, ['.stats', '.ctile', 'details.dash']);
 });
 
 test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, info) => {
@@ -79,8 +82,8 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await page.locator('.dcard').first().click();
   await expect(page.locator('.dpanel')).toBeVisible();
   // grid / list sits in the toolbar above the cards (the commander's section is gone: its big card is the menu)
-  const sw = page.locator('.dtools .viewsw.mini');
   await expect(page.locator('details.cat > summary .h', { hasText: 'COMMANDER' })).toHaveCount(0);
+  const sw = (await opts(page)).locator('.viewsw.mini');
   await expect(sw).toBeVisible();
   await fits(page, ['.viewsw.mini']);
   await sw.getByRole('button', { name: 'List view' }).click();
@@ -208,8 +211,9 @@ test('Deck names open the deck: commander page and the copies warning', async ({
 test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dtools .sbox')).toHaveCount(3); // search + two filters
+  await expect(page.locator('.dtools .sbox')).toHaveCount(3); // search + two filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
+  await opts(page);
   const group = page.locator('.dtools select').first();
   await group.selectOption('show:missing'); // every seeded card is owned
   await expect(page.locator('details.cat')).toHaveCount(0);
@@ -249,8 +253,9 @@ for (const [ok, text, name] of [[true, /Buzz sent/, 'sent'], [false, /blocked/, 
   test(`Haptics button: sends a test buzz and says what happened (${name})`, async ({ page }) => {
     await page.addInitScript((v) => { (window as any).__buzz = []; navigator.vibrate = (p) => ((window as any).__buzz.push(p), v); }, ok);
     await page.goto('/');
-    await page.locator('.pillhub').click();
-    const btn = page.getByRole('button', { name: /Haptic feedback/ });
+    await go(page, 'collection');
+    await page.locator('.bmbtn').click(); // haptics live in the binder menu (no hamburger)
+    const btn = page.getByRole('menuitemcheckbox', { name: /Haptics/ });
     await btn.click(); // on by default: this turns it off
     await expect(page.locator('.hapnote')).toHaveText('Haptics off.');
     await btn.click(); // turn on again: test buzz
@@ -274,9 +279,9 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(5); // search first, then the filters
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(5); // search first, then the filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
-  const sw = page.locator('.dtools .viewsw.mini');
+  const sw = (await opts(page)).locator('.viewsw.mini');
   await expect(sw).toBeVisible();
   await fits(page, ['.viewsw.mini']);
   await sw.getByRole('button', { name: 'List view' }).click();
@@ -376,7 +381,9 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await note.getByRole('button', { name: 'Close' }).click();
   // My decks sit on the Collection page and open the deck too
   await go(page, 'collection');
-  await expect(page.locator('.shelf li')).toHaveCount(2);
+  await dash(page);
+  await expect(page.locator('.shelf li:not(.seeall)')).toHaveCount(2);
+  await expect(page.locator('.shelf li.seeall')).toHaveCount(1);
   await fits(page, ['.shelf']);
   await page.locator('.shelf li button').first().click();
   await expect(page.locator('.forgehint')).toBeVisible();
@@ -424,6 +431,7 @@ test('Deck light: active decks mark their cards in use in Collection; off frees 
   await expect(sol.locator('.inuse')).toHaveText('in 1 deck');
   await expect(sol.locator('.inuse i')).toHaveCount(1); // one dot, in the deck's colour
   await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
+  await dash(page);
   await page.locator('.shelf .dlight').first().click();
   await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);
   await expect(sol.locator('.inuse')).toHaveCount(0);
@@ -463,6 +471,7 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
   await ask.getByRole('button', { name: 'SAVE', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await go(page, 'collection');
+  await dash(page);
   await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
 });
 
@@ -476,8 +485,7 @@ test('Pill menu: back arrow only where there is somewhere to go back to', async 
   await pill.getByRole('button', { name: 'Back' }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await expect(pill.locator('.pback')).toHaveCount(0);
-  await pill.locator('.pillhub').click();
-  await expect(page.locator('.hubslide')).toHaveClass(/open/);
+  await expect(pill.locator('.pillhub')).toHaveCount(0); // no hamburger: sync and haptics are in the binder menu
 });
 
 test('Swapping keeps the deck organised: a creature swapped in for a sorcery moves to Creatures', async ({ page }) => {
@@ -542,8 +550,10 @@ test('My decks shelf: a long deck name never makes its tile bigger', async ({ pa
   });
   await page.reload();
   await go(page, 'collection');
-  await expect(page.locator('.shelf li')).toHaveCount(2);
-  const ws = await page.locator('.shelf li').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
+  await dash(page);
+  await expect(page.locator('.shelf li:not(.seeall)')).toHaveCount(2);
+  await expect(page.locator('.shelf li.seeall')).toHaveCount(1);
+  const ws = await page.locator('.shelf li:not(.seeall)').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
   expect(new Set(ws).size).toBe(1);
 });
 

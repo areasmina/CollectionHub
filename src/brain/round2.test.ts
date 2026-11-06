@@ -82,7 +82,25 @@ import { binderCandidates } from './candidates';
 describe('candidates include owned cards EDHREC does not list', () => {
   it('Mind Stone comes up for a UG deck; off-colour, illegal, basics and never-use cards do not', () => {
     const b = (name: string, type: string, ci: string[], legal = true) => ({ name, key: name.toLowerCase(), type, cmc: 2, ci, legal });
-    const out = binderCandidates([{ name: 'Mox Amber', incl: 0.5 }], [b('Mind Stone', 'Artifact', []), b('Talisman of Dominance', 'Artifact', ['U', 'B']), b('Mana Crypt', 'Artifact', [], false), b('Island', 'Basic Land — Island', ['U']), b('Fellwar Stone', 'Artifact', [])], ['U', 'G'], new Set(['fellwar stone']));
+    const out = binderCandidates([{ name: 'Mox Amber', incl: 0.5 }], [b('Mox Amber', 'Legendary Artifact', []), b('Mind Stone', 'Artifact', []), b('Talisman of Dominance', 'Artifact', ['U', 'B']), b('Mana Crypt', 'Artifact', [], false), b('Island', 'Basic Land — Island', ['U']), b('Fellwar Stone', 'Artifact', [])], ['U', 'G'], new Set(['fellwar stone']));
     expect(out.map((c) => c.name)).toEqual(['Mox Amber', 'Mind Stone']);
+  });
+});
+
+import { identityGate, inIdentity, offIdentity } from './identity';
+describe('colour identity is a hard rule (WILDCARD put Kaya in a Grixis deck, Nov 6)', () => {
+  const grixis = ['U', 'B', 'R'];
+  const ci: Record<string, string[]> = { 'Kaya, Intangible Slayer': ['W', 'B'], 'Felidar Guardian': ['W'], 'Glint-Horn Buccaneer': ['R'], 'Sol Ring': [] };
+  it('EDHREC-listed owned cards outside the identity never become candidates', () => {
+    const b = (name: string) => ({ name, key: name.toLowerCase(), type: 'Creature', cmc: 3, ci: ci[name], legal: true });
+    const out = binderCandidates([{ name: 'Kaya, Intangible Slayer' }, { name: 'Glint-Horn Buccaneer' }, { name: 'Not In Binder' }], ['Kaya, Intangible Slayer', 'Glint-Horn Buccaneer', 'Felidar Guardian', 'Sol Ring'].map(b), grixis);
+    expect(out.map((c) => c.name)).toEqual(['Glint-Horn Buccaneer', 'Sol Ring']);
+  });
+  it('the gate refuses off-colour and unknown cards; offIdentity flags only known ones', () => {
+    const gate = identityGate(grixis, (n) => ci[n]);
+    expect(['Kaya, Intangible Slayer', 'Felidar Guardian', 'Glint-Horn Buccaneer', 'Sol Ring', 'Unknown'].filter(gate)).toEqual(['Glint-Horn Buccaneer', 'Sol Ring']);
+    expect(offIdentity(['Kaya, Intangible Slayer', 'Sol Ring', 'Unknown'], grixis, (n) => ci[n])).toEqual(['Kaya, Intangible Slayer']);
+    expect(inIdentity([], [])).toBe(true);
+    expect(inIdentity(['U'], [])).toBe(false);
   });
 });

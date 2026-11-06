@@ -3,17 +3,19 @@ import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
-import { db, type Card, type Entry } from '../lib/db';
+import { haptic as buzz, HAPTIC_NOTE, hapticsOn, hapticsSupported, setHaptics } from '../lib/haptics';
+import { useRef } from 'react';
+import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
-import { cad, toCad } from '../lib/prices';
+import { cad } from '../lib/prices';
 import { CardsView } from './CardsView';
 import { MyDecks } from './MyDecks';
 import type { Shared } from './shared';
 import { isCommander } from './Discover';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
-import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
-import { PriceLink, priced, priceSum, Progress, Thumb } from './shared';
+import { snapshot } from '../lib/pricewatch';
+import { priced, priceSum, Progress } from './shared';
 import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
 
 export function ImportReport({ r }: { r: ImportResult }) {
@@ -57,81 +59,26 @@ export function ImportReport({ r }: { r: ImportResult }) {
   );
 }
 
-type Panel = { key: string; title: string; sub: string; rows: { e: Entry; card: Card; label: string; tone?: 'up' | 'down'; why?: string }[]; empty?: string };
-
-/** Rotating "top 3" widget: most valuable, highest total, 3-day risers, 3-day fallers. Every 4 s; hover pauses,
- *  a click (not on a card) goes to the next one. */
-function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
-  const [i, setI] = useState(0);
-  const [hold, setHold] = useState(false);
-  const [past, setPast] = useState<Awaited<ReturnType<typeof snapshotFrom>>>(null);
-  useEffect(() => void snapshotFrom(3).then(setPast), [entries.length, cards.size]);
-  const unit = (e: Entry) => Number(priced(cards.get(e.cardId), e.foil)?.usd ?? 0);
-  const uniq = (xs: Entry[]) => xs.filter((x, j, a) => a.findIndex((y) => cards.get(y.cardId)?.key === cards.get(x.cardId)?.key) === j);
-  const owned = entries.filter((e) => cards.get(e.cardId) && unit(e) > 0);
-  const byUnit = uniq([...owned].sort((a, b) => unit(b) - unit(a))).slice(0, 3);
-  const byTotal = uniq([...owned].sort((a, b) => unit(b) * b.qty - unit(a) * a.qty)).slice(0, 3);
-  const since = past ? new Date(past.day + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
-  const moveRows = (ms: Move[], tone: 'up' | 'down') =>
-    ms.map((m) => ({ e: m.entry, card: cards.get(m.entry.cardId)!, tone, label: `${m.diff > 0 ? '▲' : '▼'} ${cad(Math.abs(toCad(String(m.diff)) ?? 0))}`, why: `${m.diff > 0 ? '+' : '−'}${Math.round((Math.abs(m.diff) / m.was) * 100)}%: ${cad(toCad(String(m.was)) ?? 0)} → ${cad(toCad(String(m.now)) ?? 0)}` }));
-  const panels: Panel[] = [
-    { key: 'unit', title: 'MOST VALUABLE', sub: 'per copy', rows: byUnit.map((e) => ({ e, card: cards.get(e.cardId)!, label: cad(toCad(String(unit(e))) ?? 0) })) },
-    { key: 'total', title: 'BIGGEST HOLDINGS', sub: 'price × copies', rows: byTotal.map((e) => ({ e, card: cards.get(e.cardId)!, label: `${e.qty}× · ${cad(toCad(String(unit(e) * e.qty)) ?? 0)}` })) },
-    { key: 'up', title: 'RISING', sub: past ? `since ${since}` : 'last 3 days', rows: past ? moveRows(movers(entries, cards, past.prices, 'up'), 'up') : [], empty: past ? 'Nothing went up.' : 'Collecting prices: risers show up after a day or two.' },
-    { key: 'down', title: 'FALLING', sub: past ? `since ${since}` : 'last 3 days', rows: past ? moveRows(movers(entries, cards, past.prices, 'down'), 'down') : [], empty: past ? 'Nothing went down.' : 'Collecting prices: fallers show up after a day or two.' },
-  ];
-  useEffect(() => {
-    if (hold || matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const t = setInterval(() => setI((x) => (x + 1) % panels.length), 4000);
-    return () => clearInterval(t);
-  }, [hold]);
-  if (!owned.length) return null;
-  const p = panels[i % panels.length];
-  return (
-    <div
-      className="topwidget"
-      role="region"
-      aria-roledescription="carousel"
-      aria-label="Collection highlights"
-      onMouseEnter={() => setHold(true)}
-      onMouseLeave={() => setHold(false)}
-      onClick={() => (haptic('tap'), setI((x) => (x + 1) % panels.length))}
-    >
-      <span className="pen" aria-hidden="true" />
-      <div className="twhead">
-        <span className={`tlabel ${p.key}`}>
-          TOP 3 · {p.title}
-        </span>
-        <small>{p.sub}</small>
-        <span className="twdots" aria-hidden="true">
-          {panels.map((x, j) => (
-            <i key={x.key} className={j === i % panels.length ? 'on' : ''} />
-          ))}
-        </span>
-      </div>
-      <ul key={p.key} aria-live="polite">
-        {p.rows.length ? (
-          p.rows.map(({ e, card, label, tone, why }, j) => (
-            <li key={e.id} style={{ '--i': j - (p.rows.length - 1) / 2 } as React.CSSProperties} onClick={(ev) => ev.stopPropagation()}>
-              <Thumb src={card.img?.replace('/small/', '/normal/')} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
-              <span className={`tw price tapey y${j} t${j}${tone ? ' ' + tone : ''}`} title={why}>
-                {label}
-              </span>
-            </li>
-          ))
-        ) : (
-          <li className="twempty">{p.empty}</li>
-        )}
-      </ul>
-    </div>
-  );
-}
-
-export function Collection({ profile, name, s, onSwitch }: { profile: number; name: string; s: Shared; onSwitch?: () => void }) {
+export function Collection({ profile, name, s, binders = [], onPick, sync }: { profile: number; name: string; s: Shared; binders?: { id: number; name: string }[]; onPick?: (id: number) => void; sync?: SyncItem }) {
   const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
   const entries = list ?? [];
   // Import folds away; it opens by itself for an empty binder (and stays open while an import runs).
   const [importOpen, setImportOpen] = useState<boolean | null>(null);
+  const [dashPick, setDashPick] = useState<boolean | null>(() => {
+    try {
+      const v = localStorage.getItem('ch:dash');
+      return v === null ? null : v === '1';
+    } catch {
+      return null;
+    }
+  });
+  const setDash = (o: boolean) => {
+    setDashPick(o);
+    try {
+      localStorage.setItem('ch:dash', o ? '1' : '0');
+    } catch {}
+  };
+  const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).count(), [profile]) ?? 0;
   const [text, setText] = useState('');
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -173,6 +120,8 @@ export function Collection({ profile, name, s, onSwitch }: { profile: number; na
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
   const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
+  // opens by itself for an empty binder and while an import runs or reports
+  const dashOpen = !!busy || !!result || (dashPick ?? (list !== undefined && list.length === 0));
   const upload = (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <path d="M3 12 V15 H15 V12 M9 3 V11 M5 7 L9 3 L13 7" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -185,122 +134,134 @@ export function Collection({ profile, name, s, onSwitch }: { profile: number; na
       <main>
         <section className="chead2">
           <Title text="COLLECTION" label="Collection" size={60} seed={21} />
-          <label className="kraft">
-            binder name
-            <input defaultValue={name} key={name} onBlur={(e) => e.target.value.trim() && db.profiles.update(profile, { name: e.target.value.trim() })} />
-          </label>
-          {/* switching binders lives here, next to the binder's name (not in the hub menu) */}
-          {onSwitch && (
-            <button className="btn ink binderswap" onClick={onSwitch} aria-label={`Switch to ${s.otherName}`}>
-              ⇄ {s.otherName}
-            </button>
-          )}
+          {/* One binder control (owner's call, Nov 6): switch, add, rename, reset, delete, plus sync and haptics */}
+          <BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />
         </section>
 
-        <section className="stats">
-          <div className="stat gbox" style={{ transform: 'rotate(-1deg)' }}>
-            <span className="worn" aria-hidden="true" />
-            <span className="spray" aria-hidden="true" />
-            <b>{total.toLocaleString()}</b>
-            <span>cards</span>
-            <Doodles n={377} count={1} spots={[[70, -24]]} />
-          </div>
-          <div className="stat" style={{ transform: 'rotate(.8deg)' }}>
-            <span className="worn" aria-hidden="true" />
-            <span className="spray" aria-hidden="true" />
-            <b>{unique.toLocaleString()}</b>
-            <span>unique cards</span>
-          </div>
-          <div className="stat red gbox" style={{ transform: 'rotate(-1.4deg)' }}>
-            <span className="worn" aria-hidden="true" />
-            <span className="spray" aria-hidden="true" />
-            <b>{commanders.toLocaleString()}</b>
-            <span>commanders</span>
-            <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
-              <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
-              <path d="M5 40 C20 37 42 42 58 38" />
-              <circle cx="30" cy="4" r="2.6" />
-              <circle cx="4" cy="10" r="2.2" />
-              <circle cx="58" cy="8" r="2.2" />
-            </svg>
-          </div>
-          <div className="slip">
-            <span className="se">worth about</span>
-            <b>{value > 0 ? cad(value) : 'CA$—'}</b>
-            <span className="se small" title={PRICE_METHOD}>
-              est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
+        {/* Dashboard fold (owner's call, Nov 6): counts, worth, your decks and import live together, closed by default,
+            so the collection comes first. The closed fold still says the numbers in one line. */}
+        <details className="dash" open={dashOpen} onToggle={(e) => setDash(e.currentTarget.open)}>
+          <summary aria-label={`Binder overview: ${total} cards, ${commanders} commanders${decks ? `, ${decks} decks` : ''}`}>
+            <span className="dsum">
+              <span>
+                <b>{total.toLocaleString()}</b> cards
+              </span>
+              <span>
+                <b>{commanders.toLocaleString()}</b> {commanders === 1 ? 'commander' : 'commanders'}
+              </span>
+              {value > 0 && (
+                <span>
+                  <b>{cad(value).replace(/\.\d\d$/, '')}</b>
+                </span>
+              )}
+              {decks > 0 && (
+                <span>
+                  <b>{decks}</b> {decks === 1 ? 'deck' : 'decks'}
+                </span>
+              )}
             </span>
-            <span className="warn">warning</span>
-            {value > 0 && <span className="stamp">APPRAISED</span>}
-          </div>
-          <TopWidget entries={entries} cards={cards} />
-        </section>
-
-        {illegal > 0 && (
-          <p className="count">
-            {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
-          </p>
-        )}
-
-        {/* Import sits right under the counts: it's used the most */}
-        <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
-          <summary>
-            <span className="stripe" aria-hidden="true" />
-            <b>IMPORT CARDS</b>
-            <small>ManaBox CSV, CSV or a text list · add to or replace {name}</small>
+            <span className="dimp">IMPORT</span>
             <span className="chev" aria-hidden="true">
               ▾
             </span>
           </summary>
-        <section className="importrow">
-          <div className="flyer gbox">
-            <Doodles n={433} count={1} spots={[[70, 60]]} paper />
-            <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
-            <p>ManaBox CSV, a CSV with name/quantity columns, or a text list (Moxfield, Archidekt, "1 Sol Ring").</p>
-            <label className="btn ink file">
-              {upload}
-              CHOOSE A FILE
-              <input
-                type="file"
-                accept=".csv,.txt,text/csv,text/plain"
-                disabled={!!busy}
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (f) setText(await f.text());
-                }}
-              />
-            </label>
-          </div>
-          <div className="pastecol">
-            <label className="notebook">
-              <span>…or paste here</span>
-              <textarea className="ruled" rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
-            </label>
-            <div className="btnrow">
-              <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
-                ADD TO BINDER
-              </button>
-              <button className="btn secondary" disabled={!text.trim() || !!busy} onClick={() => run(text, true)}>
-                REPLACE BINDER
-              </button>
+          <section className="stats">
+            <div className="stat gbox" style={{ transform: 'rotate(-1deg)' }}>
+              <span className="worn" aria-hidden="true" />
+              <span className="spray" aria-hidden="true" />
+              <b>{total.toLocaleString()}</b>
+              <span>cards</span>
+              <Doodles n={377} count={1} spots={[[70, -24]]} />
             </div>
-            {/* Emptying the binder lives with the other whole-binder actions (folded away), not above the card search. */}
-            <button style={{ marginTop: 12 }} className="stencil" disabled={!entries.length} onClick={() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile)}>
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M8 1 L15 14 H1 Z M8 6 V9.5 M8 11.5 V12" fill="none" stroke="currentColor" strokeWidth="2" />
+            <div className="stat" style={{ transform: 'rotate(.8deg)' }}>
+              <span className="worn" aria-hidden="true" />
+              <span className="spray" aria-hidden="true" />
+              <b>{unique.toLocaleString()}</b>
+              <span>unique cards</span>
+            </div>
+            <div className="stat red gbox" style={{ transform: 'rotate(-1.4deg)' }}>
+              <span className="worn" aria-hidden="true" />
+              <span className="spray" aria-hidden="true" />
+              <b>{commanders.toLocaleString()}</b>
+              <span>commanders</span>
+              <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
+                <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
+                <path d="M5 40 C20 37 42 42 58 38" />
+                <circle cx="30" cy="4" r="2.6" />
+                <circle cx="4" cy="10" r="2.2" />
+                <circle cx="58" cy="8" r="2.2" />
               </svg>
-              RESET BINDER
-            </button>
+            </div>
+            <div className="slip">
+              <span className="se">worth about</span>
+              <b>{value > 0 ? cad(value) : 'CA$—'}</b>
+              <span className="se small" title={PRICE_METHOD}>
+                est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
+              </span>
+              <span className="warn">warning</span>
+              {value > 0 && <span className="stamp">APPRAISED</span>}
+            </div>
+          </section>
 
-            {busy && <Progress {...busy} />}
-            {error && <p className="error">{error}</p>}
-            {result && <ImportReport r={result} />}
-          </div>
-        </section>
+          <MyDecks s={s} />
+
+          {illegal > 0 && (
+            <p className="count">
+              {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
+            </p>
+          )}
+
+          {/* Import sits right under the counts: it's used the most */}
+          <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
+            <summary>
+              <span className="stripe" aria-hidden="true" />
+              <b>IMPORT CARDS</b>
+              <small>ManaBox CSV, CSV or a text list · add to or replace {name}</small>
+              <span className="chev" aria-hidden="true">
+                ▾
+              </span>
+            </summary>
+          <section className="importrow">
+            <div className="flyer gbox">
+              <Doodles n={433} count={1} spots={[[70, 60]]} paper />
+              <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
+              <p>ManaBox CSV, a CSV with name/quantity columns, or a text list (Moxfield, Archidekt, "1 Sol Ring").</p>
+              <label className="btn ink file">
+                {upload}
+                CHOOSE A FILE
+                <input
+                  type="file"
+                  accept=".csv,.txt,text/csv,text/plain"
+                  disabled={!!busy}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) setText(await f.text());
+                  }}
+                />
+              </label>
+            </div>
+            <div className="pastecol">
+              <label className="notebook">
+                <span>…or paste here</span>
+                <textarea className="ruled" rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
+              </label>
+              <div className="btnrow slimbtns">
+                <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
+                  + ADD
+                </button>
+                <button className="btn secondary" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
+                  REPLACE
+                </button>
+              </div>
+
+              {busy && <Progress {...busy} />}
+              {error && <p className="error">{error}</p>}
+              {result && <ImportReport r={result} />}
+            </div>
+          </section>
+          </details>
         </details>
-
-        <MyDecks s={s} />
 
         <section>
           <CardsView
@@ -313,13 +274,8 @@ export function Collection({ profile, name, s, onSwitch }: { profile: number; na
             cards={cards}
             profile={profile}
             binderName={name}
-            search={
-              <label className="sbox dark">
-                <span className="tab">SEARCH</span>
-                <input type="search" placeholder="name or rules text_" value={q} onChange={(e) => setQ(e.target.value)} />
-                <span aria-hidden="true" className="fade" />
-              </label>
-            }
+            q={q}
+            setQ={setQ}
             more={
               <>
                 <button className="sticker" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
@@ -334,5 +290,103 @@ export function Collection({ profile, name, s, onSwitch }: { profile: number; na
         </section>
       </main>
     </>
+  );
+}
+
+type SyncItem = { label: string; alert: boolean; open: () => void };
+
+/**
+ * The binder control: the binder's name with ▾. Its menu switches binders, adds a new one, renames, empties (RESET,
+ * with a confirm) or deletes one (never the last), and holds SYNC and the haptics switch (the old hamburger's items).
+ */
+function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: number; name: string; count: number; binders: { id: number; name: string }[]; onPick?: (id: number) => void; sync?: SyncItem }) {
+  const [open, setOpen] = useState(false);
+  const [hapt, setHapt] = useState(hapticsOn);
+  const [note, setNote] = useState('');
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const out = (e: PointerEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    addEventListener('pointerdown', out);
+    addEventListener('keydown', esc);
+    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc));
+  }, [open]);
+  const act = (f: () => unknown) => () => (setOpen(false), f());
+  async function add() {
+    const id = Math.max(0, ...binders.map((b) => b.id)) + 1;
+    const nm = prompt('Name the new binder', `Binder ${id}`)?.trim();
+    if (!nm) return;
+    await db.profiles.add({ id, name: nm });
+    buzz('success');
+    onPick?.(id);
+  }
+  async function rename() {
+    const nm = prompt('Rename this binder', name)?.trim();
+    if (nm && nm !== name) await db.profiles.update(profile, { name: nm });
+  }
+  async function remove() {
+    const decks = await db.decks.where('profile').equals(profile).count();
+    if (!confirm(`Delete ${name}? Its ${count} card entries${decks ? ` and ${decks} deck${decks === 1 ? '' : 's'}` : ''} go with it. This can't be undone.`)) return;
+    buzz('warn');
+    await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
+      await db.entries.where('profile').equals(profile).delete();
+      await db.decks.where('profile').equals(profile).delete();
+      await db.profiles.delete(profile);
+    });
+    onPick?.(binders.find((b) => b.id !== profile)!.id);
+  }
+  return (
+    <div className="bindermenu" ref={box}>
+      <button className={`bmbtn${sync?.alert ? ' alert' : ''}`} aria-expanded={open} aria-haspopup="menu" onClick={() => (buzz('open'), setOpen(!open))}>
+        <span className="lbl">BINDER</span>
+        <b>{name}</b>
+        <span className="chev" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="bmenu" role="menu" aria-label="Binders">
+          {binders.length > 1 &&
+            binders.map((b) => (
+              <button key={b.id} role="menuitemradio" aria-checked={b.id === profile} onClick={act(() => b.id !== profile && onPick?.(b.id))}>
+                {b.id === profile ? '● ' : '○ '}
+                {b.name}
+              </button>
+            ))}
+          <button role="menuitem" onClick={act(add)}>
+            + New binder
+          </button>
+          <button role="menuitem" onClick={act(rename)}>
+            ✎ Rename
+          </button>
+          <hr />
+          {sync && (
+            <button role="menuitem" className={sync.alert ? 'alert' : ''} onClick={act(sync.open)}>
+              ⟳ SYNC <small>{sync.label}</small>
+            </button>
+          )}
+          {hapticsSupported() && (
+            <button role="menuitemcheckbox" aria-checked={hapt} onClick={() => (setNote(HAPTIC_NOTE[setHaptics(!hapt)]), setHapt(!hapt))}>
+              {hapt ? '◉' : '○'} Haptics {hapt ? 'on' : 'off'}
+            </button>
+          )}
+          {note && (
+            <p className="small hapnote" role="status">
+              {note}
+            </p>
+          )}
+          <hr />
+          <button role="menuitem" className="danger" disabled={!count} onClick={act(() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile))}>
+            ⚠ Reset (empty this binder)
+          </button>
+          {binders.length > 1 && (
+            <button role="menuitem" className="danger" onClick={act(remove)}>
+              ✕ Delete this binder
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

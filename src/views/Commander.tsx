@@ -13,6 +13,7 @@ import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
 import { recordTaste, setWild } from '../brain/store';
 import { comboBreaks, nearCombos } from '../brain/combos';
+import { identityGate, offIdentity } from '../brain/identity';
 import { comboAllowed } from '../brain/win';
 import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
@@ -20,7 +21,7 @@ import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
-import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, SearchBox, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -146,8 +147,19 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const binder = useBinder(s.profile);
   const never = new Set([...pins.out, ...cf.exc].map(norm));
   const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
+  // Colour identity is a hard rule on every path in: candidates, WILDCARD, saved swaps and pins (identity.ts).
+  const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
+  const ciKnown = cmdr?.ci ?? page?.card?.ci;
+  const ci = ciKnown ?? [];
+  const binderCi = new Map(binder.map((c) => [c.key, c.ci]));
+  const ciOf = (n: string) => binderCi.get(norm(n));
+  // Until the commander's identity is known nothing new is offered, and saved swaps are left as they are.
+  const fits = ciKnown ? identityGate(ci, ciOf) : () => false;
+  const off = new Set(ciKnown ? offIdentity([...Object.values(swaps), ...pins.in], ci, ciOf).map(norm) : []);
+  const swapsOk = Object.fromEntries(Object.entries(swaps).filter(([, r]) => !off.has(norm(r))));
+  const pinsOk = { ...pins, in: pins.in.filter((p) => !off.has(norm(p))) };
   // Replacement candidates: owned cards EDHREC recommends for this commander, minus the ones you never use.
-  const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
+  const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)) && fits(c.name));
   const recCard = new Map((sugg?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
   const slotInfo = (c: EdhCard): SubCard => {
     const info = recInfo.get(norm(c.name));
@@ -159,8 +171,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   // The deck after your swaps and pins (slot = EDHREC's card).
   const eff = arrange(
     [...byName.values()].map((c) => ({ name: c.name, qty: c.qty ?? 1, type: slotInfo(c).type, incl: recInfo.get(norm(c.name))?.incl })),
-    swaps,
-    pins,
+    swapsOk,
+    pinsOk,
     (slot, used) => rankSubs(slotInfo(byName.get(slot)!), owned.filter((o) => !used.has(norm(o.name))), 1)[0]?.name,
     { commander: name, typeOf: (n) => binderType.get(norm(n)) },
   );
@@ -195,6 +207,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const p = (await db.profiles.get(s.profile))!;
     const deck = { ...(p.swaps?.[path] ?? {}) };
     const was = deck[missingName] ?? missingName;
+    if (replacement && !fits(replacement)) return; // never write a card outside the commander's colours
     if (replacement) deck[missingName] = replacement;
     else delete deck[missingName];
     if (replacement) void recordTaste(s.profile, was, 'cut', name).then(() => recordTaste(s.profile, replacement, 'add', name));
@@ -242,7 +255,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   }
 
   // The forging zone: your first swap on this deck starts it; leaving asks whether to keep the deck.
-  const changes = Object.keys(swaps).length;
+  const changes = Object.keys(swapsOk).length;
   const forging = kind === 'average' && changes > 0;
   const [leaving, setLeaving] = useState<((go: boolean) => void) | null>(null);
   const live = useRef({ forging, saveDeck, clearSwaps });
@@ -273,8 +286,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const short = page
     ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
     : [];
-  const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
-  const ci = cmdr?.ci ?? page?.card?.ci ?? [];
   // EDHREC bracket slug -> bracket number for the rules (All = 4: no combo is off limits there).
   const bracketNum = Number(BRACKETS.find(([v]) => v === bracket)?.[2]) || 4;
   // WILDCARD (1 slot by default, off per commander): a seeded random pick among owned cards with evidence only.
@@ -285,7 +296,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     if (!wildOn || !page) return undefined;
     const binderKeys = new Set(binder.map((b) => b.key));
     const near = nearCombos(deckNames, binderKeys)
-      .filter((n) => !never.has(norm(n.add)))
+      .filter((n) => !never.has(norm(n.add)) && fits(n.add))
       .map((n) => ({ add: n.add, owned: n.owned, allowed: comboAllowed(n.combo, bracketNum), cards: n.combo.cards }));
     const pick = pickWildcards(wildcardCandidates(candidates, near), 1, seedOf(name) + (wildSet.roll ?? 0), inDeck)[0];
     if (!pick) return undefined;
@@ -405,20 +416,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
               </div>
             </div>
-          </div>
-        </section>
-
-        {/* One slim bar that stays in reach while you scroll the cards: POWER and BUDGET. The missing cost lives in the
-            TO BUY list, and the Forge starts with your first swap (owner's call, Nov 6: no FORGE IT button). */}
-        <section className="slimbar" aria-label="Deck settings">
-          <div className="cell">
-            <span className="lbl">POWER</span>
-            <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
-            {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
-          </div>
-          <div className="cell">
-            <span className="lbl">BUDGET</span>
-            <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
           </div>
         </section>
 
@@ -617,23 +614,26 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
-              {/* How the cards are ordered and filtered, right above them */}
-              {/* One FILTERS button: sort and show (and later EDHREC's with/without card) live in its sheet. */}
-              <div className="dtools" role="toolbar" aria-label="Card order and filter">
-                <SearchBox q={q} setQ={setQ} />
-                <details className="fsheet">
-                  <summary>
-                    <span className="ft">FILTERS</span>
-                    <span className="fnow">
-                      {CSORTS.find(([v]) => v === sort)?.[1]} · {SHOWS.find(([v]) => v === show)?.[1]}
-                    </span>
-                    <span className="arrow" aria-hidden="true">
-                      ▼
-                    </span>
-                  </summary>
-                  <div className="fbody">
-                    <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                    <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+              {/* The one slim bar (owner's rule): search, then ⋮ with POWER, BUDGET, SORT, SHOW, VIEW and EDHREC's With / Without card */}
+              <ToolBar q={q} setQ={setQ} now={[BRACKETS.find(([v]) => v === bracket)?.[1].toUpperCase(), budget ? BUDGETS.find(([v]) => v === budget)?.[1].toUpperCase() : ''].filter(Boolean).join(' · ')}>
+                <OptRow label="POWER">
+                  <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
+                </OptRow>
+                <OptRow label="BUDGET">
+                  <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
+                </OptRow>
+                <OptRow label="VIEW">
+                  <div className="viewsw mini" role="group" aria-label="Card view">
+                    <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                      <GridIcon />
+                    </button>
+                    <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                      <ListIcon />
+                    </button>
+                  </div>
+                </OptRow>
+                <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
                     {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
                     <form
                       className="cfilter"
@@ -677,17 +677,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         </p>
                       )}
                     </form>
-                  </div>
-                </details>
-                <div className="viewsw mini" role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-              </div>
+              </ToolBar>
+              {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {listed.map((l) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';

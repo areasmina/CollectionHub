@@ -44,6 +44,11 @@ export interface Deck {
   commander?: string;
   /** Second commander: a Partner, Friends forever, Background or Doctor's companion (colour identity = both). */
   partner?: string;
+  /**
+   * Copy policy (optional): 'shared' (default, also when missing) = a virtual list that may use any copy you own, as
+   * always; 'reserved' = this deck holds its physical copies, and other reserved decks can't count them as available.
+   */
+  alloc?: 'shared' | 'reserved';
   /** EDHREC bracket page the deck was forged from ('cedh', 'optimized'…), when it came from a commander page. */
   source?: string;
   cards: DeckCard[];
@@ -98,4 +103,5 @@ class DB extends Dexie {
 
 export const db = new DB();
 export const PROFILES = [1, 2] as const;
-db.on('populate', () => db.profiles.bulkAdd([{ id: 1, name: 'Binder 1' }, { id: 2, name: 'Binder 2' }]));
+// One binder to start; more come from Collection's binder menu.
+db.on('populate', () => db.profiles.bulkAdd([{ id: 1, name: 'Binder 1' }]));

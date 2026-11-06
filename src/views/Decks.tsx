@@ -9,6 +9,7 @@ import { replaceInDeck, savePin, setCommander } from '../lib/deckedit';
 import { noPins, pinOf } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
+import { offIdentity } from '../brain/identity';
 import { killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
@@ -26,7 +27,7 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, SearchBox, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -498,7 +499,10 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   }, [cmdrSlug, refBracket]);
   const kill = killCheck(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), refBracket === 'cedh' ? 5 : Math.max(call.bracket, 2));
   const banned = deck.cards.filter((c) => cardOf(c.name)?.legal === false).map((c) => c.name);
+  // Colour identity: a saved deck may hold cards from before the identity gate (or an import). Flag them, known ones only.
+  const offColour = cmdr ? offIdentity(deck.cards.map((c) => c.name).filter((n) => n !== deck.commander && n !== deck.partner), ci, (n) => cardOf(n)?.ci) : [];
   const read = [
+    ...(offColour.length ? [{ tone: 'low' as const, text: `${offColour.length} ${offColour.length === 1 ? 'card is' : 'cards are'} outside ${(deck.commander ?? '').split(' // ')[0]}'s colours: ${offColour.slice(0, 5).join(', ')}${offColour.length > 5 ? '…' : ''}. Swap ${offColour.length === 1 ? 'it' : 'them'} out before you play.` }] : []),
     ...(banned.length ? [{ tone: 'low' as const, text: `${banned.length} ${banned.length === 1 ? "card isn't" : "cards aren't"} legal in Commander: ${banned.slice(0, 5).join(', ')}${banned.length > 5 ? '…' : ''}. Swap ${banned.length === 1 ? 'it' : 'them'} out before you play.` }] : []),
     ...analysis(st, { bracket: refBracket === 'cedh' ? 5 : call.bracket, ref }),
     { tone: (kill.verdict === 'lethal' ? 'ok' : 'low') as 'ok' | 'low', text: kill.says },
@@ -536,6 +540,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const forgePool = () =>
     binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));
   async function swapIn(from: string, to: string) {
+    if (cmdr && offIdentity([to], ci, (n) => binderCard.get(norm(n))?.ci ?? cardOf(n)?.ci).length) return; // hard rule: never outside the colours
     haptic('success');
     const key = deck.commander ?? deck.name;
     void recordTaste(s.profile, from, 'cut', key).then(() => recordTaste(s.profile, to, 'add', key));
@@ -643,19 +648,20 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
             </div>
             {/* How the cards are split and ordered, right above them */}
-            <div className="dtools" role="toolbar" aria-label="Deck view">
-              <SearchBox q={q} setQ={setQ} />
+            <ToolBar q={q} setQ={setQ} now={`${GROUPINGS.find(([v]) => v === grouping)?.[1] ?? ''} · ${SORTS.find(([v]) => v === sort)?.[1] ?? ''}`}>
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+              <OptRow label="VIEW">
                 <div className="viewsw mini" role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-            </div>
+                  <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                    <GridIcon />
+                  </button>
+                  <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                    <ListIcon />
+                  </button>
+                </div>
+              </OptRow>
+            </ToolBar>
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {
