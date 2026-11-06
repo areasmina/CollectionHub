@@ -211,7 +211,7 @@ test('Deck names open the deck: commander page and the copies warning', async ({
 test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dtools .sbox')).toHaveCount(3); // search + two filters (in the ⋮ options)
+  await expect(page.locator('.dtools .sbox')).toHaveCount(4); // search + three filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
   await opts(page);
   const group = page.locator('.dtools select').first();
@@ -279,7 +279,7 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(5); // search first, then the filters (in the ⋮ options)
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(6); // search first, then the filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
   const sw = (await opts(page)).locator('.viewsw.mini');
   await expect(sw).toBeVisible();
@@ -577,7 +577,7 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await page.locator('.ccard').first().click();
   const cov = page.locator('.lists > .coverage');
   await expect(cov).toContainText('from your binder');
-  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · $$$'); // decks open at MED power, MAX budget
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · B4 · 3RD GEAR'); // decks open at MED power, MAX budget
   const before = await cov.innerText();
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();

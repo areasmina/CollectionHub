@@ -607,6 +607,16 @@ export const ListIcon = () => (
   </svg>
 );
 
+/** Compact list icon: lines only (name · mana · price · owned). */
+export const CompactIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="currentColor">
+    <rect x="1" y="2" width="16" height="2" rx="1" />
+    <rect x="1" y="6" width="16" height="2" rx="1" />
+    <rect x="1" y="10" width="16" height="2" rx="1" />
+    <rect x="1" y="14" width="16" height="2" rx="1" />
+  </svg>
+);
+
 /** Mana symbols for the colour buttons (W sun, U drop, B skull, R fire swirl, G tree). */
 export function ManaIcon({ c }: { c: string }) {
   const k = { width: 22, height: 22, viewBox: '0 0 24 24', 'aria-hidden': true as const, fill: 'currentColor' };

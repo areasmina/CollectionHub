@@ -42,3 +42,19 @@ export function sortBy<T>(items: T[], key: SortKey, facts: (t: T) => Facts): T[]
 }
 
 export const shows = (show: Show, owned: boolean) => show === 'all' || (show === 'owned') === owned;
+
+/** ONLY (owner's ask, Nov 6): Game Changers and price filters on a deck's cards. Prices in CAD; unknown prices never pass a price filter. */
+export type Only = 'all' | 'gc' | 'under5' | 'under20' | 'over20';
+export const ONLYS: [Only, string][] = [
+  ['all', 'EVERY CARD'],
+  ['gc', 'GAME CHANGERS'],
+  ['under5', 'UNDER CA$5'],
+  ['under20', 'UNDER CA$20'],
+  ['over20', 'CA$20 AND UP'],
+];
+export function onlyOk(only: Only, f: { gc: boolean; cad?: number }) {
+  if (only === 'all') return true;
+  if (only === 'gc') return f.gc;
+  if (f.cad == null) return false;
+  return only === 'under5' ? f.cad < 5 : only === 'under20' ? f.cad < 20 : f.cad >= 20;
+}

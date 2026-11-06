@@ -110,3 +110,23 @@ export function searchCards<T>(cards: T[], q: string, n = 6, nameOf: (c: T) => s
     .slice(0, n)
     .map((x) => x.c);
 }
+
+/** How many pins per side ride along on EDHREC's With / Without filter (more cards leave too few decks to learn from). */
+export const PIN_FILTER_MAX = 2;
+/** Fewer decks than this after the filter: the pins are dropped from it and the plain page is used (said in the note). */
+export const PIN_FILTER_MIN_DECKS = 20;
+
+/**
+ * Your pins drive EDHREC's filter: suggestions come from decks that run your 📌 always-in cards (in=) and skip your
+ * 💀 never-use cards (out=). Cards you typed in the With / Without boxes come first; the first PIN_FILTER_MAX pins of
+ * each side are added after them, without repeats. Basics are never sent.
+ */
+export function withPins(f: { inc: string[]; exc: string[] }, p: Pins, max = PIN_FILTER_MAX) {
+  const add = (list: string[], more: string[]) => {
+    const seen = new Set(list.map(norm));
+    const out = [...list];
+    for (const n of more.filter((x) => !BASIC.test(x) && !seen.has(norm(x))).slice(0, max)) (seen.add(norm(n)), out.push(n));
+    return out;
+  };
+  return { inc: add(f.inc, p.in), exc: add(f.exc, p.out) };
+}

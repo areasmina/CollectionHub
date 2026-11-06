@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { allocate } from '../lib/allocation';
 import { inUseChip } from './chips';
-import { coverage, coverageText, firstInCap, overCap, ownedOnly, preferOwned } from './modes';
+import { buyGroups, coverage, coverageText, firstInCap, overCap, ownedOnly, preferOwned } from './modes';
 
 const own = new Set(['sol ring', 'arcane signet', 'cultivate', 'forest']);
 const owns = (n: string) => own.has(n.toLowerCase());
@@ -77,5 +77,22 @@ describe('in <deck> chip', () => {
     expect(inUseChip(a, 'Sol Ring', () => false)).toEqual({ deck: 'Atraxa', lock: true, text: 'held by Atraxa +1' });
     expect(inUseChip(a, 'Cultivate', (d) => d === 'Tatyova')).toEqual({ deck: 'Kinnan', lock: false, text: 'in Kinnan' });
     expect(inUseChip(a, 'Arcane Signet', () => false)).toBeUndefined();
+  });
+});
+
+describe('TO BUY groups', () => {
+  it('bands by EDHREC play rate, cheapest first, with a subtotal', () => {
+    const items = [
+      { n: 'A', incl: 0.6, p: 30 },
+      { n: 'B', incl: 0.7, p: 2 },
+      { n: 'C', incl: 0.3, p: undefined },
+      { n: 'D', incl: undefined, p: 1 },
+    ];
+    const g = buyGroups(items, (t) => t.incl, (t) => t.p);
+    expect(g.map((x) => [x.label, x.items.map((t) => t.n), x.total])).toEqual([
+      ['IN HALF THE DECKS OR MORE', ['B', 'A'], 32],
+      ['IN 25–50% OF DECKS', ['C'], 0],
+      ['UNDER 25% · NICE TO HAVE', ['D'], 1],
+    ]);
   });
 });

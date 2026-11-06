@@ -11063,3 +11063,108 @@ html.forging .forgebar {
     font-size: 16px;
   }
 }
+.fsugg .fcfnote {
+  margin: -4px 0 8px;
+  color: #555;
+}
+
+/* Compact list (phones' default, Nov 6): one line per card: name · mana · price · owned; no art */
+ul.zcompact > li.zrow {
+  min-height: 40px;
+  padding: 4px 6px;
+  gap: 6px;
+  align-items: center;
+}
+ul.zcompact > li.zrow .thumb {
+  display: none;
+}
+ul.zcompact > li.zrow .info {
+  flex: 1 1 auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+ul.zcompact > li.zrow .nm {
+  flex: 1 1 auto;
+  min-width: 6ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+ul.zcompact > li.zrow .note {
+  flex: none;
+  white-space: nowrap;
+  font-size: 11px;
+}
+ul.zcompact > li.zrow .swapmark {
+  flex: none;
+  white-space: nowrap;
+  font-size: 11px;
+}
+ul.zcompact > li.zrow.owned .nm::before {
+  content: '✓ ';
+  color: #39ff88;
+}
+ul.zcompact > li.zrow.missing .nm {
+  opacity: 0.75;
+}
+
+/* TO BUY grouped by play rate (Nov 6): a dotted header per band with its subtotal; GC and COMBO marks */
+.receipt .rgroup + .rgroup {
+  margin-top: 8px;
+}
+.receipt .rgh {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px dotted #141414;
+  font-family: var(--an);
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+.receipt .rmark {
+  font-family: var(--an);
+  font-size: 11px;
+  padding: 0 3px;
+  margin-left: 4px;
+  border: 1px solid #141414;
+}
+.receipt .rmark.gc {
+  background: #141414;
+  color: var(--hazard);
+}
+.receipt .rmark.combo {
+  border-style: dashed;
+}
+ul.zcompact > li.zrow {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+ul.zcompact > li.zrow .info {
+  display: flex;
+}
+ul.zcompact > li.zrow .nm {
+  font-size: 16px;
+}
+ul.zcompact > li.zrow .acts {
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+ul.zcompact > li.zrow .acts .swapbtn,
+ul.zcompact > li.zrow .acts .morebtn {
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 6px;
+  font-size: 14px;
+}
+ul.zcompact > li.zrow .price.tapey {
+  position: static;
+  transform: none;
+  font-size: 12px;
+  padding: 0 4px;
+  white-space: nowrap;
+}

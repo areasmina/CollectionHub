@@ -408,10 +408,10 @@ export function ForgeSuggest({
                 CLEAR
               </button>
             )}
-            {cfNote && <p className="small">{cfNote}</p>}
           </form>
         </details>
       )}
+      {cfNote && <p className="small fcfnote" role="status">{cfNote}</p>}
       <div className="ftabs" role="tablist" aria-label="Which cards">
         {(
           [
@@ -444,7 +444,7 @@ export function ForgeSuggest({
                 onDragEnd={dragEnd}
                 onPointerDown={(e) => holdToDrag(e, { label: r.c.name, img, onDrop: (at: DropAt) => dropRow(r.c.name, at) })}
                 onContextMenu={(e) => e.preventDefault()}
-                onClick={() => (haptic('select'), onPlace(placing === r.c.name ? null : r.c.name))}
+                onClick={() => (haptic('select'), setSheet(false), onPlace(placing === r.c.name ? null : r.c.name))}
                 aria-pressed={placing === r.c.name}
                 title={r.blocked ?? 'Tap, then tap a deck card to swap it in. Or drag it onto one.'}
               >

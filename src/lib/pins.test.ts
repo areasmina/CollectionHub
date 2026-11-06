@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrange, noPins, pinOf, searchCards, togglePin } from './pins';
+import { arrange, noPins, pinOf, searchCards, togglePin, withPins } from './pins';
 
 const slots = [
   { name: 'Atraxa', qty: 1, type: 'Legendary Creature' },
@@ -59,5 +59,15 @@ describe('searchCards', () => {
     expect(searchCards(cards, 'exile').map((c) => c.name)).toEqual(['Exile Shrine', 'Path to Exile']);
     expect(searchCards(cards, 'lim-dul').map((c) => c.name)).toEqual(['Lim-Dûl the Necromancer']);
     expect(searchCards(cards, 'e')).toEqual([]);
+  });
+});
+
+describe('pins drive the EDHREC filter', () => {
+  it('adds the first pins of each side after your own cards, no repeats, no basics', () => {
+    expect(withPins({ inc: ['Sol Ring'], exc: [] }, { in: ['sol ring', 'Rhystic Study', 'Forest', 'Cultivate', 'Swords'], out: ['Cyclonic Rift'] })).toEqual({
+      inc: ['Sol Ring', 'Rhystic Study', 'Cultivate'],
+      exc: ['Cyclonic Rift'],
+    });
+    expect(withPins({ inc: [], exc: [] }, { in: [], out: [] })).toEqual({ inc: [], exc: [] });
   });
 });

@@ -13,6 +13,11 @@ const leads = (d: Deck) => [d.commander, d.partner].filter((x): x is string => !
 export const deckText = (d: Deck) =>
   [...(leads(d).length ? ['Commander', ...leads(d).map((n) => `1 ${n}`), '', 'Deck'] : []), ...d.cards.filter((c) => !leads(d).includes(c.name)).map((c) => `${c.qty} ${c.name}${c.foil ? ' *F*' : ''}`)].join('\n');
 
+/** MTG Arena's import: "Commander" then "Deck" sections, plain "1 Name" lines (no foil marks, no set codes: Arena
+ *  picks its own printings). Basics stay; quantities stay. */
+export const deckArena = (d: Deck) =>
+  [...(leads(d).length ? ['Commander', ...leads(d).map((n) => `1 ${n}`), ''] : []), 'Deck', ...d.cards.filter((c) => !leads(d).includes(c.name)).map((c) => `${c.qty} ${c.name}`)].join('\n');
+
 export const deckCsv = (d: Deck) => ['Name,Quantity,Commander,Foil', ...d.cards.map((c) => `${q(c.name)},${c.qty},${leads(d).includes(c.name)},${c.foil ? 'foil' : 'normal'}`)].join('\n');
 
 export function download(filename: string, text: string, type = 'text/plain') {
