@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { deckColour } from '../lib/deckcolor';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { statusOf } from '../lib/compare';
@@ -26,6 +27,7 @@ export function DeckLight({ deck }: { deck: Deck }) {
   return (
     <button
       className={`dlight${on ? ' on' : ''}`}
+      style={{ '--dc': deckColour(deck) } as React.CSSProperties}
       aria-pressed={on}
       aria-label={`${deck.name}: ${on ? 'active, tap to put it away' : 'put away, tap to make it active'}`}
       title={on ? 'Active: its cards count as in use in your binder' : 'Put away: its cards are free in your binder'}
@@ -127,7 +129,8 @@ export function PriceLink({ card, plain, tape }: { card?: Card; plain?: boolean;
   let h = 0;
   for (const ch of tape ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const cls = `price${plain ? ' plain' : ''}${tape ? ` tapey y${h % 5} t${(h >> 3) % 4}` : ''}`;
-  return card?.buy && card.usd ? (
+  if (!card?.usd) return null; // basics and unpriced cards: no "≈CA$—"
+  return card.buy ? (
     <a className={cls} href={card.buy} target="_blank" rel="noreferrer" title={rateNote()} onClick={(e) => e.stopPropagation()}>
       {usd(card)}
     </a>
@@ -236,7 +239,7 @@ export function CardLine({
             ⋯
           </button>
         )}
-        <PriceLink card={card} plain={st === 'owned' && !marker} />
+        <PriceLink card={card} tape={name} />
       </span>
       {children}
     </li>
@@ -251,6 +254,11 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
   return (
     <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
       <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      {st === 'missing' && (
+        <span className="misstape" aria-hidden="true">
+          MISSING
+        </span>
+      )}
       <span className="tname">
         {name}
         {st === 'missing' && <span className="sr">(missing)</span>}
@@ -260,8 +268,8 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
       {st === 'other' && <span className="tagother">in {s.otherName}</span>}
       <span className="tacts">
         {onOpen && (
-          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
-            {quiet ? '⇄' : '↺ SWAP'}
+          <button className="swapbtn tilehit" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
+            <span className="sr">Swap</span>
           </button>
         )}
         {onMenu && (
@@ -279,18 +287,19 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
             ⋯
           </button>
         )}
-        <PriceLink card={card} plain={st === 'owned' && !marker} />
       </span>
+      {/* the same peel-on tape sticker as Collection: on the art's top-right corner */}
+      <PriceLink card={card} tape={name} />
       {children}
     </li>
   );
 }
 
-export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void; roman?: boolean }) {
+export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: ([string, string] | [string, string, string])[]; onChange: (v: string) => void; roman?: boolean }) {
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
-      {options.map(([v, text]) => (
-        <button key={v} role="radio" className={roman && v ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
+      {options.map(([v, text, tip]) => (
+        <button key={v} role="radio" className={roman && v ? 'roman' : ''} title={tip} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}
@@ -362,14 +371,15 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
 export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: ReactNode }) {
   return (
     <div className="hstats" onClick={(e) => e.stopPropagation()}>
-      <span className="price tapey y1 t0 big" title={PRICE_METHOD} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
-        <small className="wideonly">DECK</small> {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
-      </span>
+      {/* How the price is worked out stays in the tooltip, not as a line under the header */}
+      {/* One loud price per page (what's missing); the deck's total is quiet grey text, how it's worked out in the tooltip */}
+      {price !== undefined && (
+        <span className="price quiet" title={`${PRICE_METHOD} ${fetched}`} aria-label={`Whole deck costs about ${cad(price)}`}>
+          deck ≈{cad(price)}
+        </span>
+      )}
       <SaltStat names={names} />
       {children}
-      <small className="fetched" title={PRICE_METHOD}>
-        deck price: cheapest printings · {fetched}
-      </small>
     </div>
   );
 }
@@ -378,15 +388,16 @@ export function HeroStats({ price, fetched, names, children }: { price?: number;
 export function SaltStat({ names }: { names: string[] }) {
   const [salt, setSalt] = useState<Map<string, number> | null>(null);
   useEffect(() => void saltMap().then(setSalt), []);
-  const s = salt && deckSalt(names, salt);
+  const s = salt && salt.size > 0 ? deckSalt(names, salt) : null;
+  if (!s) return null; // unknown salt (loading, or EDHREC's list unreachable): show nothing rather than "…"
   return (
     <details className="scrap salt">
-      <summary aria-label={s ? `Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards` : 'Salt loading'}>
+      <summary aria-label={`Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards`}>
         <span className="k">SALT</span>
-        <span className="amt">{s ? s.total.toFixed(1) : '…'}</span>
-        {s && s.top.length > 0 && <span className="caret" aria-hidden="true">▾</span>}
+        <span className="amt">{s.total.toFixed(1)}</span>
+        {s.top.length > 0 && <span className="caret" aria-hidden="true">▾</span>}
       </summary>
-      {s && (
+      {(
         <ul className="popnote">
           {s.top.map((c) => (
             <li key={c.name}>
@@ -410,7 +421,8 @@ export function DeckLink({ name, children }: { name: string; children?: ReactNod
 }
 
 /** Hazard note: cards your decks share more often than you own copies (decks are virtual lists). */
-export function ShortAlert({ items }: { items: Shortfall[] }) {
+/** Copies warning. `inline`: it leads a hint line (which turns yellow), so it needs no band of its own. */
+export function ShortAlert({ items, inline }: { items: Shortfall[]; inline?: boolean }) {
   const real = useLiveQuery(async () => new Set((await db.decks.toArray()).map((d) => d.name)), []) ?? new Set<string>();
   if (!items.length) return null;
   const row = (s: Shortfall) => (
@@ -427,19 +439,67 @@ export function ShortAlert({ items }: { items: Shortfall[] }) {
       </small>
     </li>
   );
-  return (
-    <aside className="shortalert" role="status">
-      <b>⚠ COPIES</b>
-      {items.length <= 3 ? (
+  if (inline)
+    return (
+      <details className="shortin" role="status">
+        <summary title={`${items.length} ${items.length === 1 ? 'card is' : 'cards are'} in more decks than you have copies: tap for the list`}>
+          <b>⚠ {items.length} SHORT</b>
+        </summary>
         <ul>{items.map(row)}</ul>
-      ) : (
-        <details>
-          <summary>
-            {items.length} cards are in more decks than you have copies for
-          </summary>
-          <ul>{items.map(row)}</ul>
-        </details>
-      )}
+      </details>
+    );
+  return (
+    <aside className="shortalert chip" role="status">
+      {/* A small chip; tap it for which cards and decks (the full warning used to take a whole band). */}
+      <details>
+        <summary>
+          <b>⚠ {items.length} SHORT</b> <span>{items.length === 1 ? 'card is' : 'cards are'} in more decks than you have copies</span>
+        </summary>
+        <ul>{items.map(row)}</ul>
+      </details>
     </aside>
+  );
+}
+
+/** The commander's big card is its menu button (it replaces the old one-card "Commander" section): a lift and a
+ *  ⋯ OPTIONS corner on hover, a faint corner on touch screens, and a one-time "tap for options" tape. */
+export function CmdrCard({ src, name, onMenu, children }: { src: string; name: string; onMenu: (x: number, y: number) => void; children?: ReactNode }) {
+  const [seen, setSeen] = useStored<'0' | '1'>('cmdrhint', '0', ['0', '1']);
+  const open = (x: number, y: number) => (haptic('open'), setSeen('1'), onMenu(x, y));
+  return (
+    <button
+      type="button"
+      className="cmdrbtn"
+      onPointerDown={(e) => e.stopPropagation()}
+      aria-label={`${name}: commander options`}
+      title="Commander options (right-click or hold works too)"
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        open(r.left + r.width / 2, r.top + r.height * 0.4);
+      }}
+      onContextMenu={(e) => (e.preventDefault(), e.stopPropagation(), open(e.clientX, e.clientY))}
+    >
+      <img src={src} alt="" />
+      {children}
+      <span className="cmdrmore" aria-hidden="true">
+        ⋯ <b>OPTIONS</b>
+      </span>
+      {seen === '0' && (
+        <span className="cmdrhint" aria-hidden="true">
+          tap for options
+        </span>
+      )}
+    </button>
+  );
+}
+
+/** The SEARCH segment every toolbar starts with: cards by name or rules text (Oracle + reminder text). */
+export function SearchBox({ q, setQ, placeholder = 'name or rules text_' }: { q: string; setQ: (v: string) => void; placeholder?: string }) {
+  return (
+    <label className="sbox dark tsearch">
+      <span className="tab">SEARCH</span>
+      <input type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards by name or rules text" />
+      <span aria-hidden="true" className="fade" />
+    </label>
   );
 }

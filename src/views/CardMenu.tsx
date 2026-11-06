@@ -2,7 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BASICS } from '../lib/compare';
 import { db, type Deck } from '../lib/db';
-import { addToDeck, changeQty, removeFromDeck, removeOneFromBinder, setCommander, setFoil } from '../lib/deckedit';
+import { addToDeck, changeQty, removeFromDeck, removeOneFromBinder, setCommander, setFoil, setPrinting } from '../lib/deckedit';
+import { printingsOf } from '../lib/scryfall';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
 import { openDeck } from '../lib/nav';
@@ -65,6 +66,31 @@ export function CardMenu({
     return () => (removeEventListener('keydown', key), removeEventListener('scroll', scroll));
   }, []);
   const isCmdr = !!d && name === d.commander;
+  // Change commander: legendary creatures in this deck first, then the rest of your binder.
+  const [picking, setPicking] = useState(false);
+  const [q, setQ] = useState('');
+  const legends =
+    useLiveQuery(async () => {
+      if (!d || !isCmdr || !picking) return [];
+      const inDeck = new Set(d.cards.map((c) => norm(c.name)));
+      const names = [...new Set([...d.cards.map((c) => c.name), ...(await db.entries.where('profile').equals(profile).toArray()).map((e) => e.name)])];
+      const cs = await db.cards.where('key').anyOf(names.map(norm)).toArray();
+      return [...new Map(cs.filter((c) => /Legendary.*Creature/.test(c.type ?? '') || /can be your commander/i.test(c.text ?? '')).map((c) => [c.name, c])).values()]
+        .filter((c) => c.name !== d.commander)
+        .sort((a, b) => Number(inDeck.has(b.key)) - Number(inDeck.has(a.key)) || a.name.localeCompare(b.name))
+        .map((c) => ({ name: c.name, inDeck: inDeck.has(c.key) }));
+    }, [d?.id, d?.commander, isCmdr, picking, profile]) ?? [];
+  // Change artwork: pick the printing you own (Scryfall's paper printings, loaded when opened)
+  const [arts, setArts] = useState<Awaited<ReturnType<typeof printingsOf>> | null | 'loading'>(null);
+  const myRows = useLiveQuery(() => db.entries.where('profile').equals(profile).toArray(), [profile])?.filter((e) => norm(e.name) === norm(name)) ?? [];
+  const mine = new Set(myRows.map((e) => e.cardId));
+  const openArts = async () => {
+    haptic('select');
+    if (arts) return setArts(null);
+    setArts('loading');
+    setArts(await printingsOf(name.split(' // ')[0]));
+  };
+  const shownLegends = legends.filter((c) => norm(c.name).includes(norm(q))).slice(0, 8);
   const basic = BASICS.has(norm(name));
   const toast = (t: Toast) => onToast?.(t);
   const act = (f: () => unknown) => () => (f(), onClose());
@@ -100,6 +126,40 @@ export function CardMenu({
               </li>
             </>
           )}
+          {d && isCmdr && (
+            <li>
+              <button aria-expanded={picking} onClick={() => (haptic('select'), setPicking(!picking))}>
+                ⇄ Change commander… {picking ? '▲' : '▼'}
+              </button>
+              {picking && (
+                <ul className="sub">
+                  <li>
+                    <input type="search" className="subq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search legends…" aria-label="Search legendary creatures" autoFocus />
+                  </li>
+                  {shownLegends.map((c) => (
+                    <li key={c.name}>
+                      <button
+                        onClick={act(async () => {
+                          haptic('success');
+                          const before = { cards: d.cards, commander: d.commander };
+                          if (!c.inDeck) await addToDeck(d, c.name);
+                          await setCommander(d, c.name);
+                          toast({ text: `${c.name} leads the deck now`, undo: () => db.decks.update(d.id!, before) });
+                        })}
+                      >
+                        {c.name} <small>{c.inDeck ? '· in this deck' : '· in your binder'}</small>
+                      </button>
+                    </li>
+                  ))}
+                  {!shownLegends.length && (
+                    <li>
+                      <small>No legendary creature of yours matches.</small>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </li>
+          )}
           {d && !isCmdr && (
             <li>
               <button onClick={act(() => (haptic('success'), setCommander(d, name)))}>{d.commander ? `★ Make it the commander (replaces ${d.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
@@ -132,6 +192,33 @@ export function CardMenu({
                   </button>
                 </span>
               ))}
+            </li>
+          )}
+          {owned > 0 && (
+            <li>
+              <button aria-expanded={!!arts} onClick={openArts}>
+                🎨 Change artwork… <small>· the printing you own</small> {arts ? '▲' : '▼'}
+              </button>
+              {arts === 'loading' && <p className="small artsload">Loading printings from Scryfall…</p>}
+              {arts && arts !== 'loading' && (
+                <ul className="artgrid" aria-label="Printings">
+                  {arts.length === 0 && <li className="small">Scryfall has no other printing.</li>}
+                  {arts.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        aria-pressed={mine.has(p.id)}
+                        title={`${p.setName} #${p.cn}`}
+                        onClick={act(async () => (haptic('success'), toast({ text: `${name}: ${p.setName} art`, undo: await setPrinting(profile, name, p, p.set, p.cn) })))}
+                      >
+                        {p.img && <img src={p.img} alt={`${p.setName} #${p.cn}`} loading="lazy" />}
+                        <small>
+                          {p.set.toUpperCase()} {p.cn}
+                        </small>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           )}
           <li className="sep" />

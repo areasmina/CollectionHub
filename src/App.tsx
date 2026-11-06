@@ -77,6 +77,21 @@ export default function App() {
     document.addEventListener('pointerdown', off);
     return () => document.removeEventListener('pointerdown', off);
   }, [hubOpen]);
+  // The floating nav slides away while you scroll down and comes back on the way up (or near the top / bottom).
+  const [navAway, setNavAway] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const end = y + window.innerHeight >= document.documentElement.scrollHeight - 40;
+      if (y < 80 || end) setNavAway(false);
+      else if (y > last + 6) setNavAway(true);
+      else if (y < last - 6) setNavAway(false);
+      if (Math.abs(y - last) > 6) last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const [backFn, setBackFn] = useState<(() => void) | null>(null);
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
@@ -169,7 +184,7 @@ export default function App() {
       </div>
       {/* The pill menu, phones and desktop alike: back (when there's somewhere to go back to), the two sections, and the hub
           (binder, theme, sync). */}
-      <nav className="pillnav" aria-label="Sections">
+      <nav className={`pillnav${navAway && !hubOpen ? ' away' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
         <div className="pill">
           {backFn && (
             <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>

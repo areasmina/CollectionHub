@@ -1,4 +1,6 @@
 import { haptic } from '../lib/haptics';
+import { DECK_COLOURS, deckColour } from '../lib/deckcolor';
+import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
@@ -20,8 +22,8 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, useBinder, useStored, useMenuPress, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
+import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, SearchBox, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -177,6 +179,23 @@ function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st
   return (
     <aside className={`dpanel ${fold}`} aria-label="Deck analysis">
       <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
+      <div className="dmatch">
+        <span className="lbl">COLLECTION MATCH</span>
+        <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
+          <span className="burst" aria-hidden="true" />
+          <span className="meter">
+            <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
+              {Array.from({ length: 10 }, (_, i) => (
+                <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
+              ))}
+            </span>
+            <small>
+              You own {sum.owned} of {sum.total} in {s.binderName}
+            </small>
+          </span>
+          <span className="num">{sum.pct}%</span>
+        </div>
+      </div>
       <h2>
         <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
           ANALYSIS
@@ -233,21 +252,17 @@ function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st
       </div>
       <div className="dsec">
         <h3>to complete</h3>
-        <div className="plate" role="img" aria-label={`Missing cards cost about ${cad(missingCost)}`}>
-          <span className="wedge" aria-hidden="true">
-            <svg width="24" height="22" viewBox="0 0 24 22">
-              <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-              <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-            </svg>
-          </span>
-          <span className="amt">
-            <small>≈</small>
-            {pricesIn ? cad(missingCost) : 'CA$—'}
-          </span>
-        </div>
-        <small className="fetched">
-          {sum.missing + sum.other} missing{sum.other > 0 ? ` (${sum.other} in ${s.otherName})` : ''}
-        </small>
+        {/* Missing cost = money, so yellow tape (no hazard stripes: nothing is wrong). Nothing missing: a quiet line. */}
+        {sum.missing + sum.other > 0 ? (
+          <>
+            <span className="misscost" role="img" aria-label={`Missing cards cost about ${pricesIn ? cad(missingCost) : 'an unknown amount'}`}>
+              <small>{sum.missing + sum.other} MISSING</small> {pricesIn ? `≈${cad(missingCost)}` : 'price unknown'}
+            </span>
+            {sum.other > 0 && <small className="fetched">{sum.other} of them in {s.otherName}</small>}
+          </>
+        ) : (
+          <small className="fetched">Nothing missing: every card is yours.</small>
+        )}
       </div>
       <div className="dsec dnotes">
         <h3>note &amp; tags</h3>
@@ -346,6 +361,22 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                   ⧉ Duplicate <small>a copy you can change freely</small>
                 </button>
               </li>
+              <li className="colourrow">
+                <span className="cl">Deck colour <small>its cards glow in it</small></span>
+                <span className="swatches" role="radiogroup" aria-label="Deck colour">
+                  {DECK_COLOURS.map(([c, label]) => (
+                    <button
+                      key={c}
+                      role="radio"
+                      aria-checked={deckColour(deck) === c}
+                      aria-label={label}
+                      title={label}
+                      style={{ background: c }}
+                      onClick={act(() => (haptic('select'), db.decks.update(deck.id!, { color: c })))}
+                    />
+                  ))}
+                </span>
+              </li>
               <li>
                 <button role="menuitem" onClick={share}>
                   {copied ? '✓ Copied' : canShare ? '⇪ Share' : '⎘ Copy decklist'} <small>{copied ? 'paste it anywhere' : canShare ? 'send the decklist to a friend' : 'paste into a chat, Moxfield…'}</small>
@@ -407,6 +438,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [view, setView] = useStored<'grid' | 'list'>('ch:view', 'grid', ['grid', 'list']);
   const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
+  const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
   // Foil deck cards are priced at the foil price of the printing on file.
   const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
@@ -450,8 +482,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     return { ...recInfo.get(norm(name)), name, type: card?.type, cmc: card?.cmc };
   };
   const optionOf = (sub: SubCard): SwapOption => {
-    const img = binderCard.get(norm(sub.name))?.img;
-    return { sub, img, big: img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0 };
+    const bc = binderCard.get(norm(sub.name));
+    const img = bc?.img;
+    return { sub, img, big: img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text };
   };
   const forgePool = () =>
     binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));
@@ -462,6 +495,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   }
 
   // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
+  const shortHere = short.filter((x) => x.decks.includes(deck.name));
   const owned = (n: string) => statusOf(n, s.mine) === 'owned';
   const keyOf = (c: DeckCard) => {
     const card = cardOf(c.name);
@@ -486,12 +520,13 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           ? ['Owned', `In ${s.otherName}`, 'Missing']
           : ['All cards'];
   const sections = new Map<string, DeckCard[]>(order.map((k) => [k, []]));
-  const shown = deck.cards.filter((c) => shows(show, owned(c.name)));
+  const shown = searchByText(deck.cards.filter((c) => shows(show, owned(c.name))), q, (c) => ({ name: c.name, type: cardOf(c.name)?.type, text: cardOf(c.name)?.text }));
   const sorted = sortBy(shown, sort, (c) => {
     const card = cardOf(c.name);
     return { name: c.name, usd: card?.usd ? Number(card.usd) : undefined, mv: card ? (isLand(card.type) ? 99 : card.cmc) : undefined, owned: owned(c.name) };
   });
-  for (const c of sorted) sections.get(keyOf(c))?.push(c);
+  // The commander isn't repeated in the list: the big card at the top is its menu.
+  for (const c of sorted) if (c.name !== deck.commander) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
 
   return (
@@ -511,9 +546,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <div className="cimg gbox">
               <span className="xart cmdrimg">
                 <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-                <a href={scryfallUrl(cmdr.name)} target="_blank" rel="noreferrer" title="Open on Scryfall">
-                  <img src={cmdr.img.replace('/small/', '/normal/')} alt={`${cmdr.name}: open on Scryfall`} />
-                </a>
+                <CmdrCard
+                  src={cmdr.img.replace('/small/', '/normal/')}
+                  name={cmdr.name}
+                  onMenu={(x, y) => setMenu({ card: deck.cards.find((c) => c.name === deck.commander) ?? { name: cmdr.name, qty: 1 }, x, y })}
+                />
                 <Xgrain />
               </span>
             </div>
@@ -521,9 +558,13 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           <div className="cright">
             <div className="ctitle">
               <div className="banner ht" aria-hidden="true" />
-              <h1 aria-label={deck.name}>
-                <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} />
-              </h1>
+              <div className="titlerow">
+                <h1 aria-label={deck.name}>
+                  <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} />
+                </h1>
+                {/* Active / off sits at the end of the name, in the deck's own colour */}
+                <DeckLight deck={deck} />
+              </div>
               <div className="namerow">
                 <Pips ci={ci} size={30} />
                 <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
@@ -532,45 +573,43 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               </div>
             </div>
             <div className="cmeta">
-              <DeckLight deck={deck} />
               <span className="typed">
                 {[deck.commander ? `COMMANDER: ${deck.commander.split(' // ')[0].toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
               </span>
-              <span className="score">
-                <span className="mono">
-                  YOU OWN {sum.owned} OF {sum.total}
-                  <br />
-                  IN {s.binderName.toUpperCase()}
-                </span>
-                <span className="pct">
-                  <span className="bigpct">{sum.pct}%</span>
-                  <RiseBars pct={sum.pct} />
-                </span>
-              </span>
+              {/* The collection match lives above ANALYSIS on the right, so the commander and title stay clean */}
             </div>
           </div>
           {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
         </section>
 
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
-        <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className="lists">
-            <p className="forgehint">
+            <div className={`forgehint${shortHere.length ? ' warn' : ''}`}>
+              <ShortAlert items={shortHere} inline />
               <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
-            </p>
+            </div>
             {/* How the cards are split and ordered, right above them */}
             <div className="dtools" role="toolbar" aria-label="Deck view">
+              <SearchBox q={q} setQ={setQ} />
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+                <div className="viewsw mini" role="group" aria-label="Card view">
+                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                          <GridIcon />
+                        </button>
+                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                          <ListIcon />
+                        </button>
+                      </div>
             </div>
             {[...sections]
               .filter(([, cs]) => cs.length)
-              .map(([h, cs], i) => {
+              .map(([h, cs]) => {
                 const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
                 return (
                   <details key={h} className="cat" open>
@@ -589,17 +628,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
-                    {i === 0 && (
-                      // Grid / list sits in the first section (the commander's), in the space beside the card
-                      <div className={`viewsw mini${view === 'grid' && cs.length === 1 ? ' over' : ''}`} role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-                    )}
+                    
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => (
                         <Item
@@ -744,7 +773,7 @@ export function Decks(s: Shared) {
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
             const art = d.commander ?? c?.name ?? '';
             return (
-              <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`}>
+              <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d) } as React.CSSProperties}>
                 <DeckLight deck={d} />
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
                   {i === 0 && <Doodles n={433} count={2} spots={[[64, 50], [70, -8]]} paper />}

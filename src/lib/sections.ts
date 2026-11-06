@@ -34,3 +34,17 @@ export function orderSections(lists: EdhList[], commander?: EdhCard): EdhList[] 
   const rest = [...by.keys()].filter((k) => !(SECTION_ORDER as readonly string[]).includes(k));
   return [...known, ...rest].map((header) => ({ header, cards: by.get(header)! })).filter((l) => l.cards.length);
 }
+
+/** Moves each card to the section its card in the deck belongs to (a creature swapped in for a sorcery joins the
+ *  Creatures), keeping the standard order; `sectionFor` returns undefined to leave a card where it is. */
+export function regroup<T>(lists: { header: string; cards: T[] }[], sectionFor: (c: T, header: string) => string | undefined): { header: string; cards: T[] }[] {
+  const by = new Map<string, T[]>(lists.map((l) => [l.header, []]));
+  for (const l of lists)
+    for (const c of l.cards) {
+      const to = l.header === 'Commander' ? l.header : (sectionFor(c, l.header) ?? l.header);
+      by.set(to, [...(by.get(to) ?? []), c]);
+    }
+  const known = SECTION_ORDER.filter((k) => by.has(k));
+  const rest = [...by.keys()].filter((k) => !(SECTION_ORDER as readonly string[]).includes(k));
+  return [...known, ...rest].map((header) => ({ header, cards: by.get(header)! })).filter((l) => l.cards.length);
+}
