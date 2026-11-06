@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cad, shopUrl, toCad } from './prices';
-import { mainType, rankSubs, reasonsFor, whyIn } from './subs';
+import { edhSignal, mainType, rankSubs, reasonsFor, recInfoOf, whyIn } from './subs';
 
 describe('rankSubs', () => {
   const missing = { name: 'Swords to Plowshares', category: 'Instants', type: 'Instant', cmc: 1 };
@@ -51,5 +51,35 @@ describe('reasonsFor / whyIn', () => {
   });
   it('says why the missing card is in the deck (tiny synergy left out)', () => {
     expect(whyIn(missing)).toEqual(['Role: Ramp', 'In 62% of decks']);
+  });
+});
+
+describe('lift (EDHREC replaced synergy with lift on Oct 1, 2026)', () => {
+  it('turns lift into the old synergy scale and falls back to synergy on old pages', () => {
+    expect(edhSignal({ name: 'a', lift: 4 })).toBe(1);
+    expect(edhSignal({ name: 'a', lift: 2 })).toBe(0.5);
+    expect(edhSignal({ name: 'a', lift: 1 })).toBe(0);
+    expect(edhSignal({ name: 'a', lift: 0.5 })).toBe(-0.5);
+    expect(edhSignal({ name: 'a', lift: 64 })).toBe(1);
+    expect(edhSignal({ name: 'a', synergy: 0.3 })).toBe(0.3);
+    expect(edhSignal({ name: 'a', lift: 2, synergy: 0.9 })).toBe(0.5);
+    expect(edhSignal({ name: 'a' })).toBe(0);
+  });
+  it('ranks a high-lift stand-in above a plain one when the rest ties', () => {
+    const missing = { name: 'Swords to Plowshares', category: 'Instants', type: 'Instant', cmc: 1 };
+    const owned = [
+      { name: 'Plain', category: 'Instants', type: 'Instant', cmc: 1, lift: 1, incl: 0.3 },
+      { name: 'Loved here', category: 'Instants', type: 'Instant', cmc: 1, lift: 3, incl: 0.3 },
+    ];
+    expect(rankSubs(missing, owned).map((c) => c.name)).toEqual(['Loved here', 'Plain']);
+  });
+  it('shows lift in the reasons only when the card is clearly played more here', () => {
+    expect(whyIn({ name: 'a', category: 'Ramp', incl: 0.5, lift: 2.44 })).toEqual(['Role: Ramp', 'In 50% of decks', '2.4x lift']);
+    expect(whyIn({ name: 'a', incl: 0.5, lift: 1.1 })).toEqual(['In 50% of decks']);
+    expect(reasonsFor({ name: 'm', type: 'Sorcery', cmc: 3 }, { name: 's', type: 'Sorcery', cmc: 3, lift: 1.8 })).toEqual(['Sorcery like it', 'Same mana value (3)', '1.8x lift']);
+  });
+  it('carries lift from the EDHREC page into the card info', () => {
+    const info = recInfoOf([{ header: 'Ramp', cards: [{ name: 'Cultivate', lift: 1.6, decks: 50, potential: 100 }] }], (n) => n.toLowerCase(), () => undefined);
+    expect(info.get('cultivate')).toMatchObject({ category: 'Ramp', lift: 1.6, incl: 0.5 });
   });
 });

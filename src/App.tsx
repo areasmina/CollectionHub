@@ -11,6 +11,7 @@ import { codeFromHash } from './lib/synccode';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Logo } from './views/zine';
+import { useBrainData } from './brain/data';
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
 const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
@@ -62,6 +63,7 @@ export default function App() {
   const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
+  useBrainData(); // card roles + combo files: re-render every view once they arrive
   const [hubOpen, setHubOpen] = useState(false);
   const [haptOn, setHaptOn] = useState(hapticsOn);
   const [hapNote, setHapNote] = useState('');

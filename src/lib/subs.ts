@@ -3,25 +3,66 @@ export interface SubCard {
   category?: string; // EDHREC list the card sits in on the commander page
   type?: string; // Scryfall type line
   cmc?: number;
-  synergy?: number;
+  synergy?: number; // EDHREC's old signal (pages fetched before Oct 1, 2026)
+  lift?: number; // EDHREC's signal since Oct 1, 2026: how much more decks of this commander play the card (1 = no more than usual)
   incl?: number; // inclusion 0–1
 }
+
+/**
+ * How strongly EDHREC ties a card to this commander, on the old synergy scale (about -1 to 1) so the weights below keep
+ * their meaning: lift 2x = 0.5, 4x = 1, 1x = 0, 0.5x = -0.5. Falls back to synergy for pages cached before lift existed.
+ */
+export function edhSignal(c: SubCard): number {
+  if (c.lift != null && c.lift > 0) return Math.max(-1, Math.min(1, Math.log2(c.lift) / 2));
+  return c.synergy ?? 0;
+}
+
+/** "2.4x lift" for a card clearly played more with this commander (lift 1.25+), or "+12% synergy" on old pages. */
+function signalTag(c: SubCard): string | undefined {
+  if (c.lift != null) return c.lift >= 1.25 ? `${c.lift.toFixed(1)}x lift` : undefined;
+  return c.synergy && c.synergy >= 0.05 ? `+${pctOf(c.synergy)} synergy` : undefined;
+}
+
+import { brainData, ROLE_BITS } from '../brain/data';
+import { BASICS } from './compare';
+import { norm } from './names';
 
 const TYPES = ['Land', 'Creature', 'Planeswalker', 'Battle', 'Instant', 'Sorcery', 'Artifact', 'Enchantment'];
 export const mainType = (type = '') => TYPES.find((t) => type.includes(t)) ?? '';
 
-/** Owned stand-ins for a missing card: same EDHREC category first, then card type, close mana value, then synergy/inclusion. */
+/** A card's Scryfall Tagger roles by name (bits of ROLE_BITS), when the brain's roles file knows it. */
+const tagBits = (name: string) => brainData().roles?.get(norm(name));
+/** Roles two cards share, by Tagger tags (undefined when either card isn't tagged). */
+export function sharedRoles(a: string, b: string): (typeof ROLE_BITS)[number][] | undefined {
+  const x = tagBits(a);
+  const y = tagBits(b);
+  if (x == null || y == null) return undefined;
+  return ROLE_BITS.filter((_, i) => x & y & (1 << i));
+}
+
+/**
+ * Owned stand-ins for a missing card. What the card *does* comes first (veteran playtest round 2: Basalt Monolith was
+ * offered Sylvan Library): each shared Scryfall Tagger role +3, and a card doing none of the missing card's jobs -3;
+ * then the same EDHREC category, card type, close mana value, then lift/inclusion. Basic lands are never offered.
+ */
 export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCard[] {
+  const mBits = tagBits(missing.name);
+  const job = (c: SubCard) => {
+    const shared = sharedRoles(missing.name, c.name);
+    if (!shared) return 0;
+    return shared.length ? 3 * shared.length : mBits ? -3 : 0;
+  };
   const score = (c: SubCard) =>
+    job(c) +
     (missing.category && c.category === missing.category ? 4 : 0) +
     (mainType(missing.type) && mainType(c.type) === mainType(missing.type) ? 2 : 0) +
     (missing.cmc != null && c.cmc != null ? Math.max(0, 2 - Math.abs(missing.cmc - c.cmc)) * 0.5 : 0) +
-    (c.synergy ?? 0) +
+    edhSignal(c) +
     (c.incl ?? 0);
   // Never offer a land for a spell or a spell for a land.
   const isLand = (c: SubCard) => mainType(c.type) === 'Land';
   return candidates
-    .filter((c) => c.name !== missing.name && (!missing.type || !c.type || isLand(c) === isLand(missing)))
+    .filter((c) => c.name !== missing.name && !BASICS.has(norm(c.name)) && (!missing.type || !c.type || isLand(c) === isLand(missing)))
     .map((c) => ({ c, s: score(c) }))
     .sort((a, b) => b.s - a.s || a.c.name.localeCompare(b.c.name))
     .slice(0, n)
@@ -30,12 +71,13 @@ export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCar
 
 const pctOf = (n: number) => `${Math.round(n * 100)}%`;
 
-/** Why a card is in the deck: its EDHREC role, how many decks run it, synergy. */
+/** Why a card is in the deck: its EDHREC role, how many decks run it, lift. */
 export function whyIn(c: SubCard): string[] {
   const out: string[] = [];
   if (c.category) out.push(`Role: ${c.category}`);
   if (c.incl) out.push(`In ${pctOf(c.incl)} of decks`);
-  if (c.synergy && c.synergy >= 0.05) out.push(`+${pctOf(c.synergy)} synergy`);
+  const sig = signalTag(c);
+  if (sig) out.push(sig);
   return out;
 }
 
@@ -43,10 +85,13 @@ export function whyIn(c: SubCard): string[] {
 export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0): string[] {
   const out: string[] = [];
   if (missing.category && sub.category === missing.category) out.push(`Same role: ${sub.category}`);
+  const job = sharedRoles(missing.name, sub.name);
+  if (job?.length) out.push(`Same job: ${job.join(', ')} (Scryfall Tagger)`);
   const t = mainType(sub.type);
   if (t && t === mainType(missing.type)) out.push(`${t} like it`);
   if (sub.cmc != null && missing.cmc != null) out.push(sub.cmc === missing.cmc ? `Same mana value (${sub.cmc})` : `Mana value ${sub.cmc} (vs ${missing.cmc})`);
-  if (sub.synergy && sub.synergy >= 0.05) out.push(`+${pctOf(sub.synergy)} synergy`);
+  const sig = signalTag(sub);
+  if (sig) out.push(sig);
   if (sub.incl) out.push(`In ${pctOf(sub.incl)} of decks`);
   if (owned) out.push(`You own ×${owned}`);
   return out;
@@ -54,9 +99,9 @@ export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0): string[] 
 
 // Highlight lists aren't a role (Top Cards, High Lift…): a card's category is its type list (Creatures, Mana Artifacts…).
 const META = /^(new cards|top cards|high synergy|high lift|game changers)/i;
-/** What EDHREC says about each recommended card (key = norm(name)): its role list, how many decks play it, synergy. */
+/** What EDHREC says about each recommended card (key = norm(name)): its role list, how many decks play it, lift. */
 export function recInfoOf(
-  lists: { header: string; cards: { name: string; synergy?: number; decks?: number; potential?: number }[] }[],
+  lists: { header: string; cards: { name: string; synergy?: number; lift?: number; decks?: number; potential?: number }[] }[],
   key: (name: string) => string,
   cardOf: (c: { name: string }) => { type?: string; cmc?: number } | undefined,
 ): Map<string, SubCard> {
@@ -67,7 +112,7 @@ export function recInfoOf(
       const meta = META.test(l.header);
       if (prev && (prev.category || meta)) continue;
       const sc = cardOf(c);
-      out.set(key(c.name), { name: c.name, category: meta ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
+      out.set(key(c.name), { name: c.name, category: meta ? undefined : l.header, type: sc?.type, cmc: sc?.cmc, synergy: c.synergy, lift: c.lift, incl: c.potential ? (c.decks ?? 0) / c.potential : undefined });
     }
   return out;
 }

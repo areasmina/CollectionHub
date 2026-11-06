@@ -42,6 +42,8 @@ export interface Deck {
   profile: number;
   name: string;
   commander?: string;
+  /** Second commander: a Partner, Friends forever, Background or Doctor's companion (colour identity = both). */
+  partner?: string;
   cards: DeckCard[];
   updated: number;
   note?: string;
@@ -55,6 +57,12 @@ export interface Profile {
   swaps?: Record<string, Record<string, string>>; // deck path -> missing card -> owned replacement
   bought?: string[]; // shopping list: card keys checked off
   pins?: Record<string, { in: string[]; out: string[] }>; // commander -> always in / never use
+  /** The brain's settings and what it learned about this player (src/brain): synced with the rest of the profile. */
+  brain?: {
+    aggression?: 'patient' | 'hungry' | 'lethal';
+    wildcards?: number; // WILDCARD slots, 0–3 (default 0)
+    taste?: import('../brain/taste').TasteEvent[];
+  };
 }
 export interface CachedPage {
   path: string;

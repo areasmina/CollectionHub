@@ -10,6 +10,8 @@ import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
 import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
+import { binderCandidates } from '../brain/candidates';
+import { recordTaste } from '../brain/store';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
@@ -162,7 +164,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const nameIn = (c: EdhCard) => eff.get(c.name)?.name ?? c.name;
   const inDeck = new Set([...eff.values()].map((x) => norm(x.name)));
   const candidates = owned.filter((c) => !inDeck.has(norm(c.name)));
-  const suggest = (c: EdhCard) => rankSubs(slotInfo(c), candidates);
+  // The swap window's top 3: owned cards EDHREC lists here, plus the rest of your binder in these colours.
+  const suggest = (c: EdhCard) => rankSubs(slotInfo(c), binderCandidates(candidates, binder, ci, never).filter((x) => !inDeck.has(norm(x.name))));
   const binderCard = new Map(binder.map((c) => [c.key, c]));
   const optionOf = (sub: SubCard) => {
     const sc = recCard.get(norm(sub.name));
@@ -188,13 +191,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   async function setSwap(missingName: string, replacement: string | null) {
     const p = (await db.profiles.get(s.profile))!;
     const deck = { ...(p.swaps?.[path] ?? {}) };
+    const was = deck[missingName] ?? missingName;
     if (replacement) deck[missingName] = replacement;
     else delete deck[missingName];
+    if (replacement) void recordTaste(s.profile, was, 'cut', name).then(() => recordTaste(s.profile, replacement, 'add', name));
     await db.profiles.update(s.profile, { swaps: { ...(p.swaps ?? {}), [path]: deck } });
     setMenuFor(null);
   }
   async function setPin(card: string, side: PinSide) {
     await savePin(s.profile, name, card, side);
+    void recordTaste(s.profile, card, side === 'in' ? 'always' : 'never', name);
     setMenuFor(null);
   }
   async function toggleBought(cardName: string) {
@@ -266,6 +272,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     : [];
   const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
+  // EDHREC bracket slug -> bracket number for the rules (All = 4: no combo is off limits there).
+  const bracketNum = Number(BRACKETS.find(([v]) => v === bracket)?.[2]) || 4;
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
   // Grid (card images) is the default; the choice is remembered on this device.
@@ -707,6 +715,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                                 onUndo={() => (haptic('undo'), setSwap(c.name, null))}
                                 onPin={(side) => setPin(now, side)}
                                 onClose={() => setMenuFor(null)}
+                                deck={[name, ...[...eff.values()].map((x) => x.name)]}
+                                bracket={bracketNum}
                               />
                             )}
                           </Item>

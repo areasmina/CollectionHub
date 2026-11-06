@@ -8,15 +8,19 @@ import { BASICS, statusOf, summarize } from '../lib/compare';
 import { replaceInDeck, savePin, setCommander } from '../lib/deckedit';
 import { noPins, pinOf } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
+import { binderCandidates } from '../brain/candidates';
+import { killCheck } from '../brain/win';
+import { recordTaste } from '../brain/store';
+import { roleSource } from '../lib/deckstats';
 import { pagePath, showPage, type EdhPage } from '../lib/edhrec';
 import { SwapNote, type SwapOption } from './SwapNote';
 import { CardMenu } from './CardMenu';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
-import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, type BracketCall, type DeckStats } from '../lib/deckstats';
+import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, type BracketCall, type DeckStats, type RefShape } from '../lib/deckstats';
 import { deckCsv, deckText, download } from '../lib/export';
 import { norm, slug } from '../lib/names';
 import { cad, fetchedNote, shopUrl } from '../lib/prices';
-import { guessCommander } from '../lib/commander';
+import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ImportReport } from './Collection';
@@ -123,7 +127,15 @@ function BracketStat({ call }: { call: BracketCall }) {
             Game Changers: <b>{call.gameChangers.join(', ')}</b>
           </li>
         )}
-        <li className="small">An estimate from the official bracket rules we can check. Two-card combos aren't checked; bracket I vs II and V depend on how the deck is meant to play.</li>
+        {call.combos.length > 0 && (
+          <li>
+            Two-card combos (Commander Spellbook): <b>{call.combos.map((c) => `${c.cards.join(' + ')}${c.early ? ' (early)' : ''}`).join(', ')}</b>
+          </li>
+        )}
+        <li className="small">
+          An estimate from the official bracket rules we can check: Game Changers, mass land denial, chained extra turns and two-card combos
+          {call.combosChecked ? '' : ' (combo list still loading)'}. Bracket I vs II and V depend on how the deck is meant to play.
+        </li>
       </ul>
     </details>
   );
@@ -171,11 +183,11 @@ function Curve({ curve }: { curve: number[] }) {
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
 /** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
-function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st: DeckStats; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
+function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
   // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
   const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
-  const low = analysis(st).filter((a) => a.tone !== 'ok').length;
+  const low = read.filter((a) => a.tone !== 'ok').length;
   return (
     <aside className={`dpanel ${fold}`} aria-label="Deck analysis">
       <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
@@ -242,13 +254,16 @@ function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st
       <div className="dsec">
         <h3>the read</h3>
         <ul className="dread">
-          {analysis(st).map((a) => (
+          {read.map((a) => (
             <li key={a.text} className={a.tone}>
               {a.text}
             </li>
           ))}
         </ul>
-        <small className="fetched">Roles are counted from rules text, so treat them as a rough guide.{st.unknown ? ` ${st.unknown} cards still loading.` : ''}</small>
+        <small className="fetched">
+          Roles come from Scryfall Tagger ({deck.cards.filter((c) => roleSource(c.name) === 'Scryfall Tagger').length} of {deck.cards.length} cards), the rest from rules text.
+          {st.unknown ? ` ${st.unknown} cards still loading.` : ''}
+        </small>
       </div>
       <div className="dsec">
         <h3>to complete</h3>
@@ -457,7 +472,25 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
-  const ci = cmdr?.ci ?? [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
+  const partner = deck.partner ? byKey.get(norm(deck.partner)) : undefined;
+  const ci = cmdr ? pairIdentity(cmdr.ci, partner?.ci) : [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
+  const cmdrSlug = deck.commander ? commanderSlug(deck.commander, deck.partner) : '';
+  // The read compares the deck with EDHREC's average deck for its bracket. A bracket IV estimate with 30 lands or
+  // fewer is built cEDH-style, so it is compared with the cEDH average (EDHREC's cEDH lists run ~25 lands).
+  const refBracket = call.bracket >= 4 ? (st.lands <= 30 ? 'cedh' : 'optimized') : call.bracket === 3 ? 'upgraded' : 'core';
+  const [ref, setRef] = useState<RefShape | undefined>();
+  useEffect(() => {
+    let live = true;
+    setRef(undefined);
+    const label = `EDHREC's ${refBracket === 'cedh' ? 'cEDH' : `bracket ${{ core: 2, upgraded: 3, optimized: 4 }[refBracket]}`} average deck`;
+    if (cmdrSlug) showPage(pagePath('average', cmdrSlug, refBracket), (p) => live && setRef(refShapeOf(p, label))).catch(() => {});
+    return () => void (live = false);
+  }, [cmdrSlug, refBracket]);
+  const kill = killCheck(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), refBracket === 'cedh' ? 5 : Math.max(call.bracket, 2));
+  const read = [
+    ...analysis(st, { bracket: refBracket === 'cedh' ? 5 : call.bracket, ref }),
+    { tone: (kill.verdict === 'lethal' ? 'ok' : 'low') as 'ok' | 'low', text: kill.says },
+  ];
 
   // The Forge: tap any card for the swap window (top 3 of your cards EDHREC plays with this commander, a search over
   // your binder in the deck's colours, pins). A swap changes this deck at once, with an undo.
@@ -466,9 +499,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   useEffect(() => {
     let live = true;
     setRecs(null);
-    if (deck.commander) showPage(pagePath('commander', slug(deck.commander)), (p) => live && setRecs(p)).catch(() => {});
+    if (cmdrSlug) showPage(pagePath('commander', cmdrSlug), (p) => live && setRecs(p)).catch(() => {});
     return () => void (live = false);
-  }, [deck.commander]);
+  }, [cmdrSlug]);
   const binder = useBinder(s.profile);
   const binderCard = new Map(binder.map((c) => [c.key, c]));
   const prof = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
@@ -476,7 +509,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const never = new Set(pins.out.map(norm));
   const inDeck = new Set(deck.cards.map((c) => norm(c.name)));
   const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)));
-  const candidates = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !inDeck.has(norm(c.name)) && !never.has(norm(c.name)));
+  // Owned cards EDHREC lists for this commander, plus the rest of your binder in its colours (Mind Stone for Mox Amber).
+  const listed = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
+  const candidates = binderCandidates(listed, binder, ci, never).filter((c) => !inDeck.has(norm(c.name)));
   const slotInfo = (name: string): SubCard => {
     const card = cardOf(name);
     return { ...recInfo.get(norm(name)), name, type: card?.type, cmc: card?.cmc };
@@ -490,6 +525,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));
   async function swapIn(from: string, to: string) {
     haptic('success');
+    const key = deck.commander ?? deck.name;
+    void recordTaste(s.profile, from, 'cut', key).then(() => recordTaste(s.profile, to, 'add', key));
     setSwapFor(null);
     setToast({ text: `Swapped ${from} for ${to}`, undo: await replaceInDeck(deck, from, to) });
   }
@@ -504,7 +541,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
       const st = statusOf(c.name, s.mine, s.other);
       return st === 'owned' ? 'Owned' : st === 'other' ? `In ${s.otherName}` : 'Missing';
     }
-    if (c.name === deck.commander) return 'Commander';
+    if (c.name === deck.commander || c.name === deck.partner) return 'Commander';
     if (grouping === 'type') return groupOf(card?.type);
     if (!card) return 'Other';
     if (isLand(card.type)) return 'Lands';
@@ -655,7 +692,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                               cmdr={(deck.commander ?? deck.name).split(' // ')[0]}
                               onPick={(to) => swapIn(c.name, to)}
                               onUndo={() => setSwapFor(null)}
-                              onPin={deck.commander ? (side) => (savePin(s.profile, deck.commander!, c.name, side), setSwapFor(null)) : undefined}
+                              onPin={deck.commander ? (side) => (savePin(s.profile, deck.commander!, c.name, side), void recordTaste(s.profile, c.name, side === 'in' ? 'always' : 'never', deck.commander!), setSwapFor(null)) : undefined}
+                              deck={deck.cards.map((x) => x.name)}
+                              bracket={call.bracket}
                               onClose={() => setSwapFor(null)}
                             />
                           )}
@@ -667,7 +706,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               })}
           </div>
           <div className="dside">
-            <DeckPanel deck={deck} st={st} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
+            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
           </div>
         </div>
         {menu && (

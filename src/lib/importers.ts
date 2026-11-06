@@ -82,21 +82,36 @@ function parseText(text: string): Parsed {
   const rows: Row[] = [];
   const errors: ParseError[] = [];
   let section: string | undefined;
+  let about = false; // Arena's "About / Name <deck>" header block
   let block = 0; // blank lines and section headers start a new block
   const blockOf: number[] = [];
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = i + 1;
     let s = raw.trim();
-    if (!s) return void block++;
+    if (!s) return void ((about = false), block++);
     if (s.startsWith('#')) return;
+    // Arena exports start with "About" then "Name <deck name>": not cards.
+    if (/^about$/i.test(s)) return void (about = true);
+    if (about && /^name\s/i.test(s)) return;
+    // "Commander: Thrasios, Triton Hero + Tymna the Weaver" (one line, one or two commanders)
+    const cl = /^commanders?:\s*(.+)$/i.exec(s);
+    if (cl) {
+      for (const n of cl[1].split(/\s+\+\s+/)) rows.push({ name: n.trim(), qty: 1, section: 'Commander' }), blockOf.push(block);
+      return;
+    }
+    // MTGO / Arena sideboard prefix: "SB: 1 Force of Will"
+    const sb = /^SB:\s*(.+)$/i.exec(s);
+    if (sb) s = sb[1];
     if (/^(\/\/|[^\d].*:$)/.test(s) || (!/^\d/.test(s) && HEADER.test(s.replace(/\s*\(\d+\)\s*$/, '').replace(/:$/, '').trim()))) block++;
     if (s.startsWith('//')) return void (section = s.slice(2).trim());
     const bare = s.replace(/\s*\(\d+\)\s*$/, '').replace(/:$/, '').trim();
     if (!/^\d/.test(s) && (HEADER.test(bare) || s.endsWith(':'))) return void (section = bare);
     const m = /^(\d+)\s*x?\s+(.+)$/i.exec(s);
-    const qty = m ? Number(m[1]) : 1;
-    s = m ? m[2] : s;
-    let rowSection = section;
+    // Quantity after the name: "Sol Ring x2", "Sol Ring ×2", "Counterspell 3" (bare numbers up to 99, no set code)
+    const t = m ? null : /^(.+?)\s+(?:[x×]\s*(\d+)|(\d{1,2}))$/i.exec(s);
+    const qty = m ? Number(m[1]) : t ? Number(t[2] ?? t[3]) : 1;
+    s = m ? m[2] : t ? t[1] : s;
+    let rowSection = sb ? 'Sideboard' : section;
     const cat = /\[([^\]]*)\]/.exec(s); // Archidekt category, e.g. [Commander{top}]
     if (cat && /commander/i.test(cat[1])) rowSection = 'Commander';
     if (/\*CMDR\*/i.test(s)) rowSection = 'Commander'; // Moxfield's commander mark

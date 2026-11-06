@@ -9,10 +9,11 @@ export const collectionCsv = (entries: Entry[]) =>
 export const collectionText = (entries: Entry[]) =>
   entries.map((e) => `${e.qty} ${e.name}${e.set ? ` (${e.set.toUpperCase()})${e.cn ? ' ' + e.cn : ''}` : ''}${e.foil ? ' *F*' : ''}`).join('\n');
 
+const leads = (d: Deck) => [d.commander, d.partner].filter((x): x is string => !!x);
 export const deckText = (d: Deck) =>
-  [...(d.commander ? ['Commander', `1 ${d.commander}`, '', 'Deck'] : []), ...d.cards.filter((c) => c.name !== d.commander).map((c) => `${c.qty} ${c.name}${c.foil ? ' *F*' : ''}`)].join('\n');
+  [...(leads(d).length ? ['Commander', ...leads(d).map((n) => `1 ${n}`), '', 'Deck'] : []), ...d.cards.filter((c) => !leads(d).includes(c.name)).map((c) => `${c.qty} ${c.name}${c.foil ? ' *F*' : ''}`)].join('\n');
 
-export const deckCsv = (d: Deck) => ['Name,Quantity,Commander,Foil', ...d.cards.map((c) => `${q(c.name)},${c.qty},${c.name === d.commander},${c.foil ? 'foil' : 'normal'}`)].join('\n');
+export const deckCsv = (d: Deck) => ['Name,Quantity,Commander,Foil', ...d.cards.map((c) => `${q(c.name)},${c.qty},${leads(d).includes(c.name)},${c.foil ? 'foil' : 'normal'}`)].join('\n');
 
 export function download(filename: string, text: string, type = 'text/plain') {
   const a = document.createElement('a');

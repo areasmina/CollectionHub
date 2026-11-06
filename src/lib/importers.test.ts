@@ -67,3 +67,18 @@ describe('mergeRows / slug', () => {
     expect(slug("Urza's Saga")).toBe('urzas-saga');
   });
 });
+
+describe('text import quirks (veteran playtest A8)', () => {
+  it('reads "SB: 1 Card" as a sideboard card', () => {
+    const p = parseImport('1 Sol Ring\nSB: 1 Force of Will');
+    expect(p.rows.map((r) => [r.name, r.qty, r.section])).toEqual([['Sol Ring', 1, undefined], ['Force of Will', 1, 'Sideboard']]);
+  });
+  it('reads a quantity after the name', () => {
+    const p = parseImport('Sol Ring x2\nArcane Signet ×3\nCounterspell 3\nForest');
+    expect(p.rows.map((r) => [r.name, r.qty])).toEqual([['Sol Ring', 2], ['Arcane Signet', 3], ['Counterspell', 3], ['Forest', 1]]);
+  });
+  it("skips Arena's About / Name header", () => {
+    const p = parseImport('About\nName Kinnan cEDH\n\nDeck\n1 Kinnan, Bonder Prodigy\n1 Basalt Monolith');
+    expect(p.rows.map((r) => r.name)).toEqual(['Kinnan, Bonder Prodigy', 'Basalt Monolith']);
+  });
+});
