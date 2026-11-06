@@ -42,6 +42,8 @@ export interface Deck {
   profile: number;
   name: string;
   commander?: string;
+  /** Second commander: a Partner, Friends forever, Background or Doctor's companion (colour identity = both). */
+  partner?: string;
   cards: DeckCard[];
   updated: number;
   note?: string;

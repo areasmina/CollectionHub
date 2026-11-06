@@ -1,7 +1,7 @@
 import { db, type Deck, type Entry } from './db';
 import { mergeRows, parseImport, type ParseError, type Row } from './importers';
 import { resolveRows } from './scryfall';
-import { guessCommander } from './commander';
+import { canPair, guessCommanders } from './commander';
 
 export interface ImportResult {
   format: string;
@@ -32,13 +32,24 @@ export async function importCollection(profile: number, text: string, replace: b
   return { format: parsed.format, added: matched.reduce((n, m) => n + m.row.qty, 0), unmatched, errors: parsed.errors };
 }
 
-/** Deck from a text/CSV list; names are kept as written, Scryfall fixes spelling where it can. */
+/** Sections of a pasted list that aren't part of the 100. */
+export const NOT_IN_DECK = /^(side|sideboard|maybe|maybeboard|considering|tokens?)$/i;
+
+/** Deck from a text/CSV list; names are kept as written, Scryfall fixes spelling where it can. Sideboard, maybeboard
+ *  and token sections are left out. */
 export async function importDeck(profile: number, name: string, text: string, onProgress: (done: number, total: number) => void) {
   const parsed = parseImport(text);
+  parsed.rows = parsed.rows.filter((r) => !NOT_IN_DECK.test(r.section ?? ''));
   const { matched, unmatched } = await resolveRows(mergeRows(parsed.rows), onProgress);
-  const commander =
-    matched.find((m) => /commander/i.test(m.row.section ?? ''))?.card.name ?? guessCommander(matched.map((m) => ({ name: m.card.name, card: m.card, edge: m.row.edge })));
-  const deck: Deck = { profile, name, commander, cards: matched.map((m) => ({ name: m.card.name, qty: m.row.qty })), updated: Date.now() };
+  // Up to two commanders: a "Commander" section first (two only when they can legally pair), else a guess.
+  const marked = matched.filter((m) => /commander/i.test(m.row.section ?? '')).map((m) => ({ name: m.card.name, card: m.card }));
+  const [commander, partner] =
+    marked.length >= 2 && canPair(marked[0], marked[1])
+      ? [marked[0].name, marked[1].name]
+      : marked.length
+        ? [marked[0].name]
+        : guessCommanders(matched.map((m) => ({ name: m.card.name, card: m.card, edge: m.row.edge })));
+  const deck: Deck = { profile, name, commander, ...(partner ? { partner } : {}), cards: matched.map((m) => ({ name: m.card.name, qty: m.row.qty })), updated: Date.now() };
   deck.id = await db.decks.add(deck);
   return { deck, unmatched, errors: parsed.errors };
 }
