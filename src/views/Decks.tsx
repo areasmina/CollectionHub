@@ -26,7 +26,7 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, SearchBox, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -643,19 +643,20 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
             </div>
             {/* How the cards are split and ordered, right above them */}
-            <div className="dtools" role="toolbar" aria-label="Deck view">
-              <SearchBox q={q} setQ={setQ} />
+            <ToolBar q={q} setQ={setQ} now={`${GROUPINGS.find(([v]) => v === grouping)?.[1] ?? ''} · ${SORTS.find(([v]) => v === sort)?.[1] ?? ''}`}>
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+              <OptRow label="VIEW">
                 <div className="viewsw mini" role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-            </div>
+                  <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                    <GridIcon />
+                  </button>
+                  <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                    <ListIcon />
+                  </button>
+                </div>
+              </OptRow>
+            </ToolBar>
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {

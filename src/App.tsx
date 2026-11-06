@@ -1,4 +1,4 @@
-import { haptic, hapticsOn, hapticsSupported, setHaptics } from './lib/haptics';
+import { haptic } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
@@ -10,7 +10,7 @@ import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDe
 import { codeFromHash } from './lib/synccode';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
-import { ZineDefs, Logo } from './views/zine';
+import { ZineDefs } from './views/zine';
 import { useBrainData } from './brain/data';
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
@@ -19,13 +19,6 @@ const Decks = lazy(() => import('./views/Decks').then((m) => ({ default: m.Decks
 const SyncPanel = lazy(() => import('./views/SyncPanel').then((m) => ({ default: m.SyncPanel })));
 // Warm the rest once the page is idle (keeps the session fresh and makes tab switches instant).
 const SYNC_LABEL: Record<SyncStatus, string> = { off: 'sync off', syncing: 'syncing…', synced: 'up to date', conflict: 'needs you: changed on both sides', offline: 'offline, will sync later', error: 'last sync failed' };
-// What the haptics button says after a tap: the browser handed the buzz to the phone (then the phone's own settings decide).
-const HAPTIC_NOTE = {
-  off: 'Haptics off.',
-  sent: 'Buzz sent. Felt nothing? Your phone has vibration off for apps: Android Settings → Sound & vibration → Vibration & haptics, turn on "Touch feedback" / "Touch interactions", and check silent or battery-saver mode.',
-  blocked: 'Chrome blocked the buzz. Tap anywhere on the page first, and check Chrome → Settings → Site settings, and the phone is not in silent or battery-saver mode.',
-  unsupported: 'This browser has no vibration (Firefox on Android removed it). Chrome, Samsung Internet or Edge do.',
-} as const;
 const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 2500));
 idle(() => {
   import('./views/Collection');
@@ -64,21 +57,6 @@ export default function App() {
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   useBrainData(); // card roles + combo files: re-render every view once they arrive
-  const [hubOpen, setHubOpen] = useState(false);
-  const [haptOn, setHaptOn] = useState(hapticsOn);
-  const [hapNote, setHapNote] = useState('');
-  const hubRef = useRef<HTMLDivElement>(null);
-  const hubTimer = useRef<number>(undefined);
-  const openHub = () => (clearTimeout(hubTimer.current), setHubOpen(true));
-  const closeHubSoon = () => (clearTimeout(hubTimer.current), (hubTimer.current = window.setTimeout(() => setHubOpen(false), 450)));
-  // A tap outside the drawer closes it.
-  useEffect(() => {
-    if (!hubOpen) return;
-    // (the pill's hub button toggles it itself)
-    const off = (e: PointerEvent) => !hubRef.current?.contains(e.target as Node) && !(e.target as Element).closest?.('.pillhub') && setHubOpen(false);
-    document.addEventListener('pointerdown', off);
-    return () => document.removeEventListener('pointerdown', off);
-  }, [hubOpen]);
   // The floating nav slides away while you scroll down and comes back on the way up (or near the top / bottom).
   const [navAway, setNavAway] = useState(false);
   useEffect(() => {
@@ -102,7 +80,13 @@ export default function App() {
   const goTab = (t: Tab) => void canLeave().then((ok) => ok && setTab(t));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
-  const other = profile === 1 ? 2 : 1;
+  // Binders: one by default, more when you add them (Collection's binder menu). The "other" binder is the next one,
+  // for "in Binder 2" marks; with one binder there is none.
+  const ids = profiles.map((p) => p.id).sort((a, b) => a - b);
+  const other = ids.find((i) => i !== profile) ?? 0;
+  useEffect(() => {
+    if (ids.length && !ids.includes(profile)) setProfile(ids[0]); // the binder you were on was deleted
+  }, [ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
   // Ownership for Commander: cards Scryfall marks not legal in Commander (tokens, Un-cards, banned) don't count.
   const illegal = useLiveQuery(async () => new Set(await db.cards.filter((c) => !c.legal).primaryKeys()), []) ?? new Set<string>();
   const counts = (p: number) => ownedMap(entries.filter((e) => e.profile === p && !illegal.has(e.cardId)));
@@ -111,9 +95,9 @@ export default function App() {
   const nameOf = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Binder ${id}`;
   useEffect(() => void (document.documentElement.dataset.theme = theme), []);
   useEffect(() => store.set('ch:tab', tab), [tab]);
-  useEffect(() => onOpenDeck(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
-  useEffect(() => onOpenDeckList(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
-  useEffect(() => onOpenCollection(() => (setTab('collection'), setHubOpen(false), window.scrollTo(0, 0))), []);
+  useEffect(() => onOpenDeck(() => (setTab('decks'), window.scrollTo(0, 0))), []);
+  useEffect(() => onOpenDeckList(() => (setTab('decks'), window.scrollTo(0, 0))), []);
+  useEffect(() => onOpenCollection(() => (setTab('collection'), window.scrollTo(0, 0))), []);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
   const shared = { profile, mine, other: theirs, otherName: nameOf(other), binderName: nameOf(profile) };
@@ -121,50 +105,12 @@ export default function App() {
   return (
     <div className="stage">
       <ZineDefs />
-      {/* The HUB drawer (logo, binder, theme, sync) stays tucked under a red strip until hovered, focused or tapped. */}
-      <div className="hubwrap" ref={hubRef} onBlur={(e) => !hubRef.current?.contains(e.relatedTarget as Node) && setHubOpen(false)}>
-        <div className="hubstrip" aria-hidden="true" />
-        <div className={`hubslide${hubOpen ? ' open' : ''}`}>
-          <header id="hub" className="top hubinner" inert={!hubOpen}>
-            <button className="logo" onClick={() => (goDiscover(), setHubOpen(false))} aria-label="DeckMage, go to Discover">
-              <Logo />
-            </button>
-            {/* Desktop: the section tabs live in this drawer too (phones keep the bottom bar). */}
-            <nav className="tabs hubnav" aria-label="Sections">
-              {NAV.map(([t, label]) => (
-                <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), (t === 'discover' ? goDiscover() : goTab(t)), setHubOpen(false))}>
-                  {label}
-                </button>
-              ))}
-            </nav>
-            <div className="righthead">
-              {hapticsSupported() && <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHapNote(HAPTIC_NOTE[setHaptics(!haptOn)]), setHaptOn(!haptOn))}>
-                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <rect x="6" y="2" width="8" height="16" rx="2" />
-                  {haptOn ? <path d="M3 6 v8 M1 8 v4 M17 6 v8 M19 8 v4" /> : <path d="M2 2 L18 18" />}
-                </svg>
-              </button>}
-              <button className={`iconbtn syncbtn s-${syncSt.status}`} onClick={() => (haptic('open'), setSync(!sync), setHubOpen(false))} aria-label={`Sync between devices (${SYNC_LABEL[syncSt.status]})`} title={SYNC_LABEL[syncSt.status]} aria-expanded={sync}>
-                {/* the familiar two-arrows-in-a-circle sync mark, with its word */}
-                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16.5 8.5A6.5 6.5 0 0 0 4.6 5.6 M3.5 11.5a6.5 6.5 0 0 0 11.9 2.9" />
-                  <path d="M4.2 2.2 L4.6 5.6 L8 5.2 M15.8 17.8 L15.4 14.4 L12 14.8" />
-                </svg>
-                <span className="synclbl">SYNC</span>
-              </button>
-            </div>
-            {hapNote && (
-              <p className="hapnote" role="status">
-                {hapNote}
-              </p>
-            )}
-          </header>
-        </div>
-      </div>
-      {/* The pill menu, phones and desktop alike: back (when there's somewhere to go back to), the two sections, and the hub
-          (binder, theme, sync). */}
-      <nav className={`pillnav${navAway && !hubOpen ? ' away' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
+      {/* The pill menu, phones and desktop alike: back (when there's somewhere to go back to) and the two sections. Sync,
+          haptics and binders live in Collection's binder menu (owner's call, Nov 6: no hamburger).
+      */}
+      <nav className={`pillnav${navAway ? ' away' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
         <div className="pill">
+          {/* The back arrow grows out of the pill when there's somewhere to go back to, and folds away when not */}
           {backFn && (
             <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
               <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
@@ -173,14 +119,11 @@ export default function App() {
             </button>
           )}
           {NAV.map(([t, label]) => (
-            <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : goTab(t), setHubOpen(false))}>
+            <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : goTab(t))}>
               {label}
             </button>
           ))}
         </div>
-        <button className={`pillhub${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: sync, haptics'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
-          {hubOpen ? '×' : '≡'}
-        </button>
       </nav>
       {sync && (
         <Suspense fallback={null}>
@@ -190,7 +133,16 @@ export default function App() {
       <PreviewLayer />
       {tab === 'discover' && <Discover key={home} {...shared} />}
       <Suspense fallback={<CardSpin page />}>
-        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} s={shared} onSwitch={() => (haptic('select'), setProfile(other))} />}
+        {tab === 'collection' && (
+          <Collection
+            profile={profile}
+            name={nameOf(profile)}
+            s={shared}
+            binders={profiles.map((p) => ({ id: p.id, name: p.name })).sort((a, b) => a.id - b.id)}
+            onPick={(id) => (haptic('select'), setProfile(id))}
+            sync={{ label: SYNC_LABEL[syncSt.status], alert: syncSt.status === 'conflict', open: () => (haptic('open'), setSync(true)) }}
+          />
+        )}
         {tab === 'decks' && <Decks {...shared} />}
       </Suspense>
       <footer className="credits">

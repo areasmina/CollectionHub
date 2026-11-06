@@ -237,7 +237,7 @@ export function CardLine({
               onMenu(r.left, r.bottom);
             }}
           >
-            ⋯
+            ⋮
           </button>
         )}
         <PriceLink card={card} tape={name} />
@@ -290,7 +290,7 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
               onMenu(r.left, r.bottom);
             }}
           >
-            ⋯
+            ⋮
           </button>
         )}
       </span>
@@ -507,5 +507,48 @@ export function SearchBox({ q, setQ, placeholder = 'name or rules text_' }: { q:
       <input type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards by name or rules text" />
       <span aria-hidden="true" className="fade" />
     </label>
+  );
+}
+
+/**
+ * The one tool bar (owner's rule, Nov 6): a slim single row on every page and every width. The search box, then ⋮,
+ * which opens the options (power, budget, sort, show, view, size, grouping). On wider screens the bar also names the
+ * options in use. Kept class names (.dtools / .fsheet / .fbody) so the old hooks still find it.
+ */
+export function ToolBar({ q, setQ, placeholder, now, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; now?: string; label?: string; children: ReactNode }) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  // a tap outside the open options closes them
+  useEffect(() => {
+    const out = (e: PointerEvent) => ref.current?.open && !ref.current.contains(e.target as Node) && ref.current.removeAttribute('open');
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && ref.current?.open && (ref.current.removeAttribute('open'), ref.current.querySelector('summary')?.focus());
+    addEventListener('pointerdown', out);
+    addEventListener('keydown', esc);
+    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc));
+  }, []);
+  return (
+    <div className="dtools tbar" role="toolbar" aria-label={label}>
+      <SearchBox q={q} setQ={setQ} placeholder={placeholder} />
+      <details className="fsheet tbmore" ref={ref} onToggle={(e) => e.currentTarget.open && haptic('open')}>
+        <summary aria-label="Options" title="Options">
+          {now && <span className="fnow">{now}</span>}
+          <span className="kebab" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </summary>
+        <div className="fbody">{children}</div>
+      </details>
+    </div>
+  );
+}
+
+/** One labelled row inside the tool bar's options. */
+export function OptRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="optrow">
+      <span className="lbl">{label}</span>
+      {children}
+    </div>
   );
 }
