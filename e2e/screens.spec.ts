@@ -625,3 +625,21 @@ test('B: the TO BUY receipt flips to a PULL list of your cards, and prints', asy
   await fits(page, ['aside.receipt']);
   await page.screenshot({ path: `test-results/b-pull-${info.project.name}.png` });
 });
+
+test('Readiness + Bracket Fit tiles beside Match; the swap window says why the card is in', async ({ page }, info) => {
+  await page.locator('.ccard').first().click();
+  const tiles = page.locator('.strip .vtiles');
+  await expect(tiles.locator('.vtile.ready summary')).toContainText(/READY|ALMOST|NOT READY|NOT LEGAL/);
+  await expect(tiles.locator('.vtile.fit summary')).toContainText(/FITS|PLAYS/);
+  await tiles.locator('.vtile.ready summary').click();
+  await expect(tiles.locator('.vtile.ready .vpop li').first()).toBeVisible();
+  await fits(page, ['.vtiles', '.vtile.ready .vpop']);
+  await page.screenshot({ path: `test-results/ready-${info.project.name}.png` });
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.whycard .wh')).toContainText(/EDHREC|binder|swap|Pinned/);
+  // the saved deck shows the same tiles in its analysis
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await expect(page.locator('.dpanel .vtile.ready')).toBeVisible();
+});

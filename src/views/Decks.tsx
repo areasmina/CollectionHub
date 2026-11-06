@@ -13,7 +13,10 @@ import { offIdentity } from '../brain/identity';
 import { killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
-import { pagePath, showPage, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, pagePath, showPage, type EdhPage } from '../lib/edhrec';
+import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
+import { whyCard } from '../brain/why';
+import { ReadyTiles } from './Verdict';
 import { allocate } from '../lib/allocation';
 import { inUseChip } from '../brain/chips';
 import { SwapNote, type SwapOption } from './SwapNote';
@@ -196,7 +199,7 @@ function Curve({ curve }: { curve: number[] }) {
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
 /** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
-function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared }) {
+function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared; ready?: Readiness; fit?: BracketFit }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
   // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
   const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
@@ -221,6 +224,7 @@ function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s }: { deck: De
           <span className="num">{sum.pct}%</span>
         </div>
       </div>
+      {ready && <ReadyTiles ready={ready} fit={fit} />}
       <h2>
         <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
           ANALYSIS
@@ -488,6 +492,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const partner = deck.partner ? byKey.get(norm(deck.partner)) : undefined;
   const ci = cmdr ? pairIdentity(cmdr.ci, partner?.ci) : [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
   const cmdrSlug = deck.commander ? commanderSlug(deck.commander, deck.partner) : '';
+  // Build Readiness, Bracket Fit and "Why this card?" (logic in brain/validate.ts and brain/why.ts).
+  const aim = Number(BRACKETS.find(([v]) => v === deck.source)?.[2]) || 4;
+  const aggression = (({ upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' }) as Record<string, 'patient' | 'hungry' | 'lethal'>)[deck.source ?? ''] ?? 'hungry';
+  const ready = readiness({ deck: deck.cards, cardOf, commander: deck.commander, partner: deck.partner, identity: ci, bracket: aim, aggression });
+  const fit = bracketFit(call, aim);
   // The read compares the deck with EDHREC's average deck for its bracket. A bracket IV estimate with 30 lands or
   // fewer is built cEDH-style, so it is compared with the cEDH average (EDHREC's cEDH lists run ~25 lands).
   const refBracket = deck.source === 'cedh' ? 'cedh' : call.bracket >= 4 ? (st.lands <= 30 ? 'cedh' : 'optimized') : call.bracket === 3 ? 'upgraded' : 'core';
@@ -731,7 +740,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               })}
           </div>
           <div className="dside">
-            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} />
+            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} ready={ready} fit={fit} />
           </div>
         </div>
         {menu && (

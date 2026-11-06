@@ -22,6 +22,11 @@ import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
 import { allocate } from '../lib/allocation';
+import { bracketFit, readiness } from '../brain/validate';
+import { whyCard } from '../brain/why';
+import { bracketOf } from '../lib/deckstats';
+import { gameChangers } from '../lib/scryfall';
+import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { BUY_CAPS, coverage, coverageText, overCap, OWN_MODES, ownedOnly, type OwnMode } from '../brain/modes';
@@ -39,6 +44,8 @@ import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, Gr
 /** Where a deck opened from Discover starts: MED power (bracket 4) and MAX budget ($$$). */
 const OPEN_BRACKET = 'optimized';
 const OPEN_BUDGET = 'expensive';
+/** The POWER dial also sets how hungry the build checks are (Min = patient, Med = hungry, Max = lethal). */
+const AGGRESSION_OF: Record<string, 'patient' | 'hungry' | 'lethal'> = { '': 'hungry', upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' };
 const SHOW_AS_COMMANDER = false;
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -342,6 +349,24 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
       .sort((a, b) => (recInfo.get(norm(a[0]))?.incl ?? 1) - (recInfo.get(norm(b[0]))?.incl ?? 1))[0]?.[0];
     return slot ? { ...pick, slot } : undefined;
   })();
+  // Build Readiness, Bracket Fit and "Why this card?" (brain/validate.ts, brain/why.ts: logic there, shown here).
+  const [gc, setGc] = useState<Set<string> | null>(null);
+  useEffect(() => void gameChangers().then((g) => setGc(g ?? null)).catch(() => {}), []);
+  const edhByNorm = new Map([...all, ...(sugg?.lists ?? []).flatMap((l) => l.cards)].map((c) => [norm(c.name), c as EdhCard]));
+  const cardByName = (n: string) => {
+    const ec = edhByNorm.get(norm(n));
+    return (ec && cardOf(ec)) ?? binderCard.get(norm(n)) ?? (norm(n) === norm(name) ? cmdr : undefined);
+  };
+  const deckNow = [{ name, qty: 1 }, ...[...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ name: v.name, qty: byName.get(k)?.qty ?? 1 }))];
+  const aggression = AGGRESSION_OF[bracket] ?? 'hungry';
+  const ready = page && kind === 'average' ? readiness({ deck: deckNow, cardOf: cardByName, commander: name, identity: ci, bracket: bracketNum, aggression }) : undefined;
+  const fit = page && kind === 'average' ? bracketFit(bracketOf(deckNow.map((c) => ({ name: c.name, card: cardByName(c.name) })), gc), bracketNum) : undefined;
+  const whyOf = (slot: string) => {
+    const sl = eff.get(slot);
+    const now = sl?.name ?? slot;
+    const how = sl && sl.name !== slot ? (sl.why === 'pin' ? 'pin' : sl.why === 'auto' || sl.why === 'never' ? 'stand-in' : 'swap') : undefined;
+    return whyCard({ name: now, ctx: { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression }, rec: recInfo.get(norm(now)), how, slot: how ? slot : undefined, gc });
+  };
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
   // Grid (card images) is the default; the choice is remembered on this device.
@@ -551,6 +576,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
           </div>
+          {ready && (
+            <div className="cell wide vcell">
+              <ReadyTiles ready={ready} fit={fit} />
+            </div>
+          )}
             {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
             {tags.length > 0 && (
               <div className="builtaround">
@@ -875,6 +905,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                                 onClose={() => setMenuFor(null)}
                                 deck={[name, ...[...eff.values()].map((x) => x.name)]}
                                 bracket={bracketNum}
+                                whyCard={whyOf(c.name)}
                               />
                             )}
                           </Item>

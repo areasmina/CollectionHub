@@ -10233,3 +10233,132 @@ main > .chead2 {
   position: relative;
   z-index: 40;
 }
+/* Build Readiness + Bracket Fit tiles beside Collection Match (logic: brain/validate.ts); tap for the checks */
+.vtiles {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 4px;
+}
+.vtile {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.vtile > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  padding: 6px 10px;
+  background: #141414;
+  color: #f1ebdc;
+  border: 2px solid #141414;
+  box-shadow: 3px 3px 0 var(--r, #e5141f);
+}
+.vtile > summary::-webkit-details-marker {
+  display: none;
+}
+.vtile .lbl {
+  font-family: var(--an);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+.vtile b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1;
+}
+.vtile small {
+  font-family: var(--se);
+  font-size: 11px;
+  opacity: 0.8;
+}
+.vtile.v-ready b,
+.vtile.f-fits b,
+.vtile.f-under b {
+  color: #3ddc5a;
+}
+.vtile.v-almost b {
+  color: var(--y, #ffd400);
+}
+.vtile.v-not-ready b,
+.vtile.v-not-legal b,
+.vtile.f-over b {
+  color: #ff4a4a;
+}
+.vtile .vpop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 10px 12px;
+  background: #f1ebdc;
+  color: #141414;
+  border: 2px solid #141414;
+  box-shadow: 4px 4px 0 #141414;
+  font-family: var(--se);
+  font-size: 13px;
+}
+.vtile.fit .vpop {
+  left: auto;
+  right: 0;
+}
+.vtile .vpop ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vtile .vpop li {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed #999;
+}
+.vtile .vpop li .mk {
+  flex: none;
+  width: 16px;
+  font-weight: 700;
+}
+.vtile .vpop li.ok .mk {
+  color: #1f9a3a;
+}
+.vtile .vpop li.no .mk {
+  color: var(--r, #e5141f);
+}
+.vtile .vpop .says {
+  display: block;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.vtile .vpop p {
+  margin: 0 0 6px;
+}
+/* "Why this card?" in the swap window */
+.whycard {
+  margin: 6px 0;
+  font-family: var(--se);
+  font-size: 13px;
+}
+.whycard .wh {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.whycard .wparts {
+  margin: 0 0 4px;
+  padding-left: 16px;
+}
+.whycard .wcombo,
+.whycard .wnote {
+  margin: 2px 0;
+  font-size: 12px;
+}
+.whycard .wnote {
+  color: var(--r, #e5141f);
+}
