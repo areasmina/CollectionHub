@@ -167,21 +167,45 @@ export function deckStats(list: DeckCard[], cardOf: (name: string) => Pick<Card,
   return s;
 }
 
-/** A few plain-language lines comparing the deck with the usual template. */
-export function analysis(s: DeckStats): { tone: 'ok' | 'low' | 'high'; text: string }[] {
+/** The deck's shape to compare with: EDHREC's average deck for this commander and bracket (Deck Wizard avg_shape). */
+export interface RefShape {
+  lands: number;
+  label?: string; // e.g. "EDHREC's cEDH average deck"
+}
+
+/** Land ranges by bracket when no average deck is at hand: cEDH lists run far fewer lands (EDHREC's cEDH Kinnan
+ *  average: 25). Other brackets keep the 100-card template. */
+export const LANDS_BY_BRACKET: Record<number, [number, number]> = { 5: [24, 31], 4: [31, 37] };
+
+/**
+ * A few plain-language lines comparing the deck with what's usual. With `ref` (EDHREC's average deck for this
+ * commander and bracket) the land count is compared with that deck, ±2; else with the bracket's range; else the
+ * template. Veteran playtest round 2, A5: a cEDH list was told "25 lands: light".
+ */
+export function analysis(s: DeckStats, opts: { bracket?: number; ref?: RefShape } = {}): { tone: 'ok' | 'low' | 'high'; text: string }[] {
   const out: { tone: 'ok' | 'low' | 'high'; text: string }[] = [];
-  const check = (n: number, [lo, hi]: [number, number], what: string, lowNote: string, highNote: string) => {
-    if (n < lo) out.push({ tone: 'low', text: `${n} ${what}: light, most decks run ${lo}–${hi}. ${lowNote}`.trim() });
+  const check = (n: number, [lo, hi]: [number, number], what: string, lowNote: string, highNote: string, usual = 'most decks run') => {
+    if (n < lo) out.push({ tone: 'low', text: `${n} ${what}: light, ${usual} ${lo}–${hi}. ${lowNote}`.trim() });
     else if (n > hi) out.push({ tone: 'high', text: `${n} ${what}: more than the usual ${lo}–${hi}. ${highNote}`.trim() });
     else out.push({ tone: 'ok', text: `${n} ${what}: right in the usual ${lo}–${hi}.` });
   };
   if (s.total < 100) out.push({ tone: 'low', text: `${s.total} cards: a Commander deck has 100 (commander included).` });
   else if (s.total > 100) out.push({ tone: 'high', text: `${s.total} cards: a Commander deck has exactly 100.` });
-  check(s.lands, TARGETS.lands, 'lands', 'Expect missed land drops.', 'Room to cut a land for a spell, more so with lots of ramp.');
-  check(s.roles.ramp, TARGETS.ramp, 'ramp pieces', 'The deck may start slowly.', '');
+  const lands: [number, number] = opts.ref ? [opts.ref.lands - 2, opts.ref.lands + 2] : (LANDS_BY_BRACKET[opts.bracket ?? 0] ?? TARGETS.lands);
+  const usual = opts.ref ? `${opts.ref.label ?? "EDHREC's average deck"} runs ${opts.ref.lands}, so` : opts.bracket === 5 ? 'cEDH lists run' : 'most decks run';
+  check(s.lands, lands, 'lands', 'Expect missed land drops.', 'Room to cut a land for a spell, more so with lots of ramp.', usual);
+  const cedh = opts.bracket === 5;
+  check(s.roles.ramp, TARGETS.ramp, 'ramp pieces', 'The deck may start slowly.', cedh ? 'Normal for fast mana.' : '');
   check(s.roles.draw, TARGETS.draw, 'card-draw sources', 'Hands may run dry mid-game.', '');
-  check(s.roles.removal, TARGETS.removal, 'targeted removal / counters', 'Few answers to a threat.', '');
-  check(s.roles.wipes, TARGETS.wipes, 'board wipes', 'Hard to recover if someone floods the board.', 'Can hurt your own board too.');
+  check(s.roles.removal, cedh ? [10, 20] : TARGETS.removal, 'targeted removal / counters', 'Few answers to a threat.', '');
+  check(s.roles.wipes, cedh ? [0, 3] : TARGETS.wipes, 'board wipes', cedh ? '' : 'Hard to recover if someone floods the board.', 'Can hurt your own board too.');
   if (s.avgMv) out.push({ tone: s.avgMv > 3.8 ? 'high' : 'ok', text: `Average mana value ${s.avgMv.toFixed(2)}${s.avgMv > 3.8 ? ': top-heavy, lean on ramp' : s.avgMv < 2.6 ? ': low curve, fast starts' : ''}.` });
   return out;
+}
+
+/** EDHREC's average deck as a RefShape: its land count (basics + nonbasics, from the page's own type counts). */
+export function refShapeOf(page: { lists: { header: string; cards: { qty?: number }[] }[] }, label?: string): RefShape | undefined {
+  const l = page.lists.find((x) => /^lands?$/i.test(x.header));
+  if (!l) return undefined;
+  return { lands: l.cards.reduce((n, c) => n + (c.qty ?? 1), 0), label };
 }

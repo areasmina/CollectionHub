@@ -23,12 +23,37 @@ function signalTag(c: SubCard): string | undefined {
   return c.synergy && c.synergy >= 0.05 ? `+${pctOf(c.synergy)} synergy` : undefined;
 }
 
+import { brainData, ROLE_BITS } from '../brain/data';
+import { BASICS } from './compare';
+import { norm } from './names';
+
 const TYPES = ['Land', 'Creature', 'Planeswalker', 'Battle', 'Instant', 'Sorcery', 'Artifact', 'Enchantment'];
 export const mainType = (type = '') => TYPES.find((t) => type.includes(t)) ?? '';
 
-/** Owned stand-ins for a missing card: same EDHREC category first, then card type, close mana value, then lift/inclusion. */
+/** A card's Scryfall Tagger roles by name (bits of ROLE_BITS), when the brain's roles file knows it. */
+const tagBits = (name: string) => brainData().roles?.get(norm(name));
+/** Roles two cards share, by Tagger tags (undefined when either card isn't tagged). */
+export function sharedRoles(a: string, b: string): (typeof ROLE_BITS)[number][] | undefined {
+  const x = tagBits(a);
+  const y = tagBits(b);
+  if (x == null || y == null) return undefined;
+  return ROLE_BITS.filter((_, i) => x & y & (1 << i));
+}
+
+/**
+ * Owned stand-ins for a missing card. What the card *does* comes first (veteran playtest round 2: Basalt Monolith was
+ * offered Sylvan Library): each shared Scryfall Tagger role +3, and a card doing none of the missing card's jobs -3;
+ * then the same EDHREC category, card type, close mana value, then lift/inclusion. Basic lands are never offered.
+ */
 export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCard[] {
+  const mBits = tagBits(missing.name);
+  const job = (c: SubCard) => {
+    const shared = sharedRoles(missing.name, c.name);
+    if (!shared) return 0;
+    return shared.length ? 3 * shared.length : mBits ? -3 : 0;
+  };
   const score = (c: SubCard) =>
+    job(c) +
     (missing.category && c.category === missing.category ? 4 : 0) +
     (mainType(missing.type) && mainType(c.type) === mainType(missing.type) ? 2 : 0) +
     (missing.cmc != null && c.cmc != null ? Math.max(0, 2 - Math.abs(missing.cmc - c.cmc)) * 0.5 : 0) +
@@ -37,7 +62,7 @@ export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCar
   // Never offer a land for a spell or a spell for a land.
   const isLand = (c: SubCard) => mainType(c.type) === 'Land';
   return candidates
-    .filter((c) => c.name !== missing.name && (!missing.type || !c.type || isLand(c) === isLand(missing)))
+    .filter((c) => c.name !== missing.name && !BASICS.has(norm(c.name)) && (!missing.type || !c.type || isLand(c) === isLand(missing)))
     .map((c) => ({ c, s: score(c) }))
     .sort((a, b) => b.s - a.s || a.c.name.localeCompare(b.c.name))
     .slice(0, n)
@@ -60,6 +85,8 @@ export function whyIn(c: SubCard): string[] {
 export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0): string[] {
   const out: string[] = [];
   if (missing.category && sub.category === missing.category) out.push(`Same role: ${sub.category}`);
+  const job = sharedRoles(missing.name, sub.name);
+  if (job?.length) out.push(`Same job: ${job.join(', ')} (Scryfall Tagger)`);
   const t = mainType(sub.type);
   if (t && t === mainType(missing.type)) out.push(`${t} like it`);
   if (sub.cmc != null && missing.cmc != null) out.push(sub.cmc === missing.cmc ? `Same mana value (${sub.cmc})` : `Mana value ${sub.cmc} (vs ${missing.cmc})`);

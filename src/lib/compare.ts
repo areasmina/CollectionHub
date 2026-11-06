@@ -12,10 +12,13 @@ export function ownedMap(entries: { name: string; qty: number }[]): Map<string, 
 /** owned = in this binder; other = only in the other binder (never counted as owned). */
 // Basic lands are never worth listing as missing.
 export const BASICS = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes', 'snow-covered plains', 'snow-covered island', 'snow-covered swamp', 'snow-covered mountain', 'snow-covered forest']);
+/** Basics everyone has: counted as owned without being in the binder. Snow-covered basics are their own cards (snow
+ *  decks need them), so they count only when you own them (veteran playtest round 2, A2). */
+export const FREE_BASICS = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes']);
 
 export function statusOf(name: string, mine: Map<string, number>, other?: Map<string, number>): Status {
   const k = norm(name);
-  if (mine.has(k) || BASICS.has(k)) return 'owned';
+  if (mine.has(k) || FREE_BASICS.has(k)) return 'owned';
   return other?.has(k) ? 'other' : 'missing';
 }
 
