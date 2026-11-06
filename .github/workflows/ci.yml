@@ -26,7 +26,8 @@ jobs:
       - name: Build
         run: npx vite build
   screens:
-    runs-on: ubuntu-latest
+    # Playwright 1.56 can't install Chromium on ubuntu-latest (26.04); 24.04 is supported.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
