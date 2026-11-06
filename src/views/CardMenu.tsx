@@ -2,7 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BASICS } from '../lib/compare';
 import { db, type Deck } from '../lib/db';
-import { addToDeck, changeQty, removeFromDeck, removeOneFromBinder, setCommander, setFoil } from '../lib/deckedit';
+import { addToDeck, changeQty, removeFromDeck, removeOneFromBinder, setCommander, setFoil, setPrinting } from '../lib/deckedit';
+import { printingsOf } from '../lib/scryfall';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
 import { openDeck } from '../lib/nav';
@@ -79,6 +80,16 @@ export function CardMenu({
         .sort((a, b) => Number(inDeck.has(b.key)) - Number(inDeck.has(a.key)) || a.name.localeCompare(b.name))
         .map((c) => ({ name: c.name, inDeck: inDeck.has(c.key) }));
     }, [d?.id, d?.commander, isCmdr, picking, profile]) ?? [];
+  // Change artwork: pick the printing you own (Scryfall's paper printings, loaded when opened)
+  const [arts, setArts] = useState<Awaited<ReturnType<typeof printingsOf>> | null | 'loading'>(null);
+  const myRows = useLiveQuery(() => db.entries.where('profile').equals(profile).toArray(), [profile])?.filter((e) => norm(e.name) === norm(name)) ?? [];
+  const mine = new Set(myRows.map((e) => e.cardId));
+  const openArts = async () => {
+    haptic('select');
+    if (arts) return setArts(null);
+    setArts('loading');
+    setArts(await printingsOf(name.split(' // ')[0]));
+  };
   const shownLegends = legends.filter((c) => norm(c.name).includes(norm(q))).slice(0, 8);
   const basic = BASICS.has(norm(name));
   const toast = (t: Toast) => onToast?.(t);
@@ -181,6 +192,33 @@ export function CardMenu({
                   </button>
                 </span>
               ))}
+            </li>
+          )}
+          {owned > 0 && (
+            <li>
+              <button aria-expanded={!!arts} onClick={openArts}>
+                🎨 Change artwork… <small>· the printing you own</small> {arts ? '▲' : '▼'}
+              </button>
+              {arts === 'loading' && <p className="small artsload">Loading printings from Scryfall…</p>}
+              {arts && arts !== 'loading' && (
+                <ul className="artgrid" aria-label="Printings">
+                  {arts.length === 0 && <li className="small">Scryfall has no other printing.</li>}
+                  {arts.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        aria-pressed={mine.has(p.id)}
+                        title={`${p.setName} #${p.cn}`}
+                        onClick={act(async () => (haptic('success'), toast({ text: `${name}: ${p.setName} art`, undo: await setPrinting(profile, name, p, p.set, p.cn) })))}
+                      >
+                        {p.img && <img src={p.img} alt={`${p.setName} #${p.cn}`} loading="lazy" />}
+                        <small>
+                          {p.set.toUpperCase()} {p.cn}
+                        </small>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           )}
           <li className="sep" />

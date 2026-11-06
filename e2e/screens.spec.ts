@@ -33,25 +33,25 @@ test('Commander page: header stats, tags row stays inside its frame', async ({ p
   await page.locator('.ccard').first().click();
   await expect(page.locator('.chero h1')).toBeVisible();
   await expect(page.locator('.hstats .price')).toBeVisible();
-  const row = await page.locator('.chero .hscroll').boundingBox();
-  const frame = await page.locator('.chero').boundingBox();
+  const row = await page.locator('.strip .hscroll').boundingBox();
+  const frame = await page.locator('.strip').boundingBox();
   expect(row!.x + row!.width).toBeLessThanOrEqual(frame!.x + frame!.width + 1);
   // EDHREC's top 6 tags, the rest behind +N MORE
-  await expect(page.locator('.chero .hscroll button:not(.tagmore)')).toHaveCount(6);
+  await expect(page.locator('.strip .hscroll button:not(.tagmore)')).toHaveCount(6);
   await page.locator('.tagmore').click();
-  await expect(page.locator('.chero .hscroll button:not(.tagmore)')).toHaveCount(10);
+  await expect(page.locator('.strip .hscroll button:not(.tagmore)')).toHaveCount(10);
   await page.locator('.tagmore').click();
   await fits(page, ['.chero', '.strip']);
 });
 
-test('Commander header on a wide screen: one tidy row of tags', async ({ page }, info) => {
+test('Commander settings on a wide screen: tags stay compact (two rows at most)', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
   await page.setViewportSize({ width: 2000, height: 1100 });
   await page.locator('.ccard').first().click();
   await expect(page.locator('.tagmore')).toHaveText('+4 MORE');
-  const ys = await page.locator('.chero .hscroll button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
-  expect(new Set(ys).size).toBe(1);
-  await page.screenshot({ path: '/mnt/project-files/ui-review/screens/phone-round/6-commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 760 } });
+  const ys = await page.locator('.strip .hscroll button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top / 30)));
+  expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows (the strip is tilted a little, so tops differ by a few px)
+  await page.screenshot({ path: '/mnt/project-files/ui-review/screens/phone-round/6-commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
 test('Collection: counters, widget, grid tiles with tally marks', async ({ page }) => {

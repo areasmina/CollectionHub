@@ -367,14 +367,12 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
 export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: ReactNode }) {
   return (
     <div className="hstats" onClick={(e) => e.stopPropagation()}>
-      <span className="price tapey y1 t0 big" title={PRICE_METHOD} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
+      {/* How the price is worked out stays in the tooltip, not as a line under the header */}
+      <span className="price tapey y1 t0 big" title={`${PRICE_METHOD} ${fetched}`} aria-label={`Whole deck costs about ${price !== undefined ? cad(price) : 'an unknown amount'}`}>
         <small className="wideonly">DECK</small> {price !== undefined ? `≈${cad(price)}` : 'CA$—'}
       </span>
       <SaltStat names={names} />
       {children}
-      <small className="fetched" title={PRICE_METHOD}>
-        deck price: cheapest printings · {fetched}
-      </small>
     </div>
   );
 }

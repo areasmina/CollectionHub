@@ -8139,3 +8139,154 @@ details.cat {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Commander card: halftone dots 30% lighter; the hint tape and ⋯ corner sit on top of the dots */
+.cimg .cmdrimg::after {
+  background: radial-gradient(rgba(0, 0, 0, 0.245) 1px, transparent 1.5px) 0 0/4px 4px;
+}
+.cimg .cmdrimg .xg {
+  opacity: 0.315;
+}
+.cmdrbtn .cmdrhint,
+.cmdrbtn .cmdrmore {
+  z-index: 4;
+}
+.dhero .cimg .cmdrimg::after {
+  opacity: 0.315;
+}
+.dhero .cimg .cmdrimg .xg {
+  opacity: 0.14;
+}
+
+/* Card menu: Change artwork — a small grid of your card's printings, the one you own outlined */
+.cardmenu .artgrid {
+  list-style: none;
+  margin: 6px 0 4px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.cardmenu .artgrid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 2px;
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.cardmenu .artgrid button[aria-pressed='true'] {
+  border-color: var(--r, #e60012);
+}
+.cardmenu .artgrid img {
+  width: 100%;
+  border-radius: 4px;
+}
+.cardmenu .artgrid small {
+  font-size: 10px;
+}
+.cardmenu .artsload {
+  margin: 4px 0;
+}
+
+/* Built around now lives in the settings strip, full width under Power / Budget / Match */
+.strip .builtaround {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.strip .hscroll {
+  flex-wrap: wrap;
+  overflow: visible;
+  mask-image: none;
+  -webkit-mask-image: none;
+  padding: 2px 0;
+  gap: 6px;
+}
+.strip .hscroll button {
+  min-height: 34px;
+  font-size: 14px;
+  padding: 0 9px;
+  border-width: 2px;
+  border-color: var(--ink);
+}
+.strip .hscroll button.tagmore {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+@media (max-width: 700px) {
+  .strip .builtaround {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .strip .hscroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+}
+
+/* Commander rank + deck count: a black label-maker strip right after the name */
+.cstamp {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  margin: calc(-1 * var(--sp1)) 0 var(--sp2);
+  transform: rotate(-1.5deg);
+  font-family: var(--mono, 'Space Mono', monospace);
+  font-size: 12px;
+  letter-spacing: 1px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.cstamp > * {
+  padding: 3px 10px;
+  background: var(--ink);
+  color: var(--white);
+}
+.cstamp b {
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.cstamp a {
+  color: var(--hazard);
+  border-left: 1px dashed #666;
+}
+.cstamp span {
+  border-left: 1px dashed #666;
+}
+
+/* Deck tools: FILTERS and grid / list share one row (no line of their own) */
+.dtools:has(> .fsheet) {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp2);
+}
+.dtools > .fsheet {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dtools > .viewsw.mini {
+  position: static;
+  flex: 0 0 auto;
+  display: flex;
+  align-self: stretch;
+}
+.dtools > .viewsw.mini button {
+  height: 100%;
+}
+.strip .builtaround > span {
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}

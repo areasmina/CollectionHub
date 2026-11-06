@@ -334,41 +334,18 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <h1 aria-label={label}>
                 <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 30 : 36) : label.length > 28 ? 44 : 54} seed={11} />
               </h1>
+              {/* Rank and deck count, stamped right after the name (the header below it stays clean) */}
+              <p className="cstamp" onClick={(e) => e.stopPropagation()}>
+                <b>NO.{no ? String(no).padStart(3, '0') : '—'}</b>
+                <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
+                <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+                  EDHREC ↗
+                </a>
+              </p>
               <div className="namerow">
                 <Pips ci={ci} size={30} />
                 {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
               </div>
-            </div>
-            <div className="cmeta">
-              {tags.length > 0 && (
-                <div className="builtaround">
-                  <span>built around</span>
-                  <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
-                    {/* EDHREC's top tags only; the rest one tap away (the chosen one always shows) */}
-                    {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
-                      <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-                        {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
-                      </button>
-                    ))}
-                    {tags.length > TAGS_SHOWN && (
-                      <button className="tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
-                        {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              <span className="score">
-                <span className="mono">
-                  NO. {no ? String(no).padStart(3, '0') : '—'}
-                  <br />
-                  {page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS ·{' '}
-                  <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-                    EDHREC ↗
-                  </a>
-                </span>
-                {/* The match % shows once: in the COLLECTION MATCH bar below */}
-              </span>
             </div>
           </div>
         </section>
@@ -423,6 +400,25 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </button>
             )}
           </div>
+            {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
+            {tags.length > 0 && (
+              <div className="builtaround">
+                <span>built around</span>
+                <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
+                  {/* EDHREC's top tags only; the rest one tap away (the chosen one always shows) */}
+                  {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
+                    <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
+                      {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
+                    </button>
+                  ))}
+                  {tags.length > TAGS_SHOWN && (
+                    <button className="tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
+                      {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           <span className={`hint${short.length ? ' warn' : ''}`}>
             <ShortAlert items={short} inline />
             {kind === 'average' ? (missing.length > 0 ? 'tap any card to swap it · missing ones first' : 'every card here is yours · tap one to swap or pin it') : 'every card here is in your binder'}
