@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { type PinSide } from '../lib/pins';
 import { searchByText } from '../lib/search';
 import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
+import { comboBreaks, swapEffect } from '../brain/combos';
 import { scryfallUrl, showPreview } from './shared';
 import { Tape } from './zine';
 
@@ -18,7 +19,7 @@ export interface SwapOption {
 }
 
 /** A suggestion row: hover (mouse) shows it in the viewer; press and hold (touch) shows it full screen; tap swaps. */
-function Option({ o, missing, onPick, onLook }: { o: SwapOption; missing: SubCard; onPick: () => void; onLook: (src?: string) => void }) {
+function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; missing: SubCard; notes?: { text: string; warn?: boolean }[]; onPick: () => void; onLook: (src?: string) => void }) {
   const timer = useRef<number>(undefined);
   const held = useRef(false);
   return (
@@ -42,6 +43,11 @@ function Option({ o, missing, onPick, onLook }: { o: SwapOption; missing: SubCar
         <span>
           <b>{o.sub.name}</b>
           <span className="whys">
+            {notes.map((n) => (
+              <span key={n.text} className={n.warn ? 'cwarn' : 'cgain'}>
+                {n.text}
+              </span>
+            ))}
             {reasonsFor(missing, o.sub, o.owned).map((r) => (
               <span key={r}>{r}</span>
             ))}
@@ -71,7 +77,11 @@ export function SwapNote({
   onUndo,
   onPin,
   onClose,
+  deck,
+  bracket = 4,
 }: {
+  deck?: string[]; // every card in the deck now (commander included): for combo warnings
+  bracket?: number; // 2–5: which combos the rules allow
   name: string; // EDHREC's card in this slot
   missing: SubCard;
   big?: string;
@@ -100,7 +110,17 @@ export function SwapNote({
     q,
     (o) => ({ name: o.sub.name, type: o.sub.type, text: o.text }),
   ).slice(0, 6);
-  const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
+  // Combos (Commander Spellbook): what taking this card out breaks, and what each option completes.
+  const breaks = deck ? comboBreaks(now, deck) : [];
+  const notesFor = (o: SwapOption) => {
+    if (!deck) return [];
+    const e = swapEffect(now, o.sub.name, deck, bracket);
+    return [
+      ...e.lost.map((c) => ({ text: `⚠ breaks ${c.cards.join(' + ')}`, warn: true })),
+      ...e.gained.map((c) => (e.gainedBlocked.includes(c) ? { text: `⚠ completes ${c.cards.join(' + ')}: not allowed in bracket ${bracket}`, warn: true } : { text: `combo: ${c.cards.join(' + ')}` })),
+    ];
+  };
+  const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} notes={notesFor(o)} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
   return (
     <div className="note-pop swapnote" role="dialog" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
       <Tape
@@ -147,6 +167,11 @@ export function SwapNote({
                 <span key={r}>{r}</span>
               ))}
             </span>
+          )}
+          {!look && breaks.length > 0 && (
+            <p className="combowarn" role="note">
+              ⚠ Part of {breaks.length > 1 ? `${breaks.length} combos` : 'a combo'}: {breaks.slice(0, 3).map((c) => c.cards.join(' + ')).join(' · ')}. Swapping it out breaks {breaks.length > 1 ? 'them' : 'it'}.
+            </p>
           )}
           <a className="scrylink" href={scryfallUrl(now)} target="_blank" rel="noreferrer">
             {now} on Scryfall ↗
