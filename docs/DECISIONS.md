@@ -7,6 +7,8 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 | Date | Decision | Status | Notes |
 |---|---|---|---|
 | 2026-11-06 | Work rulebook: `CLAUDE.md`, `docs/FEATURES.md`, this file, PR template with Checks, browser checks required in CI | decided | Ideas adapted from the MIT [product-harness-starter](https://github.com/beamnxw/my_works). Skipped: separate planner/builder/evaluator sessions, a shared handoff file, evidence folders in git |
+| 2026-11-06 | Copy reservations are optional per deck; shared (virtual) decks stay the default and `copies.ts` is unchanged | decided | Shipped in #12 |
+| 2026-11-06 | EDHREC data goes through one adapter (`src/lib/sources/edhrec.ts`) | decided | Terms in `docs/data-sources.md` |
 | 2026-11-06 | WILDCARD on by default, 1 slot, switchable per commander | decided | Shipped in #10 |
 | 2026-11-06 | Power switch reads ALL · MIN · MED · MAX (MIN = B3, MED = B4, MAX = B5) | decided | ALL stays next to the others |
 | 2026-11-06 | Dark mode only | decided | – |

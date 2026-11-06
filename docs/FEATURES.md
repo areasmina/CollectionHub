@@ -4,7 +4,7 @@ What exists, its status and what proves it. Read before starting work; update th
 `docs/ROADMAP.md` keeps the original plan and history.
 
 Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps listed) · **Planned** · **Parked**
-(waiting on Guillermo). "manual, no test yet" = works when checked by hand; add a test when it's next touched. Checked against `main` at 8b6771a (2026-11-06).
+(waiting on Guillermo). "manual, no test yet" = works when checked by hand; add a test when it's next touched. Checked against `main` at e0ec5cb (2026-11-06).
 
 ## Collection
 
@@ -36,6 +36,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Partner and Background commanders | Live | #7 | `lib/commander.test.ts` |
 | WILDCARD: one seeded pick with evidence per commander, reroll, off per commander | Live | #10 | `brain/brain.test.ts` |
 | IV+ stamp on decks forged from cEDH data | Live | #11 | manual, no test yet |
+| Colour identity is a hard rule on every suggestion path | Live | #16 | `brain/round2.test.ts` |
 | Suggested deck built from owned cards first (Deck Wizard rules) | Partial | #7, #10 | brain core live; full builder port in progress (brain thread) |
 
 ## Decks and the Forge
@@ -55,7 +56,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Card roles from Scryfall Tagger (ramp, draw, removal…) | Live | #7 | `brain/roles.test.ts` |
 | Salt (EDHREC top 1,000) | Live | 2026-10-12 | `lib/salt.test.ts` |
 | Legality and completeness checks (100 cards, singleton, colour identity) | Partial | – | banned cards flagged (#11); the rest not done |
-| Physical copy reservations (optional, virtual stays default) | Planned | – | brain thread's revised plan |
+| Physical copy reservations (optional per deck: shared or reserved; shared stays default), copy status per deck | Live | #12, #14 | `lib/allocation.test.ts` |
 | Deck generation modes: Owned only / Prefer owned / Budget | Planned | – | brain thread's revised plan |
 | Playtesting (draw 7, mulligan, turns) | Parked | – | Guillermo: "much later"; plan in `/mnt/project-files/playtest-plan/` |
 
@@ -63,6 +64,8 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 
 | Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
+| EDHREC behind one adapter, its terms in `docs/data-sources.md` | Live | #12 | `lib/sources/sources.test.ts` (no other file calls EDHREC) |
+| Clean-up round: one slim tool bar, binder menu, Collection fold, no hamburger | Live | #15 | e2e (updated in #15) |
 | Sync code (encrypted, no account), link a device, change code | Live | #5 | `lib/synccode.test.ts`, `lib/sync.test.ts`, `lib/autosync.test.ts`, e2e "sync code" |
 | Move from the old Supabase sign-in sync | Live | #5 | manual; Supabase removal waits for Guillermo's OK |
 | Installable PWA, works offline for saved data | Live | v1 | manual |
