@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockWorld, seed } from './mock';
+import { addSignet, mockWorld, seed } from './mock';
 
 // Tester round 1 bugs (A1, A3, A7)
 test.beforeEach(async ({ page }) => {
@@ -17,9 +17,12 @@ test('Swap window: Esc closes it and the backdrop goes with it', async ({ page }
   await expect(page.locator('.backdrop')).toHaveCount(0);
 });
 
-test('FORGE IT: a double tap saves one deck, not two', async ({ page }) => {
+test('SAVE DECK: a double tap saves one deck, not two', async ({ page }) => {
+  await addSignet(page);
   await page.locator('.ccard').first().click();
-  await page.locator('.forgecell .btn.forge').dblclick();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
+  await page.locator('.forgebar .btn.forge').dblclick();
   await expect(page.locator('.dhero h1')).toBeVisible();
   const n = await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));

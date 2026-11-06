@@ -127,7 +127,7 @@ function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Ca
   );
 }
 
-export function Collection({ profile, name, s }: { profile: number; name: string; s: Shared }) {
+export function Collection({ profile, name, s, onSwitch }: { profile: number; name: string; s: Shared; onSwitch?: () => void }) {
   const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
   const entries = list ?? [];
   // Import folds away; it opens by itself for an empty binder (and stays open while an import runs).
@@ -189,6 +189,12 @@ export function Collection({ profile, name, s }: { profile: number; name: string
             binder name
             <input defaultValue={name} key={name} onBlur={(e) => e.target.value.trim() && db.profiles.update(profile, { name: e.target.value.trim() })} />
           </label>
+          {/* switching binders lives here, next to the binder's name (not in the hub menu) */}
+          {onSwitch && (
+            <button className="btn ink binderswap" onClick={onSwitch} aria-label={`Switch to ${s.otherName}`}>
+              ⇄ {s.otherName}
+            </button>
+          )}
         </section>
 
         <section className="stats">

@@ -9225,3 +9225,135 @@ a.misscost:hover {
   color: #141414;
 }
 .swapnote:focus { outline: none; }
+
+/* Owner's rule (Nov 6), app-wide: a card tile has no name title outside the card; the name is read on the card itself.
+   (The name stays for screen readers.) Price and copy pips sit on the card, shown on hover or when the card is selected. */
+.ztile > .tname,
+.ctile > .tname {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ctile:focus {
+  outline: none;
+}
+.ctile:focus-visible .cart {
+  outline: 3px solid var(--r, #e60012);
+  outline-offset: 3px;
+}
+/* price: hidden at rest everywhere (cards to buy too), peels on with hover / selection */
+.ztile > .price.tapey,
+.ztile.owned > .price.tapey,
+.ctile .cart > .price {
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 100% 50%;
+  transform: perspective(240px) rotate(4deg) rotateY(-95deg);
+  clip-path: inset(0 0 0 100%);
+  transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1), clip-path 0.22s ease-out, opacity 0.1s linear;
+}
+.ztile:hover > .price.tapey,
+.ztile:focus-within > .price.tapey,
+.ctile:hover .cart > .price,
+.ctile:focus-within .cart > .price {
+  opacity: 1;
+  pointer-events: auto;
+  transform: perspective(240px) rotate(4deg) rotateY(0deg);
+  clip-path: inset(0 0 0 0);
+}
+@media (hover: none) {
+  .ztile:hover > .price.tapey,
+  .ctile:hover .cart > .price {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .ztile:focus-within > .price.tapey,
+  .ctile:focus-within .cart > .price {
+    opacity: 1;
+    pointer-events: auto;
+    transform: rotate(4deg);
+    clip-path: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ztile > .price.tapey,
+  .ctile .cart > .price {
+    transition: opacity 0.1s linear;
+  }
+}
+/* copy pips: inside the card, over the bottom of the art, on hover / selection */
+.ctile .cart > .tally {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: 10px;
+  top: auto;
+  z-index: 4;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.ctile:hover .cart > .tally,
+.ctile:focus-within .cart > .tally,
+.ctile .cart > .tally.editing {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .ctile:hover:not(:focus-within) .cart > .tally:not(.editing) {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* Card Collection on a phone held upright: the title wraps onto two lines, search gets a full row, tools a row below */
+@media (max-width: 600px) {
+  .collbar > .colltitle {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .collbar > .cardopts.tools1 {
+    flex-wrap: wrap;
+  }
+  .collbar > .cardopts.tools1 > .sbox {
+    flex: 1 1 100%;
+    border-bottom: 1px solid #3a3a3a;
+  }
+  .collbar > .cardopts.tools1 > .sbox input {
+    font-size: 16px; /* readable, and stops iOS zooming in */
+    min-height: 44px;
+  }
+  .collbar > .cardopts.tools1 > .zoomsw {
+    flex: 1 1 auto;
+    border-left: 0;
+    justify-content: space-around;
+  }
+}
+/* the binder switch next to the binder's name */
+.binderswap {
+  align-self: flex-start;
+  margin-top: var(--sp2, 8px);
+}
+.syncbtn .synclbl {
+  font-family: var(--se);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  margin-left: 6px;
+}
+.syncbtn {
+  width: auto !important;
+  padding: 0 12px !important;
+  display: inline-flex;
+  align-items: center;
+}
+/* $$$ never wraps onto two lines */
+.slimbar .segs button {
+  white-space: nowrap;
+}

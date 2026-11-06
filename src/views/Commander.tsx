@@ -295,7 +295,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
       <Doodles n={377} count={1} spots={[[64, 2]]} paper />
       <h2>*** TO BUY ***</h2>
       <hr />
-      <div className="sub">your picks · ≈CA$ at your shop</div>
+      <div className="sub">
+        {missing.length} missing{pricesIn && toBuyCost > 0 ? ` · ≈${cad(toBuyCost)} to complete` : ''} · ≈CA$ at your shop
+      </div>
       <ul>
         {missing.map((c) => {
           const done = bought.has(norm(c.name));
@@ -377,8 +379,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        {/* One slim bar that stays in reach while you scroll the cards: POWER, BUDGET, what's missing (the one loud
-            price, on yellow tape) and FORGE IT. */}
+        {/* One slim bar that stays in reach while you scroll the cards: POWER and BUDGET. The missing cost lives in the
+            TO BUY list, and the Forge starts with your first swap (owner's call, Nov 6: no FORGE IT button). */}
         <section className="slimbar" aria-label="Deck settings">
           <div className="cell">
             <span className="lbl">POWER</span>
@@ -388,22 +390,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <div className="cell">
             <span className="lbl">BUDGET</span>
             <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
-          </div>
-          {receipt && pricesIn && toBuyCost > 0 && (
-            <a className="misscost" href="#shop" aria-label={`${toBuy.length} cards to buy, about ${money(toBuyCost)}: show the list`}>
-              <small>{toBuy.length} MISSING</small> ≈{cad(toBuyCost)}
-            </a>
-          )}
-          <div className="cell forgecell">
-            {saved ? (
-              <DeckLink name={saved}>
-                <span className="btn">OPEN IN THE FORGE →</span>
-              </DeckLink>
-            ) : (
-              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average' || saving} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
-                ⚒ FORGE IT
-              </button>
-            )}
           </div>
         </section>
 

@@ -252,7 +252,7 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
   return (
-    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
+    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} tabIndex={onOpen ? undefined : 0} {...press}>
       <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       {st === 'missing' && (
         <span className="misstape" aria-hidden="true">

@@ -61,7 +61,7 @@ test('Design brief: sticky slim bar, quiet totals, meta line, small sections sid
   await page.locator('.ccard').first().click();
   const bar = page.locator('.slimbar');
   await expect(bar.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
-  await expect(bar.locator('.forgecell')).toBeVisible();
+  await expect(bar.locator('.forgecell, .misscost')).toHaveCount(0); // no FORGE IT, the missing cost lives in TO BUY
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
   await expect(page.locator('.namerow .cstamp')).toContainText('DECKS');
   // the deck total is quiet text, not yellow tape; section totals too
