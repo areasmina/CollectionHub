@@ -7941,3 +7941,21 @@ details.cat {
 .dmatch .match {
   min-height: 64px;
 }
+
+/* My decks shelf: every tile the same width. A flex item's default min-width is its content, so a long deck name
+   (kept on one line) used to stretch its tile; now the name is cut with … instead. */
+.shelf li {
+  min-width: 0;
+}
+.shelf li > button:not(.dlight) {
+  min-width: 0;
+  overflow: hidden;
+}
+.shelf li b,
+.shelf li small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

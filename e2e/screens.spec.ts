@@ -522,3 +522,17 @@ test('Forge: collection match sits above ANALYSIS, not by the title', async ({ p
   await expect(page.locator('.dpanel .dmatch .num')).toHaveText(/\d+%/);
   await fits(page, ['.dpanel .dmatch']);
 });
+
+test('My decks shelf: a long deck name never makes its tile bigger', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['decks'], 'readwrite');
+    tx.objectStore('decks').put({ profile: 1, name: 'Tatyova, Benthic Druid, Queen of the Endless Landfall Engine (EDHREC average)', commander: 'Tatyova, Benthic Druid', cards: [{ name: 'Sol Ring', qty: 1 }], updated: Date.now() + 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await go(page, 'collection');
+  await expect(page.locator('.shelf li')).toHaveCount(2);
+  const ws = await page.locator('.shelf li').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
+  expect(new Set(ws).size).toBe(1);
+});
