@@ -49,7 +49,7 @@ export async function mockWorld(page: Page) {
 /** A binder with every mock card (some foil) and one saved deck. */
 export async function seed(page: Page) {
   await page.goto('/');
-  await page.waitForSelector('.pillhub', { state: 'attached' });
+  await page.waitForSelector('.pillnav', { state: 'attached' });
   await page.evaluate(async (cs) => {
     const db: IDBDatabase = await new Promise((ok, no) => {
       const q = indexedDB.open('collectionhub');
@@ -90,4 +90,17 @@ export const addSignet = async (page: Page) => {
     await new Promise((ok) => (tx.oncomplete = ok));
   });
   await page.reload();
+};
+
+/** Opens the one tool bar's ⋮ options (power, budget, sort, show, view, size). */
+export const opts = async (page: Page, scope = '') => {
+  const d = page.locator(`${scope} .tbmore`.trim()).first();
+  if (!(await d.evaluate((e) => (e as HTMLDetailsElement).open))) await d.locator('summary').click();
+  return d;
+};
+
+/** Opens the Collection dashboard fold (counts, worth, decks, import), closed by default. */
+export const dash = async (page: Page) => {
+  const d = page.locator('details.dash');
+  if (!(await d.evaluate((e) => (e as HTMLDetailsElement).open))) await d.locator('> summary').click();
 };

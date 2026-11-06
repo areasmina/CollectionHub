@@ -98,4 +98,5 @@ class DB extends Dexie {
 
 export const db = new DB();
 export const PROFILES = [1, 2] as const;
-db.on('populate', () => db.profiles.bulkAdd([{ id: 1, name: 'Binder 1' }, { id: 2, name: 'Binder 2' }]));
+// One binder to start; more come from Collection's binder menu.
+db.on('populate', () => db.profiles.bulkAdd([{ id: 1, name: 'Binder 1' }]));

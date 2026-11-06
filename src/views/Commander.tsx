@@ -20,7 +20,7 @@ import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
-import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, SearchBox, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -408,20 +408,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        {/* One slim bar that stays in reach while you scroll the cards: POWER and BUDGET. The missing cost lives in the
-            TO BUY list, and the Forge starts with your first swap (owner's call, Nov 6: no FORGE IT button). */}
-        <section className="slimbar" aria-label="Deck settings">
-          <div className="cell">
-            <span className="lbl">POWER</span>
-            <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
-            {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
-          </div>
-          <div className="cell">
-            <span className="lbl">BUDGET</span>
-            <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
-          </div>
-        </section>
-
         <section className="strip" aria-label="Collection match and themes">
           <Tape style={{ top: -12, left: -14, width: 84, height: 24, transform: 'rotate(-24deg)' }} />
           <Tape style={{ top: -10, right: 60, width: 84, height: 24, transform: 'rotate(5deg)' }} />
@@ -617,23 +603,26 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
-              {/* How the cards are ordered and filtered, right above them */}
-              {/* One FILTERS button: sort and show (and later EDHREC's with/without card) live in its sheet. */}
-              <div className="dtools" role="toolbar" aria-label="Card order and filter">
-                <SearchBox q={q} setQ={setQ} />
-                <details className="fsheet">
-                  <summary>
-                    <span className="ft">FILTERS</span>
-                    <span className="fnow">
-                      {CSORTS.find(([v]) => v === sort)?.[1]} · {SHOWS.find(([v]) => v === show)?.[1]}
-                    </span>
-                    <span className="arrow" aria-hidden="true">
-                      ▼
-                    </span>
-                  </summary>
-                  <div className="fbody">
-                    <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                    <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+              {/* The one slim bar (owner's rule): search, then ⋮ with POWER, BUDGET, SORT, SHOW, VIEW and EDHREC's With / Without card */}
+              <ToolBar q={q} setQ={setQ} now={[BRACKETS.find(([v]) => v === bracket)?.[1].toUpperCase(), budget ? BUDGETS.find(([v]) => v === budget)?.[1].toUpperCase() : ''].filter(Boolean).join(' · ')}>
+                <OptRow label="POWER">
+                  <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
+                </OptRow>
+                <OptRow label="BUDGET">
+                  <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
+                </OptRow>
+                <OptRow label="VIEW">
+                  <div className="viewsw mini" role="group" aria-label="Card view">
+                    <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                      <GridIcon />
+                    </button>
+                    <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                      <ListIcon />
+                    </button>
+                  </div>
+                </OptRow>
+                <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
                     {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
                     <form
                       className="cfilter"
@@ -677,17 +666,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         </p>
                       )}
                     </form>
-                  </div>
-                </details>
-                <div className="viewsw mini" role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-              </div>
+              </ToolBar>
+              {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {listed.map((l) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';

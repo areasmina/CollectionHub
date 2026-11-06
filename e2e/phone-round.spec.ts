@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fits, mockWorld, seed } from './mock';
+import { fits, mockWorld, opts, seed } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -61,27 +61,46 @@ test('Title answer: deck count tucked behind the title, tagline under BUILD (wid
   await page.locator('.hero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
 });
 
-test('Design brief: sticky slim bar, quiet totals, meta line, small sections side by side, nav hides on scroll', async ({ page }, info) => {
+test('One slim bar: search + ⋮ (POWER, BUDGET inside), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
-  const bar = page.locator('.slimbar');
-  await expect(bar.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
-  await expect(bar.locator('.forgecell, .misscost')).toHaveCount(0); // no FORGE IT, the missing cost lives in TO BUY
+  const bar = page.locator('.lists > .tbar');
+  await expect(page.locator('.slimbar')).toHaveCount(0); // POWER and BUDGET live in the bar's options now
+  await expect(bar.locator('.tsearch input')).toBeVisible();
+  expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52); // one slim row at every width
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
+  await expect(bar.locator('.fnow')).toHaveText(/MIN|ALL|MED|MAX/);
+  const o = await opts(page);
+  await expect(o.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
+  await expect(o.getByRole('radiogroup', { name: 'Budget' })).toBeVisible();
+  await fits(page, ['.tbar', '.tbar .fbody']);
+  await page.screenshot({ path: `test-results/bar-open-${info.project.name}.png` });
+  await o.locator('summary').click();
   await expect(page.locator('.namerow .cstamp')).toContainText('DECKS');
-  // the deck total is quiet text, not yellow tape; section totals too
   expect(await page.locator('.hstats .price').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   expect(await page.locator('.cat > summary .gval').first().evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
-  // the sample has 1-card sections: the first two share a row
+  // every group is its own full-width row, collapsed or not, and its header is one line
+  const sums = page.locator('details.cat > summary');
+  await sums.nth(0).click();
+  await sums.nth(1).click();
   const [a, b] = await Promise.all([page.locator('details.cat').nth(0).boundingBox(), page.locator('details.cat').nth(1).boundingBox()]);
-  expect(Math.abs(a!.y - b!.y)).toBeLessThan(4);
-  await fits(page, ['.slimbar', '.lists']);
+  expect(b!.y).toBeGreaterThan(a!.y + a!.height - 2);
+  expect(Math.abs(a!.width - b!.width)).toBeLessThan(2);
+  expect((await sums.nth(0).boundingBox())!.height).toBeLessThan(56);
+  await fits(page, ['.lists']);
   // scroll down: the bar sticks to the top, the nav slides away; scroll up: the nav is back
-  // (not all the way down: at the very bottom the nav comes back on purpose)
+  await sums.nth(0).click();
+  await sums.nth(1).click();
   const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  const start = (await bar.boundingBox())!.y;
+  const y0 = await page.evaluate(() => scrollY);
   await page.mouse.wheel(0, Math.min(900, room - 120));
   await expect(page.locator('.pillnav.away')).toHaveCount(1);
-  expect(Math.round((await bar.boundingBox())!.y)).toBeLessThanOrEqual(1);
-  await page.screenshot({ path: `test-results/brief-scrolled-${info.project.name}.png` });
+  // once the page has scrolled past the bar, the bar holds at the top instead of leaving the screen
+  await expect.poll(async () => (await page.evaluate(() => scrollY)) > y0).toBe(true);
+  const moved = (await page.evaluate(() => scrollY)) - y0;
+  const y = (await bar.boundingBox())!.y;
+  expect(y).toBeGreaterThanOrEqual(0);
+  expect(Math.round(y)).toBeLessThanOrEqual(Math.max(8, Math.round(start - moved) + 2));
   await page.mouse.wheel(0, -300);
   await expect(page.locator('.pillnav.away')).toHaveCount(0);
 });

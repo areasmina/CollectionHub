@@ -2,7 +2,7 @@ import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { PriceLink, priced, Thumb, useMenuPress } from './shared';
+import { OptRow, PriceLink, priced, Thumb, ToolBar, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
 import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
@@ -34,7 +34,7 @@ function MenuLi({ e, onMenu, className, children, tint }: { e: Entry; onMenu?: M
             onMenu(e, r.left, r.bottom);
           }}
         >
-          ⋯
+          ⋮
         </button>
       )}
     </li>
@@ -247,7 +247,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
 /** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
-export function CardsView({ entries, cards, profile, binderName, search, more, title }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; search?: ReactNode; more?: ReactNode; title?: ReactNode }) {
+export function CardsView({ entries, cards, profile, binderName, q = '', setQ, more, title }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; more?: ReactNode; title?: ReactNode }) {
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -303,42 +303,39 @@ export function CardsView({ entries, cards, profile, binderName, search, more, t
       {/* Title and the tools bar share one line */}
       <div className="collbar" data-zoom={zoom}>
       {title}
-      <div className="cardopts tools1">
-        {search}
+      {/* One slim row (owner's rule): search, then ⋮ with card size, list / grid, group by set and the exports */}
+      <ToolBar q={q} setQ={setQ ?? (() => {})} now={[view === 'grid' ? `SIZE ${zoom.toUpperCase()}` : 'LIST', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}>
+        <OptRow label="VIEW">
+          <div className="viewsw icons" role="group" aria-label="Card view">
+            <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
+              <ListIcon />
+            </button>
+            <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
+              <GridIcon />
+            </button>
+          </div>
+        </OptRow>
         {view === 'grid' && (
-          <div className="zoomsw" role="radiogroup" aria-label="Card size">
-            {(['s', 'm', 'l'] as const).map((z) => (
-              <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
-                <i className={`zc ${z}`} aria-hidden="true" />
-              </button>
-            ))}
-          </div>
+          <OptRow label="SIZE">
+            <div className="zoomsw" role="radiogroup" aria-label="Card size">
+              {(['s', 'm', 'l'] as const).map((z) => (
+                <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
+                  <i className={`zc ${z}`} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </OptRow>
         )}
-        <div className="viewsw icons" role="group" aria-label="Card view">
-          <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
-            <ListIcon />
-          </button>
-          <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
-            <GridIcon />
-          </button>
-        </div>
-        <details className="toolmore">
-          <summary aria-label="More options" title="More options">
-            ⋯
-          </summary>
-          <div className="tmbody">
-            <label className="check">
-              <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
-            </label>
-            {group === 'on' && (
-              <label className="check">
-                <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
-              </label>
-            )}
-            {more}
-          </div>
-        </details>
-      </div>
+        <label className="check">
+          <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
+        </label>
+        {group === 'on' && (
+          <label className="check">
+            <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
+          </label>
+        )}
+        {more && <div className="optmore">{more}</div>}
+      </ToolBar>
       </div>
 
       {group === 'on' ? (
@@ -348,16 +345,12 @@ export function CardsView({ entries, cards, profile, binderName, search, more, t
             const n = g.list.reduce((s, e) => s + e.qty, 0);
             return (
               <details key={g.code} data-col={tone(g.list)} className={`cat setgrp${n ? '' : ' empty'}`} open={open.has(g.code)} onToggle={(ev) => (ev.currentTarget.open !== open.has(g.code) ? toggle(g.code) : null)}>
-                <summary>
+                <summary title={g.year ? `${g.name} (${g.year})` : g.name}>
                   <span className="pm" aria-hidden="true" />
-                  <span className="h">
-                    {g.name}
-                    {g.year && <small className="yr"> {g.year}</small>}
-                  </span>
-                  <span className="dots" aria-hidden="true" />
+                  {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
+                  <span className="h">{g.name}</span>
                   <span className="n">
-                    {g.code.toUpperCase()} · {n} {n === 1 ? 'card' : 'cards'}
-                    {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
+                    {g.code.toUpperCase()} · {n}
                   </span>
                 </summary>
                 {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}

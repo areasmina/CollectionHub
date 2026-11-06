@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, mockWorld, seed } from './mock';
+import { addSignet, mockWorld, seed , dash } from './mock';
 
 // Tester round 1 bugs (A1, A3, A7)
 test.beforeEach(async ({ page }) => {
@@ -36,10 +36,11 @@ test('Import: when Scryfall stops answering, it says so, saves the rest and keep
   await page.clock.install();
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
+  await dash(page);
   const box = page.locator('.importbox');
   if (!(await box.evaluate((e) => (e as HTMLDetailsElement).open))) await box.locator('summary').click();
   await box.locator('textarea').fill('1 Sol Ring\n1 Brand New Card');
-  await box.getByRole('button', { name: 'ADD TO BINDER' }).click();
+  await box.getByRole('button', { name: '+ ADD' }).click();
   // three waits (5 + 10 + 20 s), run on the fake clock in steps so each failed request gets to land first
   await expect
     .poll(async () => (await page.clock.runFor(6_000), await box.locator('.report').count()), { timeout: 20_000 })

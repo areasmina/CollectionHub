@@ -9433,3 +9433,649 @@ main {
     top: 50%;
   }
 }
+
+/* ===== Clean-up round (Nov 6, owner's phone feedback): one slim tool bar, stacked groups, quiet ⋮, binder menu ===== */
+/* Card groups: every group is a full-width row (collapsed ones no longer squeeze side by side); one line each:
+   ▸ NAME (count) ……… ≈price · owned */
+.deckgrid > .lists > details.cat,
+.deckgrid > .lists > details.cat:has(> ul.zlist) {
+  flex: 1 1 100%;
+  min-width: 100%;
+}
+.deckgrid > .lists > details.cat > summary,
+.cat > summary {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--sp2, 8px);
+  width: auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 0 4px;
+  border-bottom: 1px solid #555;
+}
+.cat > summary .h,
+.cat > summary .h + * {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cat > summary .h {
+  font-size: 18px;
+  flex: 0 1 auto;
+}
+.cat > summary .dots {
+  flex: 1 1 8px;
+}
+.cat > summary .gval,
+.cat > summary .n {
+  flex: none;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .cat > summary .h + * {
+    margin-left: 0;
+    flex-basis: auto;
+  }
+}
+
+/* The one tool bar: a single slim row everywhere: [ search ……… ][ now ⋮ ] */
+.dtools.tbar,
+.lists > .dtools.tbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  position: sticky;
+  top: 6px;
+  z-index: 30;
+  width: 100%;
+  margin: 0 0 var(--sp3, 12px);
+  border: 2px solid var(--text);
+  background: var(--bg);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.dtools.tbar > .tsearch {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  border: 0 !important;
+  box-shadow: none !important;
+  min-height: 44px;
+  height: 44px;
+}
+.dtools.tbar > .tsearch .tab,
+.dtools.tbar > .tsearch .fade {
+  display: none;
+}
+.dtools.tbar > .tsearch input {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 16px;
+  width: 100%;
+}
+.dtools.tbar > .tbmore {
+  flex: none;
+  position: static;
+  border-left: 1px solid #3a3a3a;
+}
+.dtools.tbar > .tbmore > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  list-style: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text);
+  border: 0;
+}
+.dtools.tbar > .tbmore > summary::-webkit-details-marker {
+  display: none;
+}
+.dtools.tbar > .tbmore[open] > summary {
+  background: var(--accent);
+  color: var(--white);
+}
+.dtools.tbar .fnow {
+  font-family: var(--an);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+.kebab {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 4px;
+}
+.kebab i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dtools.tbar > .tbmore > .fbody {
+  position: absolute;
+  z-index: 35;
+  right: -2px;
+  top: calc(100% + 2px);
+  left: auto;
+  width: min(420px, calc(100vw - 24px));
+  max-height: 70vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg);
+  border: 2px solid var(--text);
+  box-shadow: 5px 5px 0 var(--accent);
+  animation: tbdrop 0.16s ease-out both;
+}
+@keyframes tbdrop {
+  from {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+}
+.optrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.optrow > .lbl {
+  flex: 0 0 64px;
+  font-family: var(--an);
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.tbar .fbody .viewsw,
+.tbar .fbody .zoomsw {
+  display: flex;
+  position: static;
+  float: none;
+  margin: 0;
+}
+.tbar .fbody .viewsw button,
+.tbar .fbody .zoomsw button {
+  min-height: 40px;
+  min-width: 44px;
+}
+.tbar .fbody .sbox.pick {
+  width: 100%;
+  margin: 0;
+}
+.tbar .fbody .check {
+  font-family: var(--se);
+  font-size: 14px;
+}
+.tbar .fbody .optmore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tbar .fbody .cfilter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  /* phones: search and ⋮ only, plus the power word on the commander page */
+  .dtools.tbar .fnow {
+    max-width: 9ch;
+    font-size: 12px;
+  }
+}
+.bnote {
+  display: block;
+  margin: -6px 0 8px;
+  font-family: var(--se);
+  font-size: 12px;
+  color: var(--hazard);
+}
+/* the Collection bar sits under the CARD COLLECTION title, one row */
+.collbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.collbar > .dtools.tbar {
+  margin-bottom: 14px;
+}
+
+/* ⋮ on cards: no circle, three small vertical dots on the art's right edge, only on hover or when the card is selected */
+.ztile > .morebtn,
+.ztile .tacts > .morebtn,
+.ztile:not(.ctile) .tacts > .morebtn,
+.ztile.ctile > .morebtn {
+  position: absolute;
+  top: 28%;
+  right: 2px;
+  left: auto;
+  width: 28px;
+  height: 40px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  color: #fff;
+  font-size: 26px;
+  line-height: 40px;
+  font-weight: 900;
+  text-shadow: 0 0 3px #000, 0 0 6px #000, 1px 1px 0 #000;
+  opacity: 0;
+  transform: none;
+  z-index: 4;
+}
+.ztile:hover > .morebtn,
+.ztile:focus-within > .morebtn,
+.ztile:hover .tacts > .morebtn,
+.ztile:focus-within .tacts > .morebtn {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    opacity: 0;
+  }
+  .ztile:focus-within > .morebtn,
+  .ztile:focus-within .tacts > .morebtn {
+    opacity: 1;
+  }
+}
+
+/* BUILT AROUND: the chips wrap onto a second line instead of running off the edge */
+.strip .builtaround .hscroll,
+.builtaround .hscroll {
+  flex-wrap: wrap;
+  overflow: visible;
+  scroll-snap-type: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  gap: 6px;
+}
+.strip .builtaround .hscroll > button,
+.builtaround .hscroll > button {
+  flex: 0 0 auto;
+}
+
+/* Group by set: one slim line per set: ▸ icon NAME …… CODE · count */
+.setgroups {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.cat.setgrp {
+  margin: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.cat.setgrp > summary {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid #333;
+  background: none;
+  gap: 10px;
+}
+.cat.setgrp > summary:hover {
+  background: #161616;
+}
+.cat.setgrp[open] > summary {
+  border-bottom-color: var(--accent);
+}
+.cat.setgrp > summary .seticon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  filter: invert(1);
+  opacity: 0.85;
+}
+.cat.setgrp > summary .h {
+  flex: 1 1 auto;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.cat.setgrp > summary .n {
+  font-family: var(--se);
+  font-size: 12px;
+}
+.cat.setgrp.empty > summary {
+  opacity: 0.5;
+}
+
+/* The binder control: name ▾ opens switch / new / rename / sync / haptics / reset / delete */
+.bindermenu {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+  max-width: 100%;
+}
+.bmbtn {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px 14px;
+  background: var(--kraft, #c9a77c);
+  color: #141414;
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--accent);
+  cursor: pointer;
+  transform: rotate(-1deg);
+}
+.bmbtn .lbl {
+  font-family: var(--an);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+.bmbtn b {
+  font-family: var(--se);
+  font-weight: 400;
+  font-size: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bmbtn .chev {
+  font-size: 14px;
+}
+.bmbtn.alert {
+  box-shadow: 4px 4px 0 var(--hazard);
+}
+.bmenu {
+  position: absolute;
+  z-index: 60;
+  left: 0;
+  top: calc(100% + 8px);
+  width: min(300px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--paper);
+  color: #141414;
+  border: 2px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--accent);
+  animation: tbdrop 0.16s ease-out both;
+}
+.bmenu button {
+  text-align: left;
+  min-height: 42px;
+  padding: 0 10px;
+  background: none;
+  border: 0;
+  font-family: var(--an);
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: #141414;
+  cursor: pointer;
+}
+.bmenu button:hover,
+.bmenu button:focus-visible {
+  background: var(--ink);
+  color: var(--hazard);
+}
+.bmenu button small {
+  font-family: var(--se);
+  font-size: 12px;
+  color: #555;
+}
+.bmenu button.danger {
+  color: #b00010;
+}
+.bmenu button.alert {
+  background: var(--hazard);
+}
+.bmenu button:disabled {
+  opacity: 0.4;
+}
+.bmenu hr {
+  border: 0;
+  border-top: 1px dashed #999;
+  margin: 4px 0;
+  width: 100%;
+}
+.bmenu .hapnote {
+  margin: 4px 10px;
+  font-family: var(--se);
+  font-size: 12px;
+}
+
+/* ADD / REPLACE: one slim row */
+.btnrow.slimbtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  margin-top: 10px;
+}
+.btnrow.slimbtns .btn {
+  flex: 1 1 0;
+  margin: 0;
+  min-height: 44px;
+  font-size: 16px;
+  padding: 0 10px;
+}
+
+/* The pill: no hamburger; the back arrow grows out of the pill when needed; the page you're on pops in */
+.pillnav .pill .pback {
+  animation: pbackin 0.3s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes pbackin {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 48px;
+    opacity: 1;
+  }
+}
+.pillnav .pill button[aria-current='page'] {
+  animation: pillpop 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.pillnav .pill button:active {
+  transform: scale(0.94) skewX(-8deg);
+}
+@keyframes pillpop {
+  from {
+    transform: scale(0.8) skewX(-8deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav .pill .pback,
+  .pillnav .pill button[aria-current='page'] {
+    animation: none;
+  }
+}
+/* the bar's own sizes win over older .fsheet / .sbox widths on every page */
+.dtools.tbar > .tbmore {
+  width: auto;
+  margin: 0;
+}
+.dtools.tbar > .tsearch {
+  width: auto;
+  flex: 1 1 auto;
+}
+.dtools.tbar .fnow {
+  display: inline-block !important;
+  flex: none;
+}
+.tbar .fbody .segs {
+  display: flex;
+  flex: 1 1 auto;
+}
+.tbar .fbody .segs button {
+  flex: 1 1 0;
+  min-width: 48px;
+  min-height: 40px;
+  font-size: 16px;
+  padding: 0 6px;
+}
+.tbar .fbody .cfilter .sbox {
+  flex: 1 1 100%;
+  margin: 0;
+}
+.tbar .fbody .cfilter .sbox input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+.tbar .fbody .cfilter .cfbtns {
+  display: flex;
+  gap: 8px;
+}
+.tbar .fbody .cfilter .btn {
+  margin: 0;
+  min-height: 42px;
+}
+.cat.setgrp > summary .seticon:not(img) {
+  display: none;
+}
+
+/* Collection dashboard fold (Nov 6): counts, worth, decks and import in one closed-by-default fold */
+details.dash {
+  margin: var(--sp3) 0 var(--sp4);
+}
+details.dash > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  min-height: 48px;
+  padding: 6px 12px;
+  border: 2px solid var(--paper, #f3ead8);
+  background: #141414;
+  color: var(--paper, #f3ead8);
+  box-shadow: 4px 4px 0 var(--r, #e5141f);
+  cursor: pointer;
+  font-family: var(--se);
+}
+details.dash > summary::-webkit-details-marker {
+  display: none;
+}
+details.dash > summary .dsum {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+}
+details.dash > summary .dsum b {
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+details.dash > summary .dsum > span {
+  white-space: nowrap;
+}
+details.dash > summary .dsum > span + span::before {
+  content: '·';
+  opacity: 0.5;
+  margin: 0 6px;
+}
+details.dash > summary .dimp {
+  flex: none;
+  padding: 2px 8px;
+  background: var(--y, #ffd400);
+  color: #141414;
+  font-family: var(--an);
+  font-size: 14px;
+  transform: rotate(-2deg);
+}
+details.dash > summary .chev {
+  flex: none;
+  transition: transform 0.2s;
+}
+details.dash[open] > summary .chev {
+  transform: rotate(180deg);
+}
+details.dash[open] > summary .dimp {
+  display: none;
+}
+details.dash[open] > *:not(summary) {
+  animation: dashin 0.25s ease-out both;
+}
+@keyframes dashin {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  details.dash[open] > *:not(summary) {
+    animation: none;
+  }
+}
+/* the decks row scrolls sideways and ends with SEE ALL */
+.shelf ul.shelfrow {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.shelf ul.shelfrow > li.seeall {
+  flex: 0 0 140px;
+}
+.shelf ul.shelfrow > li.seeall > button {
+  height: 100%;
+  min-height: 120px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px;
+  background: var(--r, #e5141f);
+  color: #fff;
+  border: 2px solid #141414;
+  box-shadow: 4px 4px 0 #141414;
+  transform: rotate(-1deg);
+}
+.shelf ul.shelfrow > li.seeall b {
+  font-family: var(--an);
+  font-size: 22px;
+}
+.shelf ul.shelfrow > li.seeall .arr {
+  font-size: 22px;
+}
+
+/* Phones: the eye sits a little further right so its art shows past the letters */
+@media (max-width: 700px) {
+  .titlewrap > .eyedoodle {
+    left: 76%;
+  }
+}
+/* Phones: the logo moves up, no empty black band above it (owner's call, Nov 6) */
+@media (max-width: 700px) {
+  main > section.hero {
+    margin-top: 4px;
+  }
+  main > section.hero > .titlewrap {
+    padding-top: 12px;
+  }
+}
