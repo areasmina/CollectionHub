@@ -14,7 +14,13 @@ type MenuFn = (e: Entry, x: number, y: number) => void;
 function MenuLi({ e, onMenu, className, children, tint }: { e: Entry; onMenu?: MenuFn; className: string; children: React.ReactNode; tint?: string }) {
   const press = useMenuPress(onMenu && ((x, y) => onMenu(e, x, y)));
   return (
-    <li className={`${className}${onMenu ? ' hasmenu' : ''}`} style={tint ? ({ '--dc': tint } as React.CSSProperties) : undefined} {...press}>
+    <li
+      className={`${className}${onMenu ? ' hasmenu' : ''}`}
+      style={tint ? ({ '--dc': tint } as React.CSSProperties) : undefined}
+      tabIndex={className.includes('ctile') ? 0 : undefined} // a tap selects the card: its price and copies show
+      aria-label={className.includes('ctile') ? e.name : undefined}
+      {...press}
+    >
       {children}
       {onMenu && (
         <button
@@ -196,7 +202,8 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
       <ul className="zgrid cgrid2">
         {list.map((e) => (
           <MenuLi key={e.id} e={e} onMenu={onMenu} className={`ztile owned ctile${used?.get(norm(e.name))?.length ? ' live' : ''}`} tint={tints?.get(norm(e.name))?.[0]}>
-            {/* Name on top; clean art (price sticker and "in N decks" show on hover); Arena-style copy pips centred below */}
+            {/* The card is its own title (owner's rule, Nov 6: names are read on the card). Price sticker, "in N decks"
+                and the Arena-style copy pips sit on the card and show on hover, or when the card is tapped (selected). */}
             <span className="tname" title={setLine(e)}>
               {e.name}
             </span>
@@ -204,8 +211,8 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
               {useMark(e)}
+              <Tally e={e} />
             </span>
-            <Tally e={e} />
           </MenuLi>
         ))}
       </ul>

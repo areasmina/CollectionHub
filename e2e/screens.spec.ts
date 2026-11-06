@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { edhJson, fits, mockWorld, seed } from './mock';
+import { addSignet, edhJson, fits, mockWorld, seed } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -59,9 +59,14 @@ test('Collection: counters, widget, grid tiles with tally marks', async ({ page 
   await expect(page.locator('.stats .stat')).toHaveCount(3);
   await expect(page.locator('.topwidget')).toBeVisible();
   await expect(page.locator('.ctile').first()).toBeVisible();
-  await expect(page.locator('.ctile .tally .marks').first()).toBeVisible();
-  // the tally strip opens and changes the quantity
+  // no name title outside the card; the copy pips sit on the card and show once it's selected (tap / focus / hover)
+  await expect(page.locator('.ctile > .tname').first()).toHaveCSS('width', '1px');
   const t = page.locator('.ctile').first();
+  await expect(t.locator('.tally')).toHaveCSS('opacity', '0');
+  await t.focus();
+  await expect(t.locator('.tally')).toHaveCSS('opacity', '1');
+  await expect(t.locator('.price')).toHaveCSS('opacity', '1');
+  // the tally strip opens and changes the quantity
   await t.locator('.tally .marks').click();
   const n = Number(await t.locator('.tstep b').innerText());
   await t.locator('.tstep button').last().click();
@@ -353,14 +358,18 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
   await expect(page.locator('.pinchip')).toHaveCount(0);
 });
 
-test('My decks in Collection + Forge: FORGE IT opens the deck, swap window in the Forge', async ({ page }) => {
+test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens the deck, swap window in the Forge', async ({ page }) => {
   await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'COLLECTION']);
   await expect(page.locator('.shelf')).toHaveCount(0); // Discover stays commanders only
+  await addSignet(page);
   await page.locator('.ccard').first().click();
-  await page.getByRole('button', { name: '⚒ FORGE IT' }).click();
-  await expect(page.locator('.forgehint')).toBeVisible();
+  await expect(page.locator('.slimbar .btn.forge')).toHaveCount(0); // no FORGE IT button: the first swap starts the Forge
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
-  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
+  await page.locator('.forgebar .btn.forge').click();
+  await expect(page.locator('.forgehint')).toBeVisible();
+  await page.getByRole('button', { name: 'Swap Counterspell', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Counterspell' });
   await expect(note.getByRole('button', { name: '📌 ALWAYS IN' })).toBeVisible();
   await note.getByRole('searchbox', { name: 'Search your binder' }).fill('cob');
   await expect(note.getByText(/No card of yours/).last()).toBeVisible();

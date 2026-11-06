@@ -206,15 +206,25 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     await db.profiles.update(s.profile, { bought: [...set] });
   }
 
+  // one save at a time: a double tap on FORGE IT used to race freeDeckName and make two decks
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   async function saveDeck(open = true) {
-    if (!page) return;
-    const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
-    const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
-    await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
-    await clearSwaps(); // the forge is done: the deck is yours now
-    setSaved(deckName);
-    haptic('success');
-    if (open) openDeck(deckName);
+    if (!page || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
+      const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
+      await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+      await clearSwaps(); // the forge is done: the deck is yours now
+      setSaved(deckName);
+      haptic('success');
+      if (open) openDeck(deckName);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
   async function clearSwaps() {
     const p = (await db.profiles.get(s.profile))!;
@@ -285,7 +295,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
       <Doodles n={377} count={1} spots={[[64, 2]]} paper />
       <h2>*** TO BUY ***</h2>
       <hr />
-      <div className="sub">your picks · ≈CA$ at your shop</div>
+      <div className="sub">
+        {missing.length} missing{pricesIn && toBuyCost > 0 ? ` · ≈${cad(toBuyCost)} to complete` : ''} · ≈CA$ at your shop
+      </div>
       <ul>
         {missing.map((c) => {
           const done = bought.has(norm(c.name));
@@ -367,8 +379,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        {/* One slim bar that stays in reach while you scroll the cards: POWER, BUDGET, what's missing (the one loud
-            price, on yellow tape) and FORGE IT. */}
+        {/* One slim bar that stays in reach while you scroll the cards: POWER and BUDGET. The missing cost lives in the
+            TO BUY list, and the Forge starts with your first swap (owner's call, Nov 6: no FORGE IT button). */}
         <section className="slimbar" aria-label="Deck settings">
           <div className="cell">
             <span className="lbl">POWER</span>
@@ -378,22 +390,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <div className="cell">
             <span className="lbl">BUDGET</span>
             <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
-          </div>
-          {receipt && pricesIn && toBuyCost > 0 && (
-            <a className="misscost" href="#shop" aria-label={`${toBuy.length} cards to buy, about ${money(toBuyCost)}: show the list`}>
-              <small>{toBuy.length} MISSING</small> ≈{cad(toBuyCost)}
-            </a>
-          )}
-          <div className="cell forgecell">
-            {saved ? (
-              <DeckLink name={saved}>
-                <span className="btn">OPEN IN THE FORGE →</span>
-              </DeckLink>
-            ) : (
-              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
-                ⚒ FORGE IT
-              </button>
-            )}
           </div>
         </section>
 
@@ -499,7 +495,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 {changes} {changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save
               </small>
             </span>
-            <button className="btn forge" onClick={() => saveDeck()}>
+            <button className="btn forge" onClick={() => saveDeck()} disabled={saving}>
               SAVE DECK
             </button>
             <button className="btn ink" onClick={() => (haptic('undo'), clearSwaps())}>

@@ -14,7 +14,8 @@ async function req(url: string, init: RequestInit, tries = 4): Promise<any> {
   last = Date.now();
   // A 429 comes without CORS headers, so the browser reports it as a network error: back off either way.
   const r = await fetch(url, { ...init, headers: { ...init.headers, Accept: 'application/json' } }).catch(() => null);
-  if ((!r || r.status === 429) && tries > 1) return sleep(20000 * (5 - tries)).then(() => req(url, init, tries - 1));
+  // waits 5 s, 10 s, 20 s (was 20 / 40 / 60 s: an import sat at 0 for 2 minutes when Scryfall was down)
+  if ((!r || r.status === 429) && tries > 1) return sleep(5000 * 2 ** (4 - tries)).then(() => req(url, init, tries - 1));
   if (!r) throw new Error('Could not reach Scryfall (offline, or rate-limited: wait a minute)');
   if (r.status === 404) return { data: [] }; // search with no results
   if (!r.ok) throw new Error(`Scryfall answered ${r.status}`);
@@ -112,11 +113,14 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
     if (hit) found.set(k, hit);
     else if (!need.some((n) => identKey(n) === k)) need.push(ident);
   }
+  // If Scryfall stops answering, keep what came back and report the rest as not looked up (not as "not found").
+  let down: string | undefined;
   const fetchAll = async (idents: Ident[], base: number, total: number) => {
     const missed: Ident[] = [];
-    for (let i = 0; i < idents.length; i += 75) {
+    for (let i = 0; i < idents.length && !down; i += 75) {
       const batch = idents.slice(i, i + 75);
-      const res = await post('/cards/collection', { identifiers: batch });
+      const res = await post('/cards/collection', { identifiers: batch }).catch((e: Error) => ((down = e.message), null));
+      if (!res) break;
       const cards: Card[] = [];
       const byKey = new Map<string, Card>();
       for (const c of res.data) {
@@ -143,12 +147,15 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
 
   const matched: { row: Row; card: Card }[] = [];
   const unmatched: Row[] = [];
+  const failed: Row[] = []; // never looked up: Scryfall didn't answer
+  const asked = new Set(need.map(identKey));
   for (const r of rows) {
     const card = found.get(identKey(identOf(r))) ?? found.get(identKey({ name: r.name }));
     if (card) matched.push({ row: r, card });
+    else if (down && asked.has(identKey(identOf(r)))) failed.push(r);
     else unmatched.push(r);
   }
-  return { matched, unmatched };
+  return { matched, unmatched, failed, down };
 }
 
 /** The official Commander Game Changers list (Scryfall's is:gamechanger), keyed by norm(name), cached a week. null when offline. */

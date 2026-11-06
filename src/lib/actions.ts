@@ -8,6 +8,7 @@ export interface ImportResult {
   added: number;
   unmatched: Row[];
   errors: ParseError[];
+  failed?: Row[]; // not looked up: Scryfall stopped answering (try again later)
 }
 
 const entryKey = (e: { cardId: string; set?: string; cn?: string; foil?: boolean }) => [e.cardId, e.set ?? '', e.cn ?? '', e.foil ? 'f' : ''].join('|');
@@ -15,7 +16,9 @@ const entryKey = (e: { cardId: string; set?: string; cn?: string; foil?: boolean
 export async function importCollection(profile: number, text: string, replace: boolean, onProgress: (done: number, total: number) => void): Promise<ImportResult> {
   const parsed = parseImport(text);
   const rows = mergeRows(parsed.rows);
-  const { matched, unmatched } = await resolveRows(rows, onProgress);
+  const { matched, unmatched, failed, down } = await resolveRows(rows, onProgress);
+  // Replacing with half a list would wipe the binder: when Scryfall is down, replace saves nothing.
+  if (down && replace) throw new Error(`Scryfall didn't answer (${down}). Your binder is unchanged`);
   await db.transaction('rw', db.entries, async () => {
     if (replace) await db.entries.where('profile').equals(profile).delete();
     const existing = new Map((await db.entries.where('profile').equals(profile).toArray()).map((e) => [entryKey(e), e]));
@@ -29,7 +32,7 @@ export async function importCollection(profile: number, text: string, replace: b
     }
     await db.entries.bulkPut([...existing.values()]);
   });
-  return { format: parsed.format, added: matched.reduce((n, m) => n + m.row.qty, 0), unmatched, errors: parsed.errors };
+  return { format: parsed.format, added: matched.reduce((n, m) => n + m.row.qty, 0), unmatched, errors: parsed.errors, failed };
 }
 
 /** Deck from a text/CSV list; names are kept as written, Scryfall fixes spelling where it can. */

@@ -59,7 +59,7 @@ const systemDark = () => typeof matchMedia === 'function' && matchMedia('(prefer
 export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
-  const [theme, setTheme] = useState(store.get('ch:theme') || 'system'); // system until a theme button is pressed
+  const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   const [hubOpen, setHubOpen] = useState(false);
@@ -107,13 +107,7 @@ export default function App() {
   const mine = useMemo(() => counts(profile), [entries, profile, illegal]);
   const theirs = useMemo(() => counts(other), [entries, other, illegal]);
   const nameOf = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Binder ${id}`;
-  const dark = theme === 'system' ? systemDark() : theme === 'dark';
-
-  useEffect(() => {
-    if (theme === 'system') delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = theme;
-    store.set('ch:theme', theme);
-  }, [theme]);
+  useEffect(() => void (document.documentElement.dataset.theme = theme), []);
   useEffect(() => store.set('ch:tab', tab), [tab]);
   useEffect(() => onOpenDeck(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
   useEffect(() => onOpenDeckList(() => (setTab('decks'), setHubOpen(false), window.scrollTo(0, 0))), []);
@@ -142,36 +136,19 @@ export default function App() {
               ))}
             </nav>
             <div className="righthead">
-              <select className="binder" aria-label="Binder" value={profile} onChange={(e) => (setProfile(Number(e.target.value)), setHubOpen(false))}>
-                {[1, 2].map((id) => (
-                  <option key={id} value={id}>
-                    {nameOf(id)}
-                  </option>
-                ))}
-              </select>
-              <div className="themes" role="group" aria-label="Theme">
-                <button aria-label="Dark theme" aria-pressed={dark} onClick={() => (setTheme('dark'), setHubOpen(false))}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-                    <path d="M14 13.5A7 7 0 0 1 7.5 3 7 7 0 1 0 17 12.5a7 7 0 0 1-3 1z" fill="currentColor" />
-                  </svg>
-                </button>
-                <button aria-label="Light theme" aria-pressed={!dark} onClick={() => (setTheme('light'), setHubOpen(false))}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-                    <circle cx="10" cy="10" r="4" fill="currentColor" />
-                    <path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.6 3.6l2.1 2.1M14.3 14.3l2.1 2.1M3.6 16.4l2.1-2.1M14.3 5.7l2.1-2.1" stroke="currentColor" strokeWidth="2" />
-                  </svg>
-                </button>
-              </div>
               {hapticsSupported() && <button className="iconbtn" aria-label={haptOn ? 'Haptic feedback on (tap to turn off)' : 'Haptic feedback off (tap to turn on)'} aria-pressed={haptOn} title="Haptic feedback" onClick={() => (setHapNote(HAPTIC_NOTE[setHaptics(!haptOn)]), setHaptOn(!haptOn))}>
                 <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <rect x="6" y="2" width="8" height="16" rx="2" />
                   {haptOn ? <path d="M3 6 v8 M1 8 v4 M17 6 v8 M19 8 v4" /> : <path d="M2 2 L18 18" />}
                 </svg>
               </button>}
-              <button className={`iconbtn syncbtn s-${syncSt.status}`} onClick={() => (setSync(!sync), setHubOpen(false))} aria-label={`Sync between devices (${SYNC_LABEL[syncSt.status]})`} title={SYNC_LABEL[syncSt.status]} aria-expanded={sync}>
-                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                  <path d="M5 15 V3 M2 6 L5 3 L8 6 M13 3 V15 M10 12 L13 15 L16 12" fill="none" stroke="currentColor" strokeWidth="2" />
+              <button className={`iconbtn syncbtn s-${syncSt.status}`} onClick={() => (haptic('open'), setSync(!sync), setHubOpen(false))} aria-label={`Sync between devices (${SYNC_LABEL[syncSt.status]})`} title={SYNC_LABEL[syncSt.status]} aria-expanded={sync}>
+                {/* the familiar two-arrows-in-a-circle sync mark, with its word */}
+                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16.5 8.5A6.5 6.5 0 0 0 4.6 5.6 M3.5 11.5a6.5 6.5 0 0 0 11.9 2.9" />
+                  <path d="M4.2 2.2 L4.6 5.6 L8 5.2 M15.8 17.8 L15.4 14.4 L12 14.8" />
                 </svg>
+                <span className="synclbl">SYNC</span>
               </button>
             </div>
             {hapNote && (
@@ -199,7 +176,7 @@ export default function App() {
             </button>
           ))}
         </div>
-        <button className={`pillhub${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: binder, theme, sync'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
+        <button className={`pillhub${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-expanded={hubOpen} aria-controls="hub" aria-label={hubOpen ? 'Hide the hub menu' : 'Show the hub menu: sync, haptics'} onClick={() => (haptic('tap'), setHubOpen(!hubOpen))}>
           {hubOpen ? '×' : '≡'}
         </button>
       </nav>
@@ -211,7 +188,7 @@ export default function App() {
       <PreviewLayer />
       {tab === 'discover' && <Discover key={home} {...shared} />}
       <Suspense fallback={<CardSpin page />}>
-        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} s={shared} />}
+        {tab === 'collection' && <Collection profile={profile} name={nameOf(profile)} s={shared} onSwitch={() => (haptic('select'), setProfile(other))} />}
         {tab === 'decks' && <Decks {...shared} />}
       </Suspense>
       <footer className="credits">

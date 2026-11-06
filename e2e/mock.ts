@@ -78,3 +78,16 @@ export async function fits(page: Page, selectors: string[]) {
     for (const [l, r, w] of boxes) if (w > 0 && (l < -2 || r > vw + 2)) throw new Error(`${sel} spills off the screen (${Math.round(l)}–${Math.round(r)}px on a ${vw}px screen)`);
   }
 }
+
+/** One more owned card (Arcane Signet) so Sol Ring has a swap to offer. */
+export const addSignet = async (page: Page) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'aaaaaaaa-1111-2222-3333-000000000099';
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+};
