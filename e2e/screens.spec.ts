@@ -73,8 +73,9 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   await expect(page.locator('.dpanel')).toBeVisible();
-  // grid / list lives in the first (commander) section and switches the view
-  const sw = page.locator('details.cat').first().locator('.viewsw.mini');
+  // grid / list sits in the toolbar above the cards (the commander's section is gone: its big card is the menu)
+  const sw = page.locator('.dtools .viewsw.mini');
+  await expect(page.locator('details.cat > summary .h', { hasText: 'COMMANDER' })).toHaveCount(0);
   await expect(sw).toBeVisible();
   await fits(page, ['.viewsw.mini']);
   await sw.getByRole('button', { name: 'List view' }).click();
@@ -259,22 +260,28 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat').first()).toBeVisible();
   // order: Commander, Creatures, Instants, Sorceries, Enchantments, Artifacts, Lands (no planeswalkers in the sample deck)
   const heads = await page.locator('details.cat > summary .h').allInnerTexts();
-  expect(heads.map((h) => h.replace(/\s*\(\d+\)\s*$/, ''))).toEqual(['COMMANDER', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ENCHANTMENTS', 'ARTIFACTS', 'LANDS']);
-  expect(heads[0]).toMatch(/\(1\)$/);
+  expect(heads.map((h) => h.replace(/\s*\(\d+\)\s*$/, ''))).toEqual(['CREATURES', 'INSTANTS', 'SORCERIES', 'ENCHANTMENTS', 'ARTIFACTS', 'LANDS']);
+  // no one-card Commander section, and the match % shows once (the strip's bar, not by the title)
+  await expect(page.locator('.chero .bigpct')).toHaveCount(0);
+  await expect(page.locator('.strip .match .num')).toContainText('%');
   expect(heads.at(-1)).toMatch(/\(20\)$/); // 10 Forest + 10 Island
   // every section shows what its cards cost
-  await expect(page.locator('details.cat > summary .gval')).toHaveCount(7);
+  await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
   await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(2);
   await fits(page, ['.lists > .dtools']);
-  const sw = page.locator('details.cat').first().locator('.viewsw.mini');
+  const sw = page.locator('.dtools .viewsw.mini');
   await expect(sw).toBeVisible();
   await fits(page, ['.viewsw.mini']);
   await sw.getByRole('button', { name: 'List view' }).click();
   await expect(page.locator('ul.zlist').first()).toBeVisible();
   await sw.getByRole('button', { name: 'Grid view' }).click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
+  // the big commander card is its menu
+  await page.getByRole('button', { name: /commander options/ }).click();
+  await expect(page.locator('.cardmenu')).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.screenshot({ path: 'test-results/commander-sections.png' });
 });
 
@@ -484,4 +491,34 @@ test('Swapping keeps the deck organised: a creature swapped in for a sorcery mov
   // The creature joins the Creatures; the Sorceries section (Cultivate was its only card) is gone
   await expect(section('Creatures')).toContainText('Elvish Mystic');
   await expect(section('Sorceries')).toHaveCount(0);
+});
+
+test('Forge: the big commander card is its menu; Change commander picks a legend from your binder, with undo', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'cccccccc-1111-2222-3333-000000000097';
+    tx.objectStore('cards').put({ id, name: 'Kinnan, Bonder Prodigy', key: 'kinnan, bonder prodigy', type: 'Legendary Creature — Human Druid', text: 'Whenever you tap a nonland permanent for mana, add one additional mana.', ci: ['G', 'U'], img: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, usd: '20.00', cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Kinnan, Bonder Prodigy', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await page.getByRole('button', { name: /commander options/ }).click();
+  const menu = page.locator('.cardmenu');
+  await menu.getByRole('button', { name: /Change commander/ }).click();
+  await menu.getByRole('button', { name: /Kinnan, Bonder Prodigy/ }).click();
+  await expect(page.locator('.toast')).toContainText('Kinnan, Bonder Prodigy leads the deck now');
+  await expect(page.getByRole('button', { name: 'Kinnan, Bonder Prodigy: commander options' })).toBeVisible();
+  await page.locator('.toast').getByRole('button', { name: /UNDO/ }).click();
+  await expect(page.getByRole('button', { name: 'Tatyova, Benthic Druid: commander options' })).toBeVisible();
+});
+
+test('Forge: collection match sits above ANALYSIS, not by the title', async ({ page }) => {
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await expect(page.locator('.dhero .bigpct')).toHaveCount(0);
+  await expect(page.locator('.dpanel .dmatch .num')).toHaveText(/\d+%/);
+  await fits(page, ['.dpanel .dmatch']);
 });

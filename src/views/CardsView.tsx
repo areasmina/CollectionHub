@@ -190,13 +190,16 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
     return (
       <ul className="zgrid cgrid2">
         {list.map((e) => (
-          <MenuLi key={e.id} e={e} onMenu={onMenu} className="ztile owned ctile">
+          <MenuLi key={e.id} e={e} onMenu={onMenu} className={`ztile owned ctile${used?.get(norm(e.name))?.length ? ' live' : ''}`}>
+            {/* Clean art: copies and price sit under the name; a card in an active deck glows green */}
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
-              <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
-              <Tally e={e} />
             </span>
             <span className="tname">{e.name}</span>
+            <span className="tmeta">
+              <Tally e={e} />
+              <PriceLink card={priced(cards.get(e.cardId), e.foil)} plain />
+            </span>
             <span className="tnote">{setLine(e)}</span>
             {useMark(e)}
           </MenuLi>

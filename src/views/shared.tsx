@@ -454,3 +454,35 @@ export function ShortAlert({ items, inline }: { items: Shortfall[]; inline?: boo
     </aside>
   );
 }
+
+/** The commander's big card is its menu button (it replaces the old one-card "Commander" section): a lift and a
+ *  ⋯ OPTIONS corner on hover, a faint corner on touch screens, and a one-time "tap for options" tape. */
+export function CmdrCard({ src, name, onMenu, children }: { src: string; name: string; onMenu: (x: number, y: number) => void; children?: ReactNode }) {
+  const [seen, setSeen] = useStored<'0' | '1'>('cmdrhint', '0', ['0', '1']);
+  const open = (x: number, y: number) => (haptic('open'), setSeen('1'), onMenu(x, y));
+  return (
+    <button
+      type="button"
+      className="cmdrbtn"
+      onPointerDown={(e) => e.stopPropagation()}
+      aria-label={`${name}: commander options`}
+      title="Commander options (right-click or hold works too)"
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        open(r.left + r.width / 2, r.top + r.height * 0.4);
+      }}
+      onContextMenu={(e) => (e.preventDefault(), e.stopPropagation(), open(e.clientX, e.clientY))}
+    >
+      <img src={src} alt="" />
+      {children}
+      <span className="cmdrmore" aria-hidden="true">
+        ⋯ <b>OPTIONS</b>
+      </span>
+      {seen === '0' && (
+        <span className="cmdrhint" aria-hidden="true">
+          tap for options
+        </span>
+      )}
+    </button>
+  );
+}

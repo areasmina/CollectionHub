@@ -7755,3 +7755,189 @@ details.cat {
 .forgehint.warn > b {
   margin-left: 0;
 }
+
+/* Clean tiles (Nov 6): the art stays readable. ⋯ fades in on hover / focus (faint on touch screens); prices are
+   plain small text under the name; collection copies (pips) sit under the name; active-deck cards glow green. */
+.ztile > .morebtn,
+.ztile .tacts > .morebtn {
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  background: rgba(20, 20, 20, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+}
+.ztile:hover > .morebtn,
+.ztile:focus-within > .morebtn,
+.ztile:hover .tacts > .morebtn,
+.ztile:focus-within .tacts > .morebtn {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: none) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    transition: none;
+  }
+}
+.ztile.ctile > .morebtn {
+  top: 8px;
+  right: 8px;
+}
+.ztile .tacts > .price,
+.ztile .tacts > a.price {
+  border: 0;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 12px;
+  color: #9a9a9a;
+}
+.ztile .tacts > a.price:hover {
+  color: var(--hazard);
+  text-decoration: underline;
+}
+.ctile .tmeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+}
+.ctile .tmeta .tally {
+  position: static;
+  transform: none;
+}
+.ctile .tmeta .tally .marks {
+  min-height: 28px;
+  min-width: 0;
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+}
+.ctile .tmeta .price {
+  position: static;
+  transform: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 12px;
+  color: #9a9a9a;
+  box-shadow: none;
+}
+.ctile.live .cart {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px rgba(46, 204, 64, 0.85), 0 0 16px rgba(46, 204, 64, 0.45);
+}
+@media (min-width: 900px) {
+  /* four cells now (the MISSING plate went to the TO BUY receipt) */
+  .strip {
+    grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(260px, 1.6fr) minmax(190px, 1fr);
+  }
+}
+.receipt .nm .ty {
+  font-size: 0.75em;
+  opacity: 0.6;
+}
+
+/* The commander's card is its menu: lifts on hover, ⋯ OPTIONS corner, one-time "tap for options" tape */
+.cmdrbtn {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.cmdrbtn img {
+  display: block;
+  width: 100%;
+}
+.cmdrbtn:hover,
+.cmdrbtn:focus-visible {
+  transform: translateY(-3px) rotate(-0.6deg);
+}
+.cmdrbtn:focus-visible {
+  outline: 3px solid var(--hazard);
+  outline-offset: 4px;
+}
+.cmdrmore {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 16px;
+  background: rgba(20, 20, 20, 0.78);
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  color: var(--white);
+  font-size: 16px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+.cmdrmore b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 0.2s ease;
+}
+.cmdrbtn:hover .cmdrmore,
+.cmdrbtn:focus-visible .cmdrmore {
+  opacity: 1;
+}
+.cmdrbtn:hover .cmdrmore b,
+.cmdrbtn:focus-visible .cmdrmore b {
+  max-width: 80px;
+}
+.cmdrhint {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%) rotate(-3deg);
+  white-space: nowrap;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--se);
+  font-size: 13px;
+  padding: 3px 10px;
+  box-shadow: 2px 2px 0 var(--ink);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmdrbtn,
+  .cmdrmore,
+  .cmdrmore b {
+    transition: none;
+  }
+}
+
+/* Forge: collection match sits on top of the ANALYSIS panel (the commander header stays clean) */
+.dmatch {
+  margin: 0 0 var(--sp4);
+}
+.dmatch .lbl {
+  display: block;
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  margin-bottom: var(--sp2);
+}
+.dmatch .match {
+  min-height: 64px;
+}

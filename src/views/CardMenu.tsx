@@ -65,6 +65,21 @@ export function CardMenu({
     return () => (removeEventListener('keydown', key), removeEventListener('scroll', scroll));
   }, []);
   const isCmdr = !!d && name === d.commander;
+  // Change commander: legendary creatures in this deck first, then the rest of your binder.
+  const [picking, setPicking] = useState(false);
+  const [q, setQ] = useState('');
+  const legends =
+    useLiveQuery(async () => {
+      if (!d || !isCmdr || !picking) return [];
+      const inDeck = new Set(d.cards.map((c) => norm(c.name)));
+      const names = [...new Set([...d.cards.map((c) => c.name), ...(await db.entries.where('profile').equals(profile).toArray()).map((e) => e.name)])];
+      const cs = await db.cards.where('key').anyOf(names.map(norm)).toArray();
+      return [...new Map(cs.filter((c) => /Legendary.*Creature/.test(c.type ?? '') || /can be your commander/i.test(c.text ?? '')).map((c) => [c.name, c])).values()]
+        .filter((c) => c.name !== d.commander)
+        .sort((a, b) => Number(inDeck.has(b.key)) - Number(inDeck.has(a.key)) || a.name.localeCompare(b.name))
+        .map((c) => ({ name: c.name, inDeck: inDeck.has(c.key) }));
+    }, [d?.id, d?.commander, isCmdr, picking, profile]) ?? [];
+  const shownLegends = legends.filter((c) => norm(c.name).includes(norm(q))).slice(0, 8);
   const basic = BASICS.has(norm(name));
   const toast = (t: Toast) => onToast?.(t);
   const act = (f: () => unknown) => () => (f(), onClose());
@@ -99,6 +114,40 @@ export function CardMenu({
                 <button onClick={act(() => (haptic(pin.side === 'out' ? 'undo' : 'success'), pin.onPin('out')))}>{pin.side === 'out' ? '💀 Use it again' : '💀 Never use'}</button>
               </li>
             </>
+          )}
+          {d && isCmdr && (
+            <li>
+              <button aria-expanded={picking} onClick={() => (haptic('select'), setPicking(!picking))}>
+                ⇄ Change commander… {picking ? '▲' : '▼'}
+              </button>
+              {picking && (
+                <ul className="sub">
+                  <li>
+                    <input type="search" className="subq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search legends…" aria-label="Search legendary creatures" autoFocus />
+                  </li>
+                  {shownLegends.map((c) => (
+                    <li key={c.name}>
+                      <button
+                        onClick={act(async () => {
+                          haptic('success');
+                          const before = { cards: d.cards, commander: d.commander };
+                          if (!c.inDeck) await addToDeck(d, c.name);
+                          await setCommander(d, c.name);
+                          toast({ text: `${c.name} leads the deck now`, undo: () => db.decks.update(d.id!, before) });
+                        })}
+                      >
+                        {c.name} <small>{c.inDeck ? '· in this deck' : '· in your binder'}</small>
+                      </button>
+                    </li>
+                  ))}
+                  {!shownLegends.length && (
+                    <li>
+                      <small>No legendary creature of yours matches.</small>
+                    </li>
+                  )}
+                </ul>
+              )}
+            </li>
           )}
           {d && !isCmdr && (
             <li>

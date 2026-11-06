@@ -14,7 +14,7 @@ import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
-import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -122,7 +122,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const sum = summarize(names, s.mine, s.other);
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
   const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
-  const missingCost = priceSum(missing.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
 
   // Your binder (the swap window's search, and pinned cards' types).
@@ -170,6 +169,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           return g === 'Other' || g === 'Commander' ? undefined : g;
         })
       : sections;
+  // The commander isn't repeated as a one-card section: its big card at the top is its menu.
+  const listed = placed.filter((l) => l.header !== 'Commander');
 
   async function setSwap(missingName: string, replacement: string | null) {
     const p = (await db.profiles.get(s.profile))!;
@@ -278,6 +279,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <span className="nm">
                   {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
                   {c.name}
+                  {groupOf(cardOf(c)?.type) !== 'Other' && <small className="ty"> · {groupOf(cardOf(c)?.type).replace(/s$/, '').replace(/ie$/, 'y')}</small>}
                   {nameIn(c) !== c.name && <small> · using {nameIn(c)} for now</small>}
                 </span>
               </label>
@@ -320,11 +322,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {/* The commander's own card: always full colour with a xerox look (contrast, halftone, grain). */}
             <span className="xart cmdrimg">
               <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-              {bigImg && (
-                <a href={`https://edhrec.com/commanders/${slug}`} target="_blank" rel="noreferrer" title="Open on EDHREC">
-                  <img src={bigImg} alt={`${label}: open on EDHREC`} />
-                </a>
-              )}
+              {bigImg && <CmdrCard src={bigImg} name={label} onMenu={(x, y) => setCtx({ slot: name, name, x, y })} />}
               <Xgrain />
             </span>
             <Doodles n={301} count={1} spots={[[60, 62], [-20, 4]]} />
@@ -369,12 +367,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     EDHREC ↗
                   </a>
                 </span>
-                {page && (
-                  <span className="pct">
-                    <span className="bigpct">{sum.pct}%</span>
-                    <RiseBars pct={sum.pct} />
-                  </span>
-                )}
+                {/* The match % shows once: in the COLLECTION MATCH bar below */}
               </span>
             </div>
           </div>
@@ -417,22 +410,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
           </div>
-          <div className="cell">
-            <span className="lbl">MISSING</span>
-            <div className="plate" role="img" aria-label={`Warning: missing cards cost about ${pricesIn ? money(missingCost) : 'an unknown amount'}`}>
-              <span className="wedge" aria-hidden="true">
-                <svg width="24" height="22" viewBox="0 0 24 22">
-                  <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-                  <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-                </svg>
-              </span>
-              <span className="amt">
-                <small>≈</small>
-                {pricesIn ? cad(missingCost) : 'CA$—'}
-              </span>
-              <Tape style={{ right: -14, top: -12, width: 46, height: 18, transform: 'rotate(32deg)' }} />
-            </div>
-          </div>
+          {/* No MISSING plate: the TO BUY receipt lists the same cards with their total (no repeat). */}
           <div className="cell">
             <span className="lbl">DECK</span>
             {saved ? (
@@ -452,7 +430,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {receipt && (
               <a className="jump" href="#shop">
                 {' '}
-                · shopping list ({toBuy.length}) ↓
+                · {toBuy.length} to buy{pricesIn ? ` ≈${money(toBuyCost)}` : ''} ↓
               </a>
             )}
             {/* Your decks with this commander sit on this full-width line, so the DECK cell stays as short as the
@@ -574,8 +552,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
                   </div>
                 </details>
+                <div className="viewsw mini" role="group" aria-label="Card view">
+                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                          <GridIcon />
+                        </button>
+                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                          <ListIcon />
+                        </button>
+                      </div>
               </div>
-              {placed.map((l, i) => {
+              {listed.map((l) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
                 const cs = sortBy(
@@ -602,17 +588,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
-                    {i === 0 && (
-                      // Grid / list sits in the first section (the commander's), in the space beside the card
-                      <div className={`viewsw mini${view === 'grid' && cs.length === 1 ? ' over' : ''}`} role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-                    )}
+                    
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => {
                         // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.

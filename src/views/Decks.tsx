@@ -20,8 +20,8 @@ import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfa
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, useBinder, useStored, useMenuPress, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
+import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -177,6 +177,23 @@ function DeckPanel({ deck, st, missingCost, pricesIn, sum, s }: { deck: Deck; st
   return (
     <aside className={`dpanel ${fold}`} aria-label="Deck analysis">
       <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
+      <div className="dmatch">
+        <span className="lbl">COLLECTION MATCH</span>
+        <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
+          <span className="burst" aria-hidden="true" />
+          <span className="meter">
+            <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
+              {Array.from({ length: 10 }, (_, i) => (
+                <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
+              ))}
+            </span>
+            <small>
+              You own {sum.owned} of {sum.total} in {s.binderName}
+            </small>
+          </span>
+          <span className="num">{sum.pct}%</span>
+        </div>
+      </div>
       <h2>
         <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
           ANALYSIS
@@ -492,7 +509,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     const card = cardOf(c.name);
     return { name: c.name, usd: card?.usd ? Number(card.usd) : undefined, mv: card ? (isLand(card.type) ? 99 : card.cmc) : undefined, owned: owned(c.name) };
   });
-  for (const c of sorted) sections.get(keyOf(c))?.push(c);
+  // The commander isn't repeated in the list: the big card at the top is its menu.
+  for (const c of sorted) if (c.name !== deck.commander) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
 
   return (
@@ -512,9 +530,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <div className="cimg gbox">
               <span className="xart cmdrimg">
                 <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-                <a href={scryfallUrl(cmdr.name)} target="_blank" rel="noreferrer" title="Open on Scryfall">
-                  <img src={cmdr.img.replace('/small/', '/normal/')} alt={`${cmdr.name}: open on Scryfall`} />
-                </a>
+                <CmdrCard
+                  src={cmdr.img.replace('/small/', '/normal/')}
+                  name={cmdr.name}
+                  onMenu={(x, y) => setMenu({ card: deck.cards.find((c) => c.name === deck.commander) ?? { name: cmdr.name, qty: 1 }, x, y })}
+                />
                 <Xgrain />
               </span>
             </div>
@@ -537,17 +557,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <span className="typed">
                 {[deck.commander ? `COMMANDER: ${deck.commander.split(' // ')[0].toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
               </span>
-              <span className="score">
-                <span className="mono">
-                  YOU OWN {sum.owned} OF {sum.total}
-                  <br />
-                  IN {s.binderName.toUpperCase()}
-                </span>
-                <span className="pct">
-                  <span className="bigpct">{sum.pct}%</span>
-                  <RiseBars pct={sum.pct} />
-                </span>
-              </span>
+              {/* The collection match lives above ANALYSIS on the right, so the commander and title stay clean */}
             </div>
           </div>
           {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
@@ -568,10 +578,18 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <div className="dtools" role="toolbar" aria-label="Deck view">
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+                <div className="viewsw mini" role="group" aria-label="Card view">
+                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                          <GridIcon />
+                        </button>
+                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                          <ListIcon />
+                        </button>
+                      </div>
             </div>
             {[...sections]
               .filter(([, cs]) => cs.length)
-              .map(([h, cs], i) => {
+              .map(([h, cs]) => {
                 const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
                 return (
                   <details key={h} className="cat" open>
@@ -590,17 +608,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
-                    {i === 0 && (
-                      // Grid / list sits in the first section (the commander's), in the space beside the card
-                      <div className={`viewsw mini${view === 'grid' && cs.length === 1 ? ' over' : ''}`} role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-                    )}
+                    
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => (
                         <Item
