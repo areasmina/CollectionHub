@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
@@ -157,7 +158,8 @@ export function Collection({ profile, name, s }: { profile: number; name: string
         .then((m) => snapshot(entries, m))
         .catch(() => {});
   }, [entries.length]);
-  const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
+  // name or rules text (Oracle + reminder text) or type line
+  const shown = searchByText(entries, q, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
@@ -300,7 +302,7 @@ export function Collection({ profile, name, s }: { profile: number; name: string
             search={
               <label className="sbox dark">
                 <span className="tab">SEARCH</span>
-                <input type="search" placeholder="card name_" value={q} onChange={(e) => setQ(e.target.value)} />
+                <input type="search" placeholder="name or rules text_" value={q} onChange={(e) => setQ(e.target.value)} />
                 <span aria-hidden="true" className="fade" />
               </label>
             }

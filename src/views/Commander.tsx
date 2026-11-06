@@ -7,6 +7,7 @@ import { db, type Card } from '../lib/db';
 import { BRACKETS, BUDGETS, DEFAULT_BRACKET, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
+import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
@@ -14,7 +15,7 @@ import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
-import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, SearchBox, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -167,7 +168,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const sc = recCard.get(norm(sub.name));
     const bc = binderCard.get(norm(sub.name));
     const img = (sc && cardOf(sc)?.img) ?? bc?.img ?? imgOf(sc?.id);
-    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0 };
+    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text ?? (sc && cardOf(sc)?.text) };
   };
 
   // A card swapped in sits with its own type (a creature for a sorcery joins the Creatures), so the deck stays organised.
@@ -276,6 +277,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
   const Item = view === 'grid' ? CardTile : CardLine;
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
+  const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:cshow', 'all', SHOWS.map(([v]) => v));
 
   const receipt = kind === 'average' && missing.length > 0 && (
@@ -349,29 +351,28 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <h1 aria-label={label}>
                 <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 30 : 36) : label.length > 28 ? 44 : 54} seed={11} />
               </h1>
+              {/* One tight row: colours · rank · decks · EDHREC (then the quiet deck price and salt) */}
               <div className="namerow">
                 <Pips ci={ci} size={30} />
+                <p className="cstamp" onClick={(e) => e.stopPropagation()}>
+                  <b>NO.{no ? String(no).padStart(3, '0') : '—'}</b>
+                  <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
+                  <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+                    EDHREC ↗
+                  </a>
+                </p>
                 {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
               </div>
             </div>
           </div>
         </section>
 
-        {/* Rank, deck count and EDHREC on one small meta line under the hero (the commander zone stays clean) */}
-        <p className="cmetaline">
-          <span>NO.{no ? String(no).padStart(3, '0') : '—'}</span>
-          <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
-          <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-            EDHREC ↗
-          </a>
-        </p>
-
         {/* One slim bar that stays in reach while you scroll the cards: POWER, BUDGET, what's missing (the one loud
             price, on yellow tape) and FORGE IT. */}
         <section className="slimbar" aria-label="Deck settings">
           <div className="cell">
             <span className="lbl">POWER</span>
-            <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), `Bracket ${b}`])} onChange={setBracket} />
+            <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
             {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
           </div>
           <div className="cell">
@@ -569,6 +570,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               {/* How the cards are ordered and filtered, right above them */}
               {/* One FILTERS button: sort and show (and later EDHREC's with/without card) live in its sheet. */}
               <div className="dtools" role="toolbar" aria-label="Card order and filter">
+                <SearchBox q={q} setQ={setQ} />
                 <details className="fsheet">
                   <summary>
                     <span className="ft">FILTERS</span>
@@ -640,7 +642,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
                 const cs = sortBy(
-                  l.cards.filter((c) => shows(show, own(c))),
+                  searchByText(l.cards.filter((c) => shows(show, own(c))), q, (c) => ({ name: nameIn(c), type: cardOf(c)?.type, text: cardOf(c)?.text })),
                   sort,
                   (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
                 );

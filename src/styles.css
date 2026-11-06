@@ -8851,3 +8851,376 @@ a.misscost:hover {
     margin-left: 26px;
   }
 }
+
+/* ===== Deck colours (Nov 6): every deck has its own colour; its light, its tile edge and its cards' glow use it ===== */
+.dlight.on i {
+  background: var(--dc, #2bd65a);
+  box-shadow: 0 0 8px var(--dc, #2bd65a);
+}
+.shelf li:not(.off) > button,
+.dgrid li.dtile:not(.off) > .dcard {
+  box-shadow: inset 0 -5px 0 var(--dc, transparent);
+}
+/* deck page: ACTIVE / OFF sits at the end of the deck's name */
+.dhero .titlerow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp2) var(--sp3);
+}
+.dhero .titlerow > h1 {
+  margin: 0;
+}
+.dhero .titlerow > .dlight {
+  position: relative;
+  z-index: 2;
+  transform: rotate(-3deg);
+}
+/* deck menu: colour swatches */
+.deckmenu .colourrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  padding: var(--sp2) var(--sp3);
+}
+.deckmenu .colourrow .cl {
+  font-family: var(--an);
+  font-size: 16px;
+}
+.deckmenu .colourrow .cl small {
+  font-family: var(--se);
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: var(--sp1);
+}
+.deckmenu .swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.deckmenu .swatches button {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.deckmenu .swatches button[aria-checked='true'] {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+/* collection: a card in an active deck glows faintly in that deck's colour (full on hover); dots name the decks */
+.ctile.live .cart {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dc, rgb(120, 200, 120)) 40%, transparent), 0 0 12px color-mix(in srgb, var(--dc, rgb(120, 200, 120)) 22%, transparent);
+}
+.ctile.live:hover .cart,
+.ctile.live:focus-within .cart {
+  box-shadow: 0 0 0 2px var(--dc, rgb(120, 200, 120)), 0 0 20px color-mix(in srgb, var(--dc, rgb(120, 200, 120)) 50%, transparent);
+}
+@media (hover: hover) {
+  .ctile.live:hover .timg > .pen {
+    border-color: var(--dc, rgb(120, 200, 120));
+  }
+}
+.ctile .cart > .inuse {
+  color: var(--white);
+}
+.inuse i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 2px;
+  vertical-align: 0;
+  box-shadow: 0 0 5px currentColor;
+}
+/* collection tile name: a grey tab that sits on the card's top border, like a file tab */
+.ctile > .tname {
+  align-self: center;
+  max-width: 92%;
+  margin: 0 0 -3px;
+  padding: 3px 10px 3px;
+  position: relative;
+  z-index: 2;
+  background: #3b3b3b;
+  color: var(--white);
+  border: 2px solid var(--pen);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+.ctile.live > .tname {
+  border-color: color-mix(in srgb, var(--dc, var(--pen)) 70%, var(--pen));
+}
+/* copy diamonds: centred under the card, lit ones glow, empty ones keep a faint rim light */
+.ctile > .tally {
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--sp2);
+}
+.ctile > .tally .marks i {
+  background: #2e2e2e;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.08);
+}
+.ctile > .tally .marks i.on {
+  filter: drop-shadow(0 0 4px rgba(255, 205, 70, 0.95)) drop-shadow(0 0 9px rgba(255, 205, 70, 0.45));
+}
+
+/* Swap window: SWAP <card> · search · ✕ on one header line; big card left, top 3 (or search results) right */
+.swapnote .nh {
+  align-items: center;
+}
+.swapnote .nh > span:first-child {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swapnote .swapq.top {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.swapnote .swapq.top input {
+  width: 100%;
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .swapnote .nh {
+    flex-wrap: wrap;
+  }
+  .swapnote .nh > span:first-child {
+    max-width: calc(100% - 56px);
+  }
+  .swapnote .swapq.top {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* ===== One toolbar everywhere (Nov 6): SEARCH · GROUP / SORT / FILTERS · grid / list, in one frame, the same bar as the
+   Collection's. Segments are split by thin rules; dropdowns open below the bar. ===== */
+.lists > .dtools,
+.dtools:has(> .fsheet) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  position: relative;
+  margin: 0 0 var(--sp3);
+  border: 3px solid var(--text);
+  background: var(--bg);
+}
+.lists > .dtools > * {
+  margin: 0;
+}
+.lists > .dtools > * + * {
+  border-left: 1px solid #3a3a3a;
+}
+.lists > .dtools > .tsearch {
+  flex: 1 1 auto;
+  min-width: 140px;
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+.lists > .dtools > .sbox.pick {
+  flex: 0 1 auto;
+  min-width: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.lists > .dtools > .sbox.pick select {
+  background: transparent;
+  color: var(--text);
+}
+.lists > .dtools > .sbox.pick .arrow {
+  background: transparent;
+}
+.lists > .dtools > .fsheet {
+  flex: 0 0 auto;
+  width: auto;
+  position: static;
+}
+.lists > .dtools > .fsheet > summary {
+  min-height: 48px;
+  height: 100%;
+  padding: 0 0 0 var(--sp2);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  gap: var(--sp2);
+}
+.lists > .dtools > .fsheet .fnow {
+  max-width: 200px;
+  color: var(--muted);
+}
+.lists > .dtools > .fsheet .arrow {
+  width: 40px;
+  background: transparent;
+  color: var(--text);
+}
+.lists > .dtools > .fsheet[open] > summary {
+  background: var(--accent);
+  color: var(--white);
+}
+.lists > .dtools > .fsheet[open] .fnow {
+  color: var(--white);
+}
+.lists > .dtools > .fsheet > .fbody {
+  position: absolute;
+  z-index: 25;
+  left: -3px;
+  right: -3px;
+  top: calc(100% + 3px);
+  border: 3px solid var(--text);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.lists > .dtools > .viewsw.mini {
+  float: none;
+  position: static;
+  display: flex;
+  flex: 0 0 auto;
+  margin: 0;
+}
+.lists > .dtools > .viewsw.mini button {
+  height: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text);
+}
+.lists > .dtools > .viewsw.mini button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--white);
+}
+@media (max-width: 700px) {
+  /* phones: SEARCH takes the first row, the rest share the second */
+  .lists > .dtools,
+  .dtools:has(> .fsheet) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .lists > .dtools > .tsearch {
+    flex-basis: 100%;
+    border-left: 0;
+    border-bottom: 1px solid #3a3a3a;
+  }
+  .lists > .dtools > .tsearch .tab {
+    display: none;
+  }
+  .lists > .dtools > .tsearch + * {
+    border-left: 0;
+  }
+  .lists > .dtools > .sbox.pick,
+  .lists > .dtools > .fsheet {
+    flex: 1 1 0;
+  }
+  .lists > .dtools > .fsheet .fnow {
+    display: none;
+  }
+}
+/* commander header: the rank strip sits in the same row as the colour pips */
+.namerow > .cstamp {
+  margin: 0;
+  align-self: center;
+}
+
+/* Compact strip (Nov 6): match bar and built-around share a row on wide screens; tighter padding; slimmer bar */
+.strip {
+  padding: var(--sp3) var(--sp4) var(--sp2);
+  gap: var(--sp2) var(--sp5);
+  align-items: center;
+}
+.strip .cell.wide {
+  gap: var(--sp1);
+}
+.strip .cell.wide > .lbl {
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.strip .match {
+  height: 46px;
+}
+.strip .match .burst {
+  top: -30px;
+  width: 100px;
+  height: 100px;
+}
+.strip .builtaround > span {
+  font-size: 14px;
+}
+.strip .hint {
+  padding-top: var(--sp2);
+  font-size: 13px;
+}
+.strip .hint.warn {
+  padding: var(--sp1) var(--sp3);
+}
+@media (min-width: 900px) {
+  .strip {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
+  }
+  .strip .cell.wide,
+  .strip .builtaround {
+    grid-column: auto;
+  }
+  .strip .builtaround {
+    align-self: end;
+  }
+}
+
+/* One price sticker everywhere: deck and commander tiles use Collection's yellow tape on the art's top-right corner.
+   Cards you own: folded back, it peels on while you hover or focus the card. Cards to buy: always on. */
+.ztile > .price.tapey {
+  position: absolute;
+  z-index: 5;
+  top: -10px;
+  right: -8px;
+  font-size: 12px;
+  padding: 1px 8px;
+  color: #141414;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  transform: rotate(4deg);
+}
+.ztile.owned > .price.tapey {
+  transform-origin: 100% 50%;
+  transform: perspective(240px) rotate(4deg) rotateY(-95deg);
+  clip-path: inset(0 0 0 100%);
+  transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1), clip-path 0.22s ease-out;
+}
+.ztile.owned:hover > .price.tapey,
+.ztile.owned:focus-within > .price.tapey {
+  transform: perspective(240px) rotate(4deg) rotateY(0deg);
+  clip-path: inset(0 0 0 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ztile.owned > .price.tapey { transition: none; }
+}
+@media (hover: none) {
+  .ztile.owned > .price.tapey {
+    transform: rotate(4deg) scale(0.85);
+    clip-path: none;
+  }
+}
+/* ⋯ moves to the art's top-left so it never sits under the sticker (same as Collection) */
+.ztile:not(.ctile) .tacts > .morebtn {
+  left: 8px;
+  right: auto;
+}
+/* list rows: the tape sits inline, like Collection's list */
+.zrow .price.tapey {
+  font-size: 13px;
+  padding: 1px 8px;
+  color: #141414;
+}

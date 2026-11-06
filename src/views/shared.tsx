@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { deckColour } from '../lib/deckcolor';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { statusOf } from '../lib/compare';
@@ -26,6 +27,7 @@ export function DeckLight({ deck }: { deck: Deck }) {
   return (
     <button
       className={`dlight${on ? ' on' : ''}`}
+      style={{ '--dc': deckColour(deck) } as React.CSSProperties}
       aria-pressed={on}
       aria-label={`${deck.name}: ${on ? 'active, tap to put it away' : 'put away, tap to make it active'}`}
       title={on ? 'Active: its cards count as in use in your binder' : 'Put away: its cards are free in your binder'}
@@ -237,7 +239,7 @@ export function CardLine({
             ⋯
           </button>
         )}
-        <PriceLink card={card} plain={st === 'owned' && !marker} />
+        <PriceLink card={card} tape={name} />
       </span>
       {children}
     </li>
@@ -285,8 +287,9 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
             ⋯
           </button>
         )}
-        <PriceLink card={card} plain={st === 'owned' && !marker} />
       </span>
+      {/* the same peel-on tape sticker as Collection: on the art's top-right corner */}
+      <PriceLink card={card} tape={name} />
       {children}
     </li>
   );
@@ -487,5 +490,16 @@ export function CmdrCard({ src, name, onMenu, children }: { src: string; name: s
         </span>
       )}
     </button>
+  );
+}
+
+/** The SEARCH segment every toolbar starts with: cards by name or rules text (Oracle + reminder text). */
+export function SearchBox({ q, setQ, placeholder = 'name or rules text_' }: { q: string; setQ: (v: string) => void; placeholder?: string }) {
+  return (
+    <label className="sbox dark tsearch">
+      <span className="tab">SEARCH</span>
+      <input type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards by name or rules text" />
+      <span aria-hidden="true" className="fade" />
+    </label>
   );
 }

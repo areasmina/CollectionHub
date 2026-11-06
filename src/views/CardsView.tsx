@@ -6,14 +6,15 @@ import { PriceLink, priced, Thumb, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
 import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
+import { colourByCard } from '../lib/deckcolor';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 type MenuFn = (e: Entry, x: number, y: number) => void;
 /** A card row / tile with the card menu: right-click, press and hold, or its ⋯ button. */
-function MenuLi({ e, onMenu, className, children }: { e: Entry; onMenu?: MenuFn; className: string; children: React.ReactNode }) {
+function MenuLi({ e, onMenu, className, children, tint }: { e: Entry; onMenu?: MenuFn; className: string; children: React.ReactNode; tint?: string }) {
   const press = useMenuPress(onMenu && ((x, y) => onMenu(e, x, y)));
   return (
-    <li className={`${className}${onMenu ? ' hasmenu' : ''}`} {...press}>
+    <li className={`${className}${onMenu ? ' hasmenu' : ''}`} style={tint ? ({ '--dc': tint } as React.CSSProperties) : undefined} {...press}>
       {children}
       {onMenu && (
         <button
@@ -175,13 +176,17 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]> }) {
+function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]>; tints?: Map<string, string[]> }) {
   // In your active decks: a small mark under the name ("in 2 decks", the deck names on hover).
   const useMark = (e: Entry) => {
     const ds = used?.get(norm(e.name));
     return ds?.length ? (
       <span className="inuse" title={`In ${ds.join(', ')}`}>
-        ● in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
+        {/* one dot per deck, in that deck's colour */}
+        {(tints?.get(norm(e.name)) ?? []).map((c) => (
+          <i key={c} style={{ background: c }} aria-hidden="true" />
+        ))}{' '}
+        in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
       </span>
     ) : null;
   };
@@ -190,7 +195,7 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
     return (
       <ul className="zgrid cgrid2">
         {list.map((e) => (
-          <MenuLi key={e.id} e={e} onMenu={onMenu} className={`ztile owned ctile${used?.get(norm(e.name))?.length ? ' live' : ''}`}>
+          <MenuLi key={e.id} e={e} onMenu={onMenu} className={`ztile owned ctile${used?.get(norm(e.name))?.length ? ' live' : ''}`} tint={tints?.get(norm(e.name))?.[0]}>
             {/* Name on top; clean art (price sticker and "in N decks" show on hover); Arena-style copy pips centred below */}
             <span className="tname" title={setLine(e)}>
               {e.name}
@@ -245,6 +250,7 @@ export function CardsView({ entries, cards, profile, binderName, search, more, t
   }, [toast]);
   const decks = useLiveQuery(() => (profile ? db.decks.where('profile').equals(profile).toArray() : []), [profile]) ?? [];
   const used = inUse(decks);
+  const tints = colourByCard(decks, norm); // each card glows in the colour of its deck
   const onMenu: MenuFn | undefined = profile ? (e, x, y) => setMenu({ e, x, y }) : undefined;
   const owned = (name: string) => entries.filter((x) => norm(x.name) === norm(name)).reduce((n, x) => n + x.qty, 0);
   // Always opens in grid; LIST switches for this visit only.
@@ -347,14 +353,14 @@ export function CardsView({ entries, cards, profile, binderName, search, more, t
                     {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
         </div>
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)

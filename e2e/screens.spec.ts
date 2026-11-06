@@ -203,7 +203,7 @@ test('Deck names open the deck: commander page and the copies warning', async ({
 test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dtools .sbox')).toHaveCount(2);
+  await expect(page.locator('.dtools .sbox')).toHaveCount(3); // search + two filters
   await fits(page, ['.lists > .dtools']);
   const group = page.locator('.dtools select').first();
   await group.selectOption('show:missing'); // every seeded card is owned
@@ -269,7 +269,7 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(4);
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(5); // search first, then the filters
   await fits(page, ['.lists > .dtools']);
   const sw = page.locator('.dtools .viewsw.mini');
   await expect(sw).toBeVisible();
@@ -412,7 +412,8 @@ test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ pa
 test('Deck light: active decks mark their cards in use in Collection; off frees them', async ({ page }, info) => {
   await go(page, 'collection');
   const sol = page.locator('li', { hasText: 'Sol Ring' }).first();
-  await expect(sol.locator('.inuse')).toHaveText('● in 1 deck');
+  await expect(sol.locator('.inuse')).toHaveText('in 1 deck');
+  await expect(sol.locator('.inuse i')).toHaveCount(1); // one dot, in the deck's colour
   await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
   await page.locator('.shelf .dlight').first().click();
   await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);

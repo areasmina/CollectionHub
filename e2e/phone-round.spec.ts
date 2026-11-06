@@ -63,7 +63,7 @@ test('Design brief: sticky slim bar, quiet totals, meta line, small sections sid
   await expect(bar.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
   await expect(bar.locator('.forgecell')).toBeVisible();
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
-  await expect(page.locator('.cmetaline')).toContainText('DECKS');
+  await expect(page.locator('.namerow .cstamp')).toContainText('DECKS');
   // the deck total is quiet text, not yellow tape; section totals too
   expect(await page.locator('.hstats .price').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   expect(await page.locator('.cat > summary .gval').first().evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
@@ -72,10 +72,39 @@ test('Design brief: sticky slim bar, quiet totals, meta line, small sections sid
   expect(Math.abs(a!.y - b!.y)).toBeLessThan(4);
   await fits(page, ['.slimbar', '.lists']);
   // scroll down: the bar sticks to the top, the nav slides away; scroll up: the nav is back
-  await page.mouse.wheel(0, 900);
+  // (not all the way down: at the very bottom the nav comes back on purpose)
+  const room = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  await page.mouse.wheel(0, Math.min(900, room - 120));
   await expect(page.locator('.pillnav.away')).toHaveCount(1);
   expect(Math.round((await bar.boundingBox())!.y)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `test-results/brief-scrolled-${info.project.name}.png` });
   await page.mouse.wheel(0, -300);
   await expect(page.locator('.pillnav.away')).toHaveCount(0);
+});
+
+test('Nov 6 batch: rules-text search, one price tape, swap window search up top, deck colour', async ({ page }, info) => {
+  await page.locator('.ccard').first().click();
+  // search by rules text, not just the name: "landfall" finds Lotus Cobra
+  const box = page.locator('.lists > .dtools .tsearch input');
+  await box.fill('landfall');
+  await expect(page.locator('.ztile', { hasText: 'Lotus Cobra' }).first()).toBeVisible();
+  await expect(page.locator('.ztile', { hasText: 'Counterspell' })).toHaveCount(0);
+  await box.fill('');
+  // every priced tile wears Collection's tape sticker on its corner
+  const tape = page.locator('.ztile > .price.tapey').first();
+  await expect(tape).toHaveCount(1);
+  expect(await tape.evaluate((e) => getComputedStyle(e).position)).toBe('absolute');
+  // the swap window's search sits in its header, beside the title
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const dlg = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  await expect(dlg.locator('.nh .swapq input')).toBeVisible();
+  await page.screenshot({ path: `test-results/nov6-swap-${info.project.name}.png` });
+  await dlg.getByRole('button', { name: 'Close' }).click();
+  // Collection: search reads rules text too
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  await page.locator('input[placeholder="name or rules text_"]').first().fill('counter target');
+  await expect(page.locator('li', { hasText: 'Counterspell' }).first()).toBeVisible();
+  await expect(page.locator('li', { hasText: 'Sol Ring' })).toHaveCount(0);
+  await page.screenshot({ path: `test-results/nov6-collection-${info.project.name}.png` });
 });
