@@ -6,6 +6,8 @@ import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
 import { comboBreaks, swapEffect } from '../brain/combos';
 import { scryfallUrl, showPreview } from './shared';
 import { Tape } from './zine';
+import { WhyCard } from './Verdict';
+import type { Why } from '../brain/why';
 
 // Hover preview only with a real mouse: a tap on a phone also fires a fake hover.
 const mouse = () => typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -16,6 +18,7 @@ export interface SwapOption {
   big?: string; // readable image
   owned: number;
   text?: string; // rules text (Oracle + reminder text), for the search
+  inUse?: { text: string; lock: boolean; colour?: string }; // "in Atraxa" / "held by Atraxa" (only when another deck uses it)
 }
 
 /** A suggestion row: hover (mouse) shows it in the viewer; press and hold (touch) shows it full screen; tap swaps. */
@@ -52,6 +55,13 @@ function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; mis
               <span key={r}>{r}</span>
             ))}
           </span>
+          {o.inUse && (
+            <span className="inchip" style={o.inUse.colour ? ({ '--dc': o.inUse.colour } as React.CSSProperties) : undefined}>
+              <i aria-hidden="true" />
+              {o.inUse.lock && <span aria-label="reserved">🔒</span>}
+              {o.inUse.text}
+            </span>
+          )}
         </span>
       </button>
     </li>
@@ -79,8 +89,10 @@ export function SwapNote({
   onClose,
   deck,
   bracket = 4,
+  whyCard,
 }: {
   deck?: string[]; // every card in the deck now (commander included): for combo warnings
+  whyCard?: Why; // the brain's "Why this card?" for the card in the slot now
   bracket?: number; // 2–5: which combos the rules allow
   name: string; // EDHREC's card in this slot
   missing: SubCard;
@@ -181,14 +193,20 @@ export function SwapNote({
         >
           {shown && <img src={shown} alt="" />}
           <small>{look ? `↔ instead of ${now}` : replaced ? `EDHREC’s card for this slot` : 'why it’s in the deck'}</small>
-          {!look && why.length > 0 && (
+          {whyCard && (
+            // kept in place while a suggestion is previewed, so the drop target doesn't change size mid-drag
+            <div style={look ? { visibility: 'hidden' } : undefined}>
+              <WhyCard why={whyCard} />
+            </div>
+          )}
+          {!look && !whyCard && why.length > 0 && (
             <span className="whys">
               {why.map((r) => (
                 <span key={r}>{r}</span>
               ))}
             </span>
           )}
-          {!look && breaks.length > 0 && (
+          {!look && !whyCard && breaks.length > 0 && (
             <p className="combowarn" role="note">
               ⚠ Part of {breaks.length > 1 ? `${breaks.length} combos` : 'a combo'}: {breaks.slice(0, 3).map((c) => c.cards.join(' + ')).join(' · ')}. Swapping it out breaks {breaks.length > 1 ? 'them' : 'it'}.
             </p>

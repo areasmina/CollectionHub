@@ -10079,3 +10079,286 @@ details.dash[open] > *:not(summary) {
     padding-top: 12px;
   }
 }
+/* A) Coverage line under the tool bar: where the 99 comes from */
+.lists > .coverage {
+  margin: 6px 0 10px;
+  font-family: var(--se);
+  font-size: 13px;
+  color: var(--text, #f1ebdc);
+  opacity: 0.85;
+}
+.lists > .coverage .cmode {
+  color: var(--r, #e5141f);
+}
+/* D) BUY UNDER: a buy suggestion over the cap stays listed, struck lightly and marked */
+.receipt li.over .nm {
+  opacity: 0.6;
+}
+.receipt li.over .overcap {
+  font-weight: 700;
+}
+/* C) "in <deck>" chip on a swap suggestion: small, grey, the deck's colour dot; only when another deck uses the copy */
+.inchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border: 1px solid #555;
+  background: #222;
+  color: #bbb;
+  font-family: var(--se);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.inchip > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dc, #888);
+}
+/* B) The receipt flips: TO BUY on the front, PULL (cards to take from your binder) on the back, plus PRINT */
+.receipt .rflip {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.receipt .rflip button {
+  min-height: 36px;
+  padding: 2px 10px;
+  border: 2px solid #141414;
+  background: transparent;
+  color: #141414;
+  font-family: var(--an);
+  font-size: 14px;
+  cursor: pointer;
+}
+.receipt .rflip button[aria-pressed='true'] {
+  background: #141414;
+  color: #f1ebdc;
+}
+.receipt .rflip .rprint {
+  margin-left: auto;
+}
+.receipt.back {
+  animation: rflip 0.35s ease-out both;
+}
+@keyframes rflip {
+  from {
+    transform: rotateY(90deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .receipt.back {
+    animation: none;
+  }
+}
+@media print {
+  html.printing body * {
+    visibility: hidden !important;
+  }
+  html.printing .receipt,
+  html.printing .receipt * {
+    visibility: visible !important;
+  }
+  html.printing .receipt {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  html.printing .receipt .rflip {
+    display: none !important;
+  }
+}
+/* Collection top, round 2 (Nov 6): the binder's name is a tag on the COLLECTION title; IMPORT sits in the MY DECKS bar;
+   the overview's numbers show once (summary line only while closed) */
+.chead2 .titlewrap > .bindermenu {
+  position: relative;
+  z-index: 3;
+  margin: -14px 0 0 12px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+}
+.chead2 .titlewrap > .bindermenu > .bmbtn {
+  transform: rotate(-2deg);
+}
+details.dash > summary .dsum.dhide {
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+.shelf .shelfhead {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.shelf .shelfhead > .importbox {
+  margin: 0 0 0 auto;
+}
+.shelf .shelfhead > .importbox > summary {
+  min-height: 44px;
+  padding-right: 10px;
+  gap: 8px;
+}
+.shelf .shelfhead > .importbox > summary .stripe {
+  width: 14px;
+}
+.shelf .shelfhead > .importbox > summary b {
+  font-size: 18px;
+}
+.shelf .shelfhead > .importbox[open] {
+  flex: 1 1 100%;
+  margin: 8px 0 0;
+}
+.shelf .shelfhead > .importbox[open] > summary {
+  width: max-content;
+  margin-left: auto;
+}
+details.dash > summary .dsum > span {
+  display: inline-block;
+}
+details.dash > summary .dsum {
+  white-space: normal;
+}
+
+/* the binder menu opens over the sticky tool bar below the title */
+main > .chead2 {
+  position: relative;
+  z-index: 40;
+}
+/* Build Readiness + Bracket Fit tiles beside Collection Match (logic: brain/validate.ts); tap for the checks */
+.vtiles {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 4px;
+}
+.vtile {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.vtile > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 56px;
+  padding: 6px 10px;
+  background: #141414;
+  color: #f1ebdc;
+  border: 2px solid #141414;
+  box-shadow: 3px 3px 0 var(--r, #e5141f);
+}
+.vtile > summary::-webkit-details-marker {
+  display: none;
+}
+.vtile .lbl {
+  font-family: var(--an);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+.vtile b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1;
+}
+.vtile small {
+  font-family: var(--se);
+  font-size: 11px;
+  opacity: 0.8;
+}
+.vtile.v-ready b,
+.vtile.f-fits b,
+.vtile.f-under b {
+  color: #3ddc5a;
+}
+.vtile.v-almost b {
+  color: var(--y, #ffd400);
+}
+.vtile.v-not-ready b,
+.vtile.v-not-legal b,
+.vtile.f-over b {
+  color: #ff4a4a;
+}
+.vtile .vpop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 10px 12px;
+  background: #f1ebdc;
+  color: #141414;
+  border: 2px solid #141414;
+  box-shadow: 4px 4px 0 #141414;
+  font-family: var(--se);
+  font-size: 13px;
+}
+.vtile.fit .vpop {
+  left: auto;
+  right: 0;
+}
+.vtile .vpop ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vtile .vpop li {
+  display: flex;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed #999;
+}
+.vtile .vpop li .mk {
+  flex: none;
+  width: 16px;
+  font-weight: 700;
+}
+.vtile .vpop li.ok .mk {
+  color: #1f9a3a;
+}
+.vtile .vpop li.no .mk {
+  color: var(--r, #e5141f);
+}
+.vtile .vpop .says {
+  display: block;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.vtile .vpop p {
+  margin: 0 0 6px;
+}
+/* "Why this card?" in the swap window */
+.whycard {
+  margin: 6px 0;
+  font-family: var(--se);
+  font-size: 13px;
+}
+.whycard .wh {
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+.whycard .wparts {
+  margin: 0 0 4px;
+  padding-left: 16px;
+}
+.whycard .wcombo,
+.whycard .wnote {
+  margin: 2px 0;
+  font-size: 12px;
+}
+.whycard .wnote {
+  color: var(--r, #e5141f);
+}

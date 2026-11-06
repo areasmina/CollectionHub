@@ -2,11 +2,11 @@ import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
-import { statusOf, summarize } from '../lib/compare';
+import { BASICS, statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, BUDGETS, DEFAULT_BRACKET, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, BUDGETS, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
-import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
+import { cad, fetchedNote, rateNote, shopUrl, toCad } from '../lib/prices';
 import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
@@ -21,6 +21,15 @@ import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
+import { allocate } from '../lib/allocation';
+import { bracketFit, readiness } from '../brain/validate';
+import { whyCard } from '../brain/why';
+import { bracketOf } from '../lib/deckstats';
+import { gameChangers } from '../lib/scryfall';
+import { ReadyTiles } from './Verdict';
+import { deckColour } from '../lib/deckcolor';
+import { inUseChip } from '../brain/chips';
+import { BUY_CAPS, coverage, coverageText, overCap, OWN_MODES, ownedOnly, type OwnMode } from '../brain/modes';
 import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
@@ -32,6 +41,11 @@ import { CardMenu, type Toast } from './CardMenu';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
+/** Where a deck opened from Discover starts: MED power (bracket 4) and MAX budget ($$$). */
+const OPEN_BRACKET = 'optimized';
+const OPEN_BUDGET = 'expensive';
+/** The POWER dial also sets how hungry the build checks are (Min = patient, Med = hungry, Max = lethal). */
+const AGGRESSION_OF: Record<string, 'patient' | 'hungry' | 'lethal'> = { '': 'hungry', upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' };
 const SHOW_AS_COMMANDER = false;
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -51,9 +65,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   }, []);
   const slug = toSlug(name);
   const [kind, setKind] = useState<'commander' | 'average'>(SHOW_AS_COMMANDER ? 'commander' : 'average');
-  const [bracket, setBracket] = useState(DEFAULT_BRACKET);
+  // A deck opened from Discover starts at MED power and MAX ($$$) budget (owner's call, Nov 6); thin commanders fall back.
+  const [bracket, setBracket] = useState(OPEN_BRACKET);
   const [noBracket, setNoBracket] = useState(false); // EDHREC has no page for this bracket: showing all brackets
-  const [budget, setBudget] = useState('');
+  const [budget, setBudget] = useState(OPEN_BUDGET);
+  const [noBudget, setNoBudget] = useState(false); // no page at this budget: showing any budget
   const [tag, setTag] = useState('');
   const [allTags, setAllTags] = useState(false);
   const [page, setPage] = useState<EdhPage | null>(null);
@@ -99,15 +115,23 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     // Saved pages show at once; pages over a day old are refreshed quietly behind them.
     // No page for this bracket (thin commanders): the same view across all brackets, said under the bracket switch.
     setNoBracket(false);
+    setNoBudget(false);
+    // Fallbacks, in order: this power at any budget, then every bracket at any budget.
     showPage(path, (p) => live && setPage(p))
+      .catch((e) => {
+        if (!(e instanceof NoPage) || !budget) throw e;
+        if (live) setNoBudget(true);
+        return showPage(pagePath(kind, slug, bracket, tag, ''), (p) => live && setPage(p));
+      })
       .catch((e) => {
         if (!(e instanceof NoPage) || !bracket) throw e;
         if (live) setNoBracket(true);
-        return showPage(pagePath(kind, slug, '', tag, budget), (p) => live && setPage(p));
+        return showPage(pagePath(kind, slug, '', tag, ''), (p) => live && setPage(p));
       })
       .catch((e) => live && setError(e.message));
     if (kind === 'average')
       showPage(pagePath('commander', slug, bracket, tag, budget), (p) => live && setRecs(p))
+        .catch(() => showPage(pagePath('commander', slug, bracket, tag, ''), (p) => live && setRecs(p)))
         .catch(() => showPage(pagePath('commander', slug, '', tag, budget), (p) => live && setRecs(p)))
         .catch(() => showPage(pagePath('commander', slug), (p) => live && setRecs(p)))
         .catch(() => {});
@@ -168,6 +192,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
   const byName = new Map(all.map((c) => [c.name, c]));
   const binderType = new Map(binder.map((c) => [c.key, c.type]));
+  // OWNED ONLY / PREFER OWNED and the buy cap (per device): see brain/modes.ts for the rules.
+  const [ownMode, setOwnMode] = useStored<OwnMode>('ch:own', 'prefer', OWN_MODES.map(([v]) => v));
+  const [capS, setCap] = useStored('ch:buycap', '0', BUY_CAPS.map(([v]) => v));
+  const cap = Number(capS);
   // The deck after your swaps and pins (slot = EDHREC's card).
   const eff = arrange(
     [...byName.values()].map((c) => ({ name: c.name, qty: c.qty ?? 1, type: slotInfo(c).type, incl: recInfo.get(norm(c.name))?.incl })),
@@ -176,6 +204,15 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     (slot, used) => rankSubs(slotInfo(byName.get(slot)!), owned.filter((o) => !used.has(norm(o.name))), 1)[0]?.name,
     { commander: name, typeOf: (n) => binderType.get(norm(n)) },
   );
+  // OWNED ONLY: slots still holding a card you don't own take the best owned stand-in (never the commander).
+  if (kind === 'average' && ownMode === 'owned')
+    for (const [slot, r] of ownedOnly(
+      [...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ slot: k, name: v.name, qty: byName.get(k)?.qty ?? 1 })),
+      (n) => statusOf(n, s.mine) === 'owned',
+      (slot, used) => rankSubs(slotInfo(byName.get(slot)!), owned.filter((o) => !used.has(norm(o.name))), 1)[0]?.name,
+      norm,
+    ))
+      eff.set(slot, { name: r, why: 'auto' });
   const nameIn = (c: EdhCard) => eff.get(c.name)?.name ?? c.name;
   const inDeck = new Set([...eff.values()].map((x) => norm(x.name)));
   const candidates = owned.filter((c) => !inDeck.has(norm(c.name)));
@@ -186,7 +223,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const sc = recCard.get(norm(sub.name));
     const bc = binderCard.get(norm(sub.name));
     const img = (sc && cardOf(sc)?.img) ?? bc?.img ?? imgOf(sc?.id);
-    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text ?? (sc && cardOf(sc)?.text) };
+    const use = inUseChip(alloc, sub.name, (d) => sameCmdr.has(d));
+    const inUse = use && { ...use, colour: deckCol.get(use.deck) };
+    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text ?? (sc && cardOf(sc)?.text), inUse };
   };
 
   // A card swapped in sits with its own type (a creature for a sorcery joins the Creatures), so the deck stays organised.
@@ -283,6 +322,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   // Your own decks led by this commander: one tap opens them.
   const mine = decks.filter((d) => d.commander === name).sort((a, b) => b.updated - a.updated);
   const thisDeck = `this ${name.split(' // ')[0]} deck`;
+  // Copies your other decks use, for the swap window's "in <deck>" chip (saved decks of this commander are this deck).
+  const alloc = allocate(decks, s.mine);
+  const sameCmdr = new Set(mine.map((d) => d.name));
+  const deckCol = new Map(decks.map((d) => [d.name, deckColour(d)]));
   const short = page
     ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
     : [];
@@ -306,6 +349,24 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
       .sort((a, b) => (recInfo.get(norm(a[0]))?.incl ?? 1) - (recInfo.get(norm(b[0]))?.incl ?? 1))[0]?.[0];
     return slot ? { ...pick, slot } : undefined;
   })();
+  // Build Readiness, Bracket Fit and "Why this card?" (brain/validate.ts, brain/why.ts: logic there, shown here).
+  const [gc, setGc] = useState<Set<string> | null>(null);
+  useEffect(() => void gameChangers().then((g) => setGc(g ?? null)).catch(() => {}), []);
+  const edhByNorm = new Map([...all, ...(sugg?.lists ?? []).flatMap((l) => l.cards)].map((c) => [norm(c.name), c as EdhCard]));
+  const cardByName = (n: string) => {
+    const ec = edhByNorm.get(norm(n));
+    return (ec && cardOf(ec)) ?? binderCard.get(norm(n)) ?? (norm(n) === norm(name) ? cmdr : undefined);
+  };
+  const deckNow = [{ name, qty: 1 }, ...[...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ name: v.name, qty: byName.get(k)?.qty ?? 1 }))];
+  const aggression = AGGRESSION_OF[bracket] ?? 'hungry';
+  const ready = page && kind === 'average' ? readiness({ deck: deckNow, cardOf: cardByName, commander: name, identity: ci, bracket: bracketNum, aggression }) : undefined;
+  const fit = page && kind === 'average' ? bracketFit(bracketOf(deckNow.map((c) => ({ name: c.name, card: cardByName(c.name) })), gc), bracketNum) : undefined;
+  const whyOf = (slot: string) => {
+    const sl = eff.get(slot);
+    const now = sl?.name ?? slot;
+    const how = sl && sl.name !== slot ? (sl.why === 'pin' ? 'pin' : sl.why === 'auto' || sl.why === 'never' ? 'stand-in' : 'swap') : undefined;
+    return whyCard({ name: now, ctx: { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression }, rec: recInfo.get(norm(now)), how, slot: how ? slot : undefined, gc });
+  };
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
   // Grid (card images) is the default; the choice is remembered on this device.
@@ -330,9 +391,73 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:cshow', 'all', SHOWS.map(([v]) => v));
 
-  const receipt = kind === 'average' && missing.length > 0 && (
-    <aside className="receipt gbox" id="shop" aria-label="Shopping list">
-      <Doodles n={377} count={1} spots={[[64, 2]]} paper />
+  // B) The receipt's back: the PULL list, the cards of this deck to take out of your binder (basics left out).
+  const pull = [...new Map([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => [norm(v.name), { name: v.name, qty: byName.get(k)?.qty ?? 1 }])).values()]
+    .filter((c) => statusOf(c.name, s.mine) === 'owned' && !BASICS.has(norm(c.name)))
+    .sort((x, y) => x.name.localeCompare(y.name));
+  const [side, setSide] = useState<'buy' | 'pull'>('buy');
+  const pullSide = side === 'pull' || missing.length === 0;
+  const [pulled, setPulled] = useState<Set<string>>(new Set());
+  const printReceipt = () => {
+    haptic('tap');
+    document.documentElement.classList.add('printing');
+    const done = () => (document.documentElement.classList.remove('printing'), window.removeEventListener('afterprint', done));
+    window.addEventListener('afterprint', done);
+    window.print();
+  };
+  const receipt = kind === 'average' && (missing.length > 0 || pull.length > 0) && (
+    <aside className={`receipt gbox${pullSide ? ' back' : ''}`} id="shop" aria-label={pullSide ? 'Pull list' : 'Shopping list'}>
+      <div className="rflip" role="group" aria-label="Receipt side">
+        {missing.length > 0 && (
+          <button aria-pressed={!pullSide} onClick={() => (haptic('select'), setSide('buy'))}>
+            TO BUY
+          </button>
+        )}
+        <button aria-pressed={pullSide} onClick={() => (haptic('select'), setSide('pull'))}>
+          PULL
+        </button>
+        <button className="rprint" onClick={printReceipt} aria-label="Print this list" title="Print this list">
+          PRINT
+        </button>
+      </div>
+      {pullSide ? (
+        <>
+          <h2>*** PULL LIST ***</h2>
+          <hr />
+          <div className="sub">
+            {pull.reduce((n, c) => n + c.qty, 0)} cards from your binder · tick them as you pull
+          </div>
+          <ul>
+            {pull.map((c) => {
+              const done = pulled.has(norm(c.name));
+              const use = inUseChip(alloc, c.name, (d) => sameCmdr.has(d));
+              return (
+                <li key={c.name} className={done ? 'done' : ''}>
+                  <label>
+                    <input type="checkbox" checked={done} onChange={() => (haptic(done ? 'tap' : 'success'), setPulled((p) => { const n = new Set(p); if (done) n.delete(norm(c.name)); else n.add(norm(c.name)); return n; }))} aria-label={`Pulled ${c.name}`} />
+                    <span className="nm">
+                      {c.qty > 1 ? `${c.qty}× ` : ''}
+                      {c.name}
+                      {use && <small> · {use.lock ? '🔒 ' : ''}{use.text}</small>}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          <hr />
+          <div className="total">
+            <span>PULLED</span>
+            <span>
+              {pulled.size}/{pull.length}
+            </span>
+          </div>
+          <hr />
+          <div className="thanks">thank you for building with what you own</div>
+        </>
+      ) : (
+        <>
+      <Doodles n={377} count={1} spots={[[78, 44]]} paper />
       <h2>*** TO BUY ***</h2>
       <hr />
       <div className="sub">
@@ -341,8 +466,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
       <ul>
         {missing.map((c) => {
           const done = bought.has(norm(c.name));
+          const over = overCap(toCad(cardOf(c)?.usd), cap);
           return (
-            <li key={c.name} className={done ? 'done' : ''}>
+            <li key={c.name} className={`${done ? 'done' : ''}${over ? ' over' : ''}`}>
               <label>
                 <input type="checkbox" checked={done} onChange={() => (haptic(done ? 'tap' : 'success'), toggleBought(c.name))} aria-label={`Got ${c.name}`} />
                 <span className="nm">
@@ -350,6 +476,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   {c.name}
                   {groupOf(cardOf(c)?.type) !== 'Other' && <small className="ty"> · {groupOf(cardOf(c)?.type).replace(/s$/, '').replace(/ie$/, 'y')}</small>}
                   {nameIn(c) !== c.name && <small> · using {nameIn(c)} for now</small>}
+                  {over && <small className="overcap"> · over CA${cap}</small>}
                 </span>
               </label>
               <span className="pr">
@@ -371,6 +498,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
       </p>
       <hr />
       <div className="thanks">thank you for building with what you own</div>
+    </>
+      )}
     </aside>
   );
 
@@ -447,6 +576,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
           </div>
+          {ready && (
+            <div className="cell wide vcell">
+              <ReadyTiles ready={ready} fit={fit} />
+            </div>
+          )}
             {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
             {tags.length > 0 && (
               <div className="builtaround">
@@ -478,7 +612,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 </button>
               </span>
             )}
-            {receipt && !(pricesIn && toBuyCost > 0) && (
+            {receipt && missing.length > 0 && !(pricesIn && toBuyCost > 0) && (
               <a className="jump" href="#shop">
                 {' '}
                 · {toBuy.length} to buy{pricesIn ? ` ≈${money(toBuyCost)}` : ''} ↓
@@ -615,13 +749,23 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
               {/* The one slim bar (owner's rule): search, then ⋮ with POWER, BUDGET, SORT, SHOW, VIEW and EDHREC's With / Without card */}
-              <ToolBar q={q} setQ={setQ} now={[BRACKETS.find(([v]) => v === bracket)?.[1].toUpperCase(), budget ? BUDGETS.find(([v]) => v === budget)?.[1].toUpperCase() : ''].filter(Boolean).join(' · ')}>
+              <ToolBar q={q} setQ={setQ} now={[BRACKETS.find(([v]) => v === bracket)?.[1].toUpperCase(), budget ? BUDGETS.find(([v]) => v === budget)?.[1].toUpperCase() : '', kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : ''].filter(Boolean).join(' · ')}>
                 <OptRow label="POWER">
                   <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
                 </OptRow>
                 <OptRow label="BUDGET">
                   <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
                 </OptRow>
+                {kind === 'average' && (
+                  <OptRow label="CARDS">
+                    <Segs label="Cards" value={ownMode} options={OWN_MODES.map(([v, t]) => [v, t, v === 'owned' ? 'Only cards you own: missing ones get your best stand-in' : 'Your cards win unless a missing one is clearly better'])} onChange={(v) => setOwnMode(v as OwnMode)} />
+                  </OptRow>
+                )}
+                {kind === 'average' && (
+                  <OptRow label="BUY UNDER">
+                    <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
+                  </OptRow>
+                )}
                 <OptRow label="VIEW">
                   <div className="viewsw mini" role="group" aria-label="Card view">
                     <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
@@ -678,6 +822,13 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       )}
                     </form>
               </ToolBar>
+              {kind === 'average' && (
+                <p className="coverage" role="status">
+                  {coverageText(coverage([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ slot: k, name: v.name, qty: byName.get(k)?.qty ?? 1 })), (n) => statusOf(n, s.mine) === 'owned'))}
+                  {ownMode === 'owned' && <span className="cmode"> · owned only</span>}
+                </p>
+              )}
+              {noBudget && !noBracket && <small className="bnote">No EDHREC decks at this budget: showing any budget</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {listed.map((l) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
@@ -717,7 +868,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         const bc = repl && !rc ? binderCard.get(norm(repl)) : undefined;
                         const now = repl ?? c.name;
                         const pin = pinOf(pins, now);
-                        const mark = repl ? `${slot!.why === 'pin' ? '📌' : slot!.why === 'never' ? '💀' : '↔'} for ${c.name}` : pin === 'in' ? '📌 always in' : pin === 'out' ? '💀 no card of yours fits' : undefined;
+                        const mark = repl ? `${slot!.why === 'pin' ? '📌' : slot!.why === 'never' ? '💀' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? '📌 always in' : pin === 'out' ? '💀 no card of yours fits' : undefined;
                         const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
                         return (
                           <Item
@@ -754,6 +905,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                                 onClose={() => setMenuFor(null)}
                                 deck={[name, ...[...eff.values()].map((x) => x.name)]}
                                 bracket={bracketNum}
+                                whyCard={whyOf(c.name)}
                               />
                             )}
                           </Item>

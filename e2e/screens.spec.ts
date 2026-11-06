@@ -572,3 +572,74 @@ test('EDHREC With / Without card: self-testing filter, honest fallback', async (
   await page.getByRole('button', { name: 'APPLY' }).click();
   await expect(page.locator('.cfnote')).toContainText('Suggestions from 529 EDHREC decks with Rhystic Study');
 });
+
+test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UNDER marks, never removes', async ({ page }, info) => {
+  await page.locator('.ccard').first().click();
+  const cov = page.locator('.lists > .coverage');
+  await expect(cov).toContainText('from your binder');
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · $$$'); // decks open at MED power, MAX budget
+  const before = await cov.innerText();
+  const o = await opts(page);
+  await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();
+  await expect(cov).toContainText('owned only');
+  const after = await cov.innerText();
+  const buy = (t: string) => Number(/(\d+) to buy/.exec(t)?.[1] ?? 0);
+  expect(buy(after)).toBeLessThanOrEqual(buy(before));
+  await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();
+  await fits(page, ['.lists']);
+  await page.screenshot({ path: `test-results/ad-${info.project.name}.png` });
+});
+
+test('C: the swap window says "in <deck>" when another deck uses the copy (no "free" chip)', async ({ page }, info) => {
+  await addSignet(page);
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['decks'], 'readwrite');
+    tx.objectStore('decks').put({ profile: 1, name: 'Atraxa Rocks', commander: 'Atraxa, Praetors\' Voice', cards: [{ name: 'Arcane Signet', qty: 1 }], updated: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Sol Ring' });
+  const signet = note.locator('.picks > ul:not(.found) button', { hasText: 'Arcane Signet' }).first();
+  await expect(signet.locator('.inchip')).toHaveText(/in Atraxa Rocks/);
+  await expect(note.locator('.inchip', { hasText: 'free' })).toHaveCount(0);
+  await fits(page, ['.swapnote']);
+  await page.screenshot({ path: `test-results/c-chip-${info.project.name}.png` });
+});
+
+test('B: the TO BUY receipt flips to a PULL list of your cards, and prints', async ({ page }, info) => {
+  await page.locator('.ccard').first().click();
+  const r = page.locator('aside.receipt');
+  await expect(r).toBeVisible();
+  await r.getByRole('button', { name: 'PULL' }).click();
+  await expect(r.locator('h2')).toHaveText('*** PULL LIST ***');
+  await expect(r.locator('li').first()).toBeVisible();
+  await r.locator('li input').first().check();
+  await expect(r.locator('.total')).toContainText('1/');
+  await page.evaluate(() => ((window as any).printed = 0, (window.print = () => ((window as any).printed += 1))));
+  await r.getByRole('button', { name: 'Print this list' }).click();
+  expect(await page.evaluate(() => (window as any).printed)).toBe(1);
+  await expect(page.locator('html.printing')).toHaveCount(1);
+  await fits(page, ['aside.receipt']);
+  await page.screenshot({ path: `test-results/b-pull-${info.project.name}.png` });
+});
+
+test('Readiness + Bracket Fit tiles beside Match; the swap window says why the card is in', async ({ page }, info) => {
+  await page.locator('.ccard').first().click();
+  const tiles = page.locator('.strip .vtiles');
+  await expect(tiles.locator('.vtile.ready summary')).toContainText(/READY|ALMOST|NOT READY|NOT LEGAL/);
+  await expect(tiles.locator('.vtile.fit summary')).toContainText(/FITS|PLAYS/);
+  await tiles.locator('.vtile.ready summary').click();
+  await expect(tiles.locator('.vtile.ready .vpop li').first()).toBeVisible();
+  await fits(page, ['.vtiles', '.vtile.ready .vpop']);
+  await page.screenshot({ path: `test-results/ready-${info.project.name}.png` });
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.whycard .wh')).toContainText(/EDHREC|binder|swap|Pinned/);
+  // the saved deck shows the same tiles in its analysis
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await expect(page.locator('.dpanel .vtile.ready')).toBeVisible();
+});
