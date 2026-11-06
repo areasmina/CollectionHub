@@ -44,6 +44,8 @@ export interface Deck {
   commander?: string;
   /** Second commander: a Partner, Friends forever, Background or Doctor's companion (colour identity = both). */
   partner?: string;
+  /** EDHREC bracket page the deck was forged from ('cedh', 'optimized'…), when it came from a commander page. */
+  source?: string;
   cards: DeckCard[];
   updated: number;
   note?: string;
@@ -76,6 +78,7 @@ export interface Cheap {
   key: string;
   usd?: string;
   buy?: string;
+  id?: string; // Scryfall id of that cheapest paper printing
   at: number;
 }
 

@@ -108,17 +108,27 @@ function GroupPick({ grouping, show, onGroup, onShow }: { grouping: Grouping; sh
 }
 
 /** Bracket estimate stamp; tap shows the reasons. */
-function BracketStat({ call }: { call: BracketCall }) {
+function BracketStat({ call, cedh }: { call: BracketCall; cedh?: boolean }) {
+  // Bracket 5 is about intent, so it is never guessed. When you forged the deck from EDHREC's cEDH list, that is the intent.
+  const plus = cedh && call.bracket === 4;
   return (
     <details className="scrap bracket">
-      <summary aria-label={`Estimated bracket ${call.bracket}. Show why`}>
+      <summary aria-label={`Estimated bracket ${call.bracket}${plus ? ' or 5, built from cEDH data' : ''}. Show why`}>
         <span className="k">BRACKET</span>
-        <span className="bstamp">{ROMAN[call.bracket]}</span>
+        <span className="bstamp">
+          {ROMAN[call.bracket]}
+          {plus && '+'}
+        </span>
         <span className="caret" aria-hidden="true">
           ▾
         </span>
       </summary>
       <ul className="popnote">
+        {plus && (
+          <li>
+            <b>IV+ · built from cEDH data</b>: forged from EDHREC's cEDH list, so it's meant for bracket 5 tables
+          </li>
+        )}
         {call.reasons.map((r) => (
           <li key={r}>{r}</li>
         ))}
@@ -477,7 +487,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const cmdrSlug = deck.commander ? commanderSlug(deck.commander, deck.partner) : '';
   // The read compares the deck with EDHREC's average deck for its bracket. A bracket IV estimate with 30 lands or
   // fewer is built cEDH-style, so it is compared with the cEDH average (EDHREC's cEDH lists run ~25 lands).
-  const refBracket = call.bracket >= 4 ? (st.lands <= 30 ? 'cedh' : 'optimized') : call.bracket === 3 ? 'upgraded' : 'core';
+  const refBracket = deck.source === 'cedh' ? 'cedh' : call.bracket >= 4 ? (st.lands <= 30 ? 'cedh' : 'optimized') : call.bracket === 3 ? 'upgraded' : 'core';
   const [ref, setRef] = useState<RefShape | undefined>();
   useEffect(() => {
     let live = true;
@@ -487,7 +497,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     return () => void (live = false);
   }, [cmdrSlug, refBracket]);
   const kill = killCheck(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), refBracket === 'cedh' ? 5 : Math.max(call.bracket, 2));
+  const banned = deck.cards.filter((c) => cardOf(c.name)?.legal === false).map((c) => c.name);
   const read = [
+    ...(banned.length ? [{ tone: 'low' as const, text: `${banned.length} ${banned.length === 1 ? "card isn't" : "cards aren't"} legal in Commander: ${banned.slice(0, 5).join(', ')}${banned.length > 5 ? '…' : ''}. Swap ${banned.length === 1 ? 'it' : 'them'} out before you play.` }] : []),
     ...analysis(st, { bracket: refBracket === 'cedh' ? 5 : call.bracket, ref }),
     { tone: (kill.verdict === 'lethal' ? 'ok' : 'low') as 'ok' | 'low', text: kill.says },
   ];
@@ -605,7 +617,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <div className="namerow">
                 <Pips ci={ci} size={30} />
                 <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
-                  <BracketStat call={call} />
+                  <BracketStat call={call} cedh={deck.source === 'cedh'} />
                 </HeroStats>
               </div>
             </div>

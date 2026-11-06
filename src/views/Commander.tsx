@@ -225,7 +225,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     try {
       const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
       const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
-      await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+      await db.decks.add({ profile: s.profile, name: deckName, commander: name, source: bracket || undefined, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
       await clearSwaps(); // the forge is done: the deck is yours now
       setSaved(deckName);
       haptic('success');

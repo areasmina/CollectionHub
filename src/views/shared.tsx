@@ -217,6 +217,7 @@ export function CardLine({
         </span>
         {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
         {st === 'other' && <span className="tagother">in {s.otherName}</span>}
+        {card?.legal === false && <span className="bannedtag" title="Not legal in Commander (Scryfall)">BANNED</span>}
       </span>
       <span className="acts">
         {onOpen && (
@@ -257,6 +258,11 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
       {st === 'missing' && (
         <span className="misstape" aria-hidden="true">
           MISSING
+        </span>
+      )}
+      {card?.legal === false && (
+        <span className="bannedtape" title="Not legal in Commander (Scryfall)">
+          BANNED
         </span>
       )}
       <span className="tname">
