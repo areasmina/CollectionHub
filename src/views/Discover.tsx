@@ -10,7 +10,7 @@ import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '.
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
 import { Progress, usd, type Shared } from './shared';
-import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
+import { CardDoodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
 const SORTS: [string, string][] = [
@@ -200,7 +200,21 @@ export function Discover(s: Shared) {
       <main>
         <section className="hero">
           {/* Phones: a big eye (fire, rays and orbit, no dark landscape) blazes behind the title letters. */}
-          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} behind={phone ? <EyeDoodle bare /> : undefined} />
+          <Title
+            text="WHAT CAN I BUILD?"
+            label="What can I build?"
+            size={phone ? 50 : 44}
+            seed={7}
+            behind={phone ? <EyeDoodle bare /> : undefined}
+            after={
+              commanders.length > 0 && (
+                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build
+                <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
+                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECKS` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
+                </p>
+              )
+            }
+          />
           {!phone && <EyeDoodle />}
           {phone && (
             <button
@@ -287,11 +301,6 @@ export function Discover(s: Shared) {
               </div>
               </div>
             </form>
-            <p className="caption">
-              <span>
-                &gt; Your binder vs EDHREC. Missing cards get filled from cards you own<span className="cur">_</span>
-              </span>
-            </p>
           </div>
         </section>
 
@@ -299,13 +308,8 @@ export function Discover(s: Shared) {
         {sort === 'added' && data?.undated && (
           <p className="count">Cards imported before dates were recorded have no date, so they're listed last. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
         )}
-        {commanders.length ? (
-          <p className="count">
-            {`${shown.length} of ${commanders.length} commanders in this binder.`}
-          </p>
-        ) : (
-          data && <Welcome empty={s.mine.size === 0} />
-        )}
+        {/* The commander count is the title's answer ("335 DECKS"), so no count line here */}
+        {!commanders.length && data && <Welcome empty={s.mine.size === 0} />}
         <ul className="cgrid" ref={gridRef}>
           {shown.map((c, i) => {
             const st = stats.get(c.key);

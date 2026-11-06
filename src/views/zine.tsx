@@ -84,7 +84,7 @@ export function Ransom({ text, size: wanted, seed, breakWords, swap }: { text: s
 }
 
 /** Ransom title on the red halftone slash; the heading carries the plain words. */
-export function Title({ text, label, size, seed, as: H = 'h1', className = '', swap, behind }: { text: string; label: string; size: number; seed: number; as?: 'h1' | 'h2'; className?: string; swap?: Record<number, React.ReactNode>; behind?: React.ReactNode }) {
+export function Title({ text, label, size, seed, as: H = 'h1', className = '', swap, behind, after }: { text: string; label: string; size: number; seed: number; as?: 'h1' | 'h2'; className?: string; swap?: Record<number, React.ReactNode>; behind?: React.ReactNode; after?: React.ReactNode }) {
   return (
     <div className={`titlewrap ${className}`}>
       <div className="ht slash" aria-hidden="true" />
@@ -92,6 +92,7 @@ export function Title({ text, label, size, seed, as: H = 'h1', className = '', s
       <H aria-label={label} className="ztitle">
         <Ransom text={text} size={size} seed={seed} swap={swap} />
       </H>
+      {after}
     </div>
   );
 }

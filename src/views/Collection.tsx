@@ -226,7 +226,7 @@ export function Collection({ profile, name, s }: { profile: number; name: string
           </p>
         )}
 
-        <MyDecks s={s} />
+        {/* Import sits right under the counts: it's used the most */}
         <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
           <summary>
             <span className="stripe" aria-hidden="true" />
@@ -283,6 +283,8 @@ export function Collection({ profile, name, s }: { profile: number; name: string
           </div>
         </section>
         </details>
+
+        <MyDecks s={s} />
 
         <section>
           <div className="cardshead">

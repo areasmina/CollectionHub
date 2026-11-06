@@ -251,6 +251,8 @@ export function CardsView({ entries, cards, profile, binderName, search, more }:
   // Always opens in grid; LIST switches for this visit only.
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [group, setGroup] = usePref<'on' | 'off'>('ch:collgroup', 'off');
+  // ZOOM: card size in the grid (small fits more, large reads the card), remembered on this device
+  const [zoom, setZoom] = usePref<'s' | 'm' | 'l'>('ch:collzoom', 'm');
   const [hideEmpty, setHideEmpty] = usePref<'on' | 'off'>('ch:collempty', 'on');
   const [limit, setLimit] = useState(100);
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -286,8 +288,17 @@ export function CardsView({ entries, cards, profile, binderName, search, more }:
         </div>
       )}
       {/* One row: search, List / Grid, and a ⋯ menu for the rarely used options (grouping, exports). */}
-      <div className="cardopts tools1">
+      <div className="cardopts tools1" data-zoom={zoom}>
         {search}
+        {view === 'grid' && (
+          <div className="zoomsw" role="radiogroup" aria-label="Card size">
+            {(['s', 'm', 'l'] as const).map((z) => (
+              <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
+                <i className={`zc ${z}`} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="viewsw icons" role="group" aria-label="Card view">
           <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
             <ListIcon />

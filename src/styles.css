@@ -8020,3 +8020,122 @@ details.cat {
   font-family: var(--se);
   font-weight: 400;
 }
+
+/* WHAT CAN I BUILD? → the answer in the same cut-out letters, stuck on under the title like a reply */
+.tanswer {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  margin: calc(-1 * var(--sp3)) 0 0 var(--sp6);
+  padding: var(--sp1) var(--sp2);
+  background: var(--hazard);
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-4deg);
+}
+.tanswer::before {
+  content: '→';
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--an);
+  font-size: 30px;
+  color: var(--hazard);
+}
+@media (max-width: 700px) {
+  .tanswer {
+    margin-left: var(--sp6);
+  }
+}
+
+/* Collection tools = one bar: search | ZOOM (card size) | list / grid | ⋯, inside one frame */
+.cardopts.tools1 {
+  gap: 0;
+  border: 3px solid var(--text);
+  background: var(--bg);
+}
+.cardopts.tools1 > .sbox {
+  border: 0;
+  box-shadow: none;
+}
+.cardopts.tools1 > .zoomsw,
+.cardopts.tools1 > .viewsw.icons,
+.cardopts.tools1 > .toolmore > summary {
+  border-left: 1px solid #3a3a3a;
+}
+.cardopts.tools1 .viewsw.icons button,
+.cardopts.tools1 > .toolmore > summary {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text);
+}
+.cardopts.tools1 .viewsw.icons button[aria-pressed='true'] {
+  background: var(--r, #e60012);
+  color: var(--white);
+}
+.zoomsw {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+.zoomsw button {
+  min-width: 40px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: #8a8a8a;
+  cursor: pointer;
+}
+.zoomsw button[aria-checked='true'] {
+  color: var(--hazard);
+}
+.zoomsw .zc {
+  display: block;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+}
+.zoomsw .zc.s {
+  width: 9px;
+  height: 13px;
+}
+.zoomsw .zc.m {
+  width: 13px;
+  height: 18px;
+}
+.zoomsw .zc.l {
+  width: 17px;
+  height: 24px;
+}
+/* card sizes */
+.cardopts.tools1[data-zoom='s'] ~ * .cgrid2,
+.cardopts.tools1[data-zoom='s'] ~ .cgrid2 {
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+.cardopts.tools1[data-zoom='m'] ~ * .cgrid2,
+.cardopts.tools1[data-zoom='m'] ~ .cgrid2 {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.cardopts.tools1[data-zoom='l'] ~ * .cgrid2,
+.cardopts.tools1[data-zoom='l'] ~ .cgrid2 {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+@media (max-width: 700px) {
+  .zoomsw button {
+    min-width: 34px;
+  }
+  .cardopts.tools1[data-zoom='s'] ~ * .cgrid2,
+  .cardopts.tools1[data-zoom='s'] ~ .cgrid2 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cardopts.tools1[data-zoom='m'] ~ * .cgrid2,
+  .cardopts.tools1[data-zoom='m'] ~ .cgrid2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cardopts.tools1[data-zoom='l'] ~ * .cgrid2,
+  .cardopts.tools1[data-zoom='l'] ~ .cgrid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
