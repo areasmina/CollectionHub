@@ -251,6 +251,11 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
   return (
     <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
       <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      {st === 'missing' && (
+        <span className="misstape" aria-hidden="true">
+          MISSING
+        </span>
+      )}
       <span className="tname">
         {name}
         {st === 'missing' && <span className="sr">(missing)</span>}
@@ -260,8 +265,8 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
       {st === 'other' && <span className="tagother">in {s.otherName}</span>}
       <span className="tacts">
         {onOpen && (
-          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
-            {quiet ? '⇄' : '↺ SWAP'}
+          <button className="swapbtn tilehit" onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
+            <span className="sr">Swap</span>
           </button>
         )}
         {onMenu && (
@@ -428,18 +433,14 @@ export function ShortAlert({ items }: { items: Shortfall[] }) {
     </li>
   );
   return (
-    <aside className="shortalert" role="status">
-      <b>⚠ COPIES</b>
-      {items.length <= 3 ? (
+    <aside className="shortalert chip" role="status">
+      {/* A small chip; tap it for which cards and decks (the full warning used to take a whole band). */}
+      <details>
+        <summary>
+          <b>⚠ {items.length} SHORT</b> <span>{items.length === 1 ? 'card is' : 'cards are'} in more decks than you have copies</span>
+        </summary>
         <ul>{items.map(row)}</ul>
-      ) : (
-        <details>
-          <summary>
-            {items.length} cards are in more decks than you have copies for
-          </summary>
-          <ul>{items.map(row)}</ul>
-        </details>
-      )}
+      </details>
     </aside>
   );
 }

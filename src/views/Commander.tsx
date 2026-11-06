@@ -380,7 +380,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             <span className="lbl">COLLECTION MATCH</span>
             <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
               <span className="burst" aria-hidden="true" />
-              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
               <span className="meter">
                 <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
                   {Array.from({ length: 10 }, (_, i) => (
@@ -392,6 +391,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>
+              {/* The % sits inside the red burst on the right, so the bar runs clean from the left. */}
+              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
           </div>
           <div className="cell">
@@ -534,9 +535,23 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
               {/* How the cards are ordered and filtered, right above them */}
+              {/* One FILTERS button: sort and show (and later EDHREC's with/without card) live in its sheet. */}
               <div className="dtools" role="toolbar" aria-label="Card order and filter">
-                <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                <details className="fsheet">
+                  <summary>
+                    <span className="ft">FILTERS</span>
+                    <span className="fnow">
+                      {CSORTS.find(([v]) => v === sort)?.[1]} · {SHOWS.find(([v]) => v === show)?.[1]}
+                    </span>
+                    <span className="arrow" aria-hidden="true">
+                      ▼
+                    </span>
+                  </summary>
+                  <div className="fbody">
+                    <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                    <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                  </div>
+                </details>
               </div>
               {sections.map((l, i) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.

@@ -7264,3 +7264,247 @@ details.cat {
   margin: 0;
   font-family: var(--se);
 }
+
+/* Phone round (Nov 5): a deck card is its own swap button (tap the card; hold or ⋯ for more).
+   Under it: the name (2 lines at most, so rows line up) and a small price. */
+.ztile {
+  position: relative;
+}
+.ztile .tacts > .swapbtn.tilehit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  cursor: pointer;
+}
+.ztile .tacts > .swapbtn.tilehit:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.ztile .tname {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.2em;
+  line-height: 1.1;
+}
+.ztile .tacts {
+  position: static;
+  min-height: 0;
+}
+.ztile .tacts > .price {
+  position: relative;
+  z-index: 3;
+}
+.ztile .tacts > .price {
+  margin-left: 0;
+  font-size: 13px;
+  padding: 0 6px;
+  transform: none;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--raised);
+}
+.ztile .tacts > a.price {
+  border-color: var(--hazard);
+  color: var(--hazard);
+}
+.ztile .tacts > .morebtn {
+  min-width: 36px;
+  min-height: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  top: 6px;
+  right: 6px;
+}
+.misstape {
+  position: absolute;
+  top: 18%;
+  left: -6px;
+  z-index: 3;
+  background: var(--accent);
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 2px 10px;
+  transform: rotate(-6deg);
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+}
+
+/* Collection match: bar from the left, % inside the red burst on the right */
+.match {
+  padding: 0 0 0 12px;
+  gap: 10px;
+}
+.match .burst {
+  right: -14px;
+  top: -26px;
+  width: 112px;
+  height: 112px;
+}
+.match .num {
+  flex: 0 0 auto;
+  min-width: 78px;
+  text-align: center;
+  font-size: 30px;
+  z-index: 1;
+  padding-right: 4px;
+  text-shadow: 2px 2px 0 var(--ink);
+}
+/* Copies: a small chip that opens the list */
+.shortalert.chip {
+  display: block;
+  padding: 0;
+  margin: var(--sp3, 12px) 0;
+  background: transparent;
+  border: 0;
+}
+.shortalert.chip summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--se);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.shortalert.chip summary::-webkit-details-marker {
+  display: none;
+}
+.shortalert.chip summary b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 15px;
+}
+.shortalert.chip ul {
+  margin: 10px 0 0;
+  padding: 12px 16px 12px 28px;
+  background: var(--paper);
+  color: var(--ink);
+}
+@media (max-width: 700px) {
+  .shortalert.chip summary span {
+    display: none;
+  }
+}
+/* One FILTERS button above the cards; its sheet holds sort, show and the EDHREC filters */
+.fsheet {
+  width: 100%;
+}
+.fsheet > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 0 0 14px;
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.fsheet > summary::-webkit-details-marker {
+  display: none;
+}
+.fsheet .ft {
+  font-family: var(--an);
+  font-size: 18px;
+  background: var(--accent);
+  color: var(--white);
+  padding: 2px 10px;
+}
+.fsheet .fnow {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--se);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fsheet .arrow {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  background: var(--accent);
+  color: var(--white);
+  transition: transform 0.2s;
+}
+.fsheet[open] .arrow {
+  transform: scaleY(-1);
+}
+.fsheet .fbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp3, 12px);
+  padding: var(--sp3, 12px);
+  background: var(--ink);
+  border: 3px solid var(--ink);
+  border-top: 0;
+}
+
+/* Section headers: same columns on every row (name + count | price | owned), never wrapping */
+.cat > summary {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--sp3, 12px);
+}
+.cat > summary .dots {
+  display: none;
+}
+.cat > summary .h {
+  display: block;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.cat > summary .n {
+  padding: 0 12px 0 0;
+}
+.cat > summary .gval {
+  justify-self: end;
+}
+.cat > summary .n {
+  min-width: 7.5ch;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .cat > summary {
+    grid-template-columns: 36px minmax(0, 1fr) auto auto;
+    column-gap: var(--sp2, 8px);
+  }
+  .cat > summary .pm {
+    width: 36px;
+    height: 36px;
+  }
+  .cat > summary .h {
+    font-size: 21px;
+  }
+  .cat > summary .gval {
+    font-size: 13px;
+  }
+  .cat > summary .n {
+    font-size: 12px;
+  }
+}

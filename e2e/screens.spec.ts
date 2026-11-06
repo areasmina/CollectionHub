@@ -164,12 +164,14 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   // A copy shares every card, so the copies warning lists both decks: each name opens its deck
   await deckMenu(page, 'Duplicate');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
+  await page.locator('.shortalert summary').first().click(); // the copies chip opens its list
   const other = page.locator('.shortalert .decklink', { hasText: /^Tatyova Lands$/ }).first();
   await other.scrollIntoViewIfNeeded();
   await other.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
   // …and from the Decks list's warning
   await page.locator('.backlink').click();
+  await page.locator('.shortalert summary').first().click();
   const copy = page.locator('.shortalert .decklink', { hasText: 'Tatyova Lands (copy)' }).first();
   await copy.scrollIntoViewIfNeeded();
   await copy.click();
