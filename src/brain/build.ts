@@ -7,6 +7,9 @@ import { inIdentity } from './identity';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from './score';
 import { landColours } from './validate';
 import type { Aggression } from './win';
+import { STACK_WEIGHTS } from './themes';
+
+type FocusTheme = { label: string; test: (c: Pick<Card, 'type' | 'text'> & { name: string }) => boolean };
 
 /**
  * Owned-only builder (plan phase 2a): the best 99 from your binder for a commander, with the same scoreCard every view
@@ -52,7 +55,8 @@ export function buildDeck(o: {
   bracket: number;
   aggression?: Aggression;
   gc?: Set<string> | null;
-  focus?: { label: string; test: (c: Meta & { name: string }) => boolean };
+  /** The strategy stack: one theme, or a primary plus up to two secondary themes (themes.ts themeOf). */
+  focus?: FocusTheme | FocusTheme[];
   pins?: { in: string[]; out: string[] };
   lands?: number;
 }): Built {
@@ -94,6 +98,7 @@ export function buildDeck(o: {
   const gcCap = GC_CAP[o.bracket] ?? 99;
   const gcCount = () => deck.filter((c) => o.gc?.has(norm(c.name))).length;
   const spellTarget = slots - landTarget;
+  const stack = (Array.isArray(o.focus) ? o.focus : o.focus ? [o.focus] : []).slice(0, STACK_WEIGHTS.length);
   while (deck.length - lead.length < spellTarget) {
     const needs = deckNeeds(ctx);
     const gcFull = gcCount() >= gcCap;
@@ -105,10 +110,12 @@ export function buildDeck(o: {
       if (s.blocked) continue;
       const parts = [...s.parts];
       let total = s.total;
-      if (o.focus?.test({ ...c.meta, name: c.name })) {
-        parts.push({ label: `strategy: ${o.focus.label}`, value: FOCUS_W, source: 'card text' });
-        total += FOCUS_W;
-      }
+      stack.forEach((t, i) => {
+        if (!t.test({ ...c.meta, name: c.name })) return;
+        const w = FOCUS_W * (STACK_WEIGHTS[i] ?? 0);
+        parts.push({ label: `strategy: ${t.label}`, value: w, source: 'card text' });
+        total += w;
+      });
       if (!best || total > best.total || (total === best.total && c.name < best.name)) best = { name: c.name, total, parts };
     }
     if (!best) break; // the binder ran out of legal spells: the rest goes to lands

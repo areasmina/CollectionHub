@@ -96,3 +96,16 @@ export function strategy(cmdr: string, label: string, test: (m: Meta & { name: s
   const surfaced = themed.cards.filter((c) => !a.has(norm(c.name)) && test({ ...cardOf(c.name)!, name: c.name }) && pop(c.name) < 0.5).map((c) => c.name);
   return { cmdr, label, changed: [...b].filter((k) => !a.has(k)).length, fitBase: fits(a), fitThemed: fits(b), surfaced };
 }
+
+/** Same binder, the popular build vs a strategy stack: the cards of the stacked build, and how many connive-style cards
+ *  the popular build had (for the stack test). */
+export function strategyStack(cmdr: string, themes: { label: string; test: (m: { type: string; text: string }) => boolean }[]) {
+  const identity = cardOf(cmdr)!.ci;
+  const pop = popularity(cmdr);
+  const binder = [...new Set(F.decks[cmdr].flatMap((d) => d.cards.map(([n]) => n)))].filter((n) => !BASICS.has(norm(n)));
+  const owned = binder.map((name) => ({ name, incl: pop(name) || undefined }));
+  const meta = (n: string) => ({ ...cardOf(n)!, name: n });
+  const base = buildDeck({ commander: cmdr, identity, owned, cardOf, bracket: 4, gc }).cards.filter((c) => cardOf(c.name)).map((c) => meta(c.name));
+  const cards = buildDeck({ commander: cmdr, identity, owned, cardOf, bracket: 4, gc, focus: themes }).cards.filter((c) => cardOf(c.name)).map((c) => meta(c.name));
+  return { cards, baseConnive: base.filter((c) => themes[1].test(c)).length };
+}
