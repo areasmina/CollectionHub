@@ -8491,3 +8491,18 @@ details.cat {
   left: 8px;
   right: auto;
 }
+
+/* Title answer, round 2: the deck count sits a bit lower and tucks in behind the title letters;
+   the tagline is pinned under the word BUILD (left/top set from the title's 4th word in Discover). */
+.titlewrap > .tanswer {
+  z-index: 0;
+  margin-top: calc(-1 * var(--sp2));
+  transform: rotate(-4deg) translateY(var(--sp2));
+}
+.hero .titlewrap > .tagline.tunder {
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  text-wrap: balance;
+  transform: rotate(-2deg);
+}

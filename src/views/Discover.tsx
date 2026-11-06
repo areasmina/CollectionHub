@@ -89,6 +89,26 @@ export function Discover(s: Shared) {
   const [colours, setColours] = useState<string[]>([]);
   const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
   const phone = window.innerWidth <= 700;
+  // The tagline lines up under the word BUILD: measured from the title's 4th cut-out word, kept in step on resize.
+  const underObs = useRef<ResizeObserver | null>(null);
+  const underBuild = (el: HTMLParagraphElement | null) => {
+    underObs.current?.disconnect();
+    underObs.current = null;
+    const wrap = el?.parentElement;
+    if (!el || !wrap) return;
+    const place = () => {
+      const word = wrap.querySelector<HTMLElement>('.ztitle .rword:nth-child(4)');
+      if (!word) return;
+      const w = wrap.getBoundingClientRect();
+      const b = word.getBoundingClientRect();
+      el.style.left = `${Math.round(b.left - w.left)}px`;
+      el.style.top = `${Math.round(b.bottom - w.top + 6)}px`;
+      el.style.maxWidth = `${Math.max(160, Math.round(w.width - (b.left - w.left) - 8))}px`;
+    };
+    place();
+    underObs.current = new ResizeObserver(place);
+    underObs.current.observe(wrap);
+  };
   const sig = binderSig(s.profile, s.mine);
   // Saved stats of this binder (from memory, else from the device); shown even while a changed binder is recounted.
   const [saved, setSaved] = useState<{ profile: number; sig: string; map: Map<string, SavedStat> } | null>(() => (memo?.profile === s.profile ? memo : null));
@@ -208,10 +228,14 @@ export function Discover(s: Shared) {
             behind={phone ? <EyeDoodle bare /> : undefined}
             after={
               commanders.length > 0 && (
-                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build
+                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
+                // It tucks in behind the letters; on wider screens the tagline sits under the word BUILD.
+                <>
+                {!phone && <p className="tagline tunder" ref={underBuild}>Your collection. Real decks. No guesswork.</p>}
                 <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
-                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECKS` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
+                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
                 </p>
+                </>
               )
             }
           />
@@ -235,7 +259,7 @@ export function Discover(s: Shared) {
               </span>
             </button>
           )}
-          <p className="tagline">Your collection. Real decks. No guesswork.</p>
+          {(phone || commanders.length === 0) && <p className="tagline">Your collection. Real decks. No guesswork.</p>}
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>

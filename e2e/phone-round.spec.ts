@@ -40,3 +40,19 @@ test('Phone round: eye behind the logo; Collection tools on one row', async ({ p
   await page.locator('.ztile, .zrow, .cardgrid li').first().waitFor({ timeout: 10000 }).catch(() => {});
   await page.screenshot({ path: `test-results/round-coll-${info.project.name}.png`, fullPage: true });
 });
+
+test('Title answer: deck count tucked behind the title, tagline under BUILD (wider screens)', async ({ page }, info) => {
+  const ans = page.locator('.titlewrap > .tanswer');
+  await expect(ans).toContainText(/DECK|OF/);
+  // behind the letters: below the title in stacking order
+  const z = await page.evaluate(() => [getComputedStyle(document.querySelector('.titlewrap > .tanswer')!).zIndex, getComputedStyle(document.querySelector('.titlewrap > .ztitle')!).zIndex]);
+  expect(Number(z[0])).toBeLessThan(Number(z[1]));
+  await expect(page.locator('.tagline')).toHaveCount(1);
+  if (info.project.name !== 'phone') {
+    const [tag, build] = await Promise.all([page.locator('.tagline.tunder').boundingBox(), page.locator('.ztitle .rword').nth(3).boundingBox()]);
+    expect(Math.abs(tag!.x - build!.x)).toBeLessThan(16);
+    expect(tag!.y).toBeGreaterThan(build!.y + build!.height - 12);
+  }
+  await fits(page, ['.hero']);
+  await page.locator('.hero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
+});
