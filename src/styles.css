@@ -7959,3 +7959,64 @@ details.cat {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Save this deck? — compact: spinning card beside the title, one row of buttons, "keep forging" as a quiet link */
+.note-pop.leavenote {
+  width: min(380px, calc(100vw - 32px));
+  padding: var(--sp4);
+}
+.leavenote .lhead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  text-align: left;
+}
+.leavenote .lhead img {
+  margin: 0;
+}
+.leavenote .lhead .nh {
+  justify-content: flex-start;
+  margin: 0;
+}
+.leavenote .lhead p {
+  margin: var(--sp1) 0 0;
+  line-height: 1.35;
+}
+.leavenote .leavebtns {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--sp2);
+  margin-top: var(--sp3);
+}
+.leavenote .btn {
+  min-height: 44px;
+  font-size: 18px;
+  padding: 0 var(--sp3);
+}
+.leavenote .lkeep {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 36px;
+  background: none;
+  border: 0;
+  font-family: var(--se);
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Discover search reads like the Collection one: SEARCH tab + typewriter text */
+.hero .fpanel .sbox.search .tab {
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  border-right: 1px solid #3a3a3a;
+}
+.hero .fpanel .sbox.search input,
+.hero .fpanel .sbox.search input::placeholder {
+  font-family: var(--se);
+  font-weight: 400;
+}

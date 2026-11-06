@@ -482,24 +482,28 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />
             <div className="note-pop leavenote" role="alertdialog" aria-label="Save this deck?" onClick={(e) => e.stopPropagation()}>
-              <img src="/card-spin.webp" alt="" width={70} height={102} aria-hidden="true" />
-              <div className="nh">
-                <span>
-                  SAVE THIS <mark>DECK?</mark>
-                </span>
+              <div className="lhead">
+                <img src="/card-spin.webp" alt="" width={40} height={58} aria-hidden="true" />
+                <div>
+                  <div className="nh">
+                    <span>
+                      SAVE THIS <mark>DECK?</mark>
+                    </span>
+                  </div>
+                  <p className="small">
+                    {changes} {changes === 1 ? 'swap' : 'swaps'} to {label}. Saved decks keep tuning in the Forge.
+                  </p>
+                </div>
               </div>
-              <p className="small">
-                You made {changes} {changes === 1 ? 'swap' : 'swaps'} to {label}. Save it to your decks to keep tuning it in the Forge.
-              </p>
               <div className="leavebtns">
                 <button className="btn forge" onClick={() => leave('save')}>
-                  YES, SAVE
+                  SAVE
                 </button>
                 <button className="btn ink" onClick={() => leave('drop')}>
-                  NO, DISCARD
+                  DISCARD
                 </button>
-                <button className="btn secondary" onClick={() => leave('stay')}>
-                  KEEP FORGING
+                <button className="lkeep" onClick={() => leave('stay')}>
+                  keep forging
                 </button>
               </div>
             </div>

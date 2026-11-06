@@ -258,14 +258,8 @@ export function Discover(s: Shared) {
               <Tape style={{ top: -12, left: -16, width: 90, height: 24, transform: 'rotate(-24deg)' }} />
               <Tape style={{ bottom: -10, right: -12, width: 90, height: 24, transform: 'rotate(-20deg)' }} />
               <label className="sbox search">
-                <span className="tab">
-                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-                    <circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" strokeWidth="2.6" />
-                    <path d="M13 13 L18 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                  <span className="sr">Search</span>
-                </span>
-                <input type="search" placeholder="commander name, Enter opens any_" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
+                <span className="tab">SEARCH</span>
+                <input type="search" placeholder="commander_" aria-label="Search commander" title="Type a name; Enter opens it" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
                 <span aria-hidden="true" className="hfade fade" />
               </label>
               <div className="flap" id="fflap">

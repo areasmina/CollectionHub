@@ -446,11 +446,11 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
   await ask.getByRole('button', { name: 'KEEP FORGING' }).click();
   await expect(page.locator('.forgebar')).toBeVisible();
   await page.locator('.backlink').click();
-  await ask.getByRole('button', { name: 'NO, DISCARD' }).click();
+  await ask.getByRole('button', { name: 'DISCARD', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await swap();
   await page.locator('.backlink').click();
-  await ask.getByRole('button', { name: 'YES, SAVE' }).click();
+  await ask.getByRole('button', { name: 'SAVE', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await go(page, 'collection');
   await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
