@@ -1,5 +1,8 @@
+import { brainData, loadBrainData, ROLE_BITS, type Combo } from '../brain/data';
 import type { Card, DeckCard } from './db';
 import { norm } from './names';
+
+loadBrainData(); // roles + combos files, in the background
 
 /** Moxfield-style type groups, in display order. A card goes to the first group its (front-face) type matches. */
 export const GROUPS = ['Commander', 'Creatures', 'Planeswalkers', 'Battles', 'Instants', 'Sorceries', 'Artifacts', 'Enchantments', 'Lands', 'Other'] as const;
@@ -22,16 +25,39 @@ export function groupOf(type?: string): Group {
   return 'Other';
 }
 
-// Roles read from Oracle text: a rough count, stated as such in the UI.
+// Fallback roles read from Oracle text, for cards the Scryfall Tagger file doesn't know yet (new sets) or before it loads.
+// Fixed after the veteran playtest (Nov 6): "an opponent draws" isn't your draw, Treasure is ramp, "additional" draws,
+// one-sided bounce and -X/-X sweepers, counters for noncreature spells, tutors for a coloured card or to the graveyard.
 const ROLES: Record<Role, RegExp> = {
-  ramp: /add \{|add (one|two|three) mana|mana of any|search your library for (up to (two|three|\w+) )?(a |an )?(basic )?(land|forest|plains|island|swamp|mountain)|put (a|up to \w+) (basic )?land cards? .*onto the battlefield/i,
-  draw: /draws? (a|two|three|four|x|\w+) cards?|draw cards equal|investigate|connives?\b/i,
-  removal: /(destroy|exile) target|counter target (spell|activated|ability)|deals? (\d+|x|that much) damage to (any target|target (creature|planeswalker|permanent))|return target (nonland )?(creature|permanent) to its owner's hand|target (creature|player) (gets -|sacrifices)/i,
-  wipes: /(destroy|exile) all (creatures|nonland permanents|permanents|other creatures)|each (creature|other creature) gets -|deals? \d+ damage to each creature|return all (nonland permanents|creatures)/i,
-  tutors: /search your library for (a|an|up to (one|two)) (card|instant|sorcery|creature|artifact|enchantment|planeswalker|legendary)(?! named)/i,
+  ramp: /add \{|add (one|two|three) mana|mana of any|create (a|an|one|two|three|x|\w+) treasure|treasure tokens?\b.*create|search your library for (up to (two|three|\w+) )?(a |an )?(basic )?(land|forest|plains|island|swamp|mountain)|put (a|up to \w+) (basic )?land cards? .*onto the battlefield/i,
+  draw: /\bdraws? (a|an|two|three|four|x|\w+) (additional )?cards?|draw cards equal|\binvestigate|connives?\b/i,
+  removal: /(destroy|exile) target|counter target ([a-z]+ )?(spell|activated|ability)|deals? (\d+|x|that much) damage to (any target|target (creature|planeswalker|permanent))|return target (nonland )?(creature|permanent)( you don't control)? to its owner's hand|target (creature|player) (gets -|sacrifices)/i,
+  wipes: /(destroy|exile) all (creatures|nonland permanents|permanents|other creatures)|(each|all) (other )?creatures? gets? -|deals? \d+ damage to each creature|return all (nonland permanents|creatures)|return each nonland permanent|overload/i,
+  tutors: /search your library (and\/or graveyard )?for (a|an|up to (one|two)) ([a-z]+ )?(card|instant|sorcery|creature|artifact|enchantment|planeswalker|legendary)(?! named)/i,
 };
 export type Role = 'ramp' | 'draw' | 'removal' | 'wipes' | 'tutors';
-export const roleOf = (c: Pick<Card, 'type' | 'text'>): Role[] => (isLand(c.type) ? [] : (Object.keys(ROLES) as Role[]).filter((r) => ROLES[r].test(c.text ?? '')));
+const OPP_DRAW = /(whenever an|each|target) opponent draws/gi;
+
+/** Where a card's roles came from: Scryfall Tagger (the file) or our own text rules. */
+export const roleSource = (name?: string) => (name && brainData().roles?.has(norm(name)) ? 'Scryfall Tagger' : 'card text');
+
+/**
+ * A card's roles: Scryfall Tagger tags when the card is in the brain's roles file (counterspells count as removal),
+ * else read from its Oracle text. Lands have none (their mana is counted as lands).
+ */
+export function roleOf(c: Pick<Card, 'type' | 'text'> & { name?: string }): Role[] {
+  if (isLand(c.type)) return [];
+  const bits = c.name != null ? brainData().roles?.get(norm(c.name)) : undefined;
+  if (bits != null) {
+    const has = (r: (typeof ROLE_BITS)[number]) => !!(bits & (1 << ROLE_BITS.indexOf(r)));
+    return (['ramp', 'draw', 'removal', 'wipes', 'tutors'] as Role[]).filter((r) => has(r) || (r === 'removal' && has('counters')));
+  }
+  const text = c.text ?? '';
+  return (Object.keys(ROLES) as Role[]).filter((r) => {
+    if (r === 'removal' && /counter target noncreature|counter target spell/i.test(text)) return true;
+    return ROLES[r].test(r === 'draw' ? text.replace(OPP_DRAW, '') : text);
+  });
+}
 
 const MLD = /(destroy|exile) all lands|each player sacrifices (all|\w+) lands|lands don't untap|players can't untap more than one land|nonbasic lands are mountains|each land is a/i;
 const EXTRA_TURN = /takes? an extra turn/i;
@@ -45,16 +71,39 @@ export interface BracketCall {
   gameChangers: string[];
   mld: string[];
   extraTurns: string[];
-  tutors: string[];
+  tutors: string[]; // information only: Wizards removed tutor limits from the brackets (Oct 2025)
+  /** Two-card combos complete in the deck, earliest first. `early` = Commander Spellbook's early-game rule. */
+  combos: { cards: [string, string]; early: boolean; mv: number; id: string }[];
+  /** False when the combo file isn't loaded yet (first visit offline): combos weren't checked. */
+  combosChecked: boolean;
 }
 
-/** Commander bracket estimate from the official rules we can check: Game Changers, mass land denial, extra turns, tutors.
- *  Two-card combos are not checked. Bracket 1 vs 2 and bracket 5 are about intent, so the floor is 2 and 5 is never given. */
-export function bracketOf(cards: { name: string; card?: Pick<Card, 'type' | 'text'> }[], gc: Set<string> | null): BracketCall {
+/** Spellbook's "early game" reading (as in Deck Wizard, from commander-spellbook-backend's estimate_bracket, MIT):
+ *  relevant (wins / status S), definitely two cards, and at most 4 mana needed. */
+export const EARLY_MV = 4;
+export const isEarly = (c: Combo) => c.relevant && c.definite && c.mv <= EARLY_MV;
+
+/** Two-card combos with both cards in the list (the commander counts as a card). */
+export function combosIn(names: string[], index: Map<string, Combo[]>): Combo[] {
+  const have = new Set(names.map(norm));
+  const out = new Map<string, Combo>();
+  for (const k of have) for (const c of index.get(k) ?? []) if (have.has(norm(c.cards[0])) && have.has(norm(c.cards[1]))) out.set(c.id, c);
+  return [...out.values()].sort((a, b) => Number(isEarly(b)) - Number(isEarly(a)) || a.mv - b.mv);
+}
+
+/**
+ * Commander bracket estimate from the official rules we can check (Wizards, Feb 2025 + Oct 2025 updates): Game Changers,
+ * mass land denial, chained extra turns, and two-card combos (from Commander Spellbook): none in brackets I–II, none in
+ * the early game in III. Tutors are listed as information only (no longer a bracket rule since Oct 2025).
+ * Bracket 1 vs 2 and bracket 5 are about intent, so the floor is 2 and 5 is never given.
+ */
+export function bracketOf(cards: { name: string; card?: Pick<Card, 'type' | 'text'> }[], gc: Set<string> | null, comboIndex = brainData().combos): BracketCall {
   const gameChangers = gc ? cards.filter((c) => gc.has(norm(c.name))).map((c) => c.name) : [];
   const mld = cards.filter((c) => c.card && !isLand(c.card.type) && MLD.test(c.card.text)).map((c) => c.name);
   const extraTurns = cards.filter((c) => c.card && EXTRA_TURN.test(c.card.text)).map((c) => c.name);
-  const tutors = cards.filter((c) => c.card && ROLES.tutors.test(c.card.text)).map((c) => c.name);
+  const tutors = cards.filter((c) => c.card && roleOf({ ...c.card, name: c.name }).includes('tutors')).map((c) => c.name);
+  const found = comboIndex ? combosIn(cards.map((c) => c.name), comboIndex) : [];
+  const combos = found.map((c) => ({ cards: c.cards, early: isEarly(c), mv: c.mv, id: c.id }));
   let bracket: BracketCall['bracket'] = 2;
   const reasons: string[] = [];
   const up = (b: BracketCall['bracket'], why: string) => {
@@ -66,10 +115,16 @@ export function bracketOf(cards: { name: string; card?: Pick<Card, 'type' | 'tex
   if (mld.length) up(4, `mass land denial: ${mld.join(', ')}`);
   if (extraTurns.length >= 3) up(4, `${extraTurns.length} extra-turn cards: chaining turns is bracket IV`);
   else if (extraTurns.length) reasons.push(`${extraTurns.length} extra-turn card${extraTurns.length > 1 ? 's' : ''}: fine below IV if they don't chain`);
-  if (tutors.length >= 4) up(3, `${tutors.length} tutors: brackets I–II expect few`);
-  if (!reasons.length) reasons.push('no Game Changers, mass land denial, extra turns or tutor pile');
+  const early = combos.filter((c) => c.early);
+  const late = combos.filter((c) => !c.early);
+  const pair = (c: { cards: [string, string] }) => c.cards.join(' + ');
+  if (early.length) up(4, `early two-card combo${early.length > 1 ? 's' : ''} (${early.length}): ${early.slice(0, 3).map(pair).join(', ')}. Bracket III allows none in the early game`);
+  if (late.length) up(3, `two-card combo${late.length > 1 ? 's' : ''} (${late.length}): ${late.slice(0, 3).map(pair).join(', ')}. Brackets I–II allow none`);
+  if (tutors.length) reasons.push(`${tutors.length} tutor${tutors.length > 1 ? 's' : ''}: information only, tutors no longer set the bracket (Oct 2025)`);
+  if (bracket === 2) reasons.unshift('no Game Changers, mass land denial, chained extra turns or two-card combos');
   if (!gc) reasons.push("Game Changers couldn't be checked (offline)");
-  return { bracket, reasons, gameChangers, mld, extraTurns, tutors };
+  if (!comboIndex) reasons.push("two-card combos couldn't be checked yet (combo list not loaded)");
+  return { bracket, reasons, gameChangers, mld, extraTurns, tutors, combos, combosChecked: !!comboIndex };
 }
 
 export interface DeckStats {
@@ -105,7 +160,7 @@ export function deckStats(list: DeckCard[], cardOf: (name: string) => Pick<Card,
     s.curve[Math.min(mv, 7)] += q;
     mvSum += mv * q;
     spells += q;
-    for (const r of roleOf(c)) s.roles[r] += q;
+    for (const r of roleOf({ ...c, name: dc.name })) s.roles[r] += q;
     for (const m of (c.mana ?? '').match(/\{[^}]+\}/g) ?? []) for (const k of ['W', 'U', 'B', 'R', 'G', 'C'] as const) if (m.includes(k)) s.pips[k] += q;
   }
   s.avgMv = spells ? mvSum / spells : 0;

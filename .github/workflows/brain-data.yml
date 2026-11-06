@@ -1,0 +1,28 @@
+# Once a month: rebuild the brain's data files from public sources (Scryfall Tagger roles, Commander Spellbook
+# two-card combos) and open a pull request with the changes. Nothing is fetched by the app at runtime.
+# Needs: repository Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+name: Brain data
+on:
+  schedule:
+    - cron: '17 6 1 * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/build-roles.mjs
+      - run: node scripts/build-combos.mjs
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: brain-data/refresh
+          title: 'Brain data: monthly refresh (card roles, two-card combos)'
+          commit-message: 'Brain data: monthly refresh from Scryfall Tagger and Commander Spellbook'
+          body: Card roles (Scryfall Tagger) and two-card combos (Commander Spellbook), rebuilt by the monthly workflow. CI checks run on this PR before it can merge.
