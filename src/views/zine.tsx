@@ -5,7 +5,8 @@ const frac = (x: number) => x - Math.floor(x);
 
 /** Ransom-note title ("What can I build?" reference): seeded cut-out letters, cream ~62% / black ~38%, never two black in a row,
  * halftone dots fading in from one edge of each tile. */
-export function Ransom({ text, size: wanted, seed, breakWords }: { text: string; size: number; seed: number; breakWords?: boolean }) {
+/** `swap`: words (by index) drawn as something else, e.g. the eye standing in for "I" in WHAT CAN I BUILD?. */
+export function Ransom({ text, size: wanted, seed, breakWords, swap }: { text: string; size: number; seed: number; breakWords?: boolean; swap?: Record<number, React.ReactNode> }) {
   // Unless words may break (commander banner), shrink until the longest word fits the screen (each tile is ~1× size wide).
   // Breaking mid-word reads well on wide screens only; phones keep whole words.
   breakWords = breakWords && window.innerWidth > 700;
@@ -61,7 +62,12 @@ export function Ransom({ text, size: wanted, seed, breakWords }: { text: string;
   }, [text, size, seed]);
   return (
     <div className={`ransom${breakWords ? ' loose' : ''}`} aria-hidden="true" style={{ rowGap: Math.round(size * 0.16), columnGap: breakWords ? 0 : Math.round(size * 0.4), '--wg': `${Math.round(size * 0.32)}px` } as React.CSSProperties}>
-      {words.map((w, i) => (
+      {words.map((w, i) =>
+        swap?.[i] ? (
+          <span key={i} className="rword rslot" style={{ height: Math.round(size * 1.45) }}>
+            {swap[i]}
+          </span>
+        ) : (
         <span key={i} className="rword">
           {w.map((l, j) => (
             <span key={j} style={l.outer}>
@@ -71,18 +77,19 @@ export function Ransom({ text, size: wanted, seed, breakWords }: { text: string;
             </span>
           ))}
         </span>
-      ))}
+        ),
+      )}
     </div>
   );
 }
 
 /** Ransom title on the red halftone slash; the heading carries the plain words. */
-export function Title({ text, label, size, seed, as: H = 'h1', className = '' }: { text: string; label: string; size: number; seed: number; as?: 'h1' | 'h2'; className?: string }) {
+export function Title({ text, label, size, seed, as: H = 'h1', className = '', swap }: { text: string; label: string; size: number; seed: number; as?: 'h1' | 'h2'; className?: string; swap?: Record<number, React.ReactNode> }) {
   return (
     <div className={`titlewrap ${className}`}>
       <div className="ht slash" aria-hidden="true" />
       <H aria-label={label} className="ztitle">
-        <Ransom text={text} size={size} seed={seed} />
+        <Ransom text={text} size={size} seed={seed} swap={swap} />
       </H>
     </div>
   );
