@@ -116,3 +116,24 @@ describe('suggestions follow the deck (proof the brain is personal and live)', (
     expect(mine.find((s) => s.name === 'Grizzly Bears')!.parts.at(-1)).toEqual({ label: 'you cut Grizzly Bears in 3 decks', value: -0.05, source: 'your taste' });
   });
 });
+
+describe('wildcard candidates', () => {
+  it('takes only owned cards with evidence: hidden gems and allowed combo pieces', async () => {
+    const { wildcardCandidates, WILDCARD_DEFAULT } = await import('./wildcard');
+    expect(WILDCARD_DEFAULT).toBe(1);
+    const c = wildcardCandidates(
+      [
+        { name: 'Gem', lift: 3, incl: 0.05, type: 'Creature' },
+        { name: 'Staple', lift: 1.1, incl: 0.6, type: 'Artifact' },
+        { name: 'Gem Land', lift: 4, incl: 0.05, type: 'Land' },
+      ],
+      [
+        { add: 'Piece', owned: true, allowed: true, cards: ['Kinnan', 'Piece'] },
+        { add: 'Banned Piece', owned: true, allowed: false, cards: ['Kinnan', 'Banned Piece'] },
+        { add: 'Unowned', owned: false, allowed: true, cards: ['Kinnan', 'Unowned'] },
+      ],
+    );
+    expect(c.map((x) => x.name)).toEqual(['Piece', 'Gem']);
+    expect(c[1].why).toBe('hidden gem: 3.0x lift, in 5% of decks');
+  });
+});

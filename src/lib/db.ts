@@ -44,6 +44,8 @@ export interface Deck {
   commander?: string;
   /** Second commander: a Partner, Friends forever, Background or Doctor's companion (colour identity = both). */
   partner?: string;
+  /** EDHREC bracket page the deck was forged from ('cedh', 'optimized'…), when it came from a commander page. */
+  source?: string;
   cards: DeckCard[];
   updated: number;
   note?: string;
@@ -60,7 +62,8 @@ export interface Profile {
   /** The brain's settings and what it learned about this player (src/brain): synced with the rest of the profile. */
   brain?: {
     aggression?: 'patient' | 'hungry' | 'lethal';
-    wildcards?: number; // WILDCARD slots, 0–3 (default 0)
+    wildcards?: number; // WILDCARD slots, 0–3 (default 1)
+    wild?: Record<string, { off?: boolean; roll?: number }>; // per commander: WILDCARD off, reroll count
     taste?: import('../brain/taste').TasteEvent[];
   };
 }
@@ -75,6 +78,7 @@ export interface Cheap {
   key: string;
   usd?: string;
   buy?: string;
+  id?: string; // Scryfall id of that cheapest paper printing
   at: number;
 }
 

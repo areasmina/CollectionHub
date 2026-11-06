@@ -9377,6 +9377,15 @@ a.misscost:hover {
   white-space: nowrap;
 }
 
+/* WILDCARD: one seeded pick with evidence, on the commander page */
+.wildcard { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0; padding: 10px 14px; border: 2px dashed currentColor; transform: rotate(-0.4deg); }
+.wildcard .wtag { background: #d9c7f2; color: #141414; padding: 2px 8px; transform: skew(-8deg); letter-spacing: 0.08em; }
+.wildcard .wtxt { flex: 1 1 220px; min-width: 0; }
+.wildcard .wtxt small { display: block; opacity: 0.8; }
+
+/* Cards not legal in Commander (Scryfall's legality): a hazard tape on the tile, a tag on the line */
+.ztile .bannedtape { position: absolute; left: -6px; right: -6px; top: 42%; z-index: 3; padding: 3px 0; text-align: center; font-weight: 900; letter-spacing: 0.14em; color: #141414; background: repeating-linear-gradient(-45deg, #ffd400 0 12px, #141414 12px 24px); transform: rotate(-8deg); pointer-events: none; text-shadow: 0 0 3px #ffd400, 0 0 3px #ffd400; }
+.zrow .bannedtag { display: inline-block; margin-left: 6px; padding: 0 6px; font-size: 0.75em; font-weight: 900; letter-spacing: 0.1em; color: #141414; background: #ffd400; border: 1px solid #141414; }
 /* Cross-device round (brief items 16–20) */
 /* 16. The floating pill nav never covers the end of a page (welcome step 3 on phones) */
 main {

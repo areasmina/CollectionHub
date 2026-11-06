@@ -27,7 +27,7 @@ const post = (path: string, body: unknown) => req(API + path, { method: 'POST', 
 export async function cheapest(names: string[]): Promise<Map<string, Cheap>> {
   const keys = [...new Map(names.map((n) => [norm(n), n.split(/\s\/\/?\s/)[0]])).entries()];
   const out = new Map<string, Cheap>();
-  (await db.cheap.bulkGet(keys.map(([k]) => k))).forEach((c) => c && Date.now() - c.at < WEEK && out.set(c.key, c));
+  (await db.cheap.bulkGet(keys.map(([k]) => k))).forEach((c) => c && Date.now() - c.at < WEEK && (c.id || !c.usd) && out.set(c.key, c)); // entries from before `id` are fetched again
   const need = keys.filter(([k]) => !out.has(k));
   for (let i = 0; i < need.length; i += 40) {
     const batch = need.slice(i, i + 40);
@@ -39,7 +39,7 @@ export async function cheapest(names: string[]): Promise<Map<string, Cheap>> {
       for (const c of page.data) {
         const price = c.prices?.usd ?? c.prices?.usd_foil;
         const b = best.get(norm(c.name));
-        if (b && price && (!b.usd || Number(price) < Number(b.usd))) Object.assign(b, { usd: price, buy: c.purchase_uris?.tcgplayer });
+        if (b && price && (!b.usd || Number(price) < Number(b.usd))) Object.assign(b, { usd: price, buy: c.purchase_uris?.tcgplayer, id: c.id });
       }
       url = page.has_more ? page.next_page : undefined;
     }
@@ -154,6 +154,21 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
     if (card) matched.push({ row: r, card });
     else if (down && asked.has(identKey(identOf(r)))) failed.push(r);
     else unmatched.push(r);
+  }
+  // A name-only row (text, Moxfield or Archidekt import, CSV without ids) gets Scryfall's default printing, which can be
+  // MTGO-only or not priced yet (Underground Sea -> Vintage Masters). Use the cheapest paper printing with a price instead.
+  if (!down) {
+    const named = (r: Row) => !r.id && !(r.set && r.cn);
+    const unpriced = matched.filter((m) => named(m.row) && !m.card.usd);
+    if (unpriced.length) {
+      const cheap = await cheapest(unpriced.map((m) => m.card.name)).catch(() => new Map<string, Cheap>());
+      const ids = [...new Set(unpriced.map((m) => cheap.get(m.card.key)?.id).filter((x): x is string => !!x))];
+      const paper = ids.length ? await cardsByIds(ids).catch(() => new Map<string, Card>()) : new Map<string, Card>();
+      for (const m of unpriced) {
+        const p = paper.get(cheap.get(m.card.key)?.id ?? '');
+        if (p) m.card = p;
+      }
+    }
   }
   return { matched, unmatched, failed, down };
 }

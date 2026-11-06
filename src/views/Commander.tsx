@@ -11,7 +11,10 @@ import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
-import { recordTaste } from '../brain/store';
+import { recordTaste, setWild } from '../brain/store';
+import { comboBreaks, nearCombos } from '../brain/combos';
+import { comboAllowed } from '../brain/win';
+import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
@@ -222,7 +225,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     try {
       const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
       const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
-      await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+      await db.decks.add({ profile: s.profile, name: deckName, commander: name, source: bracket || undefined, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
       await clearSwaps(); // the forge is done: the deck is yours now
       setSaved(deckName);
       haptic('success');
@@ -274,6 +277,24 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const ci = cmdr?.ci ?? page?.card?.ci ?? [];
   // EDHREC bracket slug -> bracket number for the rules (All = 4: no combo is off limits there).
   const bracketNum = Number(BRACKETS.find(([v]) => v === bracket)?.[2]) || 4;
+  // WILDCARD (1 slot by default, off per commander): a seeded random pick among owned cards with evidence only.
+  const wildSet = profile?.brain?.wild?.[norm(name)] ?? {};
+  const wildOn = !wildSet.off && (profile?.brain?.wildcards ?? WILDCARD_DEFAULT) > 0;
+  const deckNames = [name, ...[...eff.values()].map((x) => x.name)];
+  const wild = (() => {
+    if (!wildOn || !page) return undefined;
+    const binderKeys = new Set(binder.map((b) => b.key));
+    const near = nearCombos(deckNames, binderKeys)
+      .filter((n) => !never.has(norm(n.add)))
+      .map((n) => ({ add: n.add, owned: n.owned, allowed: comboAllowed(n.combo, bracketNum), cards: n.combo.cards }));
+    const pick = pickWildcards(wildcardCandidates(candidates, near), 1, seedOf(name) + (wildSet.roll ?? 0), inDeck)[0];
+    if (!pick) return undefined;
+    // It takes the slot of the least played non-land card that is still EDHREC's own, not pinned and no combo piece.
+    const slot = [...eff.entries()]
+      .filter(([k, v]) => k !== name && v.name === k && byName.has(k) && !/\bLand\b/.test(slotInfo(byName.get(k)!).type ?? '') && !pins.in.includes(k) && !comboBreaks(k, deckNames).length)
+      .sort((a, b) => (recInfo.get(norm(a[0]))?.incl ?? 1) - (recInfo.get(norm(b[0]))?.incl ?? 1))[0]?.[0];
+    return slot ? { ...pick, slot } : undefined;
+  })();
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
   // Grid (card images) is the default; the choice is remembered on this device.
@@ -494,6 +515,31 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </span>
         </section>
 
+        {page && (wild || wildSet.off) && (
+          <section className="wildcard" aria-label="WILDCARD">
+            <b className="wtag">WILDCARD</b>
+            {wild && !wildSet.off ? (
+              <>
+                <span className="wtxt">
+                  <b>{wild.name}</b> <small>{wild.why} · for {wild.slot}</small>
+                </span>
+                <button className="btn" onClick={() => (haptic('success'), setSwap(wild.slot, wild.name))}>
+                  SWAP IN
+                </button>
+                <button className="btn ink" onClick={() => setWild(s.profile, name, { roll: (wildSet.roll ?? 0) + 1 })} aria-label="Reroll the wildcard">
+                  ↻ REROLL
+                </button>
+                <button className="btn ink" onClick={() => setWild(s.profile, name, { off: true })}>
+                  OFF
+                </button>
+              </>
+            ) : (
+              <button className="btn ink" onClick={() => setWild(s.profile, name, { off: false })}>
+                TURN ON
+              </button>
+            )}
+          </section>
+        )}
         {forging && (
           <div className="forgebar" role="status">
             <img src="/card-spin.webp" alt="" width={46} height={67} aria-hidden="true" />
