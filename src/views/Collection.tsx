@@ -287,14 +287,12 @@ export function Collection({ profile, name, s }: { profile: number; name: string
         <MyDecks s={s} />
 
         <section>
-          <div className="cardshead">
-            <h2 aria-label="Cards">
-              <Ransom text="CARDS" size={40} seed={5} />
-            </h2>
-            <div className="rule" aria-hidden="true" />
-          </div>
-
           <CardsView
+            title={
+              <h2 aria-label="Card collection" className="colltitle">
+                <Ransom text="CARD COLLECTION" size={30} seed={5} />
+              </h2>
+            }
             entries={shown}
             cards={cards}
             profile={profile}

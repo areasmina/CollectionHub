@@ -191,17 +191,16 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
       <ul className="zgrid cgrid2">
         {list.map((e) => (
           <MenuLi key={e.id} e={e} onMenu={onMenu} className={`ztile owned ctile${used?.get(norm(e.name))?.length ? ' live' : ''}`}>
-            {/* Clean art: copies and price sit under the name; a card in an active deck glows green */}
+            {/* Name on top; clean art (price sticker and "in N decks" show on hover); Arena-style copy pips centred below */}
+            <span className="tname" title={setLine(e)}>
+              {e.name}
+            </span>
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
+              <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
+              {useMark(e)}
             </span>
-            <span className="tname">{e.name}</span>
-            <span className="tmeta">
-              <Tally e={e} />
-              <PriceLink card={priced(cards.get(e.cardId), e.foil)} plain />
-            </span>
-            <span className="tnote">{setLine(e)}</span>
-            {useMark(e)}
+            <Tally e={e} />
           </MenuLi>
         ))}
       </ul>
@@ -236,7 +235,7 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
 /** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
-export function CardsView({ entries, cards, profile, binderName, search, more }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; search?: ReactNode; more?: ReactNode }) {
+export function CardsView({ entries, cards, profile, binderName, search, more, title }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; search?: ReactNode; more?: ReactNode; title?: ReactNode }) {
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -288,7 +287,10 @@ export function CardsView({ entries, cards, profile, binderName, search, more }:
         </div>
       )}
       {/* One row: search, List / Grid, and a ⋯ menu for the rarely used options (grouping, exports). */}
-      <div className="cardopts tools1" data-zoom={zoom}>
+      {/* Title and the tools bar share one line */}
+      <div className="collbar" data-zoom={zoom}>
+      {title}
+      <div className="cardopts tools1">
         {search}
         {view === 'grid' && (
           <div className="zoomsw" role="radiogroup" aria-label="Card size">
@@ -323,6 +325,7 @@ export function CardsView({ entries, cards, profile, binderName, search, more }:
             {more}
           </div>
         </details>
+      </div>
       </div>
 
       {group === 'on' ? (

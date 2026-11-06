@@ -8110,32 +8110,32 @@ details.cat {
   height: 24px;
 }
 /* card sizes */
-.cardopts.tools1[data-zoom='s'] ~ * .cgrid2,
-.cardopts.tools1[data-zoom='s'] ~ .cgrid2 {
+.collbar[data-zoom='s'] ~ * .cgrid2,
+.collbar[data-zoom='s'] ~ .cgrid2 {
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
 }
-.cardopts.tools1[data-zoom='m'] ~ * .cgrid2,
-.cardopts.tools1[data-zoom='m'] ~ .cgrid2 {
+.collbar[data-zoom='m'] ~ * .cgrid2,
+.collbar[data-zoom='m'] ~ .cgrid2 {
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
-.cardopts.tools1[data-zoom='l'] ~ * .cgrid2,
-.cardopts.tools1[data-zoom='l'] ~ .cgrid2 {
+.collbar[data-zoom='l'] ~ * .cgrid2,
+.collbar[data-zoom='l'] ~ .cgrid2 {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 @media (max-width: 700px) {
   .zoomsw button {
     min-width: 34px;
   }
-  .cardopts.tools1[data-zoom='s'] ~ * .cgrid2,
-  .cardopts.tools1[data-zoom='s'] ~ .cgrid2 {
+  .collbar[data-zoom='s'] ~ * .cgrid2,
+  .collbar[data-zoom='s'] ~ .cgrid2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .cardopts.tools1[data-zoom='m'] ~ * .cgrid2,
-  .cardopts.tools1[data-zoom='m'] ~ .cgrid2 {
+  .collbar[data-zoom='m'] ~ * .cgrid2,
+  .collbar[data-zoom='m'] ~ .cgrid2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .cardopts.tools1[data-zoom='l'] ~ * .cgrid2,
-  .cardopts.tools1[data-zoom='l'] ~ .cgrid2 {
+  .collbar[data-zoom='l'] ~ * .cgrid2,
+  .collbar[data-zoom='l'] ~ .cgrid2 {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -8309,4 +8309,185 @@ details.cat {
 }
 .cfilter .cfnote {
   margin: 0;
+}
+
+/* ===== Collection tile v3 (Nov 6): name on top · clean art · price sticker + "in N decks" on hover ·
+   Arena-style copy pips centred below · active-deck cards carry only a faint green breath at rest ===== */
+.ctile {
+  --live: 120, 200, 120; /* a muted, slightly dusty green that sits with the ink / hazard / red palette */
+}
+.ctile > .tname {
+  order: -1;
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.ctile .cart {
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease;
+}
+/* price sticker: back in the corner, only while you hover or focus the card */
+.ctile .cart > .price {
+  opacity: 0;
+  transform: rotate(4deg) translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+.ctile:hover .cart > .price,
+.ctile:focus-within .cart > .price {
+  opacity: 1;
+  transform: rotate(4deg);
+  pointer-events: auto;
+}
+/* in an active deck: a barely-there green at rest, the full note on hover */
+.ctile.live .cart {
+  box-shadow: 0 0 0 1px rgba(var(--live), 0.28), 0 0 10px rgba(var(--live), 0.14);
+}
+.ctile.live:hover .cart,
+.ctile.live:focus-within .cart {
+  box-shadow: 0 0 0 2px rgba(var(--live), 0.75), 0 0 18px rgba(var(--live), 0.35);
+}
+.ctile .cart > .inuse {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: rgba(14, 14, 14, 0.85);
+  color: rgb(var(--live));
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.ctile:hover .cart > .inuse,
+.ctile:focus-within .cart > .inuse {
+  opacity: 1;
+}
+/* copy pips, Arena style: slim diamonds centred under the card; owned copies lit warm with a soft glow */
+.ctile > .tally {
+  position: static;
+  transform: none;
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+.ctile > .tally .marks {
+  min-height: 24px;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.ctile > .tally .marks i {
+  width: 9px;
+  height: 13px;
+  transform: none;
+  border: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: #3a3a3a;
+  box-shadow: none;
+}
+.ctile > .tally .marks i.on {
+  background: linear-gradient(180deg, #fff6d6 0%, #ffd34d 45%, #e0a200 100%);
+  filter: drop-shadow(0 0 3px rgba(255, 205, 70, 0.85));
+}
+.ctile > .tally .marks small {
+  font-size: 12px;
+  color: #ffd34d;
+  margin-left: 2px;
+}
+.ctile > .tally.editing {
+  position: static;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctile .cart,
+  .ctile .cart > .price,
+  .ctile .cart > .inuse {
+    transition: none;
+  }
+}
+@media (hover: none) {
+  /* touch screens: no hover, so the price shows small and quiet */
+  .ctile .cart > .price {
+    opacity: 0.85;
+    transform: rotate(4deg) scale(0.85);
+  }
+}
+@media (hover: hover) {
+  .ctile.live:hover .timg > .pen {
+    border-color: rgb(var(--live));
+  }
+}
+/* name sits above the art now: the ⋯ badge moves down onto the art's corner */
+.ztile.ctile > .morebtn {
+  top: 34px;
+  right: 8px;
+}
+
+/* CARD COLLECTION title and the tools bar on one line (wraps under the title on phones) */
+.collbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp4);
+  margin: var(--sp5, 24px) 0 var(--sp4);
+}
+.collbar > .colltitle {
+  flex: none;
+  margin: 0;
+}
+.collbar > .cardopts.tools1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .collbar {
+    flex-wrap: wrap;
+    gap: var(--sp2);
+  }
+  .collbar > .cardopts.tools1 {
+    flex-basis: 100%;
+  }
+}
+
+/* Price sticker peels on like tape: folded back on its right edge at rest, unfolds flat on hover (CSS only, cheap) */
+.ctile .cart > .price {
+  transform-origin: 100% 50%;
+  transform: perspective(240px) rotate(4deg) rotateY(-95deg);
+  clip-path: inset(0 0 0 100%);
+  transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1), clip-path 0.22s ease-out, opacity 0.1s linear;
+}
+.ctile:hover .cart > .price,
+.ctile:focus-within .cart > .price {
+  transform: perspective(240px) rotate(4deg) rotateY(0deg);
+  clip-path: inset(0 0 0 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctile .cart > .price {
+    transform: rotate(4deg);
+    clip-path: none;
+  }
+}
+@media (hover: none) {
+  .ctile .cart > .price {
+    transform: rotate(4deg) scale(0.85);
+    clip-path: none;
+  }
+}
+/* ⋯ on the art's top-left, price sticker on the top-right: they never collide */
+.ztile.ctile > .morebtn {
+  left: 8px;
+  right: auto;
 }
