@@ -1,5 +1,8 @@
 # CollectionHub roadmap: collection-first Commander plan
 
+> Current status of every feature lives in [FEATURES.md](FEATURES.md) and agreed choices in
+> [DECISIONS.md](DECISIONS.md). This file keeps the original October plan and its history.
+
 Source: Guillermo's 15-section plan (2026-10-12). Save point before this work: tag/branch `v1-save-point` (53d02a3).
 Plan work happens on a branch and is merged to `main` only when Guillermo approves (phase 3a + deck page merged 2026-10-13).
 
