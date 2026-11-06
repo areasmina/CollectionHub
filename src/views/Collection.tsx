@@ -22,9 +22,15 @@ export function ImportReport({ r }: { r: ImportResult }) {
       <p>
         Read as <b>{r.format === 'manabox' ? 'ManaBox CSV' : r.format === 'csv' ? 'CSV' : 'text list'}</b>: {r.added} cards added.
       </p>
+      {!!r.failed?.length && (
+        <p className="error">
+          Scryfall stopped answering, so {r.failed.length} {r.failed.length === 1 ? 'card was' : 'cards were'} not looked up yet. The rest are saved. The box now holds
+          just those cards: add them again in a minute.
+        </p>
+      )}
       {r.unmatched.length > 0 && (
         <details>
-          <summary className="error">{r.unmatched.length} names Scryfall couldn't find (not added)</summary>
+          <summary className="error">{r.unmatched.length} {r.unmatched.length === 1 ? 'name' : 'names'} Scryfall couldn't find (not added)</summary>
           <ul>
             {r.unmatched.map((u, i) => (
               <li key={i}>
@@ -139,8 +145,10 @@ export function Collection({ profile, name, s }: { profile: number; name: string
     setResult(null);
     setBusy({ done: 0, total: 0 });
     try {
-      setResult(await importCollection(profile, input, replace, (done, total) => setBusy({ done, total })));
-      setText('');
+      const r = await importCollection(profile, input, replace, (done, total) => setBusy({ done, total }));
+      setResult(r);
+      // only the cards Scryfall never answered for stay in the box, so adding again doesn't count the saved ones twice
+      setText((r.failed ?? []).map((f) => `${f.qty} ${f.name}${f.set && f.cn ? ` (${f.set.toUpperCase()}) ${f.cn}` : ''}${f.foil ? ' *F*' : ''}`).join('\n'));
     } catch (e) {
       setError(`Import failed: ${(e as Error).message}. Nothing was lost; try again.`);
     }

@@ -206,15 +206,25 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     await db.profiles.update(s.profile, { bought: [...set] });
   }
 
+  // one save at a time: a double tap on FORGE IT used to race freeDeckName and make two decks
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   async function saveDeck(open = true) {
-    if (!page) return;
-    const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
-    const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
-    await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
-    await clearSwaps(); // the forge is done: the deck is yours now
-    setSaved(deckName);
-    haptic('success');
-    if (open) openDeck(deckName);
+    if (!page || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const list = page.lists.flatMap((l) => l.cards.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })));
+      const deckName = await freeDeckName(s.profile, `${name} (${forging ? 'forged' : 'EDHREC average'})`);
+      await db.decks.add({ profile: s.profile, name: deckName, commander: name, cards: [{ name, qty: 1 }, ...list], updated: Date.now() });
+      await clearSwaps(); // the forge is done: the deck is yours now
+      setSaved(deckName);
+      haptic('success');
+      if (open) openDeck(deckName);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
   async function clearSwaps() {
     const p = (await db.profiles.get(s.profile))!;
@@ -390,7 +400,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <span className="btn">OPEN IN THE FORGE →</span>
               </DeckLink>
             ) : (
-              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
+              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average' || saving} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
                 ⚒ FORGE IT
               </button>
             )}
@@ -499,7 +509,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 {changes} {changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save
               </small>
             </span>
-            <button className="btn forge" onClick={() => saveDeck()}>
+            <button className="btn forge" onClick={() => saveDeck()} disabled={saving}>
               SAVE DECK
             </button>
             <button className="btn ink" onClick={() => (haptic('undo'), clearSwaps())}>

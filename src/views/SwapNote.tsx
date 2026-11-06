@@ -1,5 +1,5 @@
 import { haptic } from '../lib/haptics';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type PinSide } from '../lib/pins';
 import { searchByText } from '../lib/search';
 import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
@@ -90,6 +90,25 @@ export function SwapNote({
   const [look, setLook] = useState<string | undefined>();
   const [q, setQ] = useState('');
   const [over, setOver] = useState(false); // a card dragged over the slot
+  const box = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  close.current = onClose;
+  // Esc closes it (and with it the backdrop); Tab stays inside the window; focus starts in it and goes back after.
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    box.current?.focus({ preventScroll: true });
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') return e.stopPropagation(), close.current();
+      if (e.key !== 'Tab' || !box.current) return;
+      const f = [...box.current.querySelectorAll<HTMLElement>('button:not([disabled]), input, a[href]')];
+      if (!f.length) return;
+      const [first, last] = [f[0], f[f.length - 1]];
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === box.current)) (e.preventDefault(), last.focus());
+      else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus());
+    };
+    document.addEventListener('keydown', key);
+    return () => (document.removeEventListener('keydown', key), back?.focus?.({ preventScroll: true }));
+  }, []);
   const shown = look ?? big;
   const why = whyIn(missing);
   const now = replaced ?? name;
@@ -102,7 +121,7 @@ export function SwapNote({
   ).slice(0, 6);
   const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
   return (
-    <div className="note-pop swapnote" role="dialog" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
+    <div ref={box} tabIndex={-1} className="note-pop swapnote" role="dialog" aria-modal="true" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
       <Tape
         style={{
           top: -12,
