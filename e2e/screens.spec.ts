@@ -51,7 +51,7 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
   await expect(page.locator('.tagmore')).toHaveText('+4 MORE');
   const ys = await page.locator('.strip .hscroll button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top / 30)));
   expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows (the strip is tilted a little, so tops differ by a few px)
-  await page.screenshot({ path: '/mnt/project-files/ui-review/screens/phone-round/6-commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
+  await page.screenshot({ path: 'test-results/commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
 test('Collection: counters, widget, grid tiles with tally marks', async ({ page }) => {
