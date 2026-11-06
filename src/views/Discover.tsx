@@ -199,8 +199,8 @@ export function Discover(s: Shared) {
       <PageDecor seed={501} rays="46% 30%" sheet={{ side: 'right', top: 560, rot: -6 }} />
       <main>
         <section className="hero">
-          {/* Phones: the eye is the "I" (eye = I), so it is part of the title instead of a band of its own. */}
-          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} swap={phone ? { 2: <EyeDoodle /> } : undefined} />
+          {/* Phones: a big eye (fire, rays and orbit, no dark landscape) blazes behind the title letters. */}
+          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} behind={phone ? <EyeDoodle bare /> : undefined} />
           {!phone && <EyeDoodle />}
           {phone && (
             <button

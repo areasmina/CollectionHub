@@ -7509,23 +7509,25 @@ details.cat {
   }
 }
 
-/* Phones: the eye stands in for the "I" of WHAT CAN I BUILD? (a rebus), sized like a letter tile */
-.ransom .rslot {
-  display: inline-flex;
-  align-items: center;
-  align-self: center;
+/* Phones: the eye blazes behind the title letters, between the red slash and the tiles */
+.titlewrap {
+  position: relative;
 }
-.hero .ransom .rslot .eyedoodle,
-.ransom .rslot .eyedoodle {
-  position: static;
-  display: block;
-  height: 100%;
-  width: auto;
-  margin: 0 -4px;
+.titlewrap > .eyedoodle {
+  position: absolute;
+  z-index: 0;
+  left: 68%;
+  top: 48%;
+  width: 108%;
   max-width: none;
-  order: 0;
-  align-self: center;
-  filter: drop-shadow(2px 4px 0 rgba(0, 0, 0, 0.9));
+  height: auto;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.titlewrap > .ztitle {
+  position: relative;
+  z-index: 1;
 }
 
 /* Collection tools: search | List / Grid | ⋯ (group by set, exports) on one row */

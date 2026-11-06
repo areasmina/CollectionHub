@@ -84,10 +84,11 @@ export function Ransom({ text, size: wanted, seed, breakWords, swap }: { text: s
 }
 
 /** Ransom title on the red halftone slash; the heading carries the plain words. */
-export function Title({ text, label, size, seed, as: H = 'h1', className = '', swap }: { text: string; label: string; size: number; seed: number; as?: 'h1' | 'h2'; className?: string; swap?: Record<number, React.ReactNode> }) {
+export function Title({ text, label, size, seed, as: H = 'h1', className = '', swap, behind }: { text: string; label: string; size: number; seed: number; as?: 'h1' | 'h2'; className?: string; swap?: Record<number, React.ReactNode>; behind?: React.ReactNode }) {
   return (
     <div className={`titlewrap ${className}`}>
       <div className="ht slash" aria-hidden="true" />
+      {behind}
       <H aria-label={label} className="ztitle">
         <Ransom text={text} size={size} seed={seed} swap={swap} />
       </H>
@@ -244,7 +245,7 @@ type Orb = { el: React.ReactNode; ring: 0 | 1; at: number; size: number; twinkle
  *  farther items shrink, dim and pass behind the fire, nearer ones grow and pass in front with a shadow. Positions
  *  are set per frame on the DOM (no re-render); fire, blink, iris and twinkles are CSS (styles.css .eyedoodle).
  *  With reduced motion everything holds still. Decorative. */
-export const EyeDoodle = memo(function EyeDoodle() {
+export const EyeDoodle = memo(function EyeDoodle({ bare = false }: { bare?: boolean }) {
   const ink = '#1c120c';
   const red = '#c9402a';
   const orange = '#e58a2b';
@@ -417,6 +418,9 @@ export const EyeDoodle = memo(function EyeDoodle() {
       </defs>
       <g filter="url(#distress)">
 
+      {/* `bare` (phone title backdrop): no sky or mountains, so no dark block behind the eye */}
+      {!bare && (
+        <>
       {/* sky: drifting clouds */}
       <g mask="url(#skymask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
         {/* drifting clouds */}
@@ -454,6 +458,9 @@ export const EyeDoodle = memo(function EyeDoodle() {
           <path d="M92 196 l-10 24 M100 202 l-2 22 M184 206 l-8 24 M192 210 l4 20 M250 198 l-8 26 M258 204 l6 22" />
         </g>
       </g>
+
+        </>
+      )}
 
       {/* poster-style white lightning bolts and spray flecks */}
       <g className="bolts" fill={cream} stroke={ink} strokeWidth="1.6" strokeLinejoin="round">
