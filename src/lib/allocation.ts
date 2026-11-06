@@ -109,3 +109,30 @@ export function availabilityNote(v: { free: number; heldBy: string[] }) {
 
 export const reservedShortText = (s: ReservedShort) =>
   `${s.deck} is short ${s.need - s.got} ${s.name}${s.heldBy.length ? `: ${s.heldBy.join(', ')} ${s.heldBy.length === 1 ? 'holds' : 'hold'} yours` : ''}`;
+
+/**
+ * A card's copy status for one deck (states after ManaVault's allocation view, MPL-2.0, idea only):
+ * - basic: basic lands are never counted
+ * - missing: you own none
+ * - held: a reserved deck already holds every copy this deck needs ("in Atraxa")
+ * - partial: you own some, but fewer than the deck can use (`usable` < `need`)
+ * - ok: enough copies (a shared deck may use every copy; a reserved deck its own + the free ones)
+ */
+export type CopyStatus = 'basic' | 'missing' | 'held' | 'partial' | 'ok';
+
+export function copyStatus(a: Allocation, name: string, forDeck: AllocDeck | undefined, owned: Map<string, number>, need = 1) {
+  if (BASICS.has(norm(name))) return { status: 'basic' as CopyStatus, own: 0, free: 0, usable: 0, heldBy: [] as string[], note: '' };
+  const v = availability(a, name, forDeck, owned);
+  const status: CopyStatus = v.own === 0 ? 'missing' : v.usable === 0 ? 'held' : v.usable < need ? 'partial' : 'ok';
+  return { ...v, status, note: v.own === 0 ? '' : availabilityNote(v) };
+}
+
+/**
+ * Suggestions with free copies first. For a reserved deck, cards whose every copy another reserved deck holds move to
+ * the end (order kept otherwise). For a shared deck (the default) the order is never changed: notes only.
+ */
+export function freeFirst<T extends { name: string }>(cands: T[], a: Allocation, forDeck: AllocDeck | undefined, owned: Map<string, number>): T[] {
+  if (!forDeck || policy(forDeck) !== 'reserved') return cands;
+  const usable = (c: T) => availability(a, c.name, forDeck, owned).usable > 0 || (owned.get(norm(c.name)) ?? 0) === 0;
+  return [...cands.filter(usable), ...cands.filter((c) => !usable(c))];
+}

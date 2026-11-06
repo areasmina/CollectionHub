@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allocate, availability, availabilityNote, reservedShortText, type AllocDeck } from './allocation';
+import { allocate, availability, availabilityNote, copyStatus, freeFirst, reservedShortText, type AllocDeck } from './allocation';
 import { shortfalls } from './copies';
 
 const deck = (name: string, cards: [string, number][], more: Partial<AllocDeck> = {}): AllocDeck => ({ name, cards: cards.map(([n, qty]) => ({ name: n, qty })), ...more });
@@ -56,5 +56,31 @@ describe('allocation: reserved decks hold real copies', () => {
   it('cards you do not own are not reported as reserved shortfalls (they are simply missing)', () => {
     const a = allocate([deck('X', [['Mana Crypt', 1]], { alloc: 'reserved' })], owned);
     expect(a.short).toEqual([]);
+  });
+});
+
+describe('copy status and free-first ranking', () => {
+  const own = new Map([['sol ring', 1], ['arcane signet', 2], ['mind stone', 1]]);
+  const atraxa = deck('Atraxa', [['Sol Ring', 1], ['Arcane Signet', 1]], { id: 1, alloc: 'reserved' });
+  const kinnan = deck('Kinnan', [['Arcane Signet', 1]], { id: 2, alloc: 'reserved' });
+  const shared = deck('Tatyova', [['Sol Ring', 1]], { id: 3 });
+  const a = allocate([atraxa, kinnan, shared], own);
+  it('names the five states', () => {
+    expect(copyStatus(a, 'Forest', kinnan, own).status).toBe('basic');
+    expect(copyStatus(a, 'Mana Crypt', kinnan, own).status).toBe('missing');
+    expect(copyStatus(a, 'Sol Ring', kinnan, own)).toMatchObject({ status: 'held', note: 'in Atraxa' });
+    expect(copyStatus(a, 'Mind Stone', kinnan, own)).toMatchObject({ status: 'ok', note: 'free' });
+    expect(copyStatus(a, 'Mind Stone', kinnan, own, 2).status).toBe('partial');
+  });
+  it('a shared deck can still use a reserved copy (status ok, note says who holds it)', () => {
+    expect(copyStatus(a, 'Sol Ring', shared, own)).toMatchObject({ status: 'ok', note: 'in Atraxa' });
+  });
+  const cands = [{ name: 'Sol Ring' }, { name: 'Mana Crypt' }, { name: 'Mind Stone' }];
+  it('a reserved deck sees cards held elsewhere last, order otherwise kept', () => {
+    expect(freeFirst(cands, a, kinnan, own).map((c) => c.name)).toEqual(['Mana Crypt', 'Mind Stone', 'Sol Ring']);
+  });
+  it('a shared deck keeps the order exactly', () => {
+    expect(freeFirst(cands, a, shared, own)).toBe(cands);
+    expect(freeFirst(cands, a, undefined, own)).toBe(cands);
   });
 });
