@@ -22,7 +22,11 @@ test('Discover: title, eye art, filters and commanders fit the screen', async ({
     await expect(page.locator('.hero .fpanel input[type=search]')).toBeVisible();
   } else await expect(page.locator('.hero .fpanel input[type=search]')).toBeVisible();
   await expect(page.locator('.colours button')).toHaveCount(5);
-  await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.eyedoodle', '.ccard']);
+  if (info.project.name === 'phone') {
+    // the big eye behind the title bleeds past the letters; the title clips it at its own edges
+    expect(await page.locator('.hero .titlewrap').evaluate((e) => getComputedStyle(e).overflowX)).toBe('clip');
+    await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.ccard']);
+  } else await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.eyedoodle', '.ccard']);
 });
 
 test('Commander page: header stats, tags row stays inside its frame', async ({ page }) => {

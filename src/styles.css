@@ -7513,6 +7513,10 @@ details.cat {
 .titlewrap {
   position: relative;
 }
+/* the big eye may bleed past the letters, never past the screen */
+.titlewrap:has(> .eyedoodle) {
+  overflow-x: clip;
+}
 .titlewrap > .eyedoodle {
   position: absolute;
   z-index: 0;
