@@ -12,15 +12,17 @@ import { deckColour } from '../lib/deckcolor';
 const SHELF = 6;
 
 /** Your saved decks, newest first, in one sideways row ending with SEE ALL: one tap opens the deck in the Forge. */
-export function MyDecks({ s }: { s: Shared }) {
+export function MyDecks({ s, action }: { s: Shared; action?: React.ReactNode }) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
   const arts = useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? ''))).toArray()).map((c) => [c.key, c.img])), [decks]) ?? new Map<string, string | undefined>();
-  if (!decks.length) return null;
+  if (!decks.length && !action) return null;
   return (
     <section className="shelf" aria-label="My decks">
       <div className="shelfhead">
         <h2>MY DECKS ({decks.length})</h2>
+        {action}
       </div>
+      {decks.length > 0 && (
       <ul className="shelfrow">
         {decks.slice(0, SHELF).map((d) => {
           const pct = summarize(d.cards.map((c) => c.name), s.mine, s.other).pct;
@@ -46,6 +48,7 @@ export function MyDecks({ s }: { s: Shared }) {
           </button>
         </li>
       </ul>
+      )}
     </section>
   );
 }

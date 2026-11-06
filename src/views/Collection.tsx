@@ -133,15 +133,18 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
       <PageDecor seed={821} rays="18% 18%" sheet={{ side: 'right', top: 120, rot: 7 }} />
       <main>
         <section className="chead2">
-          <Title text="COLLECTION" label="Collection" size={60} seed={21} />
-          {/* One binder control (owner's call, Nov 6): switch, add, rename, reset, delete, plus sync and haptics */}
-          <BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />
+          {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
+              control (switch, add, rename, reset, delete, plus sync and haptics). */}
+          <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />} />
         </section>
 
         {/* Dashboard fold (owner's call, Nov 6): counts, worth, your decks and import live together, closed by default,
             so the collection comes first. The closed fold still says the numbers in one line. */}
         <details className="dash" open={dashOpen} onToggle={(e) => setDash(e.currentTarget.open)}>
           <summary aria-label={`Binder overview: ${total} cards, ${commanders} commanders${decks ? `, ${decks} decks` : ''}`}>
+            {dashOpen ? (
+              <span className="dsum dhide">HIDE THE OVERVIEW</span>
+            ) : (
             <span className="dsum">
               <span>
                 <b>{total.toLocaleString()}</b> cards
@@ -160,7 +163,12 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
                 </span>
               )}
             </span>
-            <span className="dimp">IMPORT</span>
+            )}
+            {!dashOpen && (
+              <span className="dimp" onClick={() => setImportOpen(true)}>
+                IMPORT
+              </span>
+            )}
             <span className="chev" aria-hidden="true">
               ▾
             </span>
@@ -203,20 +211,14 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             </div>
           </section>
 
-          <MyDecks s={s} />
-
-          {illegal > 0 && (
-            <p className="count">
-              {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
-            </p>
-          )}
-
-          {/* Import sits right under the counts: it's used the most */}
+          {/* Import lives in the MY DECKS bar (owner's call, Nov 6): adding cards and decks in one place */}
+          <MyDecks
+            s={s}
+            action={
           <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
             <summary>
               <span className="stripe" aria-hidden="true" />
-              <b>IMPORT CARDS</b>
-              <small>ManaBox CSV, CSV or a text list · add to or replace {name}</small>
+              <b>+ IMPORT CARDS</b>
               <span className="chev" aria-hidden="true">
                 ▾
               </span>
@@ -261,7 +263,16 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             </div>
           </section>
           </details>
-        </details>
+            }
+          />
+
+          {illegal > 0 && (
+            <p className="count">
+              {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
+            </p>
+          )}
+
+          </details>
 
         <section>
           <CardsView

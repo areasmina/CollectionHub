@@ -577,6 +577,7 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await page.locator('.ccard').first().click();
   const cov = page.locator('.lists > .coverage');
   await expect(cov).toContainText('from your binder');
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · $$$'); // decks open at MED power, MAX budget
   const before = await cov.innerText();
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();

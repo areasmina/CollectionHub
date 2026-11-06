@@ -10177,3 +10177,59 @@ details.dash[open] > *:not(summary) {
     display: none !important;
   }
 }
+/* Collection top, round 2 (Nov 6): the binder's name is a tag on the COLLECTION title; IMPORT sits in the MY DECKS bar;
+   the overview's numbers show once (summary line only while closed) */
+.chead2 .titlewrap > .bindermenu {
+  position: relative;
+  z-index: 3;
+  margin: -14px 0 0 12px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+}
+.chead2 .titlewrap > .bindermenu > .bmbtn {
+  transform: rotate(-2deg);
+}
+details.dash > summary .dsum.dhide {
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+.shelf .shelfhead {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.shelf .shelfhead > .importbox {
+  margin: 0 0 0 auto;
+}
+.shelf .shelfhead > .importbox > summary {
+  min-height: 44px;
+  padding-right: 10px;
+  gap: 8px;
+}
+.shelf .shelfhead > .importbox > summary .stripe {
+  width: 14px;
+}
+.shelf .shelfhead > .importbox > summary b {
+  font-size: 18px;
+}
+.shelf .shelfhead > .importbox[open] {
+  flex: 1 1 100%;
+  margin: 8px 0 0;
+}
+.shelf .shelfhead > .importbox[open] > summary {
+  width: max-content;
+  margin-left: auto;
+}
+details.dash > summary .dsum > span {
+  display: inline-block;
+}
+details.dash > summary .dsum {
+  white-space: normal;
+}
+
+/* the binder menu opens over the sticky tool bar below the title */
+main > .chead2 {
+  position: relative;
+  z-index: 40;
+}
