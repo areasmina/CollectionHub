@@ -1,19 +1,20 @@
 import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
 import { PriceLink, priced, Thumb, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
 import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
+import { colourByCard } from '../lib/deckcolor';
 import { useLiveQuery } from 'dexie-react-hooks';
 
 type MenuFn = (e: Entry, x: number, y: number) => void;
 /** A card row / tile with the card menu: right-click, press and hold, or its ⋯ button. */
-function MenuLi({ e, onMenu, className, children }: { e: Entry; onMenu?: MenuFn; className: string; children: React.ReactNode }) {
+function MenuLi({ e, onMenu, className, children, tint }: { e: Entry; onMenu?: MenuFn; className: string; children: React.ReactNode; tint?: string }) {
   const press = useMenuPress(onMenu && ((x, y) => onMenu(e, x, y)));
   return (
-    <li className={`${className}${onMenu ? ' hasmenu' : ''}`} {...press}>
+    <li className={`${className}${onMenu ? ' hasmenu' : ''}`} style={tint ? ({ '--dc': tint } as React.CSSProperties) : undefined} {...press}>
       {children}
       {onMenu && (
         <button
@@ -123,7 +124,7 @@ function toneOf(list: Entry[], cards: Map<string, Card>) {
   return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'none';
 }
 
-/** Grid quantity: spray-painted X tally on the card (X, XX, XXX, XXXX; X12 from 5). Tap it to edit: − n +,
+/** Grid quantity, Arena style: four pips under the card, one filled per copy you own, "+N" past four. Tap it to edit: − n +,
  *  the − turns into a bin at 1. Closes when you tap anywhere else. */
 function Tally({ e }: { e: Entry }) {
   const [edit, setEdit] = useState(false);
@@ -135,7 +136,6 @@ function Tally({ e }: { e: Entry }) {
     return () => document.removeEventListener('pointerdown', away);
   }, [edit]);
   const set = (q: number) => (haptic('tap'), db.entries.update(e.id!, { qty: Math.min(999, q) }));
-  const marks = e.qty <= 4 ? 'X'.repeat(e.qty) : `X${e.qty}`;
   return (
     <span ref={ref} className={`tally${edit ? ' editing' : ''}`} onClick={(ev) => ev.stopPropagation()}>
       {edit ? (
@@ -158,7 +158,10 @@ function Tally({ e }: { e: Entry }) {
         </span>
       ) : (
         <button className="marks" aria-label={`${e.qty} ${e.qty === 1 ? 'copy' : 'copies'} of ${e.name}. Change quantity`} onClick={() => (haptic('open'), setEdit(true))}>
-          {marks}
+          {[0, 1, 2, 3].map((i) => (
+            <i key={i} className={i < e.qty ? 'on' : ''} />
+          ))}
+          {e.qty > 4 && <small>+{e.qty - 4}</small>}
         </button>
       )}
     </span>
@@ -173,13 +176,17 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]> }) {
+function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]>; tints?: Map<string, string[]> }) {
   // In your active decks: a small mark under the name ("in 2 decks", the deck names on hover).
   const useMark = (e: Entry) => {
     const ds = used?.get(norm(e.name));
     return ds?.length ? (
       <span className="inuse" title={`In ${ds.join(', ')}`}>
-        ● in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
+        {/* one dot per deck, in that deck's colour */}
+        {(tints?.get(norm(e.name)) ?? []).map((c) => (
+          <i key={c} style={{ background: c }} aria-hidden="true" />
+        ))}{' '}
+        in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
       </span>
     ) : null;
   };
@@ -188,15 +195,17 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
     return (
       <ul className="zgrid cgrid2">
         {list.map((e) => (
-          <MenuLi key={e.id} e={e} onMenu={onMenu} className="ztile owned ctile">
+          <MenuLi key={e.id} e={e} onMenu={onMenu} className={`ztile owned ctile${used?.get(norm(e.name))?.length ? ' live' : ''}`} tint={tints?.get(norm(e.name))?.[0]}>
+            {/* Name on top; clean art (price sticker and "in N decks" show on hover); Arena-style copy pips centred below */}
+            <span className="tname" title={setLine(e)}>
+              {e.name}
+            </span>
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
-              <Tally e={e} />
+              {useMark(e)}
             </span>
-            <span className="tname">{e.name}</span>
-            <span className="tnote">{setLine(e)}</span>
-            {useMark(e)}
+            <Tally e={e} />
           </MenuLi>
         ))}
       </ul>
@@ -230,7 +239,8 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
 }
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
-export function CardsView({ entries, cards, profile, binderName }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string }) {
+/** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
+export function CardsView({ entries, cards, profile, binderName, search, more, title }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; search?: ReactNode; more?: ReactNode; title?: ReactNode }) {
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -240,11 +250,14 @@ export function CardsView({ entries, cards, profile, binderName }: { entries: En
   }, [toast]);
   const decks = useLiveQuery(() => (profile ? db.decks.where('profile').equals(profile).toArray() : []), [profile]) ?? [];
   const used = inUse(decks);
+  const tints = colourByCard(decks, norm); // each card glows in the colour of its deck
   const onMenu: MenuFn | undefined = profile ? (e, x, y) => setMenu({ e, x, y }) : undefined;
   const owned = (name: string) => entries.filter((x) => norm(x.name) === norm(name)).reduce((n, x) => n + x.qty, 0);
   // Always opens in grid; LIST switches for this visit only.
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [group, setGroup] = usePref<'on' | 'off'>('ch:collgroup', 'off');
+  // ZOOM: card size in the grid (small fits more, large reads the card), remembered on this device
+  const [zoom, setZoom] = usePref<'s' | 'm' | 'l'>('ch:collzoom', 'm');
   const [hideEmpty, setHideEmpty] = usePref<'on' | 'off'>('ch:collempty', 'on');
   const [limit, setLimit] = useState(100);
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -279,23 +292,46 @@ export function CardsView({ entries, cards, profile, binderName }: { entries: En
           )}
         </div>
       )}
-      <div className="cardopts">
-        <div className="viewsw" role="group" aria-label="Card view">
-          <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
-                <ListIcon /> List
+      {/* One row: search, List / Grid, and a ⋯ menu for the rarely used options (grouping, exports). */}
+      {/* Title and the tools bar share one line */}
+      <div className="collbar" data-zoom={zoom}>
+      {title}
+      <div className="cardopts tools1">
+        {search}
+        {view === 'grid' && (
+          <div className="zoomsw" role="radiogroup" aria-label="Card size">
+            {(['s', 'm', 'l'] as const).map((z) => (
+              <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
+                <i className={`zc ${z}`} aria-hidden="true" />
               </button>
-          <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
-                <GridIcon /> Grid
-              </button>
-        </div>
-        <label className="check">
-          <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
-        </label>
-        {group === 'on' && (
-          <label className="check">
-            <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
-          </label>
+            ))}
+          </div>
         )}
+        <div className="viewsw icons" role="group" aria-label="Card view">
+          <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
+            <ListIcon />
+          </button>
+          <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
+            <GridIcon />
+          </button>
+        </div>
+        <details className="toolmore">
+          <summary aria-label="More options" title="More options">
+            ⋯
+          </summary>
+          <div className="tmbody">
+            <label className="check">
+              <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
+            </label>
+            {group === 'on' && (
+              <label className="check">
+                <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
+              </label>
+            )}
+            {more}
+          </div>
+        </details>
+      </div>
       </div>
 
       {group === 'on' ? (
@@ -317,14 +353,14 @@ export function CardsView({ entries, cards, profile, binderName }: { entries: En
                     {g.icon ? <img className="seticon" src={g.icon} alt="" loading="lazy" /> : <span className="seticon" aria-hidden="true" />}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
         </div>
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)

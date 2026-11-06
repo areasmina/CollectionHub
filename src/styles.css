@@ -7264,3 +7264,1963 @@ details.cat {
   margin: 0;
   font-family: var(--se);
 }
+
+/* Phone round (Nov 5): a deck card is its own swap button (tap the card; hold or ⋯ for more).
+   Under it: the name (2 lines at most, so rows line up) and a small price. */
+.ztile {
+  position: relative;
+}
+.ztile .tacts > .swapbtn.tilehit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  cursor: pointer;
+}
+.ztile .tacts > .swapbtn.tilehit:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.ztile .tname {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.2em;
+  line-height: 1.1;
+}
+.ztile .tacts {
+  position: static;
+  min-height: 0;
+}
+.ztile .tacts > .price {
+  position: relative;
+  z-index: 3;
+}
+.ztile .tacts > .price {
+  margin-left: 0;
+  font-size: 13px;
+  padding: 0 6px;
+  transform: none;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--raised);
+}
+.ztile .tacts > a.price {
+  border-color: var(--hazard);
+  color: var(--hazard);
+}
+.ztile .tacts > .morebtn {
+  min-width: 36px;
+  min-height: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  top: 6px;
+  right: 6px;
+}
+.misstape {
+  position: absolute;
+  top: 18%;
+  left: -6px;
+  z-index: 3;
+  background: var(--accent);
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 1px;
+  padding: 2px 10px;
+  transform: rotate(-6deg);
+  box-shadow: 3px 3px 0 var(--ink);
+  pointer-events: none;
+}
+
+/* Collection match: bar from the left, % inside the red burst on the right */
+.match {
+  padding: 0 0 0 12px;
+  gap: 10px;
+}
+.match .burst {
+  right: -14px;
+  top: -26px;
+  width: 112px;
+  height: 112px;
+}
+.match .num {
+  flex: 0 0 auto;
+  min-width: 78px;
+  text-align: center;
+  font-size: 30px;
+  z-index: 1;
+  padding-right: 4px;
+  text-shadow: 2px 2px 0 var(--ink);
+}
+/* Copies: a small chip that opens the list */
+.shortalert.chip {
+  display: block;
+  padding: 0;
+  margin: var(--sp3, 12px) 0;
+  background: transparent;
+  border: 0;
+}
+.shortalert.chip summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--se);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+  box-shadow: 3px 3px 0 var(--accent);
+}
+.shortalert.chip summary::-webkit-details-marker {
+  display: none;
+}
+.shortalert.chip summary b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 15px;
+}
+.shortalert.chip ul {
+  margin: 10px 0 0;
+  padding: 12px 16px 12px 28px;
+  background: var(--paper);
+  color: var(--ink);
+}
+@media (max-width: 700px) {
+  .shortalert.chip summary span {
+    display: none;
+  }
+}
+/* One FILTERS button above the cards; its sheet holds sort, show and the EDHREC filters */
+.fsheet {
+  width: 100%;
+}
+.fsheet > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 0 0 14px;
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.fsheet > summary::-webkit-details-marker {
+  display: none;
+}
+.fsheet .ft {
+  font-family: var(--an);
+  font-size: 18px;
+  background: var(--accent);
+  color: var(--white);
+  padding: 2px 10px;
+}
+.fsheet .fnow {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--se);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fsheet .arrow {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  background: var(--accent);
+  color: var(--white);
+  transition: transform 0.2s;
+}
+.fsheet[open] .arrow {
+  transform: scaleY(-1);
+}
+.fsheet .fbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp3, 12px);
+  padding: var(--sp3, 12px);
+  background: var(--ink);
+  border: 3px solid var(--ink);
+  border-top: 0;
+}
+
+/* Section headers: same columns on every row (name + count | price | owned), never wrapping */
+.cat > summary {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: var(--sp3, 12px);
+}
+.cat > summary .dots {
+  display: none;
+}
+.cat > summary .h {
+  display: block;
+  padding: 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.cat > summary .n {
+  padding: 0 12px 0 0;
+}
+.cat > summary .gval {
+  justify-self: end;
+}
+.cat > summary .n {
+  min-width: 7.5ch;
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .cat > summary {
+    grid-template-columns: 36px minmax(0, 1fr) auto auto;
+    column-gap: var(--sp2, 8px);
+  }
+  .cat > summary .pm {
+    width: 36px;
+    height: 36px;
+  }
+  .cat > summary .h {
+    font-size: 21px;
+  }
+  .cat > summary .gval {
+    font-size: 13px;
+  }
+  .cat > summary .n {
+    font-size: 12px;
+  }
+}
+
+/* Phones: the eye blazes behind the title letters, between the red slash and the tiles */
+.titlewrap {
+  position: relative;
+}
+/* the big eye may bleed past the letters, never past the screen */
+.titlewrap:has(> .eyedoodle) {
+  overflow-x: clip;
+}
+.titlewrap > .eyedoodle {
+  position: absolute;
+  z-index: 0;
+  left: 68%;
+  top: 48%;
+  width: 108%;
+  max-width: none;
+  height: auto;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.titlewrap > .ztitle {
+  position: relative;
+  z-index: 1;
+}
+
+/* Collection tools: search | List / Grid | ⋯ (group by set, exports) on one row */
+.cardopts.tools1 {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--sp2, 8px);
+  margin: var(--sp4, 16px) 0;
+  position: relative;
+}
+.cardopts.tools1 > .sbox {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.viewsw.icons {
+  display: flex;
+  flex: 0 0 auto;
+}
+.viewsw.icons button {
+  min-width: 48px;
+  padding: 0 10px;
+}
+.toolmore {
+  flex: 0 0 auto;
+}
+.toolmore > summary {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 100%;
+  min-height: 48px;
+  background: var(--ink);
+  color: var(--white);
+  border: 3px solid var(--white);
+  font-size: 22px;
+  cursor: pointer;
+  list-style: none;
+}
+.toolmore > summary::-webkit-details-marker {
+  display: none;
+}
+.toolmore[open] > summary {
+  background: var(--accent);
+}
+.toolmore .tmbody {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp2, 8px);
+  min-width: 220px;
+  padding: var(--sp3, 12px);
+  background: var(--ink);
+  border: 3px solid var(--white);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.toolmore .tmbody .sticker {
+  transform: none;
+}
+@media (max-width: 700px) {
+  .cardopts.tools1 > .sbox .tab {
+    display: none;
+  }
+  .viewsw.icons button {
+    min-width: 44px;
+    padding: 0 8px;
+  }
+}
+
+/* Copies, Arena style: four pips centred under the card, filled per copy you own; "+N" past four */
+.tally {
+  left: 50%;
+  right: auto;
+  bottom: -18px;
+  transform: translateX(-50%);
+}
+.tally .marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 16px;
+  background: var(--ink);
+  border: 2px solid var(--raised, #444);
+  transform: none;
+  text-shadow: none;
+  font-family: var(--an);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--white);
+}
+.tally .marks::before,
+.tally .marks::after {
+  display: none;
+}
+.tally .marks i {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border: 1.5px solid #8a8a8a;
+  background: transparent;
+}
+.tally .marks i.on {
+  background: var(--hazard);
+  border-color: var(--hazard);
+  box-shadow: 0 0 5px rgba(255, 204, 0, 0.6);
+}
+.tally .marks small {
+  font-size: 13px;
+  margin-left: 2px;
+  color: var(--hazard);
+}
+.tally .marks:hover,
+.tally .marks:focus-visible {
+  transform: scale(1.06);
+}
+/* pips sit on the card's lower edge, clear of the name */
+.tally {
+  bottom: 8px;
+}
+/* Collection tile ⋯: the same small round badge as in decks, under the price tape */
+.ztile.ctile > .morebtn {
+  top: 44px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  background: var(--ink);
+  color: var(--white);
+  border: 2px solid var(--white);
+}
+.dtools:has(> .fsheet) {
+  display: block;
+}
+
+/* Built around: EDHREC's top 6 tags as slim chips, the rest behind +N MORE (24 big tags buried the header) */
+.hscroll button small {
+  font-size: 0.8em;
+  opacity: 0.7;
+  margin-left: 2px;
+}
+.hscroll button.tagmore {
+  background: transparent;
+  border-style: dashed;
+  color: var(--hazard);
+  border-color: var(--hazard);
+}
+@media (min-width: 900px) {
+  .chero .hscroll {
+    gap: 8px;
+    row-gap: 8px;
+  }
+  .chero .hscroll button {
+    min-height: 36px;
+    font-size: 15px;
+    padding: 0 10px;
+    border-width: 2px;
+  }
+}
+
+/* Copies warning lives in the strip's bottom line: the line turns hazard yellow and leads with ⚠ N SHORT (tap = list) */
+.strip .hint.warn,
+.forgehint.warn {
+  background: var(--hazard);
+  color: var(--ink);
+  border-top: 0;
+  margin-top: var(--sp2);
+  padding: var(--sp2) var(--sp3);
+}
+.forgehint.warn {
+  border: 2px solid var(--ink);
+}
+.shortin {
+  display: inline-block;
+  vertical-align: middle;
+}
+.shortin[open] {
+  display: block;
+}
+.shortin > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  cursor: pointer;
+  list-style: none;
+  margin-right: var(--sp2);
+}
+.shortin > summary::-webkit-details-marker {
+  display: none;
+}
+.shortin > summary b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  background: var(--ink);
+  color: var(--hazard);
+  padding: 2px 8px;
+}
+.shortin > summary b::after {
+  content: ' ▾';
+}
+.shortin[open] > summary b::after {
+  content: ' ▴';
+}
+.shortin > ul {
+  display: block;
+  margin: var(--sp2) 0;
+  padding-left: var(--sp4);
+  font-size: 13px;
+}
+.forgehint.warn > b {
+  margin-left: 0;
+}
+
+/* Clean tiles (Nov 6): the art stays readable. ⋯ fades in on hover / focus (faint on touch screens); prices are
+   plain small text under the name; collection copies (pips) sit under the name; active-deck cards glow green. */
+.ztile > .morebtn,
+.ztile .tacts > .morebtn {
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  background: rgba(20, 20, 20, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+}
+.ztile:hover > .morebtn,
+.ztile:focus-within > .morebtn,
+.ztile:hover .tacts > .morebtn,
+.ztile:focus-within .tacts > .morebtn {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: none) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    transition: none;
+  }
+}
+.ztile.ctile > .morebtn {
+  top: 8px;
+  right: 8px;
+}
+.ztile .tacts > .price,
+.ztile .tacts > a.price {
+  border: 0;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 12px;
+  color: #9a9a9a;
+}
+.ztile .tacts > a.price:hover {
+  color: var(--hazard);
+  text-decoration: underline;
+}
+.ctile .tmeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 32px;
+}
+.ctile .tmeta .tally {
+  position: static;
+  transform: none;
+}
+.ctile .tmeta .tally .marks {
+  min-height: 28px;
+  min-width: 0;
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+}
+.ctile .tmeta .price {
+  position: static;
+  transform: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 12px;
+  color: #9a9a9a;
+  box-shadow: none;
+}
+.ctile.live .cart {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px rgba(46, 204, 64, 0.85), 0 0 16px rgba(46, 204, 64, 0.45);
+}
+@media (min-width: 900px) {
+  /* four cells now (the MISSING plate went to the TO BUY receipt) */
+  .strip {
+    grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(260px, 1.6fr) minmax(190px, 1fr);
+  }
+}
+.receipt .nm .ty {
+  font-size: 0.75em;
+  opacity: 0.6;
+}
+
+/* The commander's card is its menu: lifts on hover, ⋯ OPTIONS corner, one-time "tap for options" tape */
+.cmdrbtn {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.cmdrbtn img {
+  display: block;
+  width: 100%;
+}
+.cmdrbtn:hover,
+.cmdrbtn:focus-visible {
+  transform: translateY(-3px) rotate(-0.6deg);
+}
+.cmdrbtn:focus-visible {
+  outline: 3px solid var(--hazard);
+  outline-offset: 4px;
+}
+.cmdrmore {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 16px;
+  background: rgba(20, 20, 20, 0.78);
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  color: var(--white);
+  font-size: 16px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+.cmdrmore b {
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  max-width: 0;
+  overflow: hidden;
+  transition: max-width 0.2s ease;
+}
+.cmdrbtn:hover .cmdrmore,
+.cmdrbtn:focus-visible .cmdrmore {
+  opacity: 1;
+}
+.cmdrbtn:hover .cmdrmore b,
+.cmdrbtn:focus-visible .cmdrmore b {
+  max-width: 80px;
+}
+.cmdrhint {
+  position: absolute;
+  left: 50%;
+  bottom: -14px;
+  transform: translateX(-50%) rotate(-3deg);
+  white-space: nowrap;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--se);
+  font-size: 13px;
+  padding: 3px 10px;
+  box-shadow: 2px 2px 0 var(--ink);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmdrbtn,
+  .cmdrmore,
+  .cmdrmore b {
+    transition: none;
+  }
+}
+
+/* Forge: collection match sits on top of the ANALYSIS panel (the commander header stays clean) */
+.dmatch {
+  margin: 0 0 var(--sp4);
+}
+.dmatch .lbl {
+  display: block;
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  color: var(--white);
+  margin-bottom: var(--sp2);
+}
+.dmatch .match {
+  min-height: 64px;
+}
+
+/* My decks shelf: every tile the same width. A flex item's default min-width is its content, so a long deck name
+   (kept on one line) used to stretch its tile; now the name is cut with … instead. */
+.shelf li {
+  min-width: 0;
+}
+.shelf li > button:not(.dlight) {
+  min-width: 0;
+  overflow: hidden;
+}
+.shelf li b,
+.shelf li small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Save this deck? — compact: spinning card beside the title, one row of buttons, "keep forging" as a quiet link */
+.note-pop.leavenote {
+  width: min(380px, calc(100vw - 32px));
+  padding: var(--sp4);
+}
+.leavenote .lhead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp3);
+  text-align: left;
+}
+.leavenote .lhead img {
+  margin: 0;
+}
+.leavenote .lhead .nh {
+  justify-content: flex-start;
+  margin: 0;
+}
+.leavenote .lhead p {
+  margin: var(--sp1) 0 0;
+  line-height: 1.35;
+}
+.leavenote .leavebtns {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--sp2);
+  margin-top: var(--sp3);
+}
+.leavenote .btn {
+  min-height: 44px;
+  font-size: 18px;
+  padding: 0 var(--sp3);
+}
+.leavenote .lkeep {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 36px;
+  background: none;
+  border: 0;
+  font-family: var(--se);
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Discover search reads like the Collection one: SEARCH tab + typewriter text */
+.hero .fpanel .sbox.search .tab {
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  border-right: 1px solid #3a3a3a;
+}
+.hero .fpanel .sbox.search input,
+.hero .fpanel .sbox.search input::placeholder {
+  font-family: var(--se);
+  font-weight: 400;
+}
+
+/* WHAT CAN I BUILD? → the answer in the same cut-out letters, stuck on under the title like a reply */
+.tanswer {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  margin: calc(-1 * var(--sp3)) 0 0 var(--sp6);
+  padding: var(--sp1) var(--sp2);
+  background: var(--hazard);
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-4deg);
+}
+.tanswer::before {
+  content: '→';
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--an);
+  font-size: 30px;
+  color: var(--hazard);
+}
+@media (max-width: 700px) {
+  .tanswer {
+    margin-left: var(--sp6);
+  }
+}
+
+/* Collection tools = one bar: search | ZOOM (card size) | list / grid | ⋯, inside one frame */
+.cardopts.tools1 {
+  gap: 0;
+  border: 3px solid var(--text);
+  background: var(--bg);
+}
+.cardopts.tools1 > .sbox {
+  border: 0;
+  box-shadow: none;
+}
+.cardopts.tools1 > .zoomsw,
+.cardopts.tools1 > .viewsw.icons,
+.cardopts.tools1 > .toolmore > summary {
+  border-left: 1px solid #3a3a3a;
+}
+.cardopts.tools1 .viewsw.icons button,
+.cardopts.tools1 > .toolmore > summary {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text);
+}
+.cardopts.tools1 .viewsw.icons button[aria-pressed='true'] {
+  background: var(--r, #e60012);
+  color: var(--white);
+}
+.zoomsw {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+.zoomsw button {
+  min-width: 40px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: #8a8a8a;
+  cursor: pointer;
+}
+.zoomsw button[aria-checked='true'] {
+  color: var(--hazard);
+}
+.zoomsw .zc {
+  display: block;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+}
+.zoomsw .zc.s {
+  width: 9px;
+  height: 13px;
+}
+.zoomsw .zc.m {
+  width: 13px;
+  height: 18px;
+}
+.zoomsw .zc.l {
+  width: 17px;
+  height: 24px;
+}
+/* card sizes */
+.collbar[data-zoom='s'] ~ * .cgrid2,
+.collbar[data-zoom='s'] ~ .cgrid2 {
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+}
+.collbar[data-zoom='m'] ~ * .cgrid2,
+.collbar[data-zoom='m'] ~ .cgrid2 {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.collbar[data-zoom='l'] ~ * .cgrid2,
+.collbar[data-zoom='l'] ~ .cgrid2 {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+@media (max-width: 700px) {
+  .zoomsw button {
+    min-width: 34px;
+  }
+  .collbar[data-zoom='s'] ~ * .cgrid2,
+  .collbar[data-zoom='s'] ~ .cgrid2 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .collbar[data-zoom='m'] ~ * .cgrid2,
+  .collbar[data-zoom='m'] ~ .cgrid2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .collbar[data-zoom='l'] ~ * .cgrid2,
+  .collbar[data-zoom='l'] ~ .cgrid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Commander card: halftone dots 30% lighter; the hint tape and ⋯ corner sit on top of the dots */
+.cimg .cmdrimg::after {
+  background: radial-gradient(rgba(0, 0, 0, 0.245) 1px, transparent 1.5px) 0 0/4px 4px;
+}
+.cimg .cmdrimg .xg {
+  opacity: 0.315;
+}
+.cmdrbtn .cmdrhint,
+.cmdrbtn .cmdrmore {
+  z-index: 4;
+}
+.dhero .cimg .cmdrimg::after {
+  opacity: 0.315;
+}
+.dhero .cimg .cmdrimg .xg {
+  opacity: 0.14;
+}
+
+/* Card menu: Change artwork — a small grid of your card's printings, the one you own outlined */
+.cardmenu .artgrid {
+  list-style: none;
+  margin: 6px 0 4px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.cardmenu .artgrid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 2px;
+  background: none;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.cardmenu .artgrid button[aria-pressed='true'] {
+  border-color: var(--r, #e60012);
+}
+.cardmenu .artgrid img {
+  width: 100%;
+  border-radius: 4px;
+}
+.cardmenu .artgrid small {
+  font-size: 10px;
+}
+.cardmenu .artsload {
+  margin: 4px 0;
+}
+
+/* Built around now lives in the settings strip, full width under Power / Budget / Match */
+.strip .builtaround {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.strip .hscroll {
+  flex-wrap: wrap;
+  overflow: visible;
+  mask-image: none;
+  -webkit-mask-image: none;
+  padding: 2px 0;
+  gap: 6px;
+}
+.strip .hscroll button {
+  min-height: 34px;
+  font-size: 14px;
+  padding: 0 9px;
+  border-width: 2px;
+  border-color: var(--ink);
+}
+.strip .hscroll button.tagmore {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+@media (max-width: 700px) {
+  .strip .builtaround {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .strip .hscroll {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+}
+
+/* Commander rank + deck count: a black label-maker strip right after the name */
+.cstamp {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: stretch;
+  flex-wrap: wrap;
+  margin: calc(-1 * var(--sp1)) 0 var(--sp2);
+  transform: rotate(-1.5deg);
+  font-family: var(--mono, 'Space Mono', monospace);
+  font-size: 12px;
+  letter-spacing: 1px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.cstamp > * {
+  padding: 3px 10px;
+  background: var(--ink);
+  color: var(--white);
+}
+.cstamp b {
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--an);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.cstamp a {
+  color: var(--hazard);
+  border-left: 1px dashed #666;
+}
+.cstamp span {
+  border-left: 1px dashed #666;
+}
+
+/* Deck tools: FILTERS and grid / list share one row (no line of their own) */
+.dtools:has(> .fsheet) {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp2);
+}
+.dtools > .fsheet {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dtools > .viewsw.mini {
+  position: static;
+  flex: 0 0 auto;
+  display: flex;
+  align-self: stretch;
+}
+.dtools > .viewsw.mini button {
+  height: 100%;
+}
+.strip .builtaround > span {
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* FILTERS sheet: With card / Without card (EDHREC) */
+.cfilter {
+  display: grid;
+  gap: var(--sp2);
+  margin-top: var(--sp2);
+  padding-top: var(--sp2);
+  border-top: 1px dashed #9a9a9a;
+}
+.cfilter .cfbtns {
+  display: flex;
+  gap: var(--sp2);
+}
+.cfilter .btn {
+  min-height: 40px;
+  margin: 0;
+}
+.cfilter .cfnote {
+  margin: 0;
+}
+
+/* ===== Collection tile v3 (Nov 6): name on top · clean art · price sticker + "in N decks" on hover ·
+   Arena-style copy pips centred below · active-deck cards carry only a faint green breath at rest ===== */
+.ctile {
+  --live: 120, 200, 120; /* a muted, slightly dusty green that sits with the ink / hazard / red palette */
+}
+.ctile > .tname {
+  order: -1;
+  margin: 0 0 6px;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.ctile .cart {
+  border-radius: 12px;
+  transition: box-shadow 0.2s ease;
+}
+/* price sticker: back in the corner, only while you hover or focus the card */
+.ctile .cart > .price {
+  opacity: 0;
+  transform: rotate(4deg) translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+.ctile:hover .cart > .price,
+.ctile:focus-within .cart > .price {
+  opacity: 1;
+  transform: rotate(4deg);
+  pointer-events: auto;
+}
+/* in an active deck: a barely-there green at rest, the full note on hover */
+.ctile.live .cart {
+  box-shadow: 0 0 0 1px rgba(var(--live), 0.28), 0 0 10px rgba(var(--live), 0.14);
+}
+.ctile.live:hover .cart,
+.ctile.live:focus-within .cart {
+  box-shadow: 0 0 0 2px rgba(var(--live), 0.75), 0 0 18px rgba(var(--live), 0.35);
+}
+.ctile .cart > .inuse {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: rgba(14, 14, 14, 0.85);
+  color: rgb(var(--live));
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.ctile:hover .cart > .inuse,
+.ctile:focus-within .cart > .inuse {
+  opacity: 1;
+}
+/* copy pips, Arena style: slim diamonds centred under the card; owned copies lit warm with a soft glow */
+.ctile > .tally {
+  position: static;
+  transform: none;
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+.ctile > .tally .marks {
+  min-height: 24px;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 4px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.ctile > .tally .marks i {
+  width: 9px;
+  height: 13px;
+  transform: none;
+  border: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: #3a3a3a;
+  box-shadow: none;
+}
+.ctile > .tally .marks i.on {
+  background: linear-gradient(180deg, #fff6d6 0%, #ffd34d 45%, #e0a200 100%);
+  filter: drop-shadow(0 0 3px rgba(255, 205, 70, 0.85));
+}
+.ctile > .tally .marks small {
+  font-size: 12px;
+  color: #ffd34d;
+  margin-left: 2px;
+}
+.ctile > .tally.editing {
+  position: static;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctile .cart,
+  .ctile .cart > .price,
+  .ctile .cart > .inuse {
+    transition: none;
+  }
+}
+@media (hover: none) {
+  /* touch screens: no hover, so the price shows small and quiet */
+  .ctile .cart > .price {
+    opacity: 0.85;
+    transform: rotate(4deg) scale(0.85);
+  }
+}
+@media (hover: hover) {
+  .ctile.live:hover .timg > .pen {
+    border-color: rgb(var(--live));
+  }
+}
+/* name sits above the art now: the ⋯ badge moves down onto the art's corner */
+.ztile.ctile > .morebtn {
+  top: 34px;
+  right: 8px;
+}
+
+/* CARD COLLECTION title and the tools bar on one line (wraps under the title on phones) */
+.collbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp4);
+  margin: var(--sp5, 24px) 0 var(--sp4);
+}
+.collbar > .colltitle {
+  flex: none;
+  margin: 0;
+}
+.collbar > .cardopts.tools1 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .collbar {
+    flex-wrap: wrap;
+    gap: var(--sp2);
+  }
+  .collbar > .cardopts.tools1 {
+    flex-basis: 100%;
+  }
+}
+
+/* Price sticker peels on like tape: folded back on its right edge at rest, unfolds flat on hover (CSS only, cheap) */
+.ctile .cart > .price {
+  transform-origin: 100% 50%;
+  transform: perspective(240px) rotate(4deg) rotateY(-95deg);
+  clip-path: inset(0 0 0 100%);
+  transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1), clip-path 0.22s ease-out, opacity 0.1s linear;
+}
+.ctile:hover .cart > .price,
+.ctile:focus-within .cart > .price {
+  transform: perspective(240px) rotate(4deg) rotateY(0deg);
+  clip-path: inset(0 0 0 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ctile .cart > .price {
+    transform: rotate(4deg);
+    clip-path: none;
+  }
+}
+@media (hover: none) {
+  .ctile .cart > .price {
+    transform: rotate(4deg) scale(0.85);
+    clip-path: none;
+  }
+}
+/* ⋯ on the art's top-left, price sticker on the top-right: they never collide */
+.ztile.ctile > .morebtn {
+  left: 8px;
+  right: auto;
+}
+
+/* Title answer, round 2: the deck count sits a bit lower and tucks in behind the title letters;
+   the tagline is pinned under the word BUILD (left/top set from the title's 4th word in Discover). */
+.titlewrap > .tanswer {
+  z-index: 0;
+  margin-top: calc(-1 * var(--sp2));
+  transform: rotate(-4deg) translateY(var(--sp2));
+}
+.hero .titlewrap > .tagline.tunder {
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  text-wrap: balance;
+  transform: rotate(-2deg);
+}
+
+/* ===== Design brief round (Nov 6): sticky slim bar · one loud price · colour meanings · plain sections · nav · hero ===== */
+
+/* 1. One slim settings bar that stays in reach: POWER · BUDGET · what's missing · FORGE IT */
+.slimbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin-top: var(--sp5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp2) var(--sp4);
+  padding: var(--sp2) var(--sp3);
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.slimbar .cell {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp2);
+}
+.slimbar .cell > .lbl {
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+.slimbar .segs button {
+  min-height: 36px;
+  padding: 0 var(--sp3);
+  font-size: 15px;
+}
+.slimbar .bnote {
+  flex-basis: 100%;
+}
+.slimbar .forgecell {
+  margin-left: auto;
+}
+.slimbar .btn.forge,
+.slimbar .forgecell .btn {
+  min-height: 40px;
+  padding: var(--sp1) var(--sp4);
+  font-size: 18px;
+}
+@media (max-width: 700px) {
+  .slimbar {
+    gap: var(--sp2);
+    padding: var(--sp2);
+  }
+  .slimbar .cell > .lbl {
+    display: none; /* the MIN · MED · MAX and ANY · $ · $$$ buttons say what they are */
+  }
+  .slimbar .segs button {
+    min-height: 34px;
+    padding: 0 var(--sp2);
+    font-size: 14px;
+  }
+  .slimbar .btn.forge,
+  .slimbar .forgecell .btn {
+    min-height: 36px;
+    font-size: 15px;
+  }
+}
+/* the strip below keeps the match bar (shown once), built around and the line of notes */
+.strip {
+  margin-top: var(--sp4);
+}
+.strip .cell.wide {
+  grid-column: 1 / -1;
+}
+.strip .hint .tip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp1);
+}
+.strip .hint .tipx {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 0 var(--sp1);
+  min-height: 28px;
+}
+.strip .hint .tipx:hover {
+  opacity: 1;
+}
+
+/* 2. One loud price: the missing cost is the only price on yellow tape; totals are quiet grey text */
+.misscost {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sp1);
+  padding: 3px 10px 2px;
+  background: var(--hazard);
+  color: var(--ink);
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-decoration: none;
+  transform: rotate(-2deg);
+  box-shadow: 2px 2px 0 var(--ink);
+  clip-path: polygon(2% 0, 98% 4%, 100% 50%, 97% 100%, 1% 94%, 0 45%);
+}
+.misscost small {
+  font-family: var(--se);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+a.misscost:hover {
+  text-decoration: underline;
+}
+.dpanel .misscost {
+  align-self: flex-start;
+  margin: var(--sp1) 0 var(--sp2);
+}
+.hstats .price.quiet {
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  transform: none;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 13px;
+  color: var(--muted);
+  align-self: center;
+  white-space: nowrap;
+}
+.cat > summary .gval {
+  background: none;
+  box-shadow: none;
+  clip-path: none;
+  transform: none;
+  padding: 0;
+  font-family: var(--se);
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+/* a card's own price: always on missing cards, on hover / focus for the ones you own */
+.ztile.owned .tacts > .price,
+.ztile.owned .tacts > a.price {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ztile.owned:hover .tacts > .price,
+.ztile.owned:focus-within .tacts > .price {
+  opacity: 1;
+}
+
+/* 3. Colour meanings: yellow = money, hazard stripes = real warnings. Decorative stripes turn red / black. */
+.stripe {
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, var(--ink) 8px 16px);
+}
+
+/* 4. Deck sections: no white boxes. A plain header row on the grid, and the cards of small sections sit side
+   by side, so a 1-card section no longer leaves a row of empty width. */
+.deckgrid > .lists {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: var(--sp6);
+  row-gap: var(--sp4);
+}
+.deckgrid > .lists > .dtools {
+  flex: 1 1 100%;
+}
+.deckgrid > .lists > details.cat {
+  flex: 1 1 auto;
+  min-width: min(100%, 280px);
+  max-width: 100%;
+  background: none;
+  border: 0;
+}
+.deckgrid > .lists > details.cat:has(> ul.zlist) {
+  flex-basis: 100%;
+}
+.cat > summary {
+  background: none;
+  color: var(--text);
+  min-height: 36px;
+  padding: 0 0 var(--sp1);
+  border-bottom: 2px solid var(--text);
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+}
+.cat > summary .pm,
+.cat[open] > summary .pm {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  background: none;
+  color: var(--text);
+}
+.cat > summary .pm::before,
+.cat[open] > summary .pm::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: none;
+  border-right: 3px solid currentColor;
+  border-bottom: 3px solid currentColor;
+  transform: translate(-50%, -70%) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.cat:not([open]) > summary .pm::before {
+  transform: translate(-70%, -50%) rotate(-45deg);
+}
+.cat > summary .pm::after,
+.cat[open] > summary .pm::after {
+  display: none;
+}
+.cat > summary .h {
+  font-size: 20px;
+}
+.cat > summary .n {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0;
+}
+.deckgrid > .lists > details.cat > ul.zgrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 14px;
+  padding: var(--sp3) 0 0;
+}
+.deckgrid > .lists > details.cat > ul.zgrid > li {
+  flex: 0 0 148px;
+  width: 148px;
+}
+.deckgrid > .lists > details.cat > ul.zlist {
+  padding-top: var(--sp2);
+}
+@media (max-width: 700px) {
+  .deckgrid > .lists {
+    column-gap: var(--sp4);
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid > li {
+    flex-basis: calc(50% - 7px);
+    width: calc(50% - 7px);
+  }
+  .cat > summary {
+    grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  }
+  .cat > summary .h {
+    font-size: 18px;
+  }
+}
+
+/* 5. Floating nav: the page leaves room for it, and it slides away while you scroll down */
+.stage {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+.pillnav {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+.pillnav.away {
+  transform: translate(-50%, calc(100% + 24px + env(safe-area-inset-bottom)));
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav {
+    transition: none;
+  }
+}
+
+/* 6. Clean hero: rank · decks · EDHREC on one small meta line under it */
+.cmetaline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp1) var(--sp3);
+  margin: var(--sp2) var(--sp1) 0;
+  font-family: var(--se);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.cmetaline > * + *::before {
+  content: '·';
+  margin-right: var(--sp3);
+  color: var(--muted);
+}
+.cmetaline a {
+  color: var(--text);
+}
+.cmetaline {
+  justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
+}
+@media (max-width: 700px) {
+  /* phones: two card columns across the page, so two small sections sit side by side */
+  .deckgrid > .lists > details.cat {
+    min-width: 0;
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid > li {
+    flex-basis: calc((100vw - 46px) / 2);
+    width: calc((100vw - 46px) / 2);
+  }
+  .cat > summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--sp2);
+  }
+  .cat > summary .h {
+    flex: 1 1 auto;
+  }
+  .cat > summary .gval,
+  .cat > summary .n {
+    min-width: 0;
+  }
+}
+/* a section header never sets its section's width: the cards do (so two 1-card sections can share a row) */
+.deckgrid > .lists > details.cat > summary {
+  width: 0;
+  min-width: 100%;
+}
+.cmetaline > * + *::before {
+  display: inline-block;
+}
+@media (max-width: 700px) {
+  .deckgrid > .lists {
+    container-type: inline-size;
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid {
+    column-gap: var(--sp4);
+  }
+  .deckgrid > .lists > details.cat > ul.zgrid > li {
+    flex-basis: calc((100cqw - var(--sp4)) / 2 - 0.5px);
+    width: calc((100cqw - var(--sp4)) / 2 - 0.5px);
+  }
+}
+@media (max-width: 700px) {
+  /* name on the first line, price · owned under it, lined up with the name */
+  .cat > summary .h {
+    flex: 1 1 calc(100% - 30px);
+  }
+  .cat > summary .h + * {
+    margin-left: 26px;
+  }
+}
+
+/* ===== Deck colours (Nov 6): every deck has its own colour; its light, its tile edge and its cards' glow use it ===== */
+.dlight.on i {
+  background: var(--dc, #2bd65a);
+  box-shadow: 0 0 8px var(--dc, #2bd65a);
+}
+.shelf li:not(.off) > button,
+.dgrid li.dtile:not(.off) > .dcard {
+  box-shadow: inset 0 -5px 0 var(--dc, transparent);
+}
+/* deck page: ACTIVE / OFF sits at the end of the deck's name */
+.dhero .titlerow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp2) var(--sp3);
+}
+.dhero .titlerow > h1 {
+  margin: 0;
+}
+.dhero .titlerow > .dlight {
+  position: relative;
+  z-index: 2;
+  transform: rotate(-3deg);
+}
+/* deck menu: colour swatches */
+.deckmenu .colourrow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp2);
+  padding: var(--sp2) var(--sp3);
+}
+.deckmenu .colourrow .cl {
+  font-family: var(--an);
+  font-size: 16px;
+}
+.deckmenu .colourrow .cl small {
+  font-family: var(--se);
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: var(--sp1);
+}
+.deckmenu .swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.deckmenu .swatches button {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.deckmenu .swatches button[aria-checked='true'] {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+/* collection: a card in an active deck glows faintly in that deck's colour (full on hover); dots name the decks */
+.ctile.live .cart {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dc, rgb(120, 200, 120)) 40%, transparent), 0 0 12px color-mix(in srgb, var(--dc, rgb(120, 200, 120)) 22%, transparent);
+}
+.ctile.live:hover .cart,
+.ctile.live:focus-within .cart {
+  box-shadow: 0 0 0 2px var(--dc, rgb(120, 200, 120)), 0 0 20px color-mix(in srgb, var(--dc, rgb(120, 200, 120)) 50%, transparent);
+}
+@media (hover: hover) {
+  .ctile.live:hover .timg > .pen {
+    border-color: var(--dc, rgb(120, 200, 120));
+  }
+}
+.ctile .cart > .inuse {
+  color: var(--white);
+}
+.inuse i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 2px;
+  vertical-align: 0;
+  box-shadow: 0 0 5px currentColor;
+}
+/* collection tile name: a grey tab that sits on the card's top border, like a file tab */
+.ctile > .tname {
+  align-self: center;
+  max-width: 92%;
+  margin: 0 0 -3px;
+  padding: 3px 10px 3px;
+  position: relative;
+  z-index: 2;
+  background: #3b3b3b;
+  color: var(--white);
+  border: 2px solid var(--pen);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+.ctile.live > .tname {
+  border-color: color-mix(in srgb, var(--dc, var(--pen)) 70%, var(--pen));
+}
+/* copy diamonds: centred under the card, lit ones glow, empty ones keep a faint rim light */
+.ctile > .tally {
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--sp2);
+}
+.ctile > .tally .marks i {
+  background: #2e2e2e;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.08);
+}
+.ctile > .tally .marks i.on {
+  filter: drop-shadow(0 0 4px rgba(255, 205, 70, 0.95)) drop-shadow(0 0 9px rgba(255, 205, 70, 0.45));
+}
+
+/* Swap window: SWAP <card> · search · ✕ on one header line; big card left, top 3 (or search results) right */
+.swapnote .nh {
+  align-items: center;
+}
+.swapnote .nh > span:first-child {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swapnote .swapq.top {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.swapnote .swapq.top input {
+  width: 100%;
+  min-height: 44px;
+}
+@media (max-width: 700px) {
+  .swapnote .nh {
+    flex-wrap: wrap;
+  }
+  .swapnote .nh > span:first-child {
+    max-width: calc(100% - 56px);
+  }
+  .swapnote .swapq.top {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* ===== One toolbar everywhere (Nov 6): SEARCH · GROUP / SORT / FILTERS · grid / list, in one frame, the same bar as the
+   Collection's. Segments are split by thin rules; dropdowns open below the bar. ===== */
+.lists > .dtools,
+.dtools:has(> .fsheet) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  position: relative;
+  margin: 0 0 var(--sp3);
+  border: 3px solid var(--text);
+  background: var(--bg);
+}
+.lists > .dtools > * {
+  margin: 0;
+}
+.lists > .dtools > * + * {
+  border-left: 1px solid #3a3a3a;
+}
+.lists > .dtools > .tsearch {
+  flex: 1 1 auto;
+  min-width: 140px;
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+  box-shadow: none;
+}
+.lists > .dtools > .sbox.pick {
+  flex: 0 1 auto;
+  min-width: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.lists > .dtools > .sbox.pick select {
+  background: transparent;
+  color: var(--text);
+}
+.lists > .dtools > .sbox.pick .arrow {
+  background: transparent;
+}
+.lists > .dtools > .fsheet {
+  flex: 0 0 auto;
+  width: auto;
+  position: static;
+}
+.lists > .dtools > .fsheet > summary {
+  min-height: 48px;
+  height: 100%;
+  padding: 0 0 0 var(--sp2);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  gap: var(--sp2);
+}
+.lists > .dtools > .fsheet .fnow {
+  max-width: 200px;
+  color: var(--muted);
+}
+.lists > .dtools > .fsheet .arrow {
+  width: 40px;
+  background: transparent;
+  color: var(--text);
+}
+.lists > .dtools > .fsheet[open] > summary {
+  background: var(--accent);
+  color: var(--white);
+}
+.lists > .dtools > .fsheet[open] .fnow {
+  color: var(--white);
+}
+.lists > .dtools > .fsheet > .fbody {
+  position: absolute;
+  z-index: 25;
+  left: -3px;
+  right: -3px;
+  top: calc(100% + 3px);
+  border: 3px solid var(--text);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.lists > .dtools > .viewsw.mini {
+  float: none;
+  position: static;
+  display: flex;
+  flex: 0 0 auto;
+  margin: 0;
+}
+.lists > .dtools > .viewsw.mini button {
+  height: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--text);
+}
+.lists > .dtools > .viewsw.mini button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--white);
+}
+@media (max-width: 700px) {
+  /* phones: SEARCH takes the first row, the rest share the second */
+  .lists > .dtools,
+  .dtools:has(> .fsheet) {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .lists > .dtools > .tsearch {
+    flex-basis: 100%;
+    border-left: 0;
+    border-bottom: 1px solid #3a3a3a;
+  }
+  .lists > .dtools > .tsearch .tab {
+    display: none;
+  }
+  .lists > .dtools > .tsearch + * {
+    border-left: 0;
+  }
+  .lists > .dtools > .sbox.pick,
+  .lists > .dtools > .fsheet {
+    flex: 1 1 0;
+  }
+  .lists > .dtools > .fsheet .fnow {
+    display: none;
+  }
+}
+/* commander header: the rank strip sits in the same row as the colour pips */
+.namerow > .cstamp {
+  margin: 0;
+  align-self: center;
+}
+
+/* Compact strip (Nov 6): match bar and built-around share a row on wide screens; tighter padding; slimmer bar */
+.strip {
+  padding: var(--sp3) var(--sp4) var(--sp2);
+  gap: var(--sp2) var(--sp5);
+  align-items: center;
+}
+.strip .cell.wide {
+  gap: var(--sp1);
+}
+.strip .cell.wide > .lbl {
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.strip .match {
+  height: 46px;
+}
+.strip .match .burst {
+  top: -30px;
+  width: 100px;
+  height: 100px;
+}
+.strip .builtaround > span {
+  font-size: 14px;
+}
+.strip .hint {
+  padding-top: var(--sp2);
+  font-size: 13px;
+}
+.strip .hint.warn {
+  padding: var(--sp1) var(--sp3);
+}
+@media (min-width: 900px) {
+  .strip {
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.5fr);
+  }
+  .strip .cell.wide,
+  .strip .builtaround {
+    grid-column: auto;
+  }
+  .strip .builtaround {
+    align-self: end;
+  }
+}
+
+/* One price sticker everywhere: deck and commander tiles use Collection's yellow tape on the art's top-right corner.
+   Cards you own: folded back, it peels on while you hover or focus the card. Cards to buy: always on. */
+.ztile > .price.tapey {
+  position: absolute;
+  z-index: 5;
+  top: -10px;
+  right: -8px;
+  font-size: 12px;
+  padding: 1px 8px;
+  color: #141414;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  transform: rotate(4deg);
+}
+.ztile.owned > .price.tapey {
+  transform-origin: 100% 50%;
+  transform: perspective(240px) rotate(4deg) rotateY(-95deg);
+  clip-path: inset(0 0 0 100%);
+  transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1), clip-path 0.22s ease-out;
+}
+.ztile.owned:hover > .price.tapey,
+.ztile.owned:focus-within > .price.tapey {
+  transform: perspective(240px) rotate(4deg) rotateY(0deg);
+  clip-path: inset(0 0 0 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ztile.owned > .price.tapey { transition: none; }
+}
+@media (hover: none) {
+  .ztile.owned > .price.tapey {
+    transform: rotate(4deg) scale(0.85);
+    clip-path: none;
+  }
+}
+/* ⋯ moves to the art's top-left so it never sits under the sticker (same as Collection) */
+.ztile:not(.ctile) .tacts > .morebtn {
+  left: 8px;
+  right: auto;
+}
+/* list rows: the tape sits inline, like Collection's list */
+.zrow .price.tapey {
+  font-size: 13px;
+  padding: 1px 8px;
+  color: #141414;
+}

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fits, mockWorld, seed } from './mock';
+import { edhJson, fits, mockWorld, seed } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -22,17 +22,36 @@ test('Discover: title, eye art, filters and commanders fit the screen', async ({
     await expect(page.locator('.hero .fpanel input[type=search]')).toBeVisible();
   } else await expect(page.locator('.hero .fpanel input[type=search]')).toBeVisible();
   await expect(page.locator('.colours button')).toHaveCount(5);
-  await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.eyedoodle', '.ccard']);
+  if (info.project.name === 'phone') {
+    // the big eye behind the title bleeds past the letters; the title clips it at its own edges
+    expect(await page.locator('.hero .titlewrap').evaluate((e) => getComputedStyle(e).overflowX)).toBe('clip');
+    await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.ccard']);
+  } else await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.eyedoodle', '.ccard']);
 });
 
 test('Commander page: header stats, tags row stays inside its frame', async ({ page }) => {
   await page.locator('.ccard').first().click();
   await expect(page.locator('.chero h1')).toBeVisible();
   await expect(page.locator('.hstats .price')).toBeVisible();
-  const row = await page.locator('.chero .hscroll').boundingBox();
-  const frame = await page.locator('.chero').boundingBox();
+  const row = await page.locator('.strip .hscroll').boundingBox();
+  const frame = await page.locator('.strip').boundingBox();
   expect(row!.x + row!.width).toBeLessThanOrEqual(frame!.x + frame!.width + 1);
+  // EDHREC's top 6 tags, the rest behind +N MORE
+  await expect(page.locator('.strip .hscroll button:not(.tagmore)')).toHaveCount(6);
+  await page.locator('.tagmore').click();
+  await expect(page.locator('.strip .hscroll button:not(.tagmore)')).toHaveCount(10);
+  await page.locator('.tagmore').click();
   await fits(page, ['.chero', '.strip']);
+});
+
+test('Commander settings on a wide screen: tags stay compact (two rows at most)', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  await page.setViewportSize({ width: 2000, height: 1100 });
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.tagmore')).toHaveText('+4 MORE');
+  const ys = await page.locator('.strip .hscroll button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top / 30)));
+  expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows (the strip is tilted a little, so tops differ by a few px)
+  await page.screenshot({ path: '/mnt/project-files/ui-review/screens/phone-round/6-commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
 test('Collection: counters, widget, grid tiles with tally marks', async ({ page }) => {
@@ -54,8 +73,9 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   await expect(page.locator('.dpanel')).toBeVisible();
-  // grid / list lives in the first (commander) section and switches the view
-  const sw = page.locator('details.cat').first().locator('.viewsw.mini');
+  // grid / list sits in the toolbar above the cards (the commander's section is gone: its big card is the menu)
+  const sw = page.locator('.dtools .viewsw.mini');
+  await expect(page.locator('details.cat > summary .h', { hasText: 'COMMANDER' })).toHaveCount(0);
   await expect(sw).toBeVisible();
   await fits(page, ['.viewsw.mini']);
   await sw.getByRole('button', { name: 'List view' }).click();
@@ -164,12 +184,16 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   // A copy shares every card, so the copies warning lists both decks: each name opens its deck
   await deckMenu(page, 'Duplicate');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
-  const other = page.locator('.shortalert .decklink', { hasText: /^Tatyova Lands$/ }).first();
+  // the warning leads the Forge line, which turns yellow; tapping ⚠ N SHORT opens its list
+  await expect(page.locator('.forgehint.warn .shortin')).toBeVisible();
+  await page.locator('.shortin summary').first().click();
+  const other = page.locator('.shortin .decklink', { hasText: /^Tatyova Lands$/ }).first();
   await other.scrollIntoViewIfNeeded();
   await other.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
   // …and from the Decks list's warning
   await page.locator('.backlink').click();
+  await page.locator('.shortalert summary').first().click();
   const copy = page.locator('.shortalert .decklink', { hasText: 'Tatyova Lands (copy)' }).first();
   await copy.scrollIntoViewIfNeeded();
   await copy.click();
@@ -179,7 +203,7 @@ test('Deck names open the deck: commander page and the copies warning', async ({
 test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dtools .sbox')).toHaveCount(2);
+  await expect(page.locator('.dtools .sbox')).toHaveCount(3); // search + two filters
   await fits(page, ['.lists > .dtools']);
   const group = page.locator('.dtools select').first();
   await group.selectOption('show:missing'); // every seeded card is owned
@@ -236,22 +260,28 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat').first()).toBeVisible();
   // order: Commander, Creatures, Instants, Sorceries, Enchantments, Artifacts, Lands (no planeswalkers in the sample deck)
   const heads = await page.locator('details.cat > summary .h').allInnerTexts();
-  expect(heads.map((h) => h.replace(/\s*\(\d+\)\s*$/, ''))).toEqual(['COMMANDER', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ENCHANTMENTS', 'ARTIFACTS', 'LANDS']);
-  expect(heads[0]).toMatch(/\(1\)$/);
+  expect(heads.map((h) => h.replace(/\s*\(\d+\)\s*$/, ''))).toEqual(['CREATURES', 'INSTANTS', 'SORCERIES', 'ENCHANTMENTS', 'ARTIFACTS', 'LANDS']);
+  // no one-card Commander section, and the match % shows once (the strip's bar, not by the title)
+  await expect(page.locator('.chero .bigpct')).toHaveCount(0);
+  await expect(page.locator('.strip .match .num')).toContainText('%');
   expect(heads.at(-1)).toMatch(/\(20\)$/); // 10 Forest + 10 Island
   // every section shows what its cards cost
-  await expect(page.locator('details.cat > summary .gval')).toHaveCount(7);
+  await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(2);
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(5); // search first, then the filters
   await fits(page, ['.lists > .dtools']);
-  const sw = page.locator('details.cat').first().locator('.viewsw.mini');
+  const sw = page.locator('.dtools .viewsw.mini');
   await expect(sw).toBeVisible();
   await fits(page, ['.viewsw.mini']);
   await sw.getByRole('button', { name: 'List view' }).click();
   await expect(page.locator('ul.zlist').first()).toBeVisible();
   await sw.getByRole('button', { name: 'Grid view' }).click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
+  // the big commander card is its menu
+  await page.getByRole('button', { name: /commander options/ }).click();
+  await expect(page.locator('.cardmenu')).toBeVisible();
+  await page.keyboard.press('Escape');
   await page.screenshot({ path: 'test-results/commander-sections.png' });
 });
 
@@ -382,7 +412,8 @@ test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ pa
 test('Deck light: active decks mark their cards in use in Collection; off frees them', async ({ page }, info) => {
   await go(page, 'collection');
   const sol = page.locator('li', { hasText: 'Sol Ring' }).first();
-  await expect(sol.locator('.inuse')).toHaveText('● in 1 deck');
+  await expect(sol.locator('.inuse')).toHaveText('in 1 deck');
+  await expect(sol.locator('.inuse i')).toHaveCount(1); // one dot, in the deck's colour
   await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
   await page.locator('.shelf .dlight').first().click();
   await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);
@@ -416,11 +447,11 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
   await ask.getByRole('button', { name: 'KEEP FORGING' }).click();
   await expect(page.locator('.forgebar')).toBeVisible();
   await page.locator('.backlink').click();
-  await ask.getByRole('button', { name: 'NO, DISCARD' }).click();
+  await ask.getByRole('button', { name: 'DISCARD', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await swap();
   await page.locator('.backlink').click();
-  await ask.getByRole('button', { name: 'YES, SAVE' }).click();
+  await ask.getByRole('button', { name: 'SAVE', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await go(page, 'collection');
   await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
@@ -438,4 +469,87 @@ test('Pill menu: back arrow only where there is somewhere to go back to', async 
   await expect(pill.locator('.pback')).toHaveCount(0);
   await pill.locator('.pillhub').click();
   await expect(page.locator('.hubslide')).toHaveClass(/open/);
+});
+
+test('Swapping keeps the deck organised: a creature swapped in for a sorcery moves to Creatures', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'bbbbbbbb-1111-2222-3333-000000000098';
+    tx.objectStore('cards').put({ id, name: 'Elvish Mystic', key: 'elvish mystic', type: 'Creature — Elf Druid', text: '{T}: Add {G}.', ci: ['G'], img: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, usd: '0.30', cmc: 1, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Elvish Mystic', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  const section = (h: string) => page.locator('details.cat').filter({ has: page.locator('summary .h', { hasText: h }) });
+  await expect(section('Sorceries')).toContainText('Cultivate');
+  await page.getByRole('button', { name: 'Swap Cultivate', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Cultivate' });
+  await note.getByRole('searchbox', { name: 'Search your binder' }).fill('elvish');
+  await note.locator('ul.found button', { hasText: 'Elvish Mystic' }).click();
+  await page.keyboard.press('Escape');
+  // The creature joins the Creatures; the Sorceries section (Cultivate was its only card) is gone
+  await expect(section('Creatures')).toContainText('Elvish Mystic');
+  await expect(section('Sorceries')).toHaveCount(0);
+});
+
+test('Forge: the big commander card is its menu; Change commander picks a legend from your binder, with undo', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'cccccccc-1111-2222-3333-000000000097';
+    tx.objectStore('cards').put({ id, name: 'Kinnan, Bonder Prodigy', key: 'kinnan, bonder prodigy', type: 'Legendary Creature — Human Druid', text: 'Whenever you tap a nonland permanent for mana, add one additional mana.', ci: ['G', 'U'], img: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, usd: '20.00', cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Kinnan, Bonder Prodigy', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await page.getByRole('button', { name: /commander options/ }).click();
+  const menu = page.locator('.cardmenu');
+  await menu.getByRole('button', { name: /Change commander/ }).click();
+  await menu.getByRole('button', { name: /Kinnan, Bonder Prodigy/ }).click();
+  await expect(page.locator('.toast')).toContainText('Kinnan, Bonder Prodigy leads the deck now');
+  await expect(page.getByRole('button', { name: 'Kinnan, Bonder Prodigy: commander options' })).toBeVisible();
+  await page.locator('.toast').getByRole('button', { name: /UNDO/ }).click();
+  await expect(page.getByRole('button', { name: 'Tatyova, Benthic Druid: commander options' })).toBeVisible();
+});
+
+test('Forge: collection match sits above ANALYSIS, not by the title', async ({ page }) => {
+  await go(page, 'decks');
+  await page.locator('.dcard').first().click();
+  await expect(page.locator('.dhero .bigpct')).toHaveCount(0);
+  await expect(page.locator('.dpanel .dmatch .num')).toHaveText(/\d+%/);
+  await fits(page, ['.dpanel .dmatch']);
+});
+
+test('My decks shelf: a long deck name never makes its tile bigger', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['decks'], 'readwrite');
+    tx.objectStore('decks').put({ profile: 1, name: 'Tatyova, Benthic Druid, Queen of the Endless Landfall Engine (EDHREC average)', commander: 'Tatyova, Benthic Druid', cards: [{ name: 'Sol Ring', qty: 1 }], updated: Date.now() + 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await go(page, 'collection');
+  await expect(page.locator('.shelf li')).toHaveCount(2);
+  const ws = await page.locator('.shelf li').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
+  expect(new Set(ws).size).toBe(1);
+});
+
+test('EDHREC With / Without card: self-testing filter, honest fallback', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await page.locator('.fsheet > summary').click();
+  // 1) EDHREC ignores the filter (same deck count): we say so and leave the card out locally
+  await page.getByLabel('Without card').fill('Sol Ring');
+  await page.getByRole('button', { name: 'APPLY' }).click();
+  await expect(page.locator('.cfnote')).toContainText("EDHREC didn't filter");
+  await expect(page.locator('.cfnote a')).toHaveAttribute('href', /edhrec\.com\/commanders\/.*\?f=out%3DSol%20Ring/);
+  // 2) EDHREC filters (deck count changes): suggestions come from those decks
+  await page.route(/json\.edhrec\.com\/pages\/commanders\/.*\?f=/, (r) => r.fulfill({ json: edhJson(529) }));
+  await page.getByRole('button', { name: 'CLEAR' }).click();
+  await page.getByLabel('With card').fill('Rhystic Study');
+  await page.getByRole('button', { name: 'APPLY' }).click();
+  await expect(page.locator('.cfnote')).toContainText('Suggestions from 529 EDHREC decks with Rhystic Study');
 });

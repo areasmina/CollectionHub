@@ -174,3 +174,17 @@ export function gameChangers(): Promise<Set<string> | null> {
     }
   })());
 }
+
+/** Every paper printing of a card (Scryfall "unique=prints"), newest first: for picking the artwork you own. */
+export async function printingsOf(name: string): Promise<(Card & { set: string; cn: string; setName: string })[]> {
+  const q = encodeURIComponent(`!"${name}" game:paper`);
+  const out: (Card & { set: string; cn: string; setName: string })[] = [];
+  let url: string | null = `https://api.scryfall.com/cards/search?q=${q}&unique=prints&order=released`;
+  for (let page = 0; url && page < 3; page++) {
+    const r: any = await fetch(url).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+    if (!r) break;
+    for (const c of r.data ?? []) out.push({ ...toCard(c), set: c.set ?? '', cn: c.collector_number ?? '', setName: c.set_name ?? (c.set ?? '').toUpperCase() });
+    url = r.has_more ? r.next_page : null;
+  }
+  return out;
+}

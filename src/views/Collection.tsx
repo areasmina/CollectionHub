@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
@@ -157,7 +158,8 @@ export function Collection({ profile, name, s }: { profile: number; name: string
         .then((m) => snapshot(entries, m))
         .catch(() => {});
   }, [entries.length]);
-  const shown = entries.filter((e) => e.name.toLowerCase().includes(q.toLowerCase()));
+  // name or rules text (Oracle + reminder text) or type line
+  const shown = searchByText(entries, q, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
@@ -226,7 +228,7 @@ export function Collection({ profile, name, s }: { profile: number; name: string
           </p>
         )}
 
-        <MyDecks s={s} />
+        {/* Import sits right under the counts: it's used the most */}
         <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
           <summary>
             <span className="stripe" aria-hidden="true" />
@@ -284,27 +286,37 @@ export function Collection({ profile, name, s }: { profile: number; name: string
         </section>
         </details>
 
+        <MyDecks s={s} />
+
         <section>
-          <div className="cardshead">
-            <h2 aria-label="Cards">
-              <Ransom text="CARDS" size={40} seed={5} />
-            </h2>
-            <div className="rule" aria-hidden="true" />
-            <button className="sticker" style={{ transform: 'rotate(-2deg)' }} disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
-              EXPORT CSV
-            </button>
-            <button className="sticker" style={{ transform: 'rotate(1.5deg)' }} disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
-              EXPORT TEXT
-            </button>
-          </div>
-
-          <label className="sbox dark" style={{ marginTop: 18 }}>
-            <span className="tab">SEARCH</span>
-            <input type="search" placeholder="card name_" value={q} onChange={(e) => setQ(e.target.value)} />
-            <span aria-hidden="true" className="fade" />
-          </label>
-
-          <CardsView entries={shown} cards={cards} profile={profile} binderName={name} />
+          <CardsView
+            title={
+              <h2 aria-label="Card collection" className="colltitle">
+                <Ransom text="CARD COLLECTION" size={30} seed={5} />
+              </h2>
+            }
+            entries={shown}
+            cards={cards}
+            profile={profile}
+            binderName={name}
+            search={
+              <label className="sbox dark">
+                <span className="tab">SEARCH</span>
+                <input type="search" placeholder="name or rules text_" value={q} onChange={(e) => setQ(e.target.value)} />
+                <span aria-hidden="true" className="fade" />
+              </label>
+            }
+            more={
+              <>
+                <button className="sticker" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
+                  EXPORT CSV
+                </button>
+                <button className="sticker" disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
+                  EXPORT TEXT
+                </button>
+              </>
+            }
+          />
         </section>
       </main>
     </>

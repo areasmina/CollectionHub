@@ -1,6 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { useRef, useState } from 'react';
-import { searchCards, type PinSide } from '../lib/pins';
+import { type PinSide } from '../lib/pins';
+import { searchByText } from '../lib/search';
 import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
 import { scryfallUrl, showPreview } from './shared';
 import { Tape } from './zine';
@@ -13,6 +14,7 @@ export interface SwapOption {
   img?: string; // small image
   big?: string; // readable image
   owned: number;
+  text?: string; // rules text (Oracle + reminder text), for the search
 }
 
 /** A suggestion row: hover (mouse) shows it in the viewer; press and hold (touch) shows it full screen; tap swaps. */
@@ -92,12 +94,12 @@ export function SwapNote({
   const why = whyIn(missing);
   const now = replaced ?? name;
   const top = new Set(options.map((o) => o.sub.name));
-  const found = searchCards(
+  // name or rules text (Oracle + reminder text) or type line
+  const found = searchByText(
     pool.filter((o) => !top.has(o.sub.name)),
     q,
-    6,
-    (o) => o.sub.name,
-  );
+    (o) => ({ name: o.sub.name, type: o.sub.type, text: o.text }),
+  ).slice(0, 6);
   const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
   return (
     <div className="note-pop swapnote" role="dialog" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
@@ -115,6 +117,10 @@ export function SwapNote({
           SWAP <mark>{now.toUpperCase()}</mark>
           {replaced && <small className="was"> · was {name}</small>}
         </span>
+        {/* Search sits up top beside the title: any card of yours, by name or rules text */}
+        <label className="swapq top">
+          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search your binder: name or rules text…" aria-label="Search your binder" autoComplete="off" />
+        </label>
         <button className="close" aria-label="Close" onClick={onClose}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="3" />
@@ -160,16 +166,22 @@ export function SwapNote({
             </ul>
           )}
           <small className="hint">
-            top 3 from your binder
+            {q.trim().length >= 2 ? `your cards matching “${q.trim()}”` : 'top 3 from your binder'}
             {mouse() ? ' · hover to read one, click or drag it onto the card' : ' · hold one to read it'}
           </small>
-          <ul>{options.map(row)}</ul>
-          {options.length === 0 && <p className="small">{loading ? 'Loading suggestions…' : 'No card of yours fits this slot by role. Search below.'}</p>}
-          <label className="swapq">
-            <span className="hint">or pick any card of yours</span>
-            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search your binder…" aria-label="Search your binder" autoComplete="off" />
-          </label>
-          {q.trim().length >= 2 && (found.length ? <ul className="found">{found.map(row)}</ul> : <p className="small">No card of yours in these colours matches “{q}”.</p>)}
+          {/* While you search, the results take the top-3 spot */}
+          {q.trim().length >= 2 ? (
+            found.length ? (
+              <ul className="found">{found.map(row)}</ul>
+            ) : (
+              <p className="small">No card of yours in these colours matches “{q}”.</p>
+            )
+          ) : (
+            <>
+              <ul>{options.map(row)}</ul>
+              {options.length === 0 && <p className="small">{loading ? 'Loading suggestions…' : 'No card of yours fits this slot by role. Search up top.'}</p>}
+            </>
+          )}
           {onPin && (
             <div className="pinrow" role="group" aria-label={`Pins for every ${cmdr} deck`}>
               <button

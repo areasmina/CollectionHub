@@ -10,7 +10,7 @@ import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '.
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
 import { Progress, usd, type Shared } from './shared';
-import { CardDoodles, PageDecor, Pips, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
+import { CardDoodles, PageDecor, Pips, Ransom, RiseBars, Tape, Title, EyeDoodle, ManaIcon } from './zine';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
 const SORTS: [string, string][] = [
@@ -89,6 +89,26 @@ export function Discover(s: Shared) {
   const [colours, setColours] = useState<string[]>([]);
   const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
   const phone = window.innerWidth <= 700;
+  // The tagline lines up under the word BUILD: measured from the title's 4th cut-out word, kept in step on resize.
+  const underObs = useRef<ResizeObserver | null>(null);
+  const underBuild = (el: HTMLParagraphElement | null) => {
+    underObs.current?.disconnect();
+    underObs.current = null;
+    const wrap = el?.parentElement;
+    if (!el || !wrap) return;
+    const place = () => {
+      const word = wrap.querySelector<HTMLElement>('.ztitle .rword:nth-child(4)');
+      if (!word) return;
+      const w = wrap.getBoundingClientRect();
+      const b = word.getBoundingClientRect();
+      el.style.left = `${Math.round(b.left - w.left)}px`;
+      el.style.top = `${Math.round(b.bottom - w.top + 6)}px`;
+      el.style.maxWidth = `${Math.max(160, Math.round(w.width - (b.left - w.left) - 8))}px`;
+    };
+    place();
+    underObs.current = new ResizeObserver(place);
+    underObs.current.observe(wrap);
+  };
   const sig = binderSig(s.profile, s.mine);
   // Saved stats of this binder (from memory, else from the device); shown even while a changed binder is recounted.
   const [saved, setSaved] = useState<{ profile: number; sig: string; map: Map<string, SavedStat> } | null>(() => (memo?.profile === s.profile ? memo : null));
@@ -199,8 +219,27 @@ export function Discover(s: Shared) {
       <PageDecor seed={501} rays="46% 30%" sheet={{ side: 'right', top: 560, rot: -6 }} />
       <main>
         <section className="hero">
-          <Title text="WHAT CAN I BUILD?" label="What can I build?" size={phone ? 50 : 44} seed={7} />
-          <EyeDoodle />
+          {/* Phones: a big eye (fire, rays and orbit, no dark landscape) blazes behind the title letters. */}
+          <Title
+            text="WHAT CAN I BUILD?"
+            label="What can I build?"
+            size={phone ? 50 : 44}
+            seed={7}
+            behind={phone ? <EyeDoodle bare /> : undefined}
+            after={
+              commanders.length > 0 && (
+                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
+                // It tucks in behind the letters; on wider screens the tagline sits under the word BUILD.
+                <>
+                {!phone && <p className="tagline tunder" ref={underBuild}>Your collection. Real decks. No guesswork.</p>}
+                <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
+                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
+                </p>
+                </>
+              )
+            }
+          />
+          {!phone && <EyeDoodle />}
           {phone && (
             <button
               type="button"
@@ -220,7 +259,7 @@ export function Discover(s: Shared) {
               </span>
             </button>
           )}
-          <p className="tagline">Your collection. Real decks. No guesswork.</p>
+          {(phone || commanders.length === 0) && <p className="tagline">Your collection. Real decks. No guesswork.</p>}
           <div className={`filters${phone && !fOpen ? ' shut' : ''}`}>
             <div className="fhead">
               <svg aria-hidden="true" width="260" height="34" viewBox="0 0 260 34" style={{ marginLeft: 6, filter: 'url(#worn)', color: 'var(--fh)' }}>
@@ -257,14 +296,8 @@ export function Discover(s: Shared) {
               <Tape style={{ top: -12, left: -16, width: 90, height: 24, transform: 'rotate(-24deg)' }} />
               <Tape style={{ bottom: -10, right: -12, width: 90, height: 24, transform: 'rotate(-20deg)' }} />
               <label className="sbox search">
-                <span className="tab">
-                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-                    <circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" strokeWidth="2.6" />
-                    <path d="M13 13 L18 18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                  <span className="sr">Search</span>
-                </span>
-                <input type="search" placeholder="commander name, Enter opens any_" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
+                <span className="tab">SEARCH</span>
+                <input type="search" placeholder="commander_" aria-label="Search commander" title="Type a name; Enter opens it" enterKeyHint="go" value={q} onChange={(e) => setQ(e.target.value)} />
                 <span aria-hidden="true" className="hfade fade" />
               </label>
               <div className="flap" id="fflap">
@@ -292,11 +325,6 @@ export function Discover(s: Shared) {
               </div>
               </div>
             </form>
-            <p className="caption">
-              <span>
-                &gt; Your binder vs EDHREC. Missing cards get filled from cards you own<span className="cur">_</span>
-              </span>
-            </p>
           </div>
         </section>
 
@@ -304,13 +332,8 @@ export function Discover(s: Shared) {
         {sort === 'added' && data?.undated && (
           <p className="count">Cards imported before dates were recorded have no date, so they're listed last. Re-import your ManaBox CSV with "Replace binder" (Collection tab) to use its real "Added" dates.</p>
         )}
-        {commanders.length ? (
-          <p className="count">
-            {`${shown.length} of ${commanders.length} commanders in this binder.`}
-          </p>
-        ) : (
-          data && <Welcome empty={s.mine.size === 0} />
-        )}
+        {/* The commander count is the title's answer ("335 DECKS"), so no count line here */}
+        {!commanders.length && data && <Welcome empty={s.mine.size === 0} />}
         <ul className="cgrid" ref={gridRef}>
           {shown.map((c, i) => {
             const st = stats.get(c.key);

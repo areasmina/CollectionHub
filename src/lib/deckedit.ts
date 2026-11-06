@@ -1,4 +1,4 @@
-import { db, type Deck, type Entry } from './db';
+import { db, type Card, type Deck, type Entry } from './db';
 import { norm } from './names';
 import { noPins, togglePin, type PinSide } from './pins';
 
@@ -79,4 +79,14 @@ export async function addToDeck(deck: Deck, name: string) {
   const has = before.find((c) => norm(c.name) === norm(name));
   await saveDeck(deck, has ? before.map((c) => (c === has ? { ...c, qty: c.qty + 1 } : c)) : [...before, { name, qty: 1 }]);
   return () => saveDeck(deck, before);
+}
+
+/** Your copies of a card switch to another printing (its artwork): every binder row of that name moves to it,
+ *  keeping quantities and finishes. Returns an undo. */
+export async function setPrinting(profile: number, name: string, card: Card, set: string, cn: string) {
+  const k = norm(name);
+  const rows = (await db.entries.where('profile').equals(profile).toArray()).filter((e) => norm(e.name) === k);
+  await db.cards.put(card);
+  await db.entries.bulkPut(rows.map((e) => ({ ...e, cardId: card.id, set, cn })));
+  return async () => void (await db.entries.bulkPut(rows));
 }

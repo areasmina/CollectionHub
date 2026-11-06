@@ -4,16 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, BUDGETS, DEFAULT_BRACKET, imgOf, NoPage, pagePath, showPage, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, BUDGETS, DEFAULT_BRACKET, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl } from '../lib/prices';
+import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
-import { orderSections } from '../lib/sections';
-import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
+import { orderSections, regroup } from '../lib/sections';
+import { groupOf } from '../lib/deckstats';
+import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, SearchBox, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
 
@@ -26,9 +28,11 @@ import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, Gr
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 const SHOW_AS_COMMANDER = false;
 
-const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V' };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
+
+/** Tags shown before "+N MORE": EDHREC's biggest archetypes. */
+const TAGS_SHOWN = 6;
 
 export function CommanderView({ name, s, onBack: back, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const onBack = () => void canLeave().then((ok) => ok && back());
@@ -45,8 +49,21 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [noBracket, setNoBracket] = useState(false); // EDHREC has no page for this bracket: showing all brackets
   const [budget, setBudget] = useState('');
   const [tag, setTag] = useState('');
+  const [allTags, setAllTags] = useState(false);
   const [page, setPage] = useState<EdhPage | null>(null);
   const [recs, setRecs] = useState<EdhPage | null>(null); // EDHREC recommendations behind an average deck
+  // EDHREC's With card / Without card: suggestions come from decks that do / don't run those cards
+  const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
+  const [cfDraft, setCfDraft] = useState({ inc: '', exc: '' });
+  const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean } | null>(null);
+  useEffect(() => {
+    setFiltered(null);
+    if (!recs || (!cf.inc.length && !cf.exc.length)) return;
+    let live = true;
+    void fetchFiltered(pagePath('commander', slug, bracket, tag, budget), cf, recs).then((r) => live && setFiltered(r));
+    return () => void (live = false);
+  }, [recs, cf, slug, bracket, tag, budget]);
+  const sugg = filtered?.page ?? recs;
   const [tags, setTags] = useState<EdhPage['tags']>([]);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -118,16 +135,15 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const sum = summarize(names, s.mine, s.other);
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
   const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
-  const missingCost = priceSum(missing.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
 
   // Your binder (the swap window's search, and pinned cards' types).
   const binder = useBinder(s.profile);
-  const never = new Set(pins.out.map(norm));
-  const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
+  const never = new Set([...pins.out, ...cf.exc].map(norm));
+  const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
   // Replacement candidates: owned cards EDHREC recommends for this commander, minus the ones you never use.
   const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
-  const recCard = new Map((recs?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
+  const recCard = new Map((sugg?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
   const slotInfo = (c: EdhCard): SubCard => {
     const info = recInfo.get(norm(c.name));
     const sc = cardOf(c);
@@ -152,8 +168,22 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const sc = recCard.get(norm(sub.name));
     const bc = binderCard.get(norm(sub.name));
     const img = (sc && cardOf(sc)?.img) ?? bc?.img ?? imgOf(sc?.id);
-    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0 };
+    return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0, text: bc?.text ?? (sc && cardOf(sc)?.text) };
   };
+
+  // A card swapped in sits with its own type (a creature for a sorcery joins the Creatures), so the deck stays organised.
+  const placed =
+    kind === 'average'
+      ? regroup(sections, (c) => {
+          const now = nameIn(c);
+          if (now === c.name) return undefined;
+          const rc = recCard.get(norm(now));
+          const g = groupOf((rc && cardOf(rc)?.type) ?? binderCard.get(norm(now))?.type);
+          return g === 'Other' || g === 'Commander' ? undefined : g;
+        })
+      : sections;
+  // The commander isn't repeated as a one-card section: its big card at the top is its menu.
+  const listed = placed.filter((l) => l.header !== 'Commander');
 
   async function setSwap(missingName: string, replacement: string | null) {
     const p = (await db.profiles.get(s.profile))!;
@@ -211,6 +241,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
+  // The swap tip shows on the first visit only: seen once, it stays off from the next visit on.
+  const [tip, setTip] = useStored<'show' | 'off'>('ch:swaptip', 'show', ['show', 'off']);
+  useEffect(() => () => setTip('off'), []); // eslint-disable-line react-hooks/exhaustive-deps
   const toBuyCost = priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const pricesIn = cards.size > 0;
   // If you built this deck too: owned cards your saved decks already use up (saved decks of this commander are the same deck).
@@ -244,6 +277,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
   const Item = view === 'grid' ? CardTile : CardLine;
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
+  const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:cshow', 'all', SHOWS.map(([v]) => v));
 
   const receipt = kind === 'average' && missing.length > 0 && (
@@ -262,6 +296,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <span className="nm">
                   {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
                   {c.name}
+                  {groupOf(cardOf(c)?.type) !== 'Other' && <small className="ty"> · {groupOf(cardOf(c)?.type).replace(/s$/, '').replace(/ie$/, 'y')}</small>}
                   {nameIn(c) !== c.name && <small> · using {nameIn(c)} for now</small>}
                 </span>
               </label>
@@ -304,11 +339,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {/* The commander's own card: always full colour with a xerox look (contrast, halftone, grain). */}
             <span className="xart cmdrimg">
               <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-              {bigImg && (
-                <a href={`https://edhrec.com/commanders/${slug}`} target="_blank" rel="noreferrer" title="Open on EDHREC">
-                  <img src={bigImg} alt={`${label}: open on EDHREC`} />
-                </a>
-              )}
+              {bigImg && <CmdrCard src={bigImg} name={label} onMenu={(x, y) => setCtx({ slot: name, name, x, y })} />}
               <Xgrain />
             </span>
             <Doodles n={301} count={1} spots={[[60, 62], [-20, 4]]} />
@@ -320,45 +351,53 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <h1 aria-label={label}>
                 <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 30 : 36) : label.length > 28 ? 44 : 54} seed={11} />
               </h1>
+              {/* One tight row: colours · rank · decks · EDHREC (then the quiet deck price and salt) */}
               <div className="namerow">
                 <Pips ci={ci} size={30} />
-                {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
-              </div>
-            </div>
-            <div className="cmeta">
-              {tags.length > 0 && (
-                <div className="builtaround">
-                  <span>built around</span>
-                  <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
-                    {tags.slice(0, 24).map((t) => (
-                      <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-                        {t.value.toUpperCase()} {t.count.toLocaleString()}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <span className="score">
-                <span className="mono">
-                  NO. {no ? String(no).padStart(3, '0') : '—'}
-                  <br />
-                  {page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS ·{' '}
+                <p className="cstamp" onClick={(e) => e.stopPropagation()}>
+                  <b>NO.{no ? String(no).padStart(3, '0') : '—'}</b>
+                  <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
                   <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
                     EDHREC ↗
                   </a>
-                </span>
-                {page && (
-                  <span className="pct">
-                    <span className="bigpct">{sum.pct}%</span>
-                    <RiseBars pct={sum.pct} />
-                  </span>
-                )}
-              </span>
+                </p>
+                {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="strip" aria-label="Filters and totals">
+        {/* One slim bar that stays in reach while you scroll the cards: POWER, BUDGET, what's missing (the one loud
+            price, on yellow tape) and FORGE IT. */}
+        <section className="slimbar" aria-label="Deck settings">
+          <div className="cell">
+            <span className="lbl">POWER</span>
+            <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
+            {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
+          </div>
+          <div className="cell">
+            <span className="lbl">BUDGET</span>
+            <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
+          </div>
+          {receipt && pricesIn && toBuyCost > 0 && (
+            <a className="misscost" href="#shop" aria-label={`${toBuy.length} cards to buy, about ${money(toBuyCost)}: show the list`}>
+              <small>{toBuy.length} MISSING</small> ≈{cad(toBuyCost)}
+            </a>
+          )}
+          <div className="cell forgecell">
+            {saved ? (
+              <DeckLink name={saved}>
+                <span className="btn">OPEN IN THE FORGE →</span>
+              </DeckLink>
+            ) : (
+              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
+                ⚒ FORGE IT
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="strip" aria-label="Collection match and themes">
           <Tape style={{ top: -12, left: -14, width: 84, height: 24, transform: 'rotate(-24deg)' }} />
           <Tape style={{ top: -10, right: 60, width: 84, height: 24, transform: 'rotate(5deg)' }} />
           {SHOW_AS_COMMANDER && (
@@ -367,20 +406,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <Segs label="View" value={kind} options={[['commander', 'AS CMDR'], ['average', 'AVERAGE']]} onChange={(v) => setKind(v as typeof kind)} />
             </div>
           )}
-          <div className="cell">
-            <span className="lbl">BRACKET</span>
-            <Segs label="Bracket" value={bracket} options={BRACKETS.map(([v, t]) => [v, ROMAN[t] ?? t.toUpperCase()])} onChange={setBracket} roman />
-            {noBracket && <small className="bnote">No EDHREC decks for bracket {ROMAN[BRACKETS.find(([v]) => v === bracket)?.[1] ?? '']}: showing all brackets</small>}
-          </div>
-          <div className="cell">
-            <span className="lbl">BUDGET</span>
-            <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
-          </div>
           <div className="cell wide">
             <span className="lbl">COLLECTION MATCH</span>
             <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
               <span className="burst" aria-hidden="true" />
-              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
               <span className="meter">
                 <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
                   {Array.from({ length: 10 }, (_, i) => (
@@ -392,43 +421,45 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>
+              {/* The % sits inside the red burst on the right, so the bar runs clean from the left. */}
+              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
           </div>
-          <div className="cell">
-            <span className="lbl">MISSING</span>
-            <div className="plate" role="img" aria-label={`Warning: missing cards cost about ${pricesIn ? money(missingCost) : 'an unknown amount'}`}>
-              <span className="wedge" aria-hidden="true">
-                <svg width="24" height="22" viewBox="0 0 24 22">
-                  <path d="M12 1 L23 21 H1 Z" fill="#FFCC00" />
-                  <path d="M12 8 V14 M12 16.5 V18" stroke="#0A0A0A" strokeWidth="2.6" strokeLinecap="square" />
-                </svg>
-              </span>
-              <span className="amt">
-                <small>≈</small>
-                {pricesIn ? cad(missingCost) : 'CA$—'}
-              </span>
-              <Tape style={{ right: -14, top: -12, width: 46, height: 18, transform: 'rotate(32deg)' }} />
-            </div>
-          </div>
-          <div className="cell">
-            <span className="lbl">DECK</span>
-            {saved ? (
-              <DeckLink name={saved}>
-                <span className="btn">OPEN IN THE FORGE →</span>
-              </DeckLink>
-            ) : (
-              <button className="btn forge" onClick={() => saveDeck()} disabled={!page || kind !== 'average'} title="Saves this deck to your decks and opens it in the Forge, where you tune it card by card">
-                ⚒ FORGE IT
-              </button>
+            {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
+            {tags.length > 0 && (
+              <div className="builtaround">
+                <span>built around</span>
+                <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
+                  {/* EDHREC's top tags only; the rest one tap away (the chosen one always shows) */}
+                  {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
+                    <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
+                      {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
+                    </button>
+                  ))}
+                  {tags.length > TAGS_SHOWN && (
+                    <button className="tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
+                      {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
-          </div>
-          <span className="hint">
-            {kind === 'average' ? (missing.length > 0 ? 'tap any card to swap it · missing ones first' : 'every card here is yours · tap one to swap or pin it') : 'every card here is in your binder'}
-            <span className="cur">_</span>
-            {receipt && (
+          <span className={`hint${short.length ? ' warn' : ''}`}>
+            <ShortAlert items={short} inline />
+            {/* A one-time tip: shown on the first visit, then gone (✕ hides it at once) */}
+            {tip !== 'off' && (
+              <span className="tip">
+                {kind === 'average' ? (missing.length > 0 ? 'tip: tap any card to swap it · missing ones first' : 'tip: tap any card to swap or pin it') : 'every card here is in your binder'}
+                <span className="cur">_</span>
+                <button className="tipx" aria-label="Hide this tip" onClick={() => (haptic('tap'), setTip('off'))}>
+                  ✕
+                </button>
+              </span>
+            )}
+            {receipt && !(pricesIn && toBuyCost > 0) && (
               <a className="jump" href="#shop">
                 {' '}
-                · shopping list ({toBuy.length}) ↓
+                · {toBuy.length} to buy{pricesIn ? ` ≈${money(toBuyCost)}` : ''} ↓
               </a>
             )}
             {/* Your decks with this commander sit on this full-width line, so the DECK cell stays as short as the
@@ -480,30 +511,33 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />
             <div className="note-pop leavenote" role="alertdialog" aria-label="Save this deck?" onClick={(e) => e.stopPropagation()}>
-              <img src="/card-spin.webp" alt="" width={70} height={102} aria-hidden="true" />
-              <div className="nh">
-                <span>
-                  SAVE THIS <mark>DECK?</mark>
-                </span>
+              <div className="lhead">
+                <img src="/card-spin.webp" alt="" width={40} height={58} aria-hidden="true" />
+                <div>
+                  <div className="nh">
+                    <span>
+                      SAVE THIS <mark>DECK?</mark>
+                    </span>
+                  </div>
+                  <p className="small">
+                    {changes} {changes === 1 ? 'swap' : 'swaps'} to {label}. Saved decks keep tuning in the Forge.
+                  </p>
+                </div>
               </div>
-              <p className="small">
-                You made {changes} {changes === 1 ? 'swap' : 'swaps'} to {label}. Save it to your decks to keep tuning it in the Forge.
-              </p>
               <div className="leavebtns">
                 <button className="btn forge" onClick={() => leave('save')}>
-                  YES, SAVE
+                  SAVE
                 </button>
                 <button className="btn ink" onClick={() => leave('drop')}>
-                  NO, DISCARD
+                  DISCARD
                 </button>
-                <button className="btn secondary" onClick={() => leave('stay')}>
-                  KEEP FORGING
+                <button className="lkeep" onClick={() => leave('stay')}>
+                  keep forging
                 </button>
               </div>
             </div>
           </>
         )}
-        <ShortAlert items={short} />
         {ctx && (
           <CardMenu
             name={ctx.name}
@@ -534,15 +568,81 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists">
               {/* How the cards are ordered and filtered, right above them */}
+              {/* One FILTERS button: sort and show (and later EDHREC's with/without card) live in its sheet. */}
               <div className="dtools" role="toolbar" aria-label="Card order and filter">
-                <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                <SearchBox q={q} setQ={setQ} />
+                <details className="fsheet">
+                  <summary>
+                    <span className="ft">FILTERS</span>
+                    <span className="fnow">
+                      {CSORTS.find(([v]) => v === sort)?.[1]} · {SHOWS.find(([v]) => v === show)?.[1]}
+                    </span>
+                    <span className="arrow" aria-hidden="true">
+                      ▼
+                    </span>
+                  </summary>
+                  <div className="fbody">
+                    <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                    <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                    {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
+                    <form
+                      className="cfilter"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        haptic('select');
+                        setCf({ inc: cfDraft.inc.trim() ? [cfDraft.inc.trim()] : [], exc: cfDraft.exc.trim() ? [cfDraft.exc.trim()] : [] });
+                      }}
+                    >
+                      <label className="sbox">
+                        <span className="tab">WITH</span>
+                        <input list="cfnames" value={cfDraft.inc} onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })} placeholder="card in the deck_" aria-label="With card" />
+                      </label>
+                      <label className="sbox">
+                        <span className="tab">WITHOUT</span>
+                        <input list="cfnames" value={cfDraft.exc} onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })} placeholder="card left out_" aria-label="Without card" />
+                      </label>
+                      <datalist id="cfnames">
+                        {[...recCard.values()].slice(0, 300).map((c) => (
+                          <option key={c.name} value={c.name} />
+                        ))}
+                      </datalist>
+                      <div className="cfbtns">
+                        <button className="btn">APPLY</button>
+                        {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                          <button type="button" className="btn secondary" onClick={() => (haptic('undo'), setCf({ inc: [], exc: [] }), setCfDraft({ inc: '', exc: '' }))}>
+                            CLEAR
+                          </button>
+                        )}
+                      </div>
+                      {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                        <p className="small cfnote" role="status">
+                          {!filtered
+                            ? 'Asking EDHREC…'
+                            : filtered.applied
+                              ? `Suggestions from ${filtered.page.numDecks?.toLocaleString()} EDHREC decks${cf.inc.length ? ` with ${cf.inc.join(', ')}` : ''}${cf.exc.length ? ` without ${cf.exc.join(', ')}` : ''}.`
+                              : `EDHREC didn't filter this page from the app${cf.exc.length ? `; ${cf.exc.join(', ')} is left out of your suggestions` : ''}.`}{' '}
+                          <a href={filterWebUrl(pagePath('commander', slug, bracket, tag, budget), cf)} target="_blank" rel="noreferrer">
+                            Open filtered on EDHREC ↗
+                          </a>
+                        </p>
+                      )}
+                    </form>
+                  </div>
+                </details>
+                <div className="viewsw mini" role="group" aria-label="Card view">
+                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                          <GridIcon />
+                        </button>
+                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                          <ListIcon />
+                        </button>
+                      </div>
               </div>
-              {sections.map((l, i) => {
+              {listed.map((l) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
                 const cs = sortBy(
-                  l.cards.filter((c) => shows(show, own(c))),
+                  searchByText(l.cards.filter((c) => shows(show, own(c))), q, (c) => ({ name: nameIn(c), type: cardOf(c)?.type, text: cardOf(c)?.text })),
                   sort,
                   (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
                 );
@@ -565,17 +665,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         {ls.owned}/{ls.total} owned
                       </span>
                     </summary>
-                    {i === 0 && (
-                      // Grid / list sits in the first section (the commander's), in the space beside the card
-                      <div className={`viewsw mini${view === 'grid' && cs.length === 1 ? ' over' : ''}`} role="group" aria-label="Card view">
-                        <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                          <GridIcon />
-                        </button>
-                        <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                          <ListIcon />
-                        </button>
-                      </div>
-                    )}
+                    
                     <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
                       {cs.map((c) => {
                         // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.
