@@ -9376,3 +9376,9 @@ a.misscost:hover {
 .slimbar .segs button {
   white-space: nowrap;
 }
+
+/* WILDCARD: one seeded pick with evidence, on the commander page */
+.wildcard { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0; padding: 10px 14px; border: 2px dashed currentColor; transform: rotate(-0.4deg); }
+.wildcard .wtag { background: #d9c7f2; color: #141414; padding: 2px 8px; transform: skew(-8deg); letter-spacing: 0.08em; }
+.wildcard .wtxt { flex: 1 1 220px; min-width: 0; }
+.wildcard .wtxt small { display: block; opacity: 0.8; }

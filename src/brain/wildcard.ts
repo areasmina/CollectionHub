@@ -2,10 +2,10 @@
  * WILDCARD slots: the brain's hint of madness, kept honest. A wildcard is a random pick, but only among cards that
  * already earned a place by evidence (a hidden gem, a high-lift card nobody plays, a combo piece). The seed is saved
  * with the deck, so the same deck shows the same wildcards after a reload; "reroll" just moves to the next seed.
- * Off by default (0 slots) until the owner decides otherwise; the player turns on 1–3.
+ * On by default with 1 slot (owner's call, Nov 6 2026); each commander's deck can switch it off or reroll it.
  */
 export const WILDCARD_MAX = 3;
-export const WILDCARD_DEFAULT = 0;
+export const WILDCARD_DEFAULT = 1;
 
 export interface Candidate {
   name: string;
@@ -41,4 +41,24 @@ export function pickWildcards(candidates: Candidate[], n: number, seed: number, 
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
   return pool.slice(0, Math.max(0, Math.min(n, WILDCARD_MAX)));
+}
+
+/** Evidence for a wildcard: an owned card EDHREC lists here with a strong lift but few decks (a hidden gem). */
+export const GEM_LIFT = 2;
+export const GEM_INCL = 0.2;
+
+/**
+ * Wildcard candidates for a commander page: owned hidden gems (lift >= GEM_LIFT, in < GEM_INCL of decks) and owned
+ * cards that complete a two-card combo the bracket allows with a card already in the deck. Nothing else qualifies:
+ * random, but only among cards with a reason.
+ */
+export function wildcardCandidates(
+  listed: { name: string; lift?: number; incl?: number; type?: string }[],
+  combos: { add: string; owned: boolean; allowed: boolean; cards: string[] }[],
+): Candidate[] {
+  const gems = listed
+    .filter((c) => (c.lift ?? 0) >= GEM_LIFT && (c.incl ?? 1) < GEM_INCL && !/\bLand\b/.test(c.type ?? ''))
+    .map((c) => ({ name: c.name, why: `hidden gem: ${c.lift!.toFixed(1)}x lift, in ${Math.round((c.incl ?? 0) * 100)}% of decks` }));
+  const wins = combos.filter((c) => c.owned && c.allowed).map((c) => ({ name: c.add, why: `completes ${c.cards.join(' + ')} (Commander Spellbook)` }));
+  return [...wins, ...gems];
 }

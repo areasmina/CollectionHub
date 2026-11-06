@@ -21,6 +21,10 @@ async function patch(profile: number, f: (b: NonNullable<import('../lib/db').Pro
 export const setAggression = (profile: number, a: Aggression) => patch(profile, (b) => void (b.aggression = a));
 export const setWildcards = (profile: number, n: number) => patch(profile, (b) => void (b.wildcards = Math.max(0, Math.min(WILDCARD_MAX, Math.round(n)))));
 
+/** One commander's WILDCARD: switched off, or rerolled (the seed moves on by one per reroll). */
+export const setWild = (profile: number, commander: string, w: { off?: boolean; roll?: number }) =>
+  patch(profile, (b) => void (b.wild = { ...(b.wild ?? {}), [norm(commander)]: { ...(b.wild?.[norm(commander)] ?? {}), ...w } }));
+
 /** Remember one thing the player did (a swap in = add, a swap out = cut, pins = always / never). */
 export const recordTaste = (profile: number, card: string, action: TasteAction, deck: string) =>
   patch(profile, (b) => void (b.taste = addTaste(b.taste ?? [], { card: norm(card), action, deck, at: Date.now() })));

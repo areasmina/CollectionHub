@@ -60,7 +60,8 @@ export interface Profile {
   /** The brain's settings and what it learned about this player (src/brain): synced with the rest of the profile. */
   brain?: {
     aggression?: 'patient' | 'hungry' | 'lethal';
-    wildcards?: number; // WILDCARD slots, 0–3 (default 0)
+    wildcards?: number; // WILDCARD slots, 0–3 (default 1)
+    wild?: Record<string, { off?: boolean; roll?: number }>; // per commander: WILDCARD off, reroll count
     taste?: import('../brain/taste').TasteEvent[];
   };
 }
