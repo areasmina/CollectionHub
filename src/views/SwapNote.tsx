@@ -123,9 +123,10 @@ export function SwapNote({
   const why = whyIn(missing);
   const now = replaced ?? name;
   const top = new Set(options.map((o) => o.sub.name));
-  // name or rules text (Oracle + reminder text) or type line
+  // name or rules text (Oracle + reminder text) or type line. Results replace the top 3 while you search, so the top 3
+  // are searched too (a card that's already a top pick must still turn up when you type its name).
   const found = searchByText(
-    pool.filter((o) => !top.has(o.sub.name)),
+    [...options, ...pool.filter((o) => !top.has(o.sub.name))],
     q,
     (o) => ({ name: o.sub.name, type: o.sub.type, text: o.text }),
   ).slice(0, 6);
