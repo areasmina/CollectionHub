@@ -5,6 +5,7 @@ import type { Card, DeckCard } from '../lib/db';
 import { brainData } from './data';
 import { AGGRESSION, comboAllowed, finisherPlans, killCheck, type Aggression } from './win';
 import { tasteFor, type TasteEvent } from './taste';
+import type { Theme } from './themes';
 
 /**
  * scoreCard / suggestCards: one needs-aware score for "what should go in this slot", shared by every view.
@@ -32,12 +33,15 @@ export interface DeckContext {
   bracket: number; // 2–5
   aggression: Aggression;
   taste?: TasteEvent[];
+  /** The theme you build towards (an EDHREC tag as a rules-text test, brain/themes.ts): fitting cards get a stated nudge. */
+  focus?: Theme;
 }
 
 const NEED = 0.15; // per role the deck is short of (at most two roles)
 const SURPLUS = -0.05; // a role already above the usual range
 const WIN_NEED = 0.2; // a finisher while the deck has fewer ways to win than the dial asks for
 const COMBO = 0.25; // completes a two-card combo the bracket allows
+const THEME = 0.15; // fits the theme you picked (Deck Wizard FOCUS_W)
 const SIGNAL_W = 0.5; // EDHREC lift, on the old synergy scale (Deck Wizard SYN_W)
 const ROLE_LABEL: Record<Role, string> = { ramp: 'ramp', draw: 'card draw', removal: 'removal', wipes: 'board wipes', tutors: 'tutors' };
 
@@ -87,6 +91,8 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
 
   if (card?.cmc != null && card.cmc > 4 && needs.stats.avgMv > needs.dial.maxAvgMv)
     parts.push({ label: `curve already high (${needs.stats.avgMv.toFixed(1)} average)`, value: -0.03 * (card.cmc - 4), source: 'deck needs' });
+
+  if (ctx.focus && card && ctx.focus.test(card)) parts.push({ label: `fits ${ctx.focus.label.toLowerCase()}`, value: THEME, source: 'card text' });
 
   const t = ctx.taste ? tasteFor(ctx.taste, norm(c.name), c.name) : null;
   if (t) parts.push({ label: t.why, value: t.delta, source: 'your taste' });

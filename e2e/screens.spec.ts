@@ -162,7 +162,7 @@ test('Deck page: Rename and Duplicate', async ({ page }, info) => {
   page.on('dialog', (d) => d.accept(answers.shift()));
   await deckMenu(page, 'Rename');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Ramp 2');
-  await page.locator('.backlink').click();
+  await page.locator('.forgetop .fleave').click();
   await expect(page.locator('.dcard')).toHaveCount(2);
 });
 
@@ -200,7 +200,7 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   await other.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
   // …and from the Decks list's warning
-  await page.locator('.backlink').click();
+  await page.locator('.forgetop .fleave').click();
   await page.locator('.shortalert summary').first().click();
   const copy = page.locator('.shortalert .decklink', { hasText: 'Tatyova Lands (copy)' }).first();
   await copy.scrollIntoViewIfNeeded();
@@ -211,7 +211,7 @@ test('Deck names open the deck: commander page and the copies warning', async ({
 test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dtools .sbox')).toHaveCount(3); // search + two filters (in the ⋮ options)
+  await expect(page.locator('.dtools .sbox')).toHaveCount(4); // search + three filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
   await opts(page);
   const group = page.locator('.dtools select').first();
@@ -279,7 +279,7 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(5); // search first, then the filters (in the ⋮ options)
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(6); // search first, then the filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
   const sw = (await opts(page)).locator('.viewsw.mini');
   await expect(sw).toBeVisible();
@@ -353,7 +353,7 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
   await page.locator('.pinchip', { hasText: 'Arcane Signet' }).click();
   await expect(page.locator('.pinchip')).toHaveCount(0);
   await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
-  await page.getByRole('button', { name: /UNDO/ }).click();
+  await page.getByRole('button', { name: /UNDO back to/ }).click();
   await expect(page.locator('.swapmark', { hasText: 'for Sol Ring' })).toHaveCount(0);
   // Never use: no other card of yours fits, so Sol Ring stays, marked, and the pin can be taken off
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
@@ -371,7 +371,7 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await expect(page.locator('.slimbar .btn.forge')).toHaveCount(0); // no FORGE IT button: the first swap starts the Forge
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
-  await page.locator('.forgebar .btn.forge').click();
+  await page.locator('.forgetop .btn.forge').click();
   await expect(page.locator('.forgehint')).toBeVisible();
   await page.getByRole('button', { name: 'Swap Counterspell', exact: true }).click();
   const note = page.getByRole('dialog', { name: 'Swap Counterspell' });
@@ -453,21 +453,21 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
     await page.locator('.ccard').first().click();
     await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
     await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
-    await expect(page.locator('.forgebar')).toContainText('FORGING');
+    await expect(page.locator('.forgetop')).toContainText('FORGE');
   };
   await swap();
   await page.screenshot({ path: `test-results/forging-${info.project.name}.png` });
-  await page.locator('.backlink').click();
+  await page.locator('.forgetop .fleave').click();
   const ask = page.getByRole('alertdialog', { name: 'Save this deck?' });
   await expect(ask).toBeVisible();
   await page.screenshot({ path: `test-results/forging-ask-${info.project.name}.png` });
   await ask.getByRole('button', { name: 'KEEP FORGING' }).click();
-  await expect(page.locator('.forgebar')).toBeVisible();
-  await page.locator('.backlink').click();
+  await expect(page.locator('.forgetop')).toBeVisible();
+  await page.locator('.forgetop .fleave').click();
   await ask.getByRole('button', { name: 'DISCARD', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await swap();
-  await page.locator('.backlink').click();
+  await page.locator('.forgetop .fleave').click();
   await ask.getByRole('button', { name: 'SAVE', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await go(page, 'collection');
@@ -577,7 +577,7 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await page.locator('.ccard').first().click();
   const cov = page.locator('.lists > .coverage');
   await expect(cov).toContainText('from your binder');
-  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · $$$'); // decks open at MED power, MAX budget
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · B4 · 3RD GEAR'); // decks open at MED power, MAX budget
   const before = await cov.innerText();
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();

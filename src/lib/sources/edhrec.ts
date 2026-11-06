@@ -17,6 +17,8 @@ import { norm } from '../names';
 export const BRACKETS: [string, string, string][] = [['', 'All', ''], ['upgraded', 'Min', '3'], ['optimized', 'Med', '4'], ['cedh', 'Max', '5']];
 export const DEFAULT_BRACKET = 'upgraded';
 export const BUDGETS: [string, string][] = [['', 'Any'], ['budget', '$'], ['expensive', '$$$']];
+/** GEAR (owner's name, Nov 6): the budget switch as gears. 1ST = EDHREC's budget decks, 2ND = every budget, 3RD = expensive. */
+export const GEARS: [string, string, string][] = [['budget', '1ST', "EDHREC's budget decks ($)"], ['', '2ND', 'Every budget'], ['expensive', '3RD', "EDHREC's expensive decks ($$$)"]];
 
 export interface EdhCard {
   name: string;

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, BUDGETS, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, GEARS, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl, toCad } from '../lib/prices';
 import { searchByText } from '../lib/search';
@@ -15,8 +15,9 @@ import { recordTaste, setWild } from '../brain/store';
 import { comboBreaks, nearCombos } from '../brain/combos';
 import { identityGate, offIdentity } from '../brain/identity';
 import { comboAllowed } from '../brain/win';
+import { brainData } from '../brain/data';
 import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
-import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
+import { arrange, noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
@@ -29,16 +30,19 @@ import { gameChangers } from '../lib/scryfall';
 import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
-import { BUY_CAPS, coverage, coverageText, overCap, OWN_MODES, ownedOnly, type OwnMode } from '../brain/modes';
+import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, OWN_MODES, ownedOnly, type OwnMode } from '../brain/modes';
 import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
-import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
+import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
 // EDHREC's own order first on commander pages.
 const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
 import { SwapNote } from './SwapNote';
+import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
+import { AGGRESSION } from '../brain/win';
+import { deckStats } from '../lib/deckstats';
 import { CardMenu, type Toast } from './CardMenu';
-import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
+import { CompactIcon, Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 /** Where a deck opened from Discover starts: MED power (bracket 4) and MAX budget ($$$). */
@@ -47,6 +51,7 @@ const OPEN_BUDGET = 'expensive';
 /** The POWER dial also sets how hungry the build checks are (Min = patient, Med = hungry, Max = lethal). */
 const AGGRESSION_OF: Record<string, 'patient' | 'hungry' | 'lethal'> = { '': 'hungry', upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' };
 const SHOW_AS_COMMANDER = false;
+type View = 'grid' | 'list' | 'compact';
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
@@ -77,15 +82,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   // EDHREC's With card / Without card: suggestions come from decks that do / don't run those cards
   const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
   const [cfDraft, setCfDraft] = useState({ inc: '', exc: '' });
-  const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean } | null>(null);
-  useEffect(() => {
-    setFiltered(null);
-    if (!recs || (!cf.inc.length && !cf.exc.length)) return;
-    let live = true;
-    void fetchFiltered(pagePath('commander', slug, bracket, tag, budget), cf, recs).then((r) => live && setFiltered(r));
-    return () => void (live = false);
-  }, [recs, cf, slug, bracket, tag, budget]);
-  const sugg = filtered?.page ?? recs;
+  const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean; pins?: boolean } | null>(null);
   const [tags, setTags] = useState<EdhPage['tags']>([]);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState('');
@@ -102,6 +99,25 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const swaps = profile?.swaps?.[path] ?? {};
   const pins = profile?.pins?.[name] ?? noPins();
   const bought = new Set(profile?.bought ?? []);
+  // Your pins drive EDHREC's filter too (decks with your 📌 cards, without your 💀 ones); thin answers drop the pins.
+  const fq = withPins(cf, pins);
+  const fqKey = JSON.stringify(fq);
+  const pinned = fq.inc.length + fq.exc.length > cf.inc.length + cf.exc.length;
+  useEffect(() => {
+    setFiltered(null);
+    if (!recs || (!fq.inc.length && !fq.exc.length)) return;
+    let live = true;
+    const at = pagePath('commander', slug, bracket, tag, budget);
+    void (async () => {
+      const r = await fetchFiltered(at, fq, recs);
+      if (!pinned || (r.applied && (r.page.numDecks ?? 0) >= PIN_FILTER_MIN_DECKS)) return live && setFiltered({ ...r, pins: pinned });
+      // too few decks with the pins: your own With / Without cards alone, or the plain page
+      const plain = cf.inc.length || cf.exc.length ? await fetchFiltered(at, cf, recs) : { page: recs, applied: false };
+      if (live) setFiltered(plain);
+    })();
+    return () => void (live = false);
+  }, [recs, fqKey, slug, bracket, tag, budget]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sugg = filtered?.page ?? recs;
 
   useEffect(() => {
     showPage(pagePath('commander', slug), (p) => setTags(p.tags)).catch(() => setTags([]));
@@ -367,17 +383,36 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const how = sl && sl.name !== slot ? (sl.why === 'pin' ? 'pin' : sl.why === 'auto' || sl.why === 'never' ? 'stand-in' : 'swap') : undefined;
     return whyCard({ name: now, ctx: { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression }, rec: recInfo.get(norm(now)), how, slot: how ? slot : undefined, gc });
   };
+  // The Forge on the commander page: focus mode from your first swap; suggestions go into slots (drag, or tap then tap).
+  useForgeMode(forging);
+  const [placing, setPlacing] = useState<string | null>(null);
+  const slotOf = new Map([...eff].map(([slot, x]) => [norm(x.name), slot]));
+  const swapInto = (onto: string, card: string) => {
+    const slot = slotOf.get(norm(onto)) ?? onto;
+    if (norm(slot) === norm(name) || !byName.has(slot)) return;
+    haptic('success');
+    setPlacing(null);
+    void setSwap(slot, card);
+  };
+  const drop = useDeckDrop(swapInto);
+  const forgeSt = deckStats(deckNow, cardByName, name);
+  const lastSwap = Object.keys(swapsOk).pop();
+  const undoLast = lastSwap ? { text: `${swapsOk[lastSwap]} for ${lastSwap}`, run: () => void setSwap(lastSwap, null) } : undefined;
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
+  const pw = BRACKETS.find(([v]) => v === bracket);
+  const powerLabel = pw && (pw[2] ? `${pw[1].toUpperCase()} · B${pw[2]}` : pw[1].toUpperCase());
   // Grid (card images) is the default; the choice is remembered on this device.
-  const [view, setViewState] = useState<'grid' | 'list'>(() => {
+  // Phones start on the compact list (name · mana · price · owned), owner's call Nov 6.
+  const [view, setViewState] = useState<View>(() => {
     try {
-      return localStorage.getItem('ch:view') === 'list' ? 'list' : 'grid';
+      const v = localStorage.getItem('ch:view');
+      return v === 'list' || v === 'grid' || v === 'compact' ? v : narrow ? 'compact' : 'grid';
     } catch {
-      return 'grid';
+      return narrow ? 'compact' : 'grid';
     }
   });
-  const setView = (v: 'grid' | 'list') => {
+  const setView = (v: View) => {
     setViewState(v);
     setMenuFor(null);
     try {
@@ -390,6 +425,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
   const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:cshow', 'all', SHOWS.map(([v]) => v));
+  const [only, setOnly] = useState<Only>('all'); // Game Changers / price bands, for this visit
 
   // B) The receipt's back: the PULL list, the cards of this deck to take out of your binder (basics left out).
   const pull = [...new Map([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => [norm(v.name), { name: v.name, qty: byName.get(k)?.qty ?? 1 }])).values()]
@@ -405,6 +441,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     window.addEventListener('afterprint', done);
     window.print();
   };
+  // TO BUY marks: completes a two-card combo with a card in this deck (Commander Spellbook data)
+  const comboWith = (n: string) => brainData().combos?.get(norm(n))?.map((k) => k.cards.find((x) => norm(x) !== norm(n))!).find((o) => o && deckNames.some((d) => norm(d) === norm(o)));
   const receipt = kind === 'average' && (missing.length > 0 || pull.length > 0) && (
     <aside className={`receipt gbox${pullSide ? ' back' : ''}`} id="shop" aria-label={pullSide ? 'Pull list' : 'Shopping list'}>
       <div className="rflip" role="group" aria-label="Receipt side">
@@ -457,14 +495,20 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         </>
       ) : (
         <>
-      <Doodles n={377} count={1} spots={[[78, 44]]} paper />
+      <Doodles n={377} count={1} spots={[[6, 97]]} paper />
       <h2>*** TO BUY ***</h2>
       <hr />
       <div className="sub">
         {missing.length} missing{pricesIn && toBuyCost > 0 ? ` · ≈${cad(toBuyCost)} to complete` : ''} · ≈CA$ at your shop
       </div>
-      <ul>
-        {missing.map((c) => {
+      {buyGroups(missing, (c) => recInfo.get(norm(c.name))?.incl, (c) => toCad(cardOf(c)?.usd)).map((g) => (
+        <div key={g.label} className="rgroup">
+          <div className="rgh">
+            <span>{g.label}</span>
+            {pricesIn && g.total > 0 && <span>≈{cad(g.total)}</span>}
+          </div>
+          <ul>
+            {g.items.map((c) => {
           const done = bought.has(norm(c.name));
           const over = overCap(toCad(cardOf(c)?.usd), cap);
           return (
@@ -475,6 +519,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   {c.qty && c.qty > 1 ? `${c.qty}× ` : ''}
                   {c.name}
                   {groupOf(cardOf(c)?.type) !== 'Other' && <small className="ty"> · {groupOf(cardOf(c)?.type).replace(/s$/, '').replace(/ie$/, 'y')}</small>}
+                  {gc?.has(norm(c.name)) && <small className="rmark gc" title="Game Changer (bracket 4 and up)"> GC</small>}
+                  {comboWith(c.name) && <small className="rmark combo" title={`Combo with ${comboWith(c.name)}`}> COMBO</small>}
                   {nameIn(c) !== c.name && <small> · using {nameIn(c)} for now</small>}
                   {over && <small className="overcap"> · over CA${cap}</small>}
                 </span>
@@ -486,8 +532,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </span>
             </li>
           );
-        })}
-      </ul>
+            })}
+          </ul>
+        </div>
+      ))}
       <hr />
       <div className="total">
         <span>TO BUY ({toBuy.length})</span>
@@ -671,23 +719,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             )}
           </section>
         )}
-        {forging && (
-          <div className="forgebar" role="status">
-            <img src="/card-spin.webp" alt="" width={46} height={67} aria-hidden="true" />
-            <span className="ft">
-              <b>⚒ FORGING</b>
-              <small>
-                {changes} {changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save
-              </small>
-            </span>
-            <button className="btn forge" onClick={() => saveDeck()} disabled={saving}>
-              SAVE DECK
-            </button>
-            <button className="btn ink" onClick={() => (haptic('undo'), clearSwaps())}>
-              DISCARD
-            </button>
-          </div>
-        )}
+        {forging && <ForgeTop label={label} sub={`${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save`} undo={undoLast} onLeave={onBack} onSave={() => saveDeck()} saving={saving} />}
         {leaving && (
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />
@@ -747,14 +779,14 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {page && (
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
-            <div className="lists">
-              {/* The one slim bar (owner's rule): search, then ⋮ with POWER, BUDGET, SORT, SHOW, VIEW and EDHREC's With / Without card */}
-              <ToolBar q={q} setQ={setQ} now={[BRACKETS.find(([v]) => v === bracket)?.[1].toUpperCase(), budget ? BUDGETS.find(([v]) => v === budget)?.[1].toUpperCase() : '', kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : ''].filter(Boolean).join(' · ')}>
+            <div className="lists" {...(forging ? drop : {})}>
+              {/* The one slim bar (owner's rule): search, then ⋮ with POWER, GEAR, SORT, SHOW, VIEW and EDHREC's With / Without card */}
+              <ToolBar q={q} setQ={setQ} now={[powerLabel, `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}>
                 <OptRow label="POWER">
-                  <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
+                  <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
                 </OptRow>
-                <OptRow label="BUDGET">
-                  <Segs label="Budget" value={budget} options={BUDGETS.map(([v, t]) => [v, t.toUpperCase()])} onChange={setBudget} />
+                <OptRow label="GEAR">
+                  <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
                 {kind === 'average' && (
                   <OptRow label="CARDS">
@@ -774,10 +806,14 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
                       <ListIcon />
                     </button>
+                    <button aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list: name · mana · price · owned" onClick={() => (haptic('select'), setView('compact'))}>
+                      <CompactIcon />
+                    </button>
                   </div>
                 </OptRow>
                 <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
                 <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
                     {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
                     <form
                       className="cfilter"
@@ -826,15 +862,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <p className="coverage" role="status">
                   {coverageText(coverage([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ slot: k, name: v.name, qty: byName.get(k)?.qty ?? 1 })), (n) => statusOf(n, s.mine) === 'owned'))}
                   {ownMode === 'owned' && <span className="cmode"> · owned only</span>}
+                  {filtered?.pins && <span className="cmode"> · suggestions from {filtered.page.numDecks?.toLocaleString()} EDHREC decks that fit your pins</span>}
                 </p>
               )}
-              {noBudget && !noBracket && <small className="bnote">No EDHREC decks at this budget: showing any budget</small>}
+              {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {listed.map((l) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
                 const cs = sortBy(
-                  searchByText(l.cards.filter((c) => shows(show, own(c))), q, (c) => ({ name: nameIn(c), type: cardOf(c)?.type, text: cardOf(c)?.text })),
+                  searchByText(l.cards.filter((c) => shows(show, own(c)) && onlyOk(only, { gc: !!gc?.has(norm(nameIn(c))), cad: toCad(cardByName(nameIn(c))?.usd) })), q, (c) => ({ name: nameIn(c), type: cardOf(c)?.type, text: cardOf(c)?.text })),
                   sort,
                   (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
                 );
@@ -858,7 +895,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       </span>
                     </summary>
                     
-                    <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
+                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'}>
                       {cs.map((c) => {
                         // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.
                         const swappable = kind === 'average' && norm(c.name) !== norm(name);
@@ -881,7 +918,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                             marker={repl ? c.name : undefined}
                             markText={mark}
                             quiet={statusOf(now, s.mine) === 'owned'}
-                            onOpen={swappable ? () => setMenuFor(c.name) : undefined}
+                            onOpen={swappable ? () => (placing ? swapInto(now, placing) : setMenuFor(c.name)) : undefined}
                             onMenu={(x, y) => setCtx({ slot: c.name, name: now, x, y })}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >
@@ -916,7 +953,30 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 );
               })}
             </div>
-            {receipt}
+            {forging ? (
+              <div className="dside">
+                <ForgeMeters st={forgeSt} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} match={sum.pct} />
+                <ForgeSuggest
+                  profile={s.profile}
+                  deck={deckNow}
+                  commander={name}
+                  bracket={bracketNum}
+                  aggression={aggression}
+                  candidates={[...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never))}
+                  cardOf={cardByName}
+                  ownedOf={(n) => s.mine.get(norm(n)) ?? 0}
+                  imgOf={(n) => optionOf({ name: n }).img}
+                  themes={tags}
+                  theme={tag}
+                  placing={placing}
+                  onPlace={setPlacing}
+                  loading={!recs}
+                  buy={receipt || undefined}
+                />
+              </div>
+            ) : (
+              receipt
+            )}
           </div>
         )}
       </main>

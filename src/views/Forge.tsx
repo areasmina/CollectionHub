@@ -1,0 +1,524 @@
+import { useLiveQuery } from 'dexie-react-hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { db, type Card, type DeckCard } from '../lib/db';
+import { haptic } from '../lib/haptics';
+import { norm } from '../lib/names';
+import { cad } from '../lib/prices';
+import { searchByText } from '../lib/search';
+import { BASICS } from '../lib/compare';
+import { isLand, roleOf, type DeckStats, type Role } from '../lib/deckstats';
+import type { SubCard } from '../lib/subs';
+import type { CardFilter } from '../lib/edhrec';
+import { themeOf } from '../brain/themes';
+import { deckNeeds, scoreCard, type DeckContext, type Part } from '../brain/score';
+import type { Aggression } from '../brain/win';
+import { dragEnd, dragStart, fromOf, holdToDrag, lightOff, lightUp, DRAG_TYPE, type DropAt } from '../lib/drag';
+import { priceSum, usd } from './shared';
+
+/**
+ * The Forge (approved plan, Nov 6): a focus mode for building a deck. The rest of the app steps back (nav, decoration);
+ * the deck stays on the left, ANALYSIS + SUGGESTIONS (and TO BUY) on the right; on phones the suggestions are a bottom sheet. Suggestions are ranked by the
+ * brain's needs-aware score (src/brain/score.ts) with its real parts as the reasons, never an invented number.
+ */
+
+/** Focus mode on the whole page while `on` (the nav and the page decoration step back). */
+export function useForgeMode(on: boolean) {
+  useEffect(() => {
+    if (!on) return;
+    const el = document.documentElement;
+    el.classList.add('forging');
+    return () => el.classList.remove('forging');
+  }, [on]);
+}
+
+/** Leave the Forge with Esc (unless a window is open on top) and undo the last change with Ctrl/Cmd+Z. */
+function useForgeKeys(onLeave: () => void, onUndo?: () => void) {
+  const live = useRef({ onLeave, onUndo });
+  live.current = { onLeave, onUndo };
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement | null)?.closest?.('input, textarea, select');
+      const over = document.querySelector('.swapnote, .note-pop, .cmenu, .leavenote, [role="dialog"], [role="alertdialog"]');
+      if (e.key === 'Escape' && !over && !typing) return live.current.onLeave();
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !typing && live.current.onUndo) {
+        e.preventDefault();
+        haptic('undo');
+        live.current.onUndo();
+      }
+    };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, []);
+}
+
+/** The Forge's own top bar: FORGE stamp, the deck, the last undo, SAVE (commander page) and ✕ LEAVE. */
+export function ForgeTop({ label, sub, undo, onLeave, onSave, saving, reserved }: { label: string; sub?: string; undo?: { text: string; run: () => void }; onLeave: () => void; onSave?: () => void; saving?: boolean; reserved?: boolean }) {
+  useForgeKeys(onLeave, undo?.run);
+  return (
+    <div className="forgetop" role="toolbar" aria-label="Forge">
+      <span className="fstamp" aria-hidden="true">
+        FORGE
+      </span>
+      <span className="ftitle">
+        <b>
+          {label}
+          {reserved && (
+            <span className="fres" title="This deck holds its copies: other decks can't use them">
+              🔒 RESERVED
+            </span>
+          )}
+        </b>
+        {sub && <small>{sub}</small>}
+      </span>
+      {undo && (
+        <button className="fundo" onClick={() => (haptic('undo'), undo.run())} title="Undo (Ctrl+Z)">
+          ↺ UNDO <small>{undo.text}</small>
+        </button>
+      )}
+      {onSave && (
+        <button className="btn forge" onClick={onSave} disabled={saving}>
+          SAVE
+        </button>
+      )}
+      <button className="btn ink fleave" onClick={() => (haptic('tap'), onLeave())} title="Leave the Forge (Esc)">
+        ✕ LEAVE
+      </button>
+    </div>
+  );
+}
+
+const METERS: [Role | 'lands' | 'mv', string][] = [
+  ['lands', 'LANDS'],
+  ['ramp', 'RAMP'],
+  ['draw', 'DRAW'],
+  ['removal', 'REMOVAL'],
+  ['wipes', 'WIPES'],
+  ['mv', 'AVG MV'],
+];
+const ROLE_WORD: Record<Role, string> = { ramp: 'ramp', draw: 'draw', removal: 'removal', wipes: 'wipes', tutors: 'tutors' };
+type Range = (r: Role) => [number, number] | undefined;
+
+/** What the deck is short of, in plain words: "draw (2 short)". */
+export function shortOf(st: DeckStats, range: Range) {
+  return (['draw', 'ramp', 'removal', 'wipes'] as Role[]).flatMap((r) => {
+    const rg = range(r);
+    return rg && st.roles[r] < rg[0] ? [{ role: r, short: rg[0] - st.roles[r] }] : [];
+  });
+}
+
+/**
+ * ANALYSIS meters for the Forge: lands, ramp, draw, removal, wipes and average mana value, each against the range the
+ * brain's dial asks for. A meter that moved with the last change tweens and shows +1 / −1; the curve bar that changed
+ * lights up; a yellow NEEDS line says what the list below is now chasing.
+ */
+export function ForgeMeters({ st, range, match }: { st: DeckStats; range: Range; match?: number }) {
+  const now: Record<string, number> = { lands: st.lands, mv: Math.round(st.avgMv * 100) / 100, ...st.roles };
+  const prev = useRef<{ v: Record<string, number>; curve: number[] } | null>(null);
+  const [delta, setDelta] = useState<{ v: Record<string, number>; curve: Set<number>; at: number }>({ v: {}, curve: new Set(), at: 0 });
+  const sig = JSON.stringify([now, st.curve]);
+  useEffect(() => {
+    const p = prev.current;
+    prev.current = { v: now, curve: st.curve };
+    if (!p || st.unknown) return;
+    const v: Record<string, number> = {};
+    for (const k of Object.keys(now)) if (now[k] !== p.v[k]) v[k] = Math.round((now[k] - p.v[k]) * 100) / 100;
+    const curve = new Set(st.curve.flatMap((n, i) => (n !== p.curve[i] ? [i] : [])));
+    if (Object.keys(v).length || curve.size) setDelta({ v, curve, at: Date.now() });
+  }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
+  const needs = shortOf(st, range);
+  const top = Math.max(1, ...st.curve);
+  return (
+    <section className="fmeters" aria-label="Forge analysis">
+      <h3>
+        ANALYSIS
+        {match != null && <span className="fmatch">MATCH {match}%</span>}
+      </h3>
+      <ul>
+        {METERS.map(([k, label]) => {
+          const rg = k === 'lands' ? ([33, 38] as [number, number]) : k === 'mv' ? undefined : range(k);
+          const v = now[k];
+          const d = delta.v[k];
+          const fill = k === 'mv' ? Math.min(1, v / 5) : Math.min(1, v / Math.max(1, (rg?.[1] ?? v) * 1.25));
+          const tone = !rg ? '' : v < rg[0] ? ' low' : v > rg[1] ? ' high' : ' ok';
+          return (
+            <li key={k} className={`fm${tone}`} title={rg ? `${label.toLowerCase()}: ${v} (usual ${rg[0]}–${rg[1]})` : `${label.toLowerCase()}: ${v}`}>
+              <span className="fl">{label}</span>
+              <span className="fbar" aria-hidden="true">
+                <i style={{ width: `${Math.round(fill * 100)}%` }} />
+              </span>
+              <b>{k === 'mv' ? v.toFixed(2) : v}</b>
+              {d ? (
+                <span key={delta.at} className={`fdelta${d > 0 ? ' up' : ' down'}`}>
+                  {d > 0 ? '+' : '−'}
+                  {k === 'mv' ? Math.abs(d).toFixed(2) : Math.abs(d)}
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="fcurve" role="img" aria-label={`Mana curve: ${st.curve.map((n, i) => `${i === 7 ? '7+' : i}: ${n}`).join(', ')}`}>
+        {st.curve.map((n, i) => (
+          <span key={i} className={delta.curve.has(i) ? 'lit' : ''} data-at={delta.curve.has(i) ? delta.at : undefined}>
+            <i style={{ height: `${Math.round((n / top) * 100)}%` }} />
+            <small>{i === 7 ? '7+' : i}</small>
+          </span>
+        ))}
+      </div>
+      {needs.length > 0 && (
+        <p className="fneeds" role="status">
+          NEEDS: {needs.map((n) => `${n.short} more ${ROLE_WORD[n.role]}`).join(' · ')}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export type ForgeSort = 'ours' | 'lift' | 'pop';
+const SORTS: [ForgeSort, string, string][] = [
+  ['ours', 'OUR PICK', "EDHREC's lift and play rate, plus cards you own and what the deck is short of"],
+  ['lift', 'EDHREC LIFT', 'How much more this commander’s decks play the card than decks in general (EDHREC lift)'],
+  ['pop', 'POPULAR', 'How many of this commander’s EDHREC decks play the card'],
+];
+type Tab = 'all' | 'owned' | 'missing';
+const OWN_W = 0.1; // a card you own is a card you can play tonight: a small, stated nudge
+
+interface Row {
+  c: SubCard;
+  owned: number;
+  card?: Card;
+  total: number;
+  parts: Part[];
+  blocked?: string;
+  roles: Role[];
+  fits: boolean;
+}
+
+/**
+ * The live suggestions list. Sources: EDHREC's cards for this commander (or the theme picked) plus every card you own
+ * in its colours. Sort OUR PICK · EDHREC LIFT · POPULAR; search your own cards; chips for what the deck needs, themes
+ * and EDHREC's With / Without card filter; tabs ALL · OWNED · TO BUY. Prices are shown and never change the order.
+ */
+export function ForgeSuggest({
+  profile,
+  deck,
+  commander,
+  bracket,
+  candidates,
+  cardOf,
+  ownedOf,
+  imgOf,
+  themes = [],
+  theme: pageTheme = '',
+  buy,
+  cf,
+  onCf,
+  cfNote,
+  placing,
+  onPlace,
+  onAdd,
+  onCut,
+  loading,
+  aggression: dial,
+}: {
+  aggression?: Aggression; // the page's dial (the commander page sets it from POWER); else your brain setting
+  profile: number;
+  deck: DeckCard[];
+  commander?: string;
+  bracket: number;
+  candidates: SubCard[];
+  cardOf: (name: string) => Card | undefined;
+  ownedOf: (name: string) => number;
+  imgOf: (name: string) => string | undefined;
+  themes?: { slug: string; value: string; count: number }[];
+  theme?: string; // the theme picked on the page (EDHREC tag slug): suggestions start filtered to it
+  buy?: ReactNode; // the TO BUY receipt, as a second pane
+  cf?: CardFilter;
+  onCf?: (f: CardFilter) => void;
+  cfNote?: string;
+  placing: string | null;
+  onPlace: (name: string | null) => void;
+  onAdd?: (name: string) => void; // saved decks: a card can be added (the commander page swaps slots only)
+  onCut?: (name: string) => void; // a deck card dropped back on the list
+  loading?: boolean;
+}) {
+  const brain = useLiveQuery(() => db.profiles.get(profile), [profile])?.brain;
+  const aggression = (dial ?? brain?.aggression ?? 'hungry') as Aggression;
+  const [sort, setSort] = useState<ForgeSort>('ours');
+  const [tab, setTab] = useState<Tab>('all');
+  const [q, setQ] = useState('');
+  const [role, setRole] = useState<Role | ''>('');
+  const [more, setMore] = useState(false);
+  const [sheet, setSheet] = useState(false); // phones: the bottom sheet is pulled up
+  const [pane, setPane] = useState<'sugg' | 'buy'>('sugg');
+  // Theme chips (EDHREC's tags as rules-text tests, brain/themes.ts): the picked one filters the list and adds "fits <theme>".
+  const [theme, setTheme] = useState(pageTheme);
+  useEffect(() => setTheme(pageTheme), [pageTheme]);
+  const tagOf = themes.find((t) => t.slug === theme);
+  const focus = useMemo(() => (tagOf ? themeOf(tagOf.value) : undefined), [tagOf?.value]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [cfDraft, setCfDraft] = useState({ inc: cf?.inc[0] ?? '', exc: cf?.exc[0] ?? '' });
+
+  const ctx: DeckContext = { deck, cardOf, commander, bracket, aggression, taste: brain?.taste, focus };
+  const deckKey = deck.map((c) => `${c.name}×${c.qty}`).join('|');
+  // recount when the deck, its card data (it loads after the names), the dial or your taste change
+  const sigNeeds = [deckKey, deck.filter((c) => cardOf(c.name)).length, aggression, bracket, brain?.taste?.length ?? 0].join('#');
+  const needs = useMemo(() => deckNeeds(ctx), [sigNeeds]); // eslint-disable-line react-hooks/exhaustive-deps
+  const rows: Row[] = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Row[] = [];
+    for (const c of candidates) {
+      const k = norm(c.name);
+      if (seen.has(k) || needs.names.has(k) || BASICS.has(k) || (commander && k === norm(commander))) continue;
+      seen.add(k);
+      const card = cardOf(c.name);
+      const owned = ownedOf(c.name);
+      const sc = scoreCard({ ...c, type: c.type ?? card?.type, cmc: c.cmc ?? card?.cmc }, ctx, needs);
+      const parts = owned ? [...sc.parts, { label: 'owned', value: OWN_W, source: 'deck needs' as const }] : sc.parts;
+      out.push({ c, owned, card, total: sc.total + (owned ? OWN_W : 0), parts, blocked: sc.blocked, roles: card && !isLand(card.type) ? roleOf({ ...card, name: c.name }) : [], fits: !!(focus && card && focus.test(card)) });
+    }
+    return out;
+  }, [needs, focus, candidates.length, candidates[0]?.name, candidates.filter((c) => cardOf(c.name)).length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const short = shortOf(needs.stats, needs.range);
+  const searching = q.trim().length >= 2;
+  const value = (r: Row) => (sort === 'ours' ? r.total : sort === 'lift' ? (r.c.lift ?? (r.c.synergy != null ? 1 + r.c.synergy : 0)) : (r.c.incl ?? 0));
+  let list = rows.filter((r) => (tab === 'owned' ? r.owned > 0 : tab === 'missing' ? r.owned === 0 : true) && (!role || r.roles.includes(role)) && (!focus || r.fits));
+  // the search covers your own cards (in the commander's colours): name, rules text, type line
+  if (searching) list = searchByText(list.filter((r) => r.owned > 0), q, (r) => ({ name: r.c.name, type: r.card?.type ?? r.c.type, text: r.card?.text }));
+  else list = [...list].sort((a, b) => Number(!!a.blocked) - Number(!!b.blocked) || value(b) - value(a) || a.c.name.localeCompare(b.c.name));
+  const shown = list.slice(0, more ? 60 : 20);
+  const buyTotal = priceSum(list.filter((r) => !r.owned).slice(0, more ? 60 : 20).map((r) => ({ card: r.card, qty: 1 })));
+
+  // Rows that change place slide to it (FLIP) with a green flash, so you see what the last change moved.
+  const box = useRef<HTMLOListElement>(null);
+  const tops = useRef(new Map<string, number>());
+  const order = shown.map((r) => r.c.name).join('|');
+  useLayoutEffect(() => {
+    const ul = box.current;
+    if (!ul) return;
+    const calm = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const next = new Map<string, number>();
+    for (const li of ul.querySelectorAll<HTMLElement>(':scope > li[data-name]')) {
+      const n = li.dataset.name!;
+      const top = li.offsetTop;
+      next.set(n, top);
+      const was = tops.current.get(n);
+      if (was == null || was === top || calm || !li.animate) continue;
+      li.animate([{ transform: `translateY(${was - top}px)` }, { transform: 'none' }], { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      if (was > top) li.animate([{ backgroundColor: 'rgba(57, 255, 136, .35)' }, { backgroundColor: 'transparent' }], { duration: 900 });
+    }
+    tops.current = next;
+  }, [order]);
+
+  const reasons = (r: Row) => {
+    const own = r.owned ? ['owned'] : [];
+    const top = r.parts
+      .filter((p) => p.label !== 'owned' && p.value !== 0)
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+      .slice(0, 3)
+      .map((p) => p.label.replace(/^fills (\S+(?: \S+)?) \(deck has (\d+), \w+ wants (\d+)–\d+\)$/, (_, w, h, lo) => `fills: ${w} (${Number(lo) - Number(h)} short)`))
+      .map((t) => t.replace(/^([\d.]+)x lift$/, (_, x) => `+${Math.round((Number(x) - 1) * 100)}% lift`));
+    return [...top, ...own];
+  };
+
+  return (
+    <section
+      className={`fsugg${sheet ? ' up' : ''}`}
+      aria-label="Suggestions"
+      onDragOver={(e) => onCut && e.dataTransfer.types.includes(DRAG_TYPE) && fromOf(e) === 'deck' && (e.preventDefault(), lightUp(e.target as Element))}
+      onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && lightOff()}
+      onDrop={(e) => {
+        const n = e.dataTransfer.getData(DRAG_TYPE);
+        dragEnd();
+        if (n && onCut && fromOf(e) === 'deck') (e.preventDefault(), haptic('warn'), onCut(n));
+      }}
+    >
+      <button className="fgrab" aria-expanded={sheet} aria-label={sheet ? 'Lower the suggestions' : 'Show all suggestions'} onClick={() => (haptic('open'), setSheet(!sheet))}>
+        <span aria-hidden="true" />
+      </button>
+      {buy ? (
+        <div className="fpanes" role="tablist" aria-label="Forge panel">
+          <button role="tab" aria-selected={pane === 'sugg'} onClick={() => (haptic('select'), setPane('sugg'))}>
+            SUGGESTIONS <small>{loading ? '…' : list.length}</small>
+          </button>
+          <button role="tab" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
+            TO BUY
+          </button>
+        </div>
+      ) : (
+        <h3>
+          SUGGESTIONS
+          <small>{loading ? 'asking EDHREC…' : `${list.length} ${list.length === 1 ? 'card' : 'cards'}`}</small>
+        </h3>
+      )}
+      {pane === 'buy' && buy ? (
+        <div className="fbuy">{buy}</div>
+      ) : (
+      <>
+      <div className="fsorts" role="radiogroup" aria-label="Sort suggestions">
+        {SORTS.map(([v, t, tip]) => (
+          <button key={v} role="radio" aria-checked={sort === v} title={tip} onClick={() => (haptic('select'), setSort(v))}>
+            {t}
+          </button>
+        ))}
+      </div>
+      <label className="sbox fq">
+        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search my cards_" aria-label="Search my cards (name or rules text)" autoComplete="off" />
+      </label>
+      <div className="fchips" role="group" aria-label="Filter suggestions">
+        {short.map((n) => (
+          <button key={n.role} className="need" aria-pressed={role === n.role} onClick={() => (haptic('select'), setRole(role === n.role ? '' : n.role))}>
+            needs: {ROLE_WORD[n.role]}
+          </button>
+        ))}
+        {(['draw', 'ramp', 'removal', 'wipes'] as Role[])
+          .filter((r) => !short.some((n) => n.role === r))
+          .map((r) => (
+            <button key={r} aria-pressed={role === r} onClick={() => (haptic('select'), setRole(role === r ? '' : r))}>
+              {ROLE_WORD[r]}
+            </button>
+          ))}
+        {themes.slice(0, 6).map((t) => (
+            <button key={t.slug} className="theme" aria-pressed={theme === t.slug} title={`Cards whose rules text fits ${t.value} (EDHREC theme, ${t.count.toLocaleString()} decks)`} onClick={() => (haptic('select'), setTheme(theme === t.slug ? '' : t.slug))}>
+              #{t.value.toLowerCase()}
+            </button>
+          ))}
+      </div>
+      {onCf && (
+        <details className="fcf">
+          <summary>WITH / WITHOUT A CARD{cf && (cf.inc.length || cf.exc.length) ? ' ·  on' : ''}</summary>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              haptic('select');
+              onCf({ inc: cfDraft.inc.trim() ? [cfDraft.inc.trim()] : [], exc: cfDraft.exc.trim() ? [cfDraft.exc.trim()] : [] });
+            }}
+          >
+            <label className="sbox">
+              <span className="tab">WITH</span>
+              <input value={cfDraft.inc} onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })} placeholder="card in the deck_" aria-label="With card" />
+            </label>
+            <label className="sbox">
+              <span className="tab">WITHOUT</span>
+              <input value={cfDraft.exc} onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })} placeholder="card left out_" aria-label="Without card" />
+            </label>
+            <button className="btn">APPLY</button>
+            {cf && (cf.inc.length > 0 || cf.exc.length > 0) && (
+              <button type="button" className="btn secondary" onClick={() => (haptic('undo'), setCfDraft({ inc: '', exc: '' }), onCf({ inc: [], exc: [] }))}>
+                CLEAR
+              </button>
+            )}
+          </form>
+        </details>
+      )}
+      {cfNote && <p className="small fcfnote" role="status">{cfNote}</p>}
+      <div className="ftabs" role="tablist" aria-label="Which cards">
+        {(
+          [
+            ['all', 'ALL'],
+            ['owned', 'OWNED'],
+            ['missing', `NOT OWNED${buyTotal > 0 ? ` ≈${cad(buyTotal)}` : ''}`],
+          ] as [Tab, string][]
+        ).map(([v, t]) => (
+          <button key={v} role="tab" aria-selected={tab === v} onClick={() => (haptic('select'), setTab(v))}>
+            {t}
+          </button>
+        ))}
+      </div>
+      {placing && (
+        <p className="fplace" role="status">
+          Tap a deck card to swap in <b>{placing}</b>
+          {onAdd ? ' (or + ADD)' : ''}.{' '}
+          <button onClick={() => onPlace(null)}>cancel</button>
+        </p>
+      )}
+      <ol ref={box} className="frows">
+        {shown.map((r) => {
+          const img = imgOf(r.c.name);
+          return (
+            <li key={r.c.name} data-name={r.c.name} className={`${r.owned ? 'own' : 'buy'}${placing === r.c.name ? ' sel' : ''}${r.blocked ? ' blocked' : ''}`}>
+              <button
+                className="frow"
+                draggable
+                onDragStart={(e) => (dragStart(e, r.c.name, 'sugg'), onPlace(null))}
+                onDragEnd={dragEnd}
+                onPointerDown={(e) => holdToDrag(e, { label: r.c.name, img, onDrop: (at: DropAt) => dropRow(r.c.name, at) })}
+                onContextMenu={(e) => e.preventDefault()}
+                onClick={() => (haptic('select'), setSheet(false), onPlace(placing === r.c.name ? null : r.c.name))}
+                aria-pressed={placing === r.c.name}
+                title={r.blocked ?? 'Tap, then tap a deck card to swap it in. Or drag it onto one.'}
+              >
+                {img ? <img src={img} alt="" loading="lazy" draggable={false} /> : <span className="noimg" aria-hidden="true" />}
+                <span className="fbody">
+                  <b>{r.c.name}</b>
+                  <span className="whys">
+                    {r.blocked ? <span className="cwarn">⚠ {r.blocked}</span> : reasons(r).map((t) => <span key={t} className={t.startsWith('fills') ? 'cgain' : t.startsWith('fits ') ? 'cfit' : t === 'owned' ? 'cown' : ''}>{t}</span>)}
+                  </span>
+                </span>
+                <span className="fprice">{r.owned ? '✓ yours' : usd(r.card)}</span>
+              </button>
+              {onAdd && (
+                <button className="fadd" aria-label={`Add ${r.c.name} to the deck`} onClick={() => (haptic('success'), onAdd(r.c.name))}>
+                  + ADD
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {!searching && list.length > 20 && (
+        <button className="fmore" onClick={() => (haptic('open'), setMore(!more))}>
+          {more ? 'FEWER' : `MORE (${Math.min(60, list.length) - 20})`}
+        </button>
+      )}
+      {!shown.length && <p className="small">{searching ? `No card of yours in these colours matches “${q}”.` : loading ? 'Loading suggestions…' : 'Nothing matches these filters.'}</p>}
+      <p className="small fsrc">Reasons come from EDHREC (play rate, lift), Scryfall Tagger roles, card text and your deck. Prices never change the order.</p>
+      </>
+      )}
+    </section>
+  );
+
+  function dropRow(name: string, at: DropAt) {
+    if (at.zone !== 'deck') return;
+    haptic('success');
+    if (at.card) window.dispatchEvent(new CustomEvent('forge-drop', { detail: { from: name, onto: at.card } }));
+    else if (onAdd) onAdd(name);
+  }
+}
+
+/** Deck side of the drag and drop: drop a suggestion on a deck card (swap) or on the deck (add). */
+export function useDeckDrop(onSwap: (onto: string, card: string) => void, onAdd?: (card: string) => void) {
+  const live = useRef({ onSwap, onAdd });
+  live.current = { onSwap, onAdd };
+  // touch drops come as an event from the suggestion row
+  useEffect(() => {
+    const f = (e: Event) => {
+      const d = (e as CustomEvent<{ from: string; onto: string }>).detail;
+      live.current.onSwap(d.onto, d.from);
+    };
+    addEventListener('forge-drop', f);
+    return () => removeEventListener('forge-drop', f);
+  }, []);
+  return {
+    onDragOver: (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes(DRAG_TYPE) || fromOf(e) !== 'sugg') return;
+      const onCard = (e.target as HTMLElement).closest?.('[data-card]');
+      if (!onCard && !live.current.onAdd) return;
+      e.preventDefault();
+      lightUp(e.target as Element);
+    },
+    onDragLeave: (e: React.DragEvent) => !e.currentTarget.contains(e.relatedTarget as Node) && lightOff(),
+    onDrop: (e: React.DragEvent) => {
+      const card = e.dataTransfer.getData(DRAG_TYPE);
+      const from = fromOf(e);
+      dragEnd();
+      if (!card || from !== 'sugg') return;
+      const onto = (e.target as HTMLElement).closest?.<HTMLElement>('[data-card]')?.dataset.card;
+      e.preventDefault();
+      haptic('success');
+      if (onto) live.current.onSwap(onto, card);
+      else live.current.onAdd?.(card);
+    },
+  };
+}
+

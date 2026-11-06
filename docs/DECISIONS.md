@@ -6,6 +6,8 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 | Date | Decision | Status | Notes |
 |---|---|---|---|
+| 2026-11-06 | Paper-ball TO BUY and the price-tape unroll on hold until Guillermo says go | parked | 22:27 "hold this idea" |
+| 2026-11-06 | Forge round: no FORGE IT button (first swap opens it; a saved deck opens in it); GEAR 1ST/2ND/3RD; POWER labels show B3/B4/B5; compact list is the phone default; TO BUY grouped by play rate; decks from Discover open at MED + $$$ | decided | Shipped in #17 / #20 |
 | 2026-11-06 | Work rulebook: `CLAUDE.md`, `docs/FEATURES.md`, this file, PR template with Checks, browser checks required in CI | decided | Ideas adapted from the MIT [product-harness-starter](https://github.com/beamnxw/my_works). Skipped: separate planner/builder/evaluator sessions, a shared handoff file, evidence folders in git |
 | 2026-11-06 | Copy reservations are optional per deck; shared (virtual) decks stay the default and `copies.ts` is unchanged | decided | Shipped in #12 |
 | 2026-11-06 | EDHREC data goes through one adapter (`src/lib/sources/edhrec.ts`) | decided | Terms in `docs/data-sources.md` |

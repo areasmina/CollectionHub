@@ -86,3 +86,20 @@ export const overCap = (cad: number | undefined, cap: number) => cap > 0 && cad 
 export function firstInCap<T>(cands: T[], cap: number, price: (t: T) => number | undefined): T | undefined {
   return cands.find((t) => !overCap(price(t), cap)) ?? cands[0];
 }
+
+/** TO BUY grouped by how much EDHREC plays each card (owner's yes, Nov 6), cheapest first inside a group. */
+export const BUY_BANDS: [number, string][] = [
+  [0.5, 'IN HALF THE DECKS OR MORE'],
+  [0.25, 'IN 25–50% OF DECKS'],
+  [0, 'UNDER 25% · NICE TO HAVE'],
+];
+export function buyGroups<T>(items: T[], incl: (t: T) => number | undefined, price: (t: T) => number | undefined) {
+  const groups = BUY_BANDS.map(([min, label]) => ({ min, label, items: [] as T[], total: 0 }));
+  for (const t of items) {
+    const g = groups.find((x) => (incl(t) ?? 0) >= x.min)!;
+    g.items.push(t);
+    g.total += price(t) ?? 0;
+  }
+  for (const g of groups) g.items.sort((a, b) => (price(a) ?? Infinity) - (price(b) ?? Infinity));
+  return groups.filter((g) => g.items.length);
+}

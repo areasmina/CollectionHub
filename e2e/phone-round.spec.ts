@@ -7,6 +7,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('Phone round: card is its own swap button, % in the burst, one FILTERS button', async ({ page }, info) => {
+  await page.evaluate(() => localStorage.setItem('ch:view', 'grid')); // these checks are about the card grid
   await page.locator('.ccard').first().click();
   await expect(page.locator('.match .num')).toHaveText(/%$/);
   // the % comes after the bar (inside the burst on the right)
@@ -19,7 +20,7 @@ test('Phone round: card is its own swap button, % in the burst, one FILTERS butt
   const sheet = page.locator('.fsheet');
   await expect(sheet.locator('.sbox').first()).toBeHidden();
   await sheet.locator('summary').click();
-  await expect(sheet.locator('.sbox')).toHaveCount(4);
+  await expect(sheet.locator('.sbox')).toHaveCount(5);
   await expect(sheet.locator('.sbox').first()).toBeVisible();
   await fits(page, ['.fsheet']);
   await sheet.locator('summary').click();
@@ -71,7 +72,7 @@ test('One slim bar: search + ⋮ (POWER, BUDGET inside), groups stacked full wid
   await expect(bar.locator('.fnow')).toHaveText(/MIN|ALL|MED|MAX/);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
-  await expect(o.getByRole('radiogroup', { name: 'Budget' })).toBeVisible();
+  await expect(o.getByRole('radiogroup', { name: 'Gear' })).toBeVisible();
   await fits(page, ['.tbar', '.tbar .fbody']);
   await page.screenshot({ path: `test-results/bar-open-${info.project.name}.png` });
   await o.locator('summary').click();
@@ -106,6 +107,7 @@ test('One slim bar: search + ⋮ (POWER, BUDGET inside), groups stacked full wid
 });
 
 test('Nov 6 batch: rules-text search, one price tape, swap window search up top, deck colour', async ({ page }, info) => {
+  await page.evaluate(() => localStorage.setItem('ch:view', 'grid')); // these checks are about the card grid
   await page.locator('.ccard').first().click();
   // search by rules text, not just the name: "landfall" finds Lotus Cobra
   const box = page.locator('.lists > .dtools .tsearch input');

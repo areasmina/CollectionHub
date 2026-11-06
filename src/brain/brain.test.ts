@@ -4,6 +4,7 @@ import { finisherPlans, killCheck } from './win';
 import { pickWildcards, seedOf } from './wildcard';
 import { addTaste, tasteFor, tasteSummary, type TasteEvent } from './taste';
 import { scoreCard, suggestCards, type DeckContext } from './score';
+import { themeOf } from './themes';
 
 const t = (type: string, text: string, cmc = 2) => ({ type, text, cmc, mana: '' });
 const CARDS: Record<string, ReturnType<typeof t>> = {
@@ -99,6 +100,13 @@ describe('suggestions follow the deck (proof the brain is personal and live)', (
     const patient = scoreCard({ name: 'Craterhoof Behemoth', incl: 0.3 }, base(['Forest', 'Torment of Hailfire', "Thassa's Oracle"], { aggression: 'patient' }));
     expect(lethal.parts.some((p) => /a way to win/.test(p.label))).toBe(true);
     expect(patient.parts.some((p) => /a way to win/.test(p.label))).toBe(false);
+  });
+  it('the theme you pick gives fitting cards a stated "fits <theme>" part, and only them', () => {
+    const focus = themeOf('Aristocrats');
+    const artist = scoreCard({ name: 'Blood Artist' }, base(['Forest'], { focus }));
+    expect(artist.parts.find((p) => p.label === 'fits aristocrats')?.value).toBe(0.15);
+    expect(scoreCard({ name: 'Grizzly Bears' }, base(['Forest'], { focus })).parts.some((p) => /^fits/.test(p.label))).toBe(false);
+    expect(scoreCard({ name: 'Blood Artist' }, base(['Forest'])).parts.some((p) => /^fits/.test(p.label))).toBe(false);
   });
   it('flags a card that completes a combo the bracket forbids, and rewards it where allowed', () => {
     setBrainData({ combos });

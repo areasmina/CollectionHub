@@ -30,7 +30,12 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Commander stats cached on the device (no EDHREC reload on app start) | Live | #3 | `lib/cmdrstats.test.ts`, e2e "Reload: commander stats come back from the device" |
 | Saved commander page shows at once even when EDHREC is down | Live | #3 | e2e "an old saved page shows at once" |
 | Commander page: sections in order with count + cost, grid / list, tags, Built around | Live | #6 | e2e "Commander page (Discover): sections in order", "Commander page: header stats" |
-| POWER ALL · MIN · MED · MAX (brackets 3 / 4 / 5) | Live | #6 | e2e "Commander settings on a wide screen" |
+| POWER ALL · MIN · B3 · MED · B4 · MAX · B5 | Live | #6, #20 | e2e "Commander settings on a wide screen", "A + D" |
+| GEAR 1ST · 2ND · 3RD (EDHREC budget / every budget / expensive); decks from Discover open at MED · 3RD | Live | #17, #20 | e2e "A + D" |
+| Pins drive EDHREC's filter (first 2 📌 as in=, first 2 💀 as out=; under 20 decks falls back) | Live | #20 | `lib/pins.test.ts`, e2e "Pins drive EDHREC" |
+| Coverage line, OWNED ONLY / PREFER OWNED, BUY UNDER CA$N | Live | #17 | `brain/modes.test.ts`, e2e "A + D" |
+| TO BUY receipt: PULL list + PRINT on the back; grouped by EDHREC play rate, cheapest first, GC / COMBO marks | Live | #17, #20 | `brain/modes.test.ts`, e2e "B: the TO BUY receipt", "TO BUY groups" |
+| Build Readiness + Bracket Fit tiles, "Why this card?" in the swap window | Live | #17 | `brain/validate.test.ts`, e2e "Readiness + Bracket Fit tiles" |
 | EDHREC With / Without card filter, self-testing with honest fallback | Live | #6 | e2e "EDHREC With / Without card" |
 | Stand-ins ranked by EDHREC lift | Live | #7 | `lib/subs.test.ts` |
 | Partner and Background commanders | Live | #7 | `lib/commander.test.ts` |
@@ -51,13 +56,18 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Swap window: every card swaps, top 3 + search your binder, undo, pins, drag to swap | Live | #6, #9 | `lib/pins.test.ts`, e2e "Swap window: every card swaps", "drag a suggestion" |
 | Combo warnings in the swap window | Live | #7 | `brain/round2.test.ts` |
 | Forge: first swap starts it, leaving asks to save, change commander with undo | Live | #6, #8 | e2e "Forging zone", "Forge: the big commander card is its menu" |
+| Full Forge: focus mode + top bar (undo, save, leave, RESERVED), ANALYSIS meters, live suggestions (OUR PICK / EDHREC LIFT / POPULAR, needs + theme chips, own-card search), tap-tap and drag incl. touch, phone bottom sheet, TO BUY pane | Live | #20 | `brain/brain.test.ts` (theme part), `e2e/forge.spec.ts` |
+| Swap window "in <deck>" chip | Live | #17 | `brain/modes.test.ts` |
+| ONLY filter: Game Changers, CA$ price bands (both deck pages) | Live | #20 | `lib/arrange.test.ts`, e2e "ONLY" |
+| Compact list (name · mana · price · owned), default on phones | Live | #20 | e2e "Phones start on the compact list", "Compact list: names stay readable" |
+| Export: Moxfield .txt, Copy for MTG Arena, CSV | Live | #20 | `lib/export.test.ts` |
 | Swaps keep the deck organised by type | Live | #6 | `lib/sections.test.ts`, e2e "Swapping keeps the deck organised" |
 | Bracket estimate with reasons; combo-aware (Spellbook two-card combos) | Live | #7 | `brain/brackets.test.ts` |
 | Card roles from Scryfall Tagger (ramp, draw, removal…) | Live | #7 | `brain/roles.test.ts` |
 | Salt (EDHREC top 1,000) | Live | 2026-10-12 | `lib/salt.test.ts` |
 | Legality and completeness checks (100 cards, singleton, colour identity) | Partial | – | banned cards flagged (#11); the rest not done |
 | Physical copy reservations (optional per deck: shared or reserved; shared stays default), copy status per deck | Live | #12, #14 | `lib/allocation.test.ts` |
-| Deck generation modes: Owned only / Prefer owned / Budget | Planned | – | brain thread's revised plan |
+| Deck generation modes: Owned only / Prefer owned / Budget | Partial | #17 | OWNED ONLY / PREFER OWNED / BUY UNDER live on commander pages (`brain/modes.test.ts`) |
 | Playtesting (draw 7, mulligan, turns) | Parked | – | Guillermo: "much later"; plan in `/mnt/project-files/playtest-plan/` |
 
 ## Sync and app

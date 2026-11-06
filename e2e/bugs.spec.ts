@@ -22,7 +22,7 @@ test('SAVE DECK: a double tap saves one deck, not two', async ({ page }) => {
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
-  await page.locator('.forgebar .btn.forge').dblclick();
+  await page.locator('.forgetop .btn.forge').dblclick();
   await expect(page.locator('.dhero h1')).toBeVisible();
   const n = await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));

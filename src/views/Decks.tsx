@@ -5,15 +5,15 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
-import { replaceInDeck, savePin, setCommander } from '../lib/deckedit';
-import { noPins, pinOf } from '../lib/pins';
+import { addToDeck, removeFromDeck, replaceInDeck, savePin, setCommander } from '../lib/deckedit';
+import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
 import { offIdentity } from '../brain/identity';
-import { killCheck } from '../brain/win';
+import { AGGRESSION, killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
-import { BRACKETS, pagePath, showPage, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
 import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
 import { whyCard } from '../brain/why';
 import { ReadyTiles } from './Verdict';
@@ -23,17 +23,18 @@ import { SwapNote, type SwapOption } from './SwapNote';
 import { CardMenu } from './CardMenu';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, type BracketCall, type DeckStats, type RefShape } from '../lib/deckstats';
-import { deckCsv, deckText, download } from '../lib/export';
+import { deckArena, deckCsv, deckText, download } from '../lib/export';
 import { norm, slug } from '../lib/names';
-import { cad, fetchedNote, shopUrl } from '../lib/prices';
+import { cad, fetchedNote, shopUrl, toCad } from '../lib/prices';
 import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
-import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
-import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
+import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
-import { Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
+import { CompactIcon, Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -199,7 +200,7 @@ function Curve({ curve }: { curve: number[] }) {
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
 /** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
-function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared; ready?: Readiness; fit?: BracketFit }) {
+function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit, meters }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared; ready?: Readiness; fit?: BracketFit; meters?: ReactNode }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
   // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
   const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
@@ -225,6 +226,8 @@ function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }
         </div>
       </div>
       {ready && <ReadyTiles ready={ready} fit={fit} />}
+      {/* The Forge's live meters (lands, ramp, draw, removal, wipes, curve) stay open on every screen */}
+      {meters}
       <h2>
         <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
           ANALYSIS
@@ -236,12 +239,14 @@ function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }
         </button>
       </h2>
       <div className="dbody">
-      <div className="dsec">
-        <h3>
-          mana curve <small>avg {st.avgMv.toFixed(2)}</small>
-        </h3>
-        <Curve curve={st.curve} />
-      </div>
+      {!meters && (
+        <div className="dsec">
+          <h3>
+            mana curve <small>avg {st.avgMv.toFixed(2)}</small>
+          </h3>
+          <Curve curve={st.curve} />
+        </div>
+      )}
       <div className="dsec">
         <h3>types</h3>
         <ul className="dtypes">
@@ -417,7 +422,12 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
               <li className="sep" role="separator" />
               <li>
                 <button role="menuitem" onClick={act(() => download(file('txt'), deckText(deck)))}>
-                  ↓ Export as text <small>paste into Moxfield, Archidekt…</small>
+                  ↓ Export for Moxfield <small>.txt · Commander + Deck, foils marked *F*</small>
+                </button>
+              </li>
+              <li>
+                <button role="menuitem" onClick={act(() => (navigator.clipboard?.writeText(deckArena(deck)).catch(() => {}), haptic('success')))}>
+                  ⎘ Copy for MTG Arena <small>then Import in Arena's deck builder</small>
                 </button>
               </li>
               <li>
@@ -467,11 +477,12 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
       .catch(() => {});
     gameChangers().then(setGc);
   }, [deck.id]);
-  const [view, setView] = useStored<'grid' | 'list'>('ch:view', 'grid', ['grid', 'list']);
+  const [view, setView] = useStored<'grid' | 'list' | 'compact'>('ch:view', typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches ? 'compact' : 'grid', ['grid', 'list', 'compact']);
   const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
   const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
+  const [only, setOnly] = useState<Only>('all'); // Game Changers / price bands, for this visit
   // Foil deck cards are priced at the foil price of the printing on file.
   const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
@@ -479,12 +490,19 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
   const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
-  const [toast, setToast] = useState<{ text: string; undo?: () => unknown } | null>(null);
+  const [toast, setToastNow] = useState<{ text: string; undo?: () => unknown } | null>(null);
+  // The Forge's top bar keeps the last undo after the toast is gone (Ctrl+Z works too).
+  const [last, setLast] = useState<{ text: string; run: () => void } | null>(null);
+  const setToast = (t: { text: string; undo?: () => unknown } | null) => {
+    setToastNow(t);
+    if (t?.undo) setLast({ text: t.text, run: () => (t.undo!(), setLast(null), setToastNow(null)) });
+  };
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
+    const t = setTimeout(() => setToastNow(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  useForgeMode(true); // a saved deck opens in the Forge
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
@@ -529,13 +547,49 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     if (cmdrSlug) showPage(pagePath('commander', cmdrSlug), (p) => live && setRecs(p)).catch(() => {});
     return () => void (live = false);
   }, [cmdrSlug]);
-  const binder = useBinder(s.profile);
-  const binderCard = new Map(binder.map((c) => [c.key, c]));
   const prof = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
   const pins = (deck.commander && prof?.pins?.[deck.commander]) || noPins();
+  // EDHREC's With card / Without card on the Forge's suggestions, plus your pins (decks with your 📌, without your 💀)
+  const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
+  const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean; pins?: boolean } | null>(null);
+  const fq = withPins(cf, pins);
+  const fqKey = JSON.stringify(fq);
+  const pinned = fq.inc.length + fq.exc.length > cf.inc.length + cf.exc.length;
+  useEffect(() => {
+    setFiltered(null);
+    if (!recs || (!fq.inc.length && !fq.exc.length)) return;
+    let live = true;
+    const at = pagePath('commander', cmdrSlug);
+    void (async () => {
+      const r = await fetchFiltered(at, fq, recs);
+      if (!pinned || (r.applied && (r.page.numDecks ?? 0) >= PIN_FILTER_MIN_DECKS)) return live && setFiltered({ ...r, pins: pinned });
+      const plain = cf.inc.length || cf.exc.length ? await fetchFiltered(at, cf, recs) : { page: recs, applied: false };
+      if (live) setFiltered(plain);
+    })();
+    return () => void (live = false);
+  }, [recs, fqKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sugg = filtered?.page ?? recs;
+  // Scryfall data for EDHREC's cards (types for the roles, prices, images), cached a week
+  const [edhCards, setEdhCards] = useState<Map<string, Card>>(new Map());
+  useEffect(() => {
+    const want = (sugg?.lists ?? []).flatMap((l) => l.cards.map((c) => c.id)).filter(Boolean) as string[];
+    let live = true;
+    if (want.length)
+      cardsByIds(want.slice(0, 400))
+        .then(async (m) => {
+          const named = new Map([...m.values()].map((c) => [c.key, c]));
+          if (live) setEdhCards(named);
+          const ch = await cheapest([...m.values()].map((c) => c.name));
+          if (live) setEdhCards(new Map([...named].map(([k, c]) => [k, withCheapest(c, ch)!])));
+        })
+        .catch(() => {});
+    return () => void (live = false);
+  }, [sugg]);
+  const binder = useBinder(s.profile);
+  const binderCard = new Map(binder.map((c) => [c.key, c]));
   const never = new Set(pins.out.map(norm));
   const inDeck = new Set(deck.cards.map((c) => norm(c.name)));
-  const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)));
+  const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)) ?? edhCards.get(norm(c.name)));
   // Owned cards EDHREC lists for this commander, plus the rest of your binder in its colours (Mind Stone for Mox Amber).
   const listed = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
   const candidates = binderCandidates(listed, binder, ci, never).filter((c) => !inDeck.has(norm(c.name)));
@@ -561,8 +615,26 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     const key = deck.commander ?? deck.name;
     void recordTaste(s.profile, from, 'cut', key).then(() => recordTaste(s.profile, to, 'add', key));
     setSwapFor(null);
+    setPlacing(null);
     setToast({ text: `Swapped ${from} for ${to}`, undo: await replaceInDeck(deck, from, to) });
   }
+  // The Forge's suggestions: EDHREC's cards (owned or not) plus every card of yours in the colours.
+  const [placing, setPlacing] = useState<string | null>(null); // a suggestion picked: the next deck card tapped is swapped
+  const forgeCands = [...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never));
+  const anyCard = (n: string) => byKey.get(norm(n)) ?? binderCard.get(norm(n)) ?? edhCards.get(norm(n));
+  const sugImg = (n: string) => binderCard.get(norm(n))?.img ?? edhCards.get(norm(n))?.img ?? byKey.get(norm(n))?.img;
+  async function addCard(n: string) {
+    if (cmdr && offIdentity([n], ci, (x) => anyCard(x)?.ci).length) return; // hard rule: never outside the colours
+    void recordTaste(s.profile, n, 'add', deck.commander ?? deck.name);
+    setPlacing(null);
+    setToast({ text: `Added ${n}`, undo: await addToDeck(deck, n) });
+  }
+  async function cutCard(n: string) {
+    if (n === deck.commander || n === deck.partner) return;
+    void recordTaste(s.profile, n, 'cut', deck.commander ?? deck.name);
+    setToast({ text: `Cut ${n}`, undo: await removeFromDeck(deck, n) });
+  }
+  const drop = useDeckDrop((onto, card) => onto !== deck.commander && void swapIn(onto, card), (card) => void addCard(card));
 
   // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
   const shortHere = short.filter((x) => x.decks.includes(deck.name));
@@ -590,7 +662,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           ? ['Owned', `In ${s.otherName}`, 'Missing']
           : ['All cards'];
   const sections = new Map<string, DeckCard[]>(order.map((k) => [k, []]));
-  const shown = searchByText(deck.cards.filter((c) => shows(show, owned(c.name))), q, (c) => ({ name: c.name, type: cardOf(c.name)?.type, text: cardOf(c.name)?.text }));
+  const shown = searchByText(deck.cards.filter((c) => shows(show, owned(c.name)) && onlyOk(only, { gc: !!gc?.has(norm(c.name)), cad: toCad(cardFor(c)?.usd) })), q, (c) => ({ name: c.name, type: cardOf(c.name)?.type, text: cardOf(c.name)?.text }));
   const sorted = sortBy(shown, sort, (c) => {
     const card = cardOf(c.name);
     return { name: c.name, usd: card?.usd ? Number(card.usd) : undefined, mv: card ? (isLand(card.type) ? 99 : card.cmc) : undefined, owned: owned(c.name) };
@@ -602,13 +674,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   return (
     <>
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
-      <main>
-        <button className="backlink" onClick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M11 2 L4 8 L11 14" fill="none" stroke="#E60012" strokeWidth="3" />
-          </svg>
-          DECKS
-        </button>
+      <main className="forgemain">
+        <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 
         <section className={`chero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} title="Right-click (or press and hold) for deck options">
           <span className="worn" aria-hidden="true" />
@@ -658,15 +725,16 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         <div className="deckgrid after-sw">
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
-          <div className="lists">
+          <div className="lists" {...drop}>
             <div className={`forgehint${shortHere.length ? ' warn' : ''}`}>
               <ShortAlert items={shortHere} inline />
-              <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
+              <b>⚒ THE FORGE</b> tap any card to swap it · drag a suggestion onto a card to swap, or onto the deck to add · drag a card back to the list to cut it
             </div>
             {/* How the cards are split and ordered, right above them */}
-            <ToolBar q={q} setQ={setQ} now={`${GROUPINGS.find(([v]) => v === grouping)?.[1] ?? ''} · ${SORTS.find(([v]) => v === sort)?.[1] ?? ''}`}>
+            <ToolBar q={q} setQ={setQ} now={[GROUPINGS.find(([v]) => v === grouping)?.[1], SORTS.find(([v]) => v === sort)?.[1], only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}>
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+              <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
               <OptRow label="VIEW">
                 <div className="viewsw mini" role="group" aria-label="Card view">
                   <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
@@ -674,6 +742,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                   </button>
                   <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
                     <ListIcon />
+                  </button>
+                  <button aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list: name · mana · price · owned" onClick={() => (haptic('select'), setView('compact'))}>
+                    <CompactIcon />
                   </button>
                 </div>
               </OptRow>
@@ -700,7 +771,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                       </span>
                     </summary>
                     
-                    <ul className={view === 'grid' ? 'zgrid' : 'zlist'}>
+                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'}>
                       {cs.map((c) => (
                         <Item
                           key={c.name}
@@ -711,7 +782,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                           onMenu={(x, y) => setMenu({ card: c, x, y })}
                           foil={c.foil}
                           quiet={owned(c.name)}
-                          onOpen={c.name === deck.commander || BASICS.has(norm(c.name)) ? undefined : () => setSwapFor(c.name)}
+                          drag={c.name !== deck.commander}
+                          onOpen={c.name === deck.commander || (BASICS.has(norm(c.name)) && !placing) ? undefined : () => (placing ? void swapIn(c.name, placing) : setSwapFor(c.name))}
                         >
                           {swapFor === c.name && (
                             <SwapNote
@@ -740,7 +812,27 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               })}
           </div>
           <div className="dside">
-            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} ready={ready} fit={fit} />
+            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} ready={ready} fit={fit} meters={<ForgeMeters st={st} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} />} />
+            <ForgeSuggest
+              profile={s.profile}
+              deck={deck.cards}
+              commander={deck.commander}
+              bracket={aim}
+              aggression={aggression}
+              candidates={forgeCands}
+              cardOf={anyCard}
+              ownedOf={(n) => s.mine.get(norm(n)) ?? 0}
+              imgOf={sugImg}
+              themes={recs?.tags ?? []}
+              cf={cf}
+              onCf={deck.commander ? setCf : undefined}
+              cfNote={filtered?.pins && !(cf.inc.length + cf.exc.length) ? `From ${filtered.page.numDecks?.toLocaleString()} EDHREC decks that fit your pins.` : cf.inc.length + cf.exc.length ? (!filtered ? 'Asking EDHREC…' : filtered.applied ? `From ${filtered.page.numDecks?.toLocaleString()} EDHREC decks.` : "EDHREC didn't filter this page from the app.") : undefined}
+              placing={placing}
+              onPlace={setPlacing}
+              onAdd={(n) => void addCard(n)}
+              onCut={(n) => void cutCard(n)}
+              loading={!!deck.commander && !recs}
+            />
           </div>
         </div>
         {menu && (
