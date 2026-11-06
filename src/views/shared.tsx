@@ -291,11 +291,11 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
   );
 }
 
-export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: [string, string][]; onChange: (v: string) => void; roman?: boolean }) {
+export function Segs({ label, value, options, onChange, roman }: { label: string; value: string; options: ([string, string] | [string, string, string])[]; onChange: (v: string) => void; roman?: boolean }) {
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
-      {options.map(([v, text]) => (
-        <button key={v} role="radio" className={roman && v ? 'roman' : ''} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
+      {options.map(([v, text, tip]) => (
+        <button key={v} role="radio" className={roman && v ? 'roman' : ''} title={tip} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}
@@ -415,7 +415,8 @@ export function DeckLink({ name, children }: { name: string; children?: ReactNod
 }
 
 /** Hazard note: cards your decks share more often than you own copies (decks are virtual lists). */
-export function ShortAlert({ items }: { items: Shortfall[] }) {
+/** Copies warning. `inline`: it leads a hint line (which turns yellow), so it needs no band of its own. */
+export function ShortAlert({ items, inline }: { items: Shortfall[]; inline?: boolean }) {
   const real = useLiveQuery(async () => new Set((await db.decks.toArray()).map((d) => d.name)), []) ?? new Set<string>();
   if (!items.length) return null;
   const row = (s: Shortfall) => (
@@ -432,6 +433,15 @@ export function ShortAlert({ items }: { items: Shortfall[] }) {
       </small>
     </li>
   );
+  if (inline)
+    return (
+      <details className="shortin" role="status">
+        <summary title={`${items.length} ${items.length === 1 ? 'card is' : 'cards are'} in more decks than you have copies: tap for the list`}>
+          <b>⚠ {items.length} SHORT</b>
+        </summary>
+        <ul>{items.map(row)}</ul>
+      </details>
+    );
   return (
     <aside className="shortalert chip" role="status">
       {/* A small chip; tap it for which cards and decks (the full warning used to take a whole band). */}

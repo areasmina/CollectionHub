@@ -36,7 +36,22 @@ test('Commander page: header stats, tags row stays inside its frame', async ({ p
   const row = await page.locator('.chero .hscroll').boundingBox();
   const frame = await page.locator('.chero').boundingBox();
   expect(row!.x + row!.width).toBeLessThanOrEqual(frame!.x + frame!.width + 1);
+  // EDHREC's top 6 tags, the rest behind +N MORE
+  await expect(page.locator('.chero .hscroll button:not(.tagmore)')).toHaveCount(6);
+  await page.locator('.tagmore').click();
+  await expect(page.locator('.chero .hscroll button:not(.tagmore)')).toHaveCount(10);
+  await page.locator('.tagmore').click();
   await fits(page, ['.chero', '.strip']);
+});
+
+test('Commander header on a wide screen: one tidy row of tags', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop');
+  await page.setViewportSize({ width: 2000, height: 1100 });
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.tagmore')).toHaveText('+4 MORE');
+  const ys = await page.locator('.chero .hscroll button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
+  expect(new Set(ys).size).toBe(1);
+  await page.screenshot({ path: '/mnt/project-files/ui-review/screens/phone-round/6-commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 760 } });
 });
 
 test('Collection: counters, widget, grid tiles with tally marks', async ({ page }) => {
@@ -168,8 +183,10 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   // A copy shares every card, so the copies warning lists both decks: each name opens its deck
   await deckMenu(page, 'Duplicate');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
-  await page.locator('.shortalert summary').first().click(); // the copies chip opens its list
-  const other = page.locator('.shortalert .decklink', { hasText: /^Tatyova Lands$/ }).first();
+  // the warning leads the Forge line, which turns yellow; tapping ⚠ N SHORT opens its list
+  await expect(page.locator('.forgehint.warn .shortin')).toBeVisible();
+  await page.locator('.shortin summary').first().click();
+  const other = page.locator('.shortin .decklink', { hasText: /^Tatyova Lands$/ }).first();
   await other.scrollIntoViewIfNeeded();
   await other.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
@@ -444,4 +461,27 @@ test('Pill menu: back arrow only where there is somewhere to go back to', async 
   await expect(pill.locator('.pback')).toHaveCount(0);
   await pill.locator('.pillhub').click();
   await expect(page.locator('.hubslide')).toHaveClass(/open/);
+});
+
+test('Swapping keeps the deck organised: a creature swapped in for a sorcery moves to Creatures', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction(['cards', 'entries'], 'readwrite');
+    const id = 'bbbbbbbb-1111-2222-3333-000000000098';
+    tx.objectStore('cards').put({ id, name: 'Elvish Mystic', key: 'elvish mystic', type: 'Creature — Elf Druid', text: '{T}: Add {G}.', ci: ['G'], img: `https://cards.scryfall.io/small/front/0/0/${id}.jpg`, usd: '0.30', cmc: 1, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Elvish Mystic', qty: 1 });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  const section = (h: string) => page.locator('details.cat').filter({ has: page.locator('summary .h', { hasText: h }) });
+  await expect(section('Sorceries')).toContainText('Cultivate');
+  await page.getByRole('button', { name: 'Swap Cultivate', exact: true }).click();
+  const note = page.getByRole('dialog', { name: 'Swap Cultivate' });
+  await note.getByRole('searchbox', { name: 'Search your binder' }).fill('elvish');
+  await note.locator('ul.found button', { hasText: 'Elvish Mystic' }).click();
+  await page.keyboard.press('Escape');
+  // The creature joins the Creatures; the Sorceries section (Cultivate was its only card) is gone
+  await expect(section('Creatures')).toContainText('Elvish Mystic');
+  await expect(section('Sorceries')).toHaveCount(0);
 });

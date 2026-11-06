@@ -462,6 +462,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   }
 
   // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
+  const shortHere = short.filter((x) => x.decks.includes(deck.name));
   const owned = (n: string) => statusOf(n, s.mine) === 'owned';
   const keyOf = (c: DeckCard) => {
     const card = cardOf(c.name);
@@ -553,16 +554,16 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         </section>
 
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
-        <ShortAlert items={short.filter((x) => x.decks.includes(deck.name))} />
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
         <div className="deckgrid after-sw">
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className="lists">
-            <p className="forgehint">
+            <div className={`forgehint${shortHere.length ? ' warn' : ''}`}>
+              <ShortAlert items={shortHere} inline />
               <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
-            </p>
+            </div>
             {/* How the cards are split and ordered, right above them */}
             <div className="dtools" role="toolbar" aria-label="Deck view">
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />

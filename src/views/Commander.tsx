@@ -12,7 +12,8 @@ import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
-import { orderSections } from '../lib/sections';
+import { orderSections, regroup } from '../lib/sections';
+import { groupOf } from '../lib/deckstats';
 import { CardLine, CardTile, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
@@ -26,9 +27,11 @@ import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, Gr
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 const SHOW_AS_COMMANDER = false;
 
-const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III', '4': 'IV', '5': 'V' };
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
+
+/** Tags shown before "+N MORE": EDHREC's biggest archetypes. */
+const TAGS_SHOWN = 6;
 
 export function CommanderView({ name, s, onBack: back, no }: { name: string; s: Shared; onBack: () => void; no?: number }) {
   const onBack = () => void canLeave().then((ok) => ok && back());
@@ -45,6 +48,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [noBracket, setNoBracket] = useState(false); // EDHREC has no page for this bracket: showing all brackets
   const [budget, setBudget] = useState('');
   const [tag, setTag] = useState('');
+  const [allTags, setAllTags] = useState(false);
   const [page, setPage] = useState<EdhPage | null>(null);
   const [recs, setRecs] = useState<EdhPage | null>(null); // EDHREC recommendations behind an average deck
   const [tags, setTags] = useState<EdhPage['tags']>([]);
@@ -154,6 +158,18 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const img = (sc && cardOf(sc)?.img) ?? bc?.img ?? imgOf(sc?.id);
     return { sub, img, big: sc?.id ? imgOf(sc.id, 'normal') : img?.replace('/small/', '/normal/'), owned: s.mine.get(norm(sub.name)) ?? 0 };
   };
+
+  // A card swapped in sits with its own type (a creature for a sorcery joins the Creatures), so the deck stays organised.
+  const placed =
+    kind === 'average'
+      ? regroup(sections, (c) => {
+          const now = nameIn(c);
+          if (now === c.name) return undefined;
+          const rc = recCard.get(norm(now));
+          const g = groupOf((rc && cardOf(rc)?.type) ?? binderCard.get(norm(now))?.type);
+          return g === 'Other' || g === 'Commander' ? undefined : g;
+        })
+      : sections;
 
   async function setSwap(missingName: string, replacement: string | null) {
     const p = (await db.profiles.get(s.profile))!;
@@ -330,11 +346,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <div className="builtaround">
                   <span>built around</span>
                   <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
-                    {tags.slice(0, 24).map((t) => (
+                    {/* EDHREC's top tags only; the rest one tap away (the chosen one always shows) */}
+                    {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
                       <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-                        {t.value.toUpperCase()} {t.count.toLocaleString()}
+                        {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
                       </button>
                     ))}
+                    {tags.length > TAGS_SHOWN && (
+                      <button className="tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
+                        {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -368,9 +390,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             </div>
           )}
           <div className="cell">
-            <span className="lbl">BRACKET</span>
-            <Segs label="Bracket" value={bracket} options={BRACKETS.map(([v, t]) => [v, ROMAN[t] ?? t.toUpperCase()])} onChange={setBracket} roman />
-            {noBracket && <small className="bnote">No EDHREC decks for bracket {ROMAN[BRACKETS.find(([v]) => v === bracket)?.[1] ?? '']}: showing all brackets</small>}
+            <span className="lbl">POWER</span>
+            <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, t.toUpperCase(), `Bracket ${b}`])} onChange={setBracket} />
+            {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
           </div>
           <div className="cell">
             <span className="lbl">BUDGET</span>
@@ -423,7 +445,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </button>
             )}
           </div>
-          <span className="hint">
+          <span className={`hint${short.length ? ' warn' : ''}`}>
+            <ShortAlert items={short} inline />
             {kind === 'average' ? (missing.length > 0 ? 'tap any card to swap it · missing ones first' : 'every card here is yours · tap one to swap or pin it') : 'every card here is in your binder'}
             <span className="cur">_</span>
             {receipt && (
@@ -504,7 +527,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             </div>
           </>
         )}
-        <ShortAlert items={short} />
         {ctx && (
           <CardMenu
             name={ctx.name}
@@ -553,7 +575,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   </div>
                 </details>
               </div>
-              {sections.map((l, i) => {
+              {placed.map((l, i) => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
                 const cs = sortBy(

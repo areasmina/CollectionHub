@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderSections, sectionOf } from './sections';
+import { orderSections, regroup, sectionOf } from './sections';
 
 const c = (name: string, qty = 1) => ({ name, qty });
 
@@ -24,5 +24,15 @@ describe('sections', () => {
   });
   it('keeps unknown sections after the known ones', () => {
     expect(orderSections([{ header: 'Battles', cards: [c('B')] }, { header: 'Lands', cards: [c('F')] }]).map((l) => l.header)).toEqual(['Lands', 'Battles']);
+  });
+  it('a swapped-in card joins the section of its own type', () => {
+    const lists = [{ header: 'Commander', cards: [c('Boss')] }, { header: 'Sorceries', cards: [c('Cultivate'), c('Ponder')] }, { header: 'Lands', cards: [c('Forest')] }];
+    // Cultivate's slot now holds a creature; the rest stay put
+    const out = regroup(lists, (x) => (x.name === 'Cultivate' ? 'Creatures' : undefined));
+    expect(out.map((l) => [l.header, l.cards.map((x) => x.name)])).toEqual([
+      ['Commander', ['Boss']], ['Creatures', ['Cultivate']], ['Sorceries', ['Ponder']], ['Lands', ['Forest']],
+    ]);
+    // an emptied section disappears
+    expect(regroup([{ header: 'Sorceries', cards: [c('A')] }], () => 'Creatures').map((l) => l.header)).toEqual(['Creatures']);
   });
 });

@@ -3,7 +3,8 @@ import { norm } from './names';
 
 // Brackets 1 (Exhibition) and 2 (Core) are left out on purpose (owner's call, Nov 2026): nobody here builds for them and
 // their EDHREC pages are thin; All stays. A commander without data for the chosen bracket falls back to All, with a note.
-export const BRACKETS: [string, string][] = [['', 'All'], ['upgraded', '3'], ['optimized', '4'], ['cedh', '5']];
+/** Power levels (owner's call, Nov 6): Min = bracket 3, Med = bracket 4, Max = bracket 5. [EDHREC slug, label, bracket] */
+export const BRACKETS: [string, string, string][] = [['upgraded', 'Min', '3'], ['optimized', 'Med', '4'], ['cedh', 'Max', '5']];
 export const DEFAULT_BRACKET = 'upgraded';
 export const BUDGETS: [string, string][] = [['', 'Any'], ['budget', '$'], ['expensive', '$$$']];
 
