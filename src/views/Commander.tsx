@@ -13,6 +13,7 @@ import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
 import { recordTaste, setWild } from '../brain/store';
 import { comboBreaks, nearCombos } from '../brain/combos';
+import { identityGate, offIdentity } from '../brain/identity';
 import { comboAllowed } from '../brain/win';
 import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
 import { arrange, noPins, pinOf, type PinSide } from '../lib/pins';
@@ -146,8 +147,19 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const binder = useBinder(s.profile);
   const never = new Set([...pins.out, ...cf.exc].map(norm));
   const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => cardOf(c as EdhCard));
+  // Colour identity is a hard rule on every path in: candidates, WILDCARD, saved swaps and pins (identity.ts).
+  const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
+  const ciKnown = cmdr?.ci ?? page?.card?.ci;
+  const ci = ciKnown ?? [];
+  const binderCi = new Map(binder.map((c) => [c.key, c.ci]));
+  const ciOf = (n: string) => binderCi.get(norm(n));
+  // Until the commander's identity is known nothing new is offered, and saved swaps are left as they are.
+  const fits = ciKnown ? identityGate(ci, ciOf) : () => false;
+  const off = new Set(ciKnown ? offIdentity([...Object.values(swaps), ...pins.in], ci, ciOf).map(norm) : []);
+  const swapsOk = Object.fromEntries(Object.entries(swaps).filter(([, r]) => !off.has(norm(r))));
+  const pinsOk = { ...pins, in: pins.in.filter((p) => !off.has(norm(p))) };
   // Replacement candidates: owned cards EDHREC recommends for this commander, minus the ones you never use.
-  const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
+  const owned = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)) && fits(c.name));
   const recCard = new Map((sugg?.lists ?? []).flatMap((l) => l.cards).map((c) => [norm(c.name), c]));
   const slotInfo = (c: EdhCard): SubCard => {
     const info = recInfo.get(norm(c.name));
@@ -159,8 +171,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   // The deck after your swaps and pins (slot = EDHREC's card).
   const eff = arrange(
     [...byName.values()].map((c) => ({ name: c.name, qty: c.qty ?? 1, type: slotInfo(c).type, incl: recInfo.get(norm(c.name))?.incl })),
-    swaps,
-    pins,
+    swapsOk,
+    pinsOk,
     (slot, used) => rankSubs(slotInfo(byName.get(slot)!), owned.filter((o) => !used.has(norm(o.name))), 1)[0]?.name,
     { commander: name, typeOf: (n) => binderType.get(norm(n)) },
   );
@@ -195,6 +207,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const p = (await db.profiles.get(s.profile))!;
     const deck = { ...(p.swaps?.[path] ?? {}) };
     const was = deck[missingName] ?? missingName;
+    if (replacement && !fits(replacement)) return; // never write a card outside the commander's colours
     if (replacement) deck[missingName] = replacement;
     else delete deck[missingName];
     if (replacement) void recordTaste(s.profile, was, 'cut', name).then(() => recordTaste(s.profile, replacement, 'add', name));
@@ -242,7 +255,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   }
 
   // The forging zone: your first swap on this deck starts it; leaving asks whether to keep the deck.
-  const changes = Object.keys(swaps).length;
+  const changes = Object.keys(swapsOk).length;
   const forging = kind === 'average' && changes > 0;
   const [leaving, setLeaving] = useState<((go: boolean) => void) | null>(null);
   const live = useRef({ forging, saveDeck, clearSwaps });
@@ -273,8 +286,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const short = page
     ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
     : [];
-  const cmdr = useLiveQuery(() => db.cards.where('key').equals(norm(name)).first(), [name]);
-  const ci = cmdr?.ci ?? page?.card?.ci ?? [];
   // EDHREC bracket slug -> bracket number for the rules (All = 4: no combo is off limits there).
   const bracketNum = Number(BRACKETS.find(([v]) => v === bracket)?.[2]) || 4;
   // WILDCARD (1 slot by default, off per commander): a seeded random pick among owned cards with evidence only.
@@ -285,7 +296,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     if (!wildOn || !page) return undefined;
     const binderKeys = new Set(binder.map((b) => b.key));
     const near = nearCombos(deckNames, binderKeys)
-      .filter((n) => !never.has(norm(n.add)))
+      .filter((n) => !never.has(norm(n.add)) && fits(n.add))
       .map((n) => ({ add: n.add, owned: n.owned, allowed: comboAllowed(n.combo, bracketNum), cards: n.combo.cards }));
     const pick = pickWildcards(wildcardCandidates(candidates, near), 1, seedOf(name) + (wildSet.roll ?? 0), inDeck)[0];
     if (!pick) return undefined;
