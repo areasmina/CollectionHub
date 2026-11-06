@@ -8,6 +8,7 @@ import { openDeck } from '../lib/nav';
 import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
+import { dragEnd, dragStart } from '../lib/drag';
 
 /** Every legal card in a binder, one per name (live). */
 export function useBinder(profile: number) {
@@ -187,8 +188,10 @@ export function CardLine({
   onClose,
   onMenu,
   foil,
+  drag,
   children,
 }: {
+  drag?: boolean; // the Forge: the card can be dragged (mouse) back onto the suggestions to cut it
   markText?: string; // what the marker line says (default "↔ for <marker>")
   quiet?: boolean; // your own card: a small swap button instead of the loud one
   onMenu?: (x: number, y: number) => void; // card menu (right-click / press and hold)
@@ -206,7 +209,7 @@ export function CardLine({
   const st = statusOf(name, s.mine, s.other);
   const press = useMenuPress(onMenu);
   return (
-    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} {...press}>
+    <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} {...press} {...dragProps(name, drag)}>
       <Thumb src={card?.img ?? img} className={`thumb xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="nm">{name}</span>
@@ -248,12 +251,15 @@ export function CardLine({
 }
 
 /** Grid tile version of CardLine: big image, name, swap + price. Opens its note on tap/click only (no hover). */
-export function CardTile({ name, img, card, s, note, marker, markText, quiet, onOpen, onMenu, foil, children }: Parameters<typeof CardLine>[0]) {
+/** Mouse drag of a deck card (the Forge: drop it on the suggestions to cut it). */
+const dragProps = (name: string, on?: boolean) => (on ? { draggable: true, onDragStart: (e: React.DragEvent) => dragStart(e, name, 'deck'), onDragEnd: dragEnd } : {});
+
+export function CardTile({ name, img, card, s, note, marker, markText, quiet, onOpen, onMenu, foil, drag, children }: Parameters<typeof CardLine>[0]) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
   return (
-    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} onClick={onOpen} tabIndex={onOpen ? undefined : 0} {...press}>
+    <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} tabIndex={onOpen ? undefined : 0} {...press} {...dragProps(name, drag)}>
       <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       {st === 'missing' && (
         <span className="misstape" aria-hidden="true">

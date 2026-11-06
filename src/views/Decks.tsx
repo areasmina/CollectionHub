@@ -5,15 +5,15 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
-import { replaceInDeck, savePin, setCommander } from '../lib/deckedit';
+import { addToDeck, removeFromDeck, replaceInDeck, savePin, setCommander } from '../lib/deckedit';
 import { noPins, pinOf } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
 import { offIdentity } from '../brain/identity';
-import { killCheck } from '../brain/win';
+import { AGGRESSION, killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
-import { BRACKETS, pagePath, showPage, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
 import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
 import { whyCard } from '../brain/why';
 import { ReadyTiles } from './Verdict';
@@ -28,7 +28,8 @@ import { norm, slug } from '../lib/names';
 import { cad, fetchedNote, shopUrl } from '../lib/prices';
 import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
 import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arrange';
-import { cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
+import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
@@ -199,7 +200,7 @@ function Curve({ curve }: { curve: number[] }) {
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
 /** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
-function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared; ready?: Readiness; fit?: BracketFit }) {
+function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit, meters }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared; ready?: Readiness; fit?: BracketFit; meters?: ReactNode }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
   // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
   const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
@@ -225,6 +226,8 @@ function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }
         </div>
       </div>
       {ready && <ReadyTiles ready={ready} fit={fit} />}
+      {/* The Forge's live meters (lands, ramp, draw, removal, wipes, curve) stay open on every screen */}
+      {meters}
       <h2>
         <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
           ANALYSIS
@@ -236,12 +239,14 @@ function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit }
         </button>
       </h2>
       <div className="dbody">
-      <div className="dsec">
-        <h3>
-          mana curve <small>avg {st.avgMv.toFixed(2)}</small>
-        </h3>
-        <Curve curve={st.curve} />
-      </div>
+      {!meters && (
+        <div className="dsec">
+          <h3>
+            mana curve <small>avg {st.avgMv.toFixed(2)}</small>
+          </h3>
+          <Curve curve={st.curve} />
+        </div>
+      )}
       <div className="dsec">
         <h3>types</h3>
         <ul className="dtypes">
@@ -479,12 +484,19 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
   const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
-  const [toast, setToast] = useState<{ text: string; undo?: () => unknown } | null>(null);
+  const [toast, setToastNow] = useState<{ text: string; undo?: () => unknown } | null>(null);
+  // The Forge's top bar keeps the last undo after the toast is gone (Ctrl+Z works too).
+  const [last, setLast] = useState<{ text: string; run: () => void } | null>(null);
+  const setToast = (t: { text: string; undo?: () => unknown } | null) => {
+    setToastNow(t);
+    if (t?.undo) setLast({ text: t.text, run: () => (t.undo!(), setLast(null), setToastNow(null)) });
+  };
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 5000);
+    const t = setTimeout(() => setToastNow(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+  useForgeMode(true); // a saved deck opens in the Forge
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
@@ -529,13 +541,40 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     if (cmdrSlug) showPage(pagePath('commander', cmdrSlug), (p) => live && setRecs(p)).catch(() => {});
     return () => void (live = false);
   }, [cmdrSlug]);
+  // EDHREC's With card / Without card on the Forge's suggestions
+  const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
+  const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean } | null>(null);
+  useEffect(() => {
+    setFiltered(null);
+    if (!recs || (!cf.inc.length && !cf.exc.length)) return;
+    let live = true;
+    void fetchFiltered(pagePath('commander', cmdrSlug), cf, recs).then((r) => live && setFiltered(r));
+    return () => void (live = false);
+  }, [recs, cf]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sugg = filtered?.page ?? recs;
+  // Scryfall data for EDHREC's cards (types for the roles, prices, images), cached a week
+  const [edhCards, setEdhCards] = useState<Map<string, Card>>(new Map());
+  useEffect(() => {
+    const want = (sugg?.lists ?? []).flatMap((l) => l.cards.map((c) => c.id)).filter(Boolean) as string[];
+    let live = true;
+    if (want.length)
+      cardsByIds(want.slice(0, 400))
+        .then(async (m) => {
+          const named = new Map([...m.values()].map((c) => [c.key, c]));
+          if (live) setEdhCards(named);
+          const ch = await cheapest([...m.values()].map((c) => c.name));
+          if (live) setEdhCards(new Map([...named].map(([k, c]) => [k, withCheapest(c, ch)!])));
+        })
+        .catch(() => {});
+    return () => void (live = false);
+  }, [sugg]);
   const binder = useBinder(s.profile);
   const binderCard = new Map(binder.map((c) => [c.key, c]));
   const prof = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
   const pins = (deck.commander && prof?.pins?.[deck.commander]) || noPins();
   const never = new Set(pins.out.map(norm));
   const inDeck = new Set(deck.cards.map((c) => norm(c.name)));
-  const recInfo = recInfoOf(recs?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)));
+  const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)) ?? edhCards.get(norm(c.name)));
   // Owned cards EDHREC lists for this commander, plus the rest of your binder in its colours (Mind Stone for Mox Amber).
   const listed = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
   const candidates = binderCandidates(listed, binder, ci, never).filter((c) => !inDeck.has(norm(c.name)));
@@ -561,8 +600,26 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     const key = deck.commander ?? deck.name;
     void recordTaste(s.profile, from, 'cut', key).then(() => recordTaste(s.profile, to, 'add', key));
     setSwapFor(null);
+    setPlacing(null);
     setToast({ text: `Swapped ${from} for ${to}`, undo: await replaceInDeck(deck, from, to) });
   }
+  // The Forge's suggestions: EDHREC's cards (owned or not) plus every card of yours in the colours.
+  const [placing, setPlacing] = useState<string | null>(null); // a suggestion picked: the next deck card tapped is swapped
+  const forgeCands = [...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never));
+  const anyCard = (n: string) => byKey.get(norm(n)) ?? binderCard.get(norm(n)) ?? edhCards.get(norm(n));
+  const sugImg = (n: string) => binderCard.get(norm(n))?.img ?? edhCards.get(norm(n))?.img ?? byKey.get(norm(n))?.img;
+  async function addCard(n: string) {
+    if (cmdr && offIdentity([n], ci, (x) => anyCard(x)?.ci).length) return; // hard rule: never outside the colours
+    void recordTaste(s.profile, n, 'add', deck.commander ?? deck.name);
+    setPlacing(null);
+    setToast({ text: `Added ${n}`, undo: await addToDeck(deck, n) });
+  }
+  async function cutCard(n: string) {
+    if (n === deck.commander || n === deck.partner) return;
+    void recordTaste(s.profile, n, 'cut', deck.commander ?? deck.name);
+    setToast({ text: `Cut ${n}`, undo: await removeFromDeck(deck, n) });
+  }
+  const drop = useDeckDrop((onto, card) => onto !== deck.commander && void swapIn(onto, card), (card) => void addCard(card));
 
   // Moxfield-style sections: by card type or mana value (commander first), by ownership, or one list.
   const shortHere = short.filter((x) => x.decks.includes(deck.name));
@@ -602,13 +659,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   return (
     <>
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
-      <main>
-        <button className="backlink" onClick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M11 2 L4 8 L11 14" fill="none" stroke="#E60012" strokeWidth="3" />
-          </svg>
-          DECKS
-        </button>
+      <main className="forgemain">
+        <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 
         <section className={`chero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} title="Right-click (or press and hold) for deck options">
           <span className="worn" aria-hidden="true" />
@@ -658,10 +710,10 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         <div className="deckgrid after-sw">
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
-          <div className="lists">
+          <div className="lists" {...drop}>
             <div className={`forgehint${shortHere.length ? ' warn' : ''}`}>
               <ShortAlert items={shortHere} inline />
-              <b>⚒ THE FORGE</b> tap any card to swap it from your binder · hold or right-click for more
+              <b>⚒ THE FORGE</b> tap any card to swap it · drag a suggestion onto a card to swap, or onto the deck to add · drag a card back to the list to cut it
             </div>
             {/* How the cards are split and ordered, right above them */}
             <ToolBar q={q} setQ={setQ} now={`${GROUPINGS.find(([v]) => v === grouping)?.[1] ?? ''} · ${SORTS.find(([v]) => v === sort)?.[1] ?? ''}`}>
@@ -711,7 +763,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                           onMenu={(x, y) => setMenu({ card: c, x, y })}
                           foil={c.foil}
                           quiet={owned(c.name)}
-                          onOpen={c.name === deck.commander || BASICS.has(norm(c.name)) ? undefined : () => setSwapFor(c.name)}
+                          drag={c.name !== deck.commander}
+                          onOpen={c.name === deck.commander || (BASICS.has(norm(c.name)) && !placing) ? undefined : () => (placing ? void swapIn(c.name, placing) : setSwapFor(c.name))}
                         >
                           {swapFor === c.name && (
                             <SwapNote
@@ -740,7 +793,27 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               })}
           </div>
           <div className="dside">
-            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} ready={ready} fit={fit} />
+            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} ready={ready} fit={fit} meters={<ForgeMeters st={st} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} />} />
+            <ForgeSuggest
+              profile={s.profile}
+              deck={deck.cards}
+              commander={deck.commander}
+              bracket={aim}
+              aggression={aggression}
+              candidates={forgeCands}
+              cardOf={anyCard}
+              ownedOf={(n) => s.mine.get(norm(n)) ?? 0}
+              imgOf={sugImg}
+              themes={recs?.tags ?? []}
+              cf={cf}
+              onCf={deck.commander ? setCf : undefined}
+              cfNote={cf.inc.length + cf.exc.length ? (!filtered ? 'Asking EDHREC…' : filtered.applied ? `From ${filtered.page.numDecks?.toLocaleString()} EDHREC decks.` : "EDHREC didn't filter this page from the app.") : undefined}
+              placing={placing}
+              onPlace={setPlacing}
+              onAdd={(n) => void addCard(n)}
+              onCut={(n) => void cutCard(n)}
+              loading={!!deck.commander && !recs}
+            />
           </div>
         </div>
         {menu && (

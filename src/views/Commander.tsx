@@ -37,6 +37,9 @@ import { shows, sortBy, SHOWS, SORTS, type Show, type SortKey } from '../lib/arr
 // EDHREC's own order first on commander pages.
 const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
 import { SwapNote } from './SwapNote';
+import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
+import { AGGRESSION } from '../brain/win';
+import { deckStats } from '../lib/deckstats';
 import { CardMenu, type Toast } from './CardMenu';
 import { Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
 
@@ -367,6 +370,21 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     const how = sl && sl.name !== slot ? (sl.why === 'pin' ? 'pin' : sl.why === 'auto' || sl.why === 'never' ? 'stand-in' : 'swap') : undefined;
     return whyCard({ name: now, ctx: { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression }, rec: recInfo.get(norm(now)), how, slot: how ? slot : undefined, gc });
   };
+  // The Forge on the commander page: focus mode from your first swap; suggestions go into slots (drag, or tap then tap).
+  useForgeMode(forging);
+  const [placing, setPlacing] = useState<string | null>(null);
+  const slotOf = new Map([...eff].map(([slot, x]) => [norm(x.name), slot]));
+  const swapInto = (onto: string, card: string) => {
+    const slot = slotOf.get(norm(onto)) ?? onto;
+    if (norm(slot) === norm(name) || !byName.has(slot)) return;
+    haptic('success');
+    setPlacing(null);
+    void setSwap(slot, card);
+  };
+  const drop = useDeckDrop(swapInto);
+  const forgeSt = deckStats(deckNow, cardByName, name);
+  const lastSwap = Object.keys(swapsOk).pop();
+  const undoLast = lastSwap ? { text: `${swapsOk[lastSwap]} for ${lastSwap}`, run: () => void setSwap(lastSwap, null) } : undefined;
   const bigImg = cmdr?.img?.replace('/small/', '/normal/') ?? imgOf(page?.card?.id, 'normal');
   const label = name.split(' // ')[0];
   // Grid (card images) is the default; the choice is remembered on this device.
@@ -671,23 +689,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             )}
           </section>
         )}
-        {forging && (
-          <div className="forgebar" role="status">
-            <img src="/card-spin.webp" alt="" width={46} height={67} aria-hidden="true" />
-            <span className="ft">
-              <b>⚒ FORGING</b>
-              <small>
-                {changes} {changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save
-              </small>
-            </span>
-            <button className="btn forge" onClick={() => saveDeck()} disabled={saving}>
-              SAVE DECK
-            </button>
-            <button className="btn ink" onClick={() => (haptic('undo'), clearSwaps())}>
-              DISCARD
-            </button>
-          </div>
-        )}
+        {forging && <ForgeTop label={label} sub={`${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save`} undo={undoLast} onLeave={onBack} onSave={() => saveDeck()} saving={saving} />}
         {leaving && (
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />
@@ -747,7 +749,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {page && (
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
-            <div className="lists">
+            <div className="lists" {...(forging ? drop : {})}>
               {/* The one slim bar (owner's rule): search, then ⋮ with POWER, BUDGET, SORT, SHOW, VIEW and EDHREC's With / Without card */}
               <ToolBar q={q} setQ={setQ} now={[BRACKETS.find(([v]) => v === bracket)?.[1].toUpperCase(), budget ? BUDGETS.find(([v]) => v === budget)?.[1].toUpperCase() : '', kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : ''].filter(Boolean).join(' · ')}>
                 <OptRow label="POWER">
@@ -881,7 +883,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                             marker={repl ? c.name : undefined}
                             markText={mark}
                             quiet={statusOf(now, s.mine) === 'owned'}
-                            onOpen={swappable ? () => setMenuFor(c.name) : undefined}
+                            onOpen={swappable ? () => (placing ? swapInto(now, placing) : setMenuFor(c.name)) : undefined}
                             onMenu={(x, y) => setCtx({ slot: c.name, name: now, x, y })}
                             onClose={swappable ? () => setMenuFor(null) : undefined}
                           >
@@ -916,7 +918,30 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 );
               })}
             </div>
-            {receipt}
+            {forging ? (
+              <div className="dside">
+                <ForgeMeters st={forgeSt} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} match={sum.pct} />
+                <ForgeSuggest
+                  profile={s.profile}
+                  deck={deckNow}
+                  commander={name}
+                  bracket={bracketNum}
+                  aggression={aggression}
+                  candidates={[...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never))}
+                  cardOf={cardByName}
+                  ownedOf={(n) => s.mine.get(norm(n)) ?? 0}
+                  imgOf={(n) => optionOf({ name: n }).img}
+                  themes={tags}
+                  theme={tag}
+                  placing={placing}
+                  onPlace={setPlacing}
+                  loading={!recs}
+                  buy={receipt || undefined}
+                />
+              </div>
+            ) : (
+              receipt
+            )}
           </div>
         )}
       </main>
