@@ -7508,3 +7508,167 @@ details.cat {
     font-size: 12px;
   }
 }
+
+/* Phones: the eye lives behind the "What can I build?" logo, peeking out top right (no band of its own) */
+@media (max-width: 700px) {
+  .hero {
+    position: relative;
+  }
+  .hero .titlewrap {
+    position: relative;
+    z-index: 1;
+  }
+  .hero .eyedoodle {
+    position: absolute;
+    top: 14px;
+    right: 2px;
+    z-index: 2;
+    width: 118px;
+    height: auto;
+    margin: 0;
+    opacity: 0.95;
+    pointer-events: none;
+  }
+}
+
+/* Collection tools: search | List / Grid | ⋯ (group by set, exports) on one row */
+.cardopts.tools1 {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--sp2, 8px);
+  margin: var(--sp4, 16px) 0;
+  position: relative;
+}
+.cardopts.tools1 > .sbox {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.viewsw.icons {
+  display: flex;
+  flex: 0 0 auto;
+}
+.viewsw.icons button {
+  min-width: 48px;
+  padding: 0 10px;
+}
+.toolmore {
+  flex: 0 0 auto;
+}
+.toolmore > summary {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 100%;
+  min-height: 48px;
+  background: var(--ink);
+  color: var(--white);
+  border: 3px solid var(--white);
+  font-size: 22px;
+  cursor: pointer;
+  list-style: none;
+}
+.toolmore > summary::-webkit-details-marker {
+  display: none;
+}
+.toolmore[open] > summary {
+  background: var(--accent);
+}
+.toolmore .tmbody {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp2, 8px);
+  min-width: 220px;
+  padding: var(--sp3, 12px);
+  background: var(--ink);
+  border: 3px solid var(--white);
+  box-shadow: 6px 6px 0 var(--accent);
+}
+.toolmore .tmbody .sticker {
+  transform: none;
+}
+@media (max-width: 700px) {
+  .cardopts.tools1 > .sbox .tab {
+    display: none;
+  }
+  .viewsw.icons button {
+    min-width: 44px;
+    padding: 0 8px;
+  }
+}
+
+/* Copies, Arena style: four pips centred under the card, filled per copy you own; "+N" past four */
+.tally {
+  left: 50%;
+  right: auto;
+  bottom: -18px;
+  transform: translateX(-50%);
+}
+.tally .marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 16px;
+  background: var(--ink);
+  border: 2px solid var(--raised, #444);
+  transform: none;
+  text-shadow: none;
+  font-family: var(--an);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--white);
+}
+.tally .marks::before,
+.tally .marks::after {
+  display: none;
+}
+.tally .marks i {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border: 1.5px solid #8a8a8a;
+  background: transparent;
+}
+.tally .marks i.on {
+  background: var(--hazard);
+  border-color: var(--hazard);
+  box-shadow: 0 0 5px rgba(255, 204, 0, 0.6);
+}
+.tally .marks small {
+  font-size: 13px;
+  margin-left: 2px;
+  color: var(--hazard);
+}
+.tally .marks:hover,
+.tally .marks:focus-visible {
+  transform: scale(1.06);
+}
+/* pips sit on the card's lower edge, clear of the name */
+.tally {
+  bottom: 8px;
+}
+/* Collection tile ⋯: the same small round badge as in decks, under the price tape */
+.ztile.ctile > .morebtn {
+  top: 44px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  font-size: 16px;
+  background: var(--ink);
+  color: var(--white);
+  border: 2px solid var(--white);
+}
+.dtools:has(> .fsheet) {
+  display: block;
+}

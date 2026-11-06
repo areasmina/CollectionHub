@@ -290,21 +290,31 @@ export function Collection({ profile, name, s }: { profile: number; name: string
               <Ransom text="CARDS" size={40} seed={5} />
             </h2>
             <div className="rule" aria-hidden="true" />
-            <button className="sticker" style={{ transform: 'rotate(-2deg)' }} disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
-              EXPORT CSV
-            </button>
-            <button className="sticker" style={{ transform: 'rotate(1.5deg)' }} disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
-              EXPORT TEXT
-            </button>
           </div>
 
-          <label className="sbox dark" style={{ marginTop: 18 }}>
-            <span className="tab">SEARCH</span>
-            <input type="search" placeholder="card name_" value={q} onChange={(e) => setQ(e.target.value)} />
-            <span aria-hidden="true" className="fade" />
-          </label>
-
-          <CardsView entries={shown} cards={cards} profile={profile} binderName={name} />
+          <CardsView
+            entries={shown}
+            cards={cards}
+            profile={profile}
+            binderName={name}
+            search={
+              <label className="sbox dark">
+                <span className="tab">SEARCH</span>
+                <input type="search" placeholder="card name_" value={q} onChange={(e) => setQ(e.target.value)} />
+                <span aria-hidden="true" className="fade" />
+              </label>
+            }
+            more={
+              <>
+                <button className="sticker" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
+                  EXPORT CSV
+                </button>
+                <button className="sticker" disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
+                  EXPORT TEXT
+                </button>
+              </>
+            }
+          />
         </section>
       </main>
     </>

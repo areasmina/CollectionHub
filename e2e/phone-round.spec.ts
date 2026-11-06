@@ -13,6 +13,8 @@ test('Phone round: card is its own swap button, % in the burst, one FILTERS butt
   const [bar, num] = await Promise.all([page.locator('.match .meter').boundingBox(), page.locator('.match .num').boundingBox()]);
   expect(num!.x).toBeGreaterThan(bar!.x + bar!.width - 2);
   await page.screenshot({ path: `test-results/round-top-${info.project.name}.png` });
+  await page.locator('.match').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `test-results/round-strip-${info.project.name}.png` });
   // FILTERS opens a sheet holding sort and show
   const sheet = page.locator('.fsheet');
   await expect(sheet.locator('.sbox').first()).toBeHidden();
@@ -29,4 +31,12 @@ test('Phone round: card is its own swap button, % in the burst, one FILTERS butt
   const box = (await tile.locator('.timg').boundingBox())!;
   await page.mouse.click(box.x + 20, box.y + 60); // a tap on the card art swaps
   await expect(page.getByRole('dialog').first()).toBeVisible();
+});
+
+test('Phone round: eye behind the logo; Collection tools on one row', async ({ page }, info) => {
+  await page.screenshot({ path: `test-results/round-home-${info.project.name}.png` });
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  await page.locator('.ztile, .zrow, .cardgrid li').first().waitFor({ timeout: 10000 }).catch(() => {});
+  await page.screenshot({ path: `test-results/round-coll-${info.project.name}.png`, fullPage: true });
 });

@@ -1,6 +1,6 @@
 import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
 import { PriceLink, priced, Thumb, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
@@ -123,7 +123,7 @@ function toneOf(list: Entry[], cards: Map<string, Card>) {
   return [...n].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'none';
 }
 
-/** Grid quantity: spray-painted X tally on the card (X, XX, XXX, XXXX; X12 from 5). Tap it to edit: − n +,
+/** Grid quantity, Arena style: four pips under the card, one filled per copy you own, "+N" past four. Tap it to edit: − n +,
  *  the − turns into a bin at 1. Closes when you tap anywhere else. */
 function Tally({ e }: { e: Entry }) {
   const [edit, setEdit] = useState(false);
@@ -135,7 +135,6 @@ function Tally({ e }: { e: Entry }) {
     return () => document.removeEventListener('pointerdown', away);
   }, [edit]);
   const set = (q: number) => (haptic('tap'), db.entries.update(e.id!, { qty: Math.min(999, q) }));
-  const marks = e.qty <= 4 ? 'X'.repeat(e.qty) : `X${e.qty}`;
   return (
     <span ref={ref} className={`tally${edit ? ' editing' : ''}`} onClick={(ev) => ev.stopPropagation()}>
       {edit ? (
@@ -158,7 +157,10 @@ function Tally({ e }: { e: Entry }) {
         </span>
       ) : (
         <button className="marks" aria-label={`${e.qty} ${e.qty === 1 ? 'copy' : 'copies'} of ${e.name}. Change quantity`} onClick={() => (haptic('open'), setEdit(true))}>
-          {marks}
+          {[0, 1, 2, 3].map((i) => (
+            <i key={i} className={i < e.qty ? 'on' : ''} />
+          ))}
+          {e.qty > 4 && <small>+{e.qty - 4}</small>}
         </button>
       )}
     </span>
@@ -230,7 +232,8 @@ function Items({ list, cards, view, onMenu, used }: { list: Entry[]; cards: Map<
 }
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
-export function CardsView({ entries, cards, profile, binderName }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string }) {
+/** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
+export function CardsView({ entries, cards, profile, binderName, search, more }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; search?: ReactNode; more?: ReactNode }) {
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -279,23 +282,33 @@ export function CardsView({ entries, cards, profile, binderName }: { entries: En
           )}
         </div>
       )}
-      <div className="cardopts">
-        <div className="viewsw" role="group" aria-label="Card view">
-          <button aria-pressed={view === 'list'} onClick={() => (haptic('select'), setView('list'))}>
-                <ListIcon /> List
-              </button>
-          <button aria-pressed={view === 'grid'} onClick={() => (haptic('select'), setView('grid'))}>
-                <GridIcon /> Grid
-              </button>
+      {/* One row: search, List / Grid, and a ⋯ menu for the rarely used options (grouping, exports). */}
+      <div className="cardopts tools1">
+        {search}
+        <div className="viewsw icons" role="group" aria-label="Card view">
+          <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
+            <ListIcon />
+          </button>
+          <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
+            <GridIcon />
+          </button>
         </div>
-        <label className="check">
-          <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
-        </label>
-        {group === 'on' && (
-          <label className="check">
-            <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
-          </label>
-        )}
+        <details className="toolmore">
+          <summary aria-label="More options" title="More options">
+            ⋯
+          </summary>
+          <div className="tmbody">
+            <label className="check">
+              <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
+            </label>
+            {group === 'on' && (
+              <label className="check">
+                <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
+              </label>
+            )}
+            {more}
+          </div>
+        </details>
       </div>
 
       {group === 'on' ? (
