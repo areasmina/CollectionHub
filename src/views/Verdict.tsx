@@ -60,18 +60,57 @@ export function ReadyTiles({ ready, fit }: { ready: Readiness; fit?: BracketFit 
             <small>{fit.fit === 'over' ? `above ${ROMAN[fit.aim]}` : fit.fit === 'under' ? `could play ${ROMAN[fit.est]}` : 'on target'}</small>
           </summary>
           <div className="vpop" role="dialog" aria-label="Bracket fit">
-            <p>{fit.says}</p>
+            <p className="vfit-says">{fit.says}</p>
             {fit.over.length > 0 && (
-              <ul>
-                {fit.over.map((o) => (
-                  <li key={o} className="no">
-                    <span className="mk" aria-hidden="true">
-                      ↑
-                    </span>
-                    <span>{o}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="vbracket-sec">
+                <span className="vsubhead">ABOVE TARGET ({fit.over.length}):</span>
+                <ul className="vreasons">
+                  {fit.over.map((o) => (
+                    <li key={o} className="no">
+                      <span className="mk" aria-hidden="true">
+                        ↑
+                      </span>
+                      <span>{o}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {fit.reasons && fit.reasons.length > 0 && (
+              <div className="vbracket-sec">
+                <span className="vsubhead">BRACKET {ROMAN[fit.est] || fit.est} SIGNALS:</span>
+                <ul className="vreasons">
+                  {fit.reasons.map((r, i) => (
+                    <li key={i} className="ok">
+                      <span className="mk" aria-hidden="true">
+                        ●
+                      </span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {fit.gameChangers && fit.gameChangers.length > 0 && (
+              <div className="vbracket-sec">
+                <span className="vsubhead">GAME CHANGERS ({fit.gameChangers.length}):</span>
+                <p className="vgc-names">{fit.gameChangers.join(', ')}</p>
+              </div>
+            )}
+            {fit.combos && fit.combos.length > 0 && (
+              <div className="vbracket-sec">
+                <span className="vsubhead">TWO-CARD COMBOS ({fit.combos.length}):</span>
+                <ul className="vreasons">
+                  {fit.combos.map((c, i) => (
+                    <li key={i} className={c.early ? 'no' : 'ok'}>
+                      <span className="mk" aria-hidden="true">
+                        ⚡
+                      </span>
+                      <span>{c.cards.join(' + ')}{c.early ? ' (early-game)' : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
         </details>

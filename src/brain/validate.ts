@@ -188,6 +188,12 @@ export interface BracketFit {
   says: string;
   /** What lifts the deck above the aim (Game Changers beyond the cap, early combos, MLD, chained extra turns). */
   over: string[];
+  /** Why this bracket: Game Changers, combo breakdown, turns, MLD */
+  reasons?: string[];
+  gameChangers?: string[];
+  combos?: { cards: [string, string]; early: boolean; mv: number; id: string }[];
+  mld?: string[];
+  extraTurns?: string[];
 }
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 export function bracketFit(call: BracketCall, aim: number): BracketFit {
@@ -208,5 +214,16 @@ export function bracketFit(call: BracketCall, aim: number): BracketFit {
       : fit === 'over'
         ? `Plays like bracket ${ROMAN[est]}, above the ${ROMAN[aim]} you aim for: ${over.slice(0, 4).join(', ')}${over.length > 4 ? '…' : ''}.`
         : `Fits bracket ${ROMAN[aim]}, and nothing in it goes past ${ROMAN[est]}.`;
-  return { aim, est, fit, says, over };
+  return {
+    aim,
+    est,
+    fit,
+    says,
+    over,
+    reasons: call.reasons,
+    gameChangers: call.gameChangers,
+    combos: call.combos,
+    mld: call.mld,
+    extraTurns: call.extraTurns,
+  };
 }
