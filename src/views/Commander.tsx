@@ -1,6 +1,6 @@
 import { haptic } from '../lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
@@ -33,7 +33,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, OWN_MODES, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, HeroStats, money, priceSum, Segs, ShortAlert, snapTick, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -44,7 +44,8 @@ import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from '
 import { AGGRESSION } from '../brain/win';
 import { deckStats } from '../lib/deckstats';
 import { CardMenu, type Toast } from './CardMenu';
-import { CompactIcon, Doodles, ownColour, PageDecor, Pips, Ransom, RiseBars, Tape, Xgrain, GridIcon, ListIcon } from './zine';
+import { CompactIcon, Pips, Ransom, RiseBars, GridIcon, ListIcon } from './zine';
+import { Menu, Meter, Sheet } from './parts';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
 /** Where a deck opened from Discover starts: MED power (bracket 4) and MAX budget ($$$). */
@@ -384,9 +385,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
 
   const toBuy = missing.filter((c) => !bought.has(norm(c.name)));
-  // The swap tip shows on the first visit only: seen once, it stays off from the next visit on.
-  const [tip, setTip] = useStored<'show' | 'off'>('ch:swaptip', 'show', ['show', 'off']);
-  useEffect(() => () => setTip('off'), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [buyOpen, setBuyOpen] = useState(false);
+  const closeBuy = useCallback(() => setBuyOpen(false), []);
   const toBuyCost = priceSum(toBuy.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
   const pricesIn = cards.size > 0;
   // If you built this deck too: owned cards your saved decks already use up (saved decks of this commander are the same deck).
@@ -517,6 +517,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
   // TO BUY marks: completes a two-card combo with a card in this deck (Commander Spellbook data)
   const comboWith = (n: string) => brainData().combos?.get(norm(n))?.map((k) => k.cards.find((x) => norm(x) !== norm(n))!).find((o) => o && deckNames.some((d) => norm(d) === norm(o)));
+  // What the deck takes from your binder and what's left to buy: said once, in the strip.
+  const covText = coverageText(coverage([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ slot: k, name: v.name, qty: byName.get(k)?.qty ?? 1 })), (n) => statusOf(n, s.mine) === 'owned'));
   const receipt = kind === 'average' && (missing.length > 0 || pull.length > 0) && (
     <aside className={`receipt gbox${pullSide ? ' back' : ''}`} id="shop" aria-label={pullSide ? 'Pull list' : 'Shopping list'}>
       <div className="rflip" role="group" aria-label="Receipt side">
@@ -569,7 +571,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         </>
       ) : (
         <>
-      <Doodles n={377} count={1} spots={[[6, 97]]} paper />
       <h2>*** TO BUY ***</h2>
       <hr />
       <div className="sub">
@@ -627,173 +628,102 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
   return (
     <>
-      <PageDecor seed={711} rays="70% 26%" sheet={{ side: 'right', top: 900, rot: -6 }} />
-      <main>
-        <button className="backlink" onClick={onBack}>
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M11 2 L4 8 L11 14" fill="none" stroke="#E60012" strokeWidth="3" />
-          </svg>
-          COMMANDERS
-        </button>
-
-        <section className="chero">
-          <span className="worn" aria-hidden="true" />
-          <div className="cimg gbox">
-            {/* The commander's own card: always full colour with a xerox look (contrast, halftone, grain). */}
-            <span className="xart cmdrimg">
-              <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-              {bigImg && <CmdrCard src={bigImg} name={label} onMenu={(x, y) => setCtx({ slot: name, name, x, y })} />}
-              <Xgrain />
-            </span>
-            <Doodles n={301} count={1} spots={[[60, 62], [-20, 4]]} />
+      <main className="dpage">
+        {/* THE OVERHAUL, deck view: hero → one strip → one toolbar → flat grid. The hero is the loud frame (ransom name,
+            one red slash); everything under it is quiet. Each fact once: match % here, deck cost in the strip. */}
+        <section className="vhero" aria-label={`${label}: commander`}>
+          <div className="vcard">
+            {bigImg && <CmdrCard src={bigImg} name={label} onMenu={(x, y) => setCtx({ slot: name, name, x, y })} />}
           </div>
-          <div className="cright">
-            {/* Clicking the commander's name goes back to Discover (the COMMANDERS link does the same for keyboards). */}
-            <div className="ctitle" onClick={onBack} title="Back to Discover">
-              <div className="banner ht" aria-hidden="true" />
+          <div className="vinfo">
+            {/* the one red slash sits behind the name only, never behind text you read */}
+            <div className="vname">
+              <span className="vslash" aria-hidden="true" />
               <h1 aria-label={label}>
-                <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 30 : 36) : label.length > 28 ? 44 : 54} seed={11} />
+                <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 26 : 32) : label.length > 28 ? 40 : 52} seed={11} />
               </h1>
-              {/* One tight row: colours · rank · decks · EDHREC (then the quiet deck price and salt) */}
-              <div className="namerow">
-                <Pips ci={ci} size={30} />
-                <p className="cstamp" onClick={(e) => e.stopPropagation()}>
-                  <b>NO.{no ? String(no).padStart(3, '0') : '—'}</b>
-                  <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} DECKS</span>
-                  <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-                    EDHREC ↗
-                  </a>
-                </p>
-                {page && <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))} names={names} />}
-              </div>
             </div>
-          </div>
-        </section>
-
-        <section className="strip" aria-label="Collection match and themes">
-          <Tape style={{ top: -12, left: -14, width: 84, height: 24, transform: 'rotate(-24deg)' }} />
-          <Tape style={{ top: -10, right: 60, width: 84, height: 24, transform: 'rotate(5deg)' }} />
-          {SHOW_AS_COMMANDER && (
-            <div className="cell">
-              <span className="lbl">VIEW</span>
-              <Segs label="View" value={kind} options={[['commander', 'AS CMDR'], ['average', 'AVERAGE']]} onChange={(v) => setKind(v as typeof kind)} />
-            </div>
-          )}
-          <div className="cell wide">
-            <span className="lbl">COLLECTION MATCH</span>
-            <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
-              <span className="burst" aria-hidden="true" />
-              <span className="meter">
-                <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
-                  {Array.from({ length: 10 }, (_, i) => (
-                    <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
+            {/* the quiet monospace line: colours · rank · decks · salt · EDHREC · your decks with this commander */}
+            <p className="vmeta">
+              <Pips ci={ci} size={20} />
+              <span>NO.{no ? String(no).padStart(3, '0') : '—'}</span>
+              <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} decks</span>
+              {page && <SaltStat names={names} />}
+              <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
+                EDHREC ↗
+              </a>
+              {mine.length > 0 && !saved && (
+                <span className="mydecks">
+                  your deck{mine.length > 1 ? 's' : ''}:{' '}
+                  {mine.map((d, i) => (
+                    <span key={d.id}>
+                      {i > 0 && ', '}
+                      <DeckLink name={d.name} />
+                    </span>
                   ))}
                 </span>
+              )}
+            </p>
+            <div className="vmatch" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
+              <b className="num">{page ? `${sum.pct}%` : '—'}</b>
+              <span className="vbar">
+                <Meter pct={page ? sum.pct : 0} label={`Collection match ${sum.pct}%`} />
                 <small>
-                  You own {sum.owned} of {sum.total} cards
+                  collection match · you own {sum.owned} of {sum.total}
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>
-              {/* The % sits inside the red burst on the right, so the bar runs clean from the left. */}
-              <span className="num">{page ? `${sum.pct}%` : '—'}</span>
             </div>
+            {ready && <ReadyTiles ready={ready} fit={fit} />}
           </div>
-          {ready && (
-            <div className="cell wide vcell">
-              <ReadyTiles ready={ready} fit={fit} />
-            </div>
-          )}
-          {page && kind === 'average' && (
-            <div className="cactions" role="group" aria-label="Deck actions">
-              {!forging ? (
-                <button type="button" className="btn forge" onClick={() => (haptic('open'), setManualForge(true))} title="Open The Forge workbench with live role meters and ranked suggestions">
-                  ⚒ FORGE &amp; EDIT
-                </button>
-              ) : (
-                <button type="button" className="btn forge" onClick={() => void saveDeck()} disabled={saving}>
-                  ✓ SAVE TO MY DECKS
-                </button>
-              )}
-              {binder.length > 0 && (
-                <button type="button" className="btn ink" onClick={() => void forgeFromBinder()} disabled={saving} title="Build a complete 100-card deck from your binder using Karsten mana math + strategy scoring">
-                  ⚡ BUILD 100 FROM BINDER
-                </button>
-              )}
-              <button
-                type="button"
-                className={`qpill${ownMode === 'owned' ? ' on' : ''}`}
-                aria-pressed={ownMode === 'owned'}
-                onClick={() => (haptic('select'), setOwnMode(ownMode === 'owned' ? 'prefer' : 'owned'))}
-                title="Fill every missing slot with the best stand-in you already own"
-              >
-                {ownMode === 'owned' ? '✓ OWNED ONLY' : 'OWNED ONLY'}
-              </button>
-            </div>
-          )}
-            {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
-            {tags.length > 0 && (
-              <div className="builtaround">
-                <span>built around</span>
-                <div className="hscroll" role="group" aria-label="EDHREC tags, scroll sideways for more" onScroll={snapTick}>
-                  {/* EDHREC's top tags only; the rest one tap away (the chosen one always shows) */}
-                  {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
-                    <button key={t.slug} aria-pressed={tag === t.slug} onClick={() => setTag(tag === t.slug ? '' : t.slug)}>
-                      {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
-                    </button>
-                  ))}
-                  {tags.length > TAGS_SHOWN && (
-                    <button className="tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
-                      {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          <span className={`hint${short.length ? ' warn' : ''}`}>
-            <ShortAlert items={short} inline />
-            {/* A one-time tip: shown on the first visit, then gone (✕ hides it at once) */}
-            {tip !== 'off' && (
-              <span className="tip">
-                {kind === 'average' ? (missing.length > 0 ? 'tip: tap any card to swap it · missing ones first' : 'tip: tap any card to swap or pin it') : 'every card here is in your binder'}
-                <span className="cur">_</span>
-                <button className="tipx" aria-label="Hide this tip" onClick={() => (haptic('tap'), setTip('off'))}>
-                  ✕
-                </button>
-              </span>
-            )}
-            {receipt && missing.length > 0 && !(pricesIn && toBuyCost > 0) && (
-              <a className="jump" href="#shop">
-                {' '}
-                · {toBuy.length} to buy{pricesIn ? ` ≈${money(toBuyCost)}` : ''} ↓
-              </a>
-            )}
-            {/* Your decks with this commander sit on this full-width line, so the DECK cell stays as short as the
-                others (a long list there left an empty band across the whole strip). */}
-            {pins.in.length + pins.out.length > 0 && (
-              <span className="pinsline">
-                {' · '}pins:{' '}
-                {(['in', 'out'] as const).flatMap((side) =>
-                  pins[side].map((n) => (
-                    <button key={side + n} className="pinchip" onClick={() => (haptic('undo'), setPin(n, side))} aria-label={`Unpin ${n}`} title="Tap to unpin">
-                      {side === 'in' ? '📌' : '💀'} {n} ×
-                    </button>
-                  )),
-                )}
-              </span>
-            )}
-            {mine.length > 0 && !saved && (
-              <span className="mydecks">
-                {' · '}your deck{mine.length > 1 ? 's' : ''}:{' '}
-                {mine.map((d, i) => (
-                  <span key={d.id}>
-                    {i > 0 && ', '}
-                    <DeckLink name={d.name} />
-                  </span>
-                ))}
-              </span>
-            )}
-          </span>
         </section>
+
+        {/* The one strip: POWER · what the deck needs and costs · short / TO BUY / FORGE. Everything else is behind ⋮. */}
+        {page && (
+          <section className={`dstrip${forging ? ' forging' : ''}`} aria-label="Deck status">
+            <Menu className="power" label={`Power: ${powerLabel}. Change it`} summary={<><span className="k">POWER</span> {powerLabel} <span className="car" aria-hidden="true">▾</span></>}>
+              <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
+            </Menu>
+            <p className="dstatus" role="status">
+              {kind === 'average' ? (
+                <>
+                  <span className="coverage">{covText}</span>
+                  {pricesIn && deckCost > 0 && (
+                    <span className="dcost" title={`What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}`}>
+                      deck ≈{cad(deckCost)}
+                    </span>
+                  )}
+                  {ownMode === 'owned' && <span className="cmode">owned only</span>}
+                  {filtered?.pins && <span className="cmode">suggestions from {filtered.page.numDecks?.toLocaleString()} EDHREC decks that fit your pins</span>}
+                </>
+              ) : (
+                <span>every card here is in your binder</span>
+              )}
+            </p>
+            <div className="dacts">
+              <ShortAlert items={short} inline />
+              {receipt && !forging && (
+                <button type="button" className={`u-btn tobuy${missing.length ? ' money' : ''}`} aria-haspopup="dialog" aria-expanded={buyOpen} onClick={() => (haptic('open'), setBuyOpen(true))}>
+                  {missing.length > 0 ? (
+                    <>
+                      TO BUY <b>{toBuy.length}</b>
+                      {pricesIn && toBuyCost > 0 && <span className="u-sticker">≈{cad(toBuyCost)}</span>}
+                    </>
+                  ) : (
+                    <>
+                      PULL <b>{pull.length}</b>
+                    </>
+                  )}
+                </button>
+              )}
+              {kind === 'average' && !forging && (
+                <button type="button" className="u-btn primary forge" onClick={() => (haptic('open'), setManualForge(true))} title="Open The Forge: live role meters and ranked suggestions">
+                  ⚒ FORGE
+                </button>
+              )}
+            </div>
+          </section>
+        )}
 
         {page && (wild || wildSet.off) && (
           <section className="wildcard" aria-label="WILDCARD">
@@ -885,7 +815,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <ToolBar
                 q={q}
                 setQ={setQ}
-                now={[powerLabel, `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+                now={[tag ? `#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag}` : '', `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
                 quick={
                   <>
                     <div className="qsegs" role="group" aria-label="Quick filter">
@@ -909,9 +839,36 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   </>
                 }
               >
-                <OptRow label="POWER">
-                  <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
-                </OptRow>
+                {/* EDHREC's themes (built around): its top tags, the rest one tap away; the chosen one always shows */}
+                {tags.length > 0 && (
+                  <OptRow label="THEME">
+                    <div className="themes" role="group" aria-label="EDHREC themes">
+                      {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
+                        <button key={t.slug} type="button" className="u-chip" aria-pressed={tag === t.slug} onClick={() => (haptic('select'), setTag(tag === t.slug ? '' : t.slug))}>
+                          {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
+                        </button>
+                      ))}
+                      {tags.length > TAGS_SHOWN && (
+                        <button type="button" className="u-chip ghost tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
+                          {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
+                        </button>
+                      )}
+                    </div>
+                  </OptRow>
+                )}
+                {pins.in.length + pins.out.length > 0 && (
+                  <OptRow label="PINS">
+                    <div className="themes" role="group" aria-label="Your pins: tap to unpin">
+                      {(['in', 'out'] as const).flatMap((side) =>
+                        pins[side].map((n) => (
+                          <button key={side + n} type="button" className="u-chip pinchip" onClick={() => (haptic('undo'), setPin(n, side))} aria-label={`Unpin ${n}`} title="Tap to unpin">
+                            {side === 'in' ? '📌' : '💀'} {n} ×
+                          </button>
+                        )),
+                      )}
+                    </div>
+                  </OptRow>
+                )}
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
@@ -990,13 +947,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       )}
                     </form>
               </ToolBar>
-              {kind === 'average' && (
-                <p className="coverage" role="status">
-                  {coverageText(coverage([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ slot: k, name: v.name, qty: byName.get(k)?.qty ?? 1 })), (n) => statusOf(n, s.mine) === 'owned'))}
-                  {ownMode === 'owned' && <span className="cmode"> · owned only</span>}
-                  {filtered?.pins && <span className="cmode"> · suggestions from {filtered.page.numDecks?.toLocaleString()} EDHREC decks that fit your pins</span>}
-                </p>
-              )}
               {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {listed.map((l) => {
@@ -1106,10 +1056,14 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   buy={receipt || undefined}
                 />
               </div>
-            ) : (
-              receipt
-            )}
+            ) : null}
           </div>
+        )}
+        {/* TO BUY / PULL: a 360px drawer on wide screens, a bottom sheet on phones */}
+        {buyOpen && receipt && !forging && (
+          <Sheet label={missing.length > 0 ? 'To buy' : 'Pull list'} onClose={closeBuy}>
+            {receipt}
+          </Sheet>
         )}
       </main>
     </>

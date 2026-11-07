@@ -81,7 +81,7 @@ test('Pins drive EDHREC: suggestions come from decks with your 📌 cards and wi
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: '💀 NEVER USE' }).click();
-  await expect(page.locator('.coverage')).toContainText('suggestions from 312 EDHREC decks that fit your pins');
+  await expect(page.locator('.dstrip .dstatus')).toContainText('suggestions from 312 EDHREC decks that fit your pins');
   expect(asked.some((u) => u.includes('f=out=Sol Ring'))).toBe(true);
 });
 
@@ -124,8 +124,9 @@ test('TO BUY groups by EDHREC play rate, cheapest first, with subtotals', async 
   });
   await page.reload();
   await page.locator('.ccard').first().click();
-  const r = page.locator('aside.receipt');
-  await r.scrollIntoViewIfNeeded();
+  await expect(page.locator('.dstrip .tobuy')).toContainText('TO BUY 2');
+  await page.locator('.dstrip .tobuy').click();
+  const r = page.getByRole('dialog', { name: 'To buy' }).locator('aside.receipt');
   // EDHREC plays both in 25% of decks: one band, cheapest first (Counterspell before Rhystic Study)
   await expect(r.locator('.rgroup .rgh').first()).toContainText('IN 25–50% OF DECKS');
   await expect(r.locator('.rgroup li .nm')).toHaveText([/Counterspell/, /Rhystic Study/]);

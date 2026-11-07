@@ -29,7 +29,8 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Commanders in your binder, ranked; search any commander | Live | v1 | e2e "Discover: title, eye art, filters" |
 | Commander stats cached on the device (no EDHREC reload on app start) | Live | #3 | `lib/cmdrstats.test.ts`, e2e "Reload: commander stats come back from the device" |
 | Saved commander page shows at once even when EDHREC is down | Live | #3 | e2e "an old saved page shows at once" |
-| Commander page: sections in order with count + cost, grid / list, tags, Built around | Live | #6 | e2e "Commander page (Discover): sections in order", "Commander page: header stats" |
+| Commander page: sections in order with count + cost, grid / list, tags, Built around | Live | #6 | e2e "Commander page (Discover): sections in order", "Deck page (overhaul)" |
+| Overhaul phase 2, deck page: hero (ransom name, one red slash, meta line, match % once, Readiness / Bracket Fit), one strip (POWER · status + deck cost · ⚠ short · TO BUY / PULL · FORGE), one toolbar (themes and pins behind ⋮), flat grid; TO BUY / PULL is a 360px drawer (bottom sheet on phones) | In review | overhaul PR | e2e "Deck page (overhaul)", "B: the TO BUY receipt", "TO BUY groups" |
 | POWER ALL · MIN · B3 · MED · B4 · MAX · B5 | Live | #6, #20 | e2e "Commander settings on a wide screen", "A + D" |
 | GEAR 1ST · 2ND · 3RD (EDHREC budget / every budget / expensive); decks from Discover open at MED · 3RD | Live | #17, #20 | e2e "A + D" |
 | Pins drive EDHREC's filter (first 2 📌 as in=, first 2 💀 as out=; under 20 decks falls back) | Live | #20 | `lib/pins.test.ts`, e2e "Pins drive EDHREC" |
@@ -82,5 +83,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Card-spin loader | Live | #4 | manual |
 | Haptics on mobile | Live | #6 | `lib/haptics.test.ts` |
 | Pill nav, back arrow only where there's somewhere to go | Live | #6 | e2e "Pill menu" |
+| Overhaul nav: 48px top bar on tablet and desktop (logo · DISCOVER DECKS COLLECTION · ⚙ sync), 40px bottom pill on phones | In review | overhaul PR | e2e "Pill menu", "Cohesive UI overhaul" |
+| Overhaul phase 1: tokens (one colour one meaning, 4·8·12·16·24·32·48 scale) and the 7 parts in `src/ui.css` + `views/parts.tsx` | In review | overhaul PR | `lib/parts.test.ts` |
 | Security headers (frame-ancestors) | Planned | #2 open | – |
 | Card scanning | Parked | – | likely needs a paid service |

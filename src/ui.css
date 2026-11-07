@@ -1,0 +1,993 @@
+/* =====================================================================================================================
+   THE OVERHAUL (docs/THE_OVERHAUL.md): frame loud, content quiet.
+   1. Tokens   2. The 7 parts (button, chip, sticker, panel, sheet, menu, meter)   3. Nav   4. Deck page
+   Loaded after styles.css. New rules use only the tokens below; screens move here one at a time and their old rules
+   are deleted from styles.css as they move.
+   ===================================================================================================================== */
+
+/* ---------- 1. Tokens ---------- */
+:root {
+  /* one colour, one meaning */
+  --u-red: #e60012; /* the one primary action per screen, and the active tab */
+  --u-yellow: #fff824; /* money and wildcard, like a highlighter */
+  --u-green: #2bd65a; /* ownership */
+  --u-grey: #3a3a3a; /* missing / unfilled */
+  --u-ink: #0a0a0a;
+  --u-carbon: #121212;
+  --u-line: #262626; /* hairline dividers */
+  --u-line2: #3d3d3d; /* outlines of controls */
+  --u-text: #f2f2f2;
+  --u-muted: #9a9a9a;
+  /* the 4 · 8 · 12 · 16 · 24 · 32 · 48 scale */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --gutter: 16px;
+  --tap: 44px;
+  --navh: 0px; /* height of the top bar (0 on phones: their nav is a bottom pill) */
+  --u-display: 'Anton', sans-serif;
+  --u-mono: 'Space Mono', monospace;
+  --u-body: 'Archivo', system-ui, sans-serif;
+}
+@media (min-width: 701px) {
+  :root {
+    --gutter: 24px;
+    --navh: 48px;
+  }
+  html.forging {
+    --navh: 0px; /* the Forge has its own top bar */
+  }
+}
+
+/* ---------- 2. The 7 parts ---------- */
+
+/* Button: red slab (one primary per screen), outline (default), ghost. 44px tap targets. */
+.u-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-height: var(--tap);
+  padding: 0 var(--s4);
+  border: 1px solid var(--u-line2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--u-text);
+  font: 400 15px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: none;
+  box-shadow: none;
+}
+.u-btn:hover {
+  border-color: var(--u-text);
+}
+.u-btn:focus-visible,
+.u-chip:focus-visible,
+.u-menu > summary:focus-visible {
+  outline: 2px solid var(--u-yellow);
+  outline-offset: 2px;
+}
+.u-btn.primary {
+  background: var(--u-red);
+  border-color: var(--u-red);
+  color: #fff;
+}
+.u-btn.primary:hover {
+  background: #ff1a2b;
+}
+.u-btn.ghost {
+  border-color: transparent;
+}
+.u-btn.money {
+  color: var(--u-yellow);
+  border-color: color-mix(in srgb, var(--u-yellow) 55%, transparent);
+}
+.u-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Chip: condensed uppercase with a hairline outline; yellow = money / wildcard. */
+.u-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  min-height: 32px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--u-line2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--u-text);
+  font: 400 13px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.u-chip small {
+  font: 400 11px var(--u-mono);
+  color: var(--u-muted);
+}
+.u-chip[aria-pressed='true'] {
+  border-color: var(--u-text);
+  background: var(--u-text);
+  color: var(--u-ink);
+}
+.u-chip[aria-pressed='true'] small {
+  color: #444;
+}
+.u-chip.money {
+  color: var(--u-yellow);
+  border-color: var(--u-yellow);
+}
+.u-chip.ghost {
+  border-style: dashed;
+  color: var(--u-muted);
+}
+@media (pointer: coarse) {
+  .u-chip {
+    min-height: 40px;
+  }
+}
+
+/* Sticker: flat yellow tape for a price. */
+.u-sticker {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--u-yellow);
+  color: var(--u-ink);
+  font: 700 12px/1.2 var(--u-mono);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Panel: carbon paper, hairline dividers. */
+.u-panel {
+  background: var(--u-carbon);
+  border: 1px solid var(--u-line);
+}
+.u-panel > * + * {
+  border-top: 1px solid var(--u-line);
+}
+
+/* Sheet / drawer: 360px from the right on wide screens, a bottom sheet on phones. */
+.u-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.62);
+}
+.u-sheet {
+  position: fixed;
+  z-index: 71;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--u-carbon);
+  border-left: 1px solid var(--u-line);
+  color: var(--u-text);
+  outline: none;
+  animation: u-in-right 0.18s ease-out;
+}
+.u-sheethead {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--s7);
+  padding: 0 var(--s2) 0 var(--s4);
+  border-bottom: 1px solid var(--u-line);
+  font: 400 16px var(--u-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.u-sheethead b {
+  font-weight: 400;
+  flex: 1;
+}
+.u-sheethead .u-x {
+  width: var(--tap);
+  padding: 0;
+}
+.u-grab {
+  display: none;
+}
+.u-sheetbody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--s4);
+}
+@media (max-width: 700px) {
+  .u-sheet {
+    top: auto;
+    left: 0;
+    width: auto;
+    max-height: 85dvh;
+    border-left: 0;
+    border-top: 1px solid var(--u-line2);
+    border-radius: 12px 12px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation-name: u-in-up;
+  }
+  .u-grab {
+    display: block;
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 2px;
+    background: var(--u-line2);
+  }
+}
+@keyframes u-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes u-in-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .u-sheet {
+    animation: none;
+  }
+}
+
+/* Menu: a chip that opens a small popover panel. */
+.u-menu {
+  position: relative;
+}
+.u-menu > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--u-line2);
+  border-radius: 999px;
+  color: var(--u-text);
+  font: 400 14px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.u-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.u-menu[open] > summary {
+  border-color: var(--u-text);
+}
+.u-menubody {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + var(--s2));
+  left: 0;
+  min-width: 220px;
+  padding: var(--s3);
+  background: var(--u-carbon);
+  border: 1px solid var(--u-line2);
+}
+
+/* Meter: slanted green bars for a match %. */
+.u-meter {
+  display: inline-flex;
+  gap: 3px;
+  padding-left: 4px;
+}
+.u-meter i {
+  width: 12px;
+  height: 16px;
+  background: var(--u-grey);
+  transform: skewX(-18deg);
+}
+.u-meter i.on {
+  background: var(--u-green);
+}
+.u-dia {
+  font: 400 12px var(--u-mono);
+  letter-spacing: 1px;
+  color: var(--u-green);
+}
+
+/* ---------- 3. Nav: 48px top bar (tablet, desktop), 40px bottom pill (phones) ---------- */
+.pillnav {
+  z-index: 41;
+  display: flex;
+  align-items: center;
+  font-family: var(--u-display);
+}
+.pillnav button {
+  border: 0;
+  background: transparent;
+  color: var(--u-text);
+  cursor: pointer;
+}
+.pillnav button:focus-visible {
+  outline: 2px solid var(--u-yellow);
+  outline-offset: -2px;
+}
+.pillnav .pill {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.pillnav .pill button {
+  font: 400 15px/1 var(--u-display);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.pillnav .pback,
+.pillnav .ugear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+}
+.pillnav .ugear {
+  position: relative;
+  color: var(--u-muted);
+}
+.pillnav .ugear:hover {
+  color: var(--u-text);
+}
+.pillnav .ugear.alert::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--u-yellow);
+}
+.pillnav .ulogo {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  height: var(--tap);
+  padding: 0;
+  font: 400 18px/1 var(--u-display);
+  letter-spacing: 0.08em;
+}
+html.forging .pillnav {
+  display: none;
+}
+@media (min-width: 701px) {
+  .pillnav {
+    position: sticky;
+    top: 0;
+    height: var(--navh);
+    padding: 0 var(--gutter);
+    gap: var(--s5);
+    background: var(--u-ink);
+    border-bottom: 1px solid var(--u-line);
+  }
+  .pillnav .pback {
+    margin-right: calc(-1 * var(--s4));
+    color: var(--u-text);
+  }
+  .pillnav .pill {
+    height: 100%;
+    gap: var(--s1);
+  }
+  .pillnav .pill button {
+    height: 100%;
+    padding: 0 var(--s4);
+    color: var(--u-muted);
+    border-bottom: 2px solid transparent;
+    border-top: 2px solid transparent;
+  }
+  .pillnav .pill button:hover {
+    color: var(--u-text);
+  }
+  .pillnav .pill button[aria-current='page'] {
+    color: var(--u-text);
+    border-bottom-color: var(--u-red);
+  }
+  .pillnav .ugear {
+    margin-left: auto;
+  }
+}
+@media (max-width: 700px) {
+  .pillnav {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--s3) + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    height: 40px;
+    padding: 0 3px;
+    gap: 2px;
+    max-width: calc(100vw - 2 * var(--gutter));
+    background: var(--u-ink);
+    border: 1px solid var(--u-line2);
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+    transition: transform 0.2s ease;
+  }
+  .pillnav.away {
+    transform: translate(-50%, calc(100% + 32px));
+  }
+  .pillnav .ulogo,
+  .pillnav .ugear {
+    display: none;
+  }
+  .pillnav .pback {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+  }
+  .pillnav .pill button {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 14px;
+  }
+  .pillnav .pill button[aria-current='page'] {
+    background: var(--u-red);
+  }
+  .stage {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 360px) {
+  .pillnav .pill button {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav {
+    transition: none;
+  }
+}
+/* Sticky bars sit under the top bar */
+@media (min-width: 701px) {
+  html:not(.forging) .dtools.tbar {
+    top: calc(var(--navh) + 6px);
+  }
+}
+
+/* ---------- 4. Deck page: hero → one strip → one toolbar → flat grid ---------- */
+main.dpage {
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+/* Hero: the loud frame. One red slash behind the name, ransom letters; the card flat. */
+.vhero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s5);
+  padding: var(--s6) 0 var(--s5);
+}
+.vname {
+  position: relative;
+  isolation: isolate;
+}
+.vslash {
+  position: absolute;
+  z-index: -1;
+  left: -20px;
+  right: calc(-1 * var(--gutter));
+  top: 22%;
+  bottom: 4%;
+  background: var(--u-red);
+  clip-path: polygon(0 30%, 100% 0, 99% 64%, 1% 100%);
+  pointer-events: none;
+}
+.vcard .cmdrbtn {
+  display: block;
+  width: 100%;
+  transform: none;
+  box-shadow: none;
+}
+.vcard .cmdrbtn img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+  background: var(--u-carbon);
+  outline: 1px solid var(--u-line);
+  border-radius: 4.75% / 3.5%;
+  border: 0;
+  filter: none;
+}
+.vinfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.vinfo h1 {
+  margin: 0;
+}
+.vmeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s4);
+  margin: 0;
+  font: 400 13px/1.4 var(--u-mono);
+  color: var(--u-muted);
+}
+.vmeta > span {
+  white-space: nowrap;
+}
+.vmeta a,
+.vmeta .decklink {
+  color: var(--u-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-transform: none;
+}
+.vmeta .decklink {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.vmeta .pips {
+  gap: var(--s1);
+}
+/* salt: a quiet line in the meta row (its saltiest cards one tap away) */
+.vmeta .scrap.salt {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  transform: none;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  filter: none;
+  clip-path: none;
+}
+.vmeta .scrap.salt::before,
+.vmeta .scrap.salt::after {
+  display: none;
+}
+.vmeta .scrap.salt > summary {
+  min-height: 0;
+  transform: none;
+  border: 0;
+  box-shadow: none;
+  clip-path: none;
+  display: inline-flex;
+  gap: var(--s1);
+  align-items: baseline;
+  padding: 0;
+  font: inherit;
+  color: var(--u-muted);
+  background: none;
+}
+.vmeta .scrap.salt .k,
+.vmeta .scrap.salt .amt {
+  font: inherit;
+  color: inherit;
+  letter-spacing: 0;
+  text-transform: lowercase;
+  background: none;
+  transform: none;
+  text-shadow: none;
+}
+.vmeta .scrap.salt .amt {
+  color: var(--u-text);
+}
+.vmeta .scrap.salt .popnote {
+  background: var(--u-carbon);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  box-shadow: none;
+  transform: none;
+  font: 400 12px/1.5 var(--u-mono);
+  text-transform: none;
+}
+.vmatch {
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+}
+.vmatch .num {
+  font: 400 48px/1 var(--u-display);
+  color: var(--u-text);
+  font-weight: 400;
+}
+.vmatch .vbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  min-width: 0;
+}
+.vmatch small {
+  font: 400 12px/1.3 var(--u-mono);
+  color: var(--u-muted);
+}
+/* Readiness + Bracket Fit: quiet outlined tiles; tap for the checks */
+.vhero .vtiles {
+  gap: var(--s2);
+  margin: 0;
+  max-width: 420px;
+}
+.vhero .vtile > summary {
+  min-height: var(--tap);
+  padding: var(--s1) var(--s3);
+  gap: 0;
+  background: transparent;
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  box-shadow: none;
+}
+.vhero .vtile .lbl {
+  font: 400 11px var(--u-mono);
+  letter-spacing: 0.04em;
+  color: var(--u-muted);
+  opacity: 1;
+}
+.vhero .vtile b {
+  font-size: 17px;
+}
+.vhero .vtile small {
+  font: 400 11px var(--u-mono);
+  color: var(--u-muted);
+}
+.vhero .vtile .vpop {
+  background: var(--u-carbon);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  box-shadow: none;
+  font: 400 12px/1.5 var(--u-mono);
+}
+.vhero .vtile .vpop li {
+  border-bottom: 1px solid var(--u-line);
+}
+@media (max-width: 700px) {
+  .vhero {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: var(--s3) var(--s4);
+    padding: var(--s5) 0 var(--s4);
+    align-items: start;
+  }
+  .vhero .vinfo {
+    display: contents;
+  }
+  .vhero .vname {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+  }
+  .vhero .vcard {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .vhero .vmeta,
+  .vhero .vmatch,
+  .vhero .vtiles {
+    grid-column: 1 / -1;
+  }
+  .vmatch .num {
+    font-size: 40px;
+  }
+  .vhero .vtiles {
+    max-width: none;
+  }
+}
+
+/* The one strip: POWER | status | short · TO BUY · FORGE */
+.dstrip {
+  position: sticky;
+  top: var(--navh);
+  z-index: 32;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  height: 56px;
+  padding: 0;
+  background: var(--u-ink);
+  border-top: 1px solid var(--u-line);
+  border-bottom: 1px solid var(--u-line);
+}
+.dstrip.forging {
+  position: relative;
+}
+.dstrip .power .k {
+  color: var(--u-muted);
+  font-size: 12px;
+}
+.dstrip .power .car {
+  color: var(--u-muted);
+  font-size: 11px;
+}
+.dstrip .power .segs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  border: 0;
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+.dstrip .power .segs button {
+  min-height: 40px;
+  padding: 0 var(--s3);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--u-text);
+  font: 400 14px var(--u-display);
+  letter-spacing: 0.04em;
+  text-align: left;
+  transform: none;
+  box-shadow: none;
+}
+.dstrip .power .segs button[aria-checked='true'] {
+  border-color: var(--u-red);
+  background: transparent;
+  color: var(--u-text);
+}
+.dstrip .power .segs button[aria-checked='true']::before {
+  content: '● ';
+  color: var(--u-red);
+}
+.dstatus {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: 400 13px/1.3 var(--u-mono);
+  color: var(--u-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dstatus > span + span::before {
+  content: ' · ';
+  color: var(--u-line2);
+}
+.dstatus > span {
+  white-space: nowrap;
+}
+.dstatus .dcost {
+  color: var(--u-text);
+}
+.dacts {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex: none;
+}
+.dacts .u-btn {
+  min-height: 40px;
+}
+.dacts .tobuy b {
+  font-weight: 400;
+}
+/* copies warning: one compact chip, its list one tap away */
+.dstrip .shortin {
+  position: relative;
+}
+.dstrip .shortin > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--u-line2);
+  color: var(--u-text);
+  background: none;
+  font: 400 13px var(--u-display);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.dstrip .shortin > summary::-webkit-details-marker {
+  display: none;
+}
+.dstrip .shortin > summary b {
+  font-weight: 400;
+}
+.dstrip .shortin > ul {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + var(--s2));
+  right: 0;
+  width: min(340px, calc(100vw - 32px));
+  margin: 0;
+  padding: var(--s3);
+  list-style: none;
+  background: var(--u-carbon);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  font: 400 12px/1.5 var(--u-mono);
+}
+.dstrip .shortin > ul li + li {
+  margin-top: var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--u-line);
+}
+@media (max-width: 700px) {
+  .dstrip {
+    position: relative;
+    top: auto;
+    flex-wrap: wrap;
+    height: auto;
+    padding: var(--s2) 0;
+    gap: var(--s2);
+  }
+  .dstatus {
+    order: 3;
+    flex-basis: 100%;
+    white-space: normal;
+  }
+  .dacts {
+    margin-left: auto;
+  }
+  .dacts .forge {
+    padding: 0 var(--s3);
+  }
+}
+
+/* WILDCARD: one flat row, yellow tag (wildcards are yellow) */
+.dpage .wildcard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  margin: 0;
+  padding: var(--s2) 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--u-line);
+  box-shadow: none;
+  transform: none;
+  color: var(--u-text);
+}
+.dpage .wildcard::before,
+.dpage .wildcard::after {
+  display: none;
+}
+.dpage .wildcard .wtag {
+  padding: 2px 6px;
+  background: var(--u-yellow);
+  color: var(--u-ink);
+  font: 400 13px var(--u-display);
+  letter-spacing: 0.06em;
+  transform: none;
+}
+.dpage .wildcard .wtxt {
+  flex: 1;
+  min-width: 180px;
+  font: 400 13px/1.4 var(--u-mono);
+}
+.dpage .wildcard .wtxt b {
+  font-family: var(--u-body);
+  font-weight: 800;
+}
+.dpage .wildcard .wtxt small {
+  color: var(--u-muted);
+}
+.dpage .wildcard .btn {
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--u-line2);
+  background: transparent;
+  color: var(--u-text);
+  font: 400 13px var(--u-display);
+  box-shadow: none;
+  transform: none;
+}
+
+/* The one toolbar under the strip */
+.dpage .lists > .tbar {
+  margin-top: var(--s3);
+  border-width: 1px;
+  border-color: var(--u-line2);
+  box-shadow: none;
+}
+@media (min-width: 701px) {
+  html:not(.forging) .dpage .lists > .tbar {
+    top: calc(var(--navh) + 56px + var(--s2));
+  }
+}
+.dpage .themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+/* Flat grid: the deck takes the full width (TO BUY is a drawer now) */
+.dpage .deckgrid {
+  margin-top: 0;
+}
+.u-sheet .receipt {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  transform: none;
+}
+
+/* the commander card's one-time hint: flat, on the card's foot */
+.vcard .cmdrhint {
+  transform: translateX(-50%);
+  box-shadow: none;
+  font: 400 12px var(--u-mono);
+}
+.dpage .ztile .timg {
+  border: 0;
+  border-radius: 4.75% / 3.5%;
+  box-shadow: none;
+  background: var(--u-carbon);
+  outline: 1px solid var(--u-line);
+}
+.dpage .timg > .pen,
+.dpage .thumb > .pen {
+  display: none;
+}
+.vcard .cmdrbtn .cmdrhint {
+  bottom: var(--s2);
+}
+.vslash {
+  top: 14%;
+  bottom: -2%;
+}
+@media (max-width: 700px) {
+  .dstatus {
+    display: flex;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}
+/* quick filters and views in the toolbar: flat outlined toggles, the chosen one filled */
+.dpage .tquick .qsegs {
+  border: 0;
+  box-shadow: none;
+  gap: 0;
+}
+.dpage .tquick .qsegs button {
+  min-height: 36px;
+  background: transparent;
+  color: var(--u-muted);
+  border: 1px solid var(--u-line2);
+  box-shadow: none;
+  transform: none;
+}
+.dpage .tquick .qsegs button + button {
+  border-left: 0;
+}
+.dpage .tquick .qsegs button[aria-pressed='true'] {
+  background: var(--u-text);
+  color: var(--u-ink);
+  border-color: var(--u-text);
+}
+/* missing = grey, flat (red is for the one primary action); the tile itself is already dimmed */
+.dpage .ztile .misstape {
+  transform: none;
+  background: var(--u-grey);
+  color: var(--u-text);
+  box-shadow: none;
+  clip-path: none;
+  font: 400 12px var(--u-display);
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+}

@@ -109,25 +109,34 @@ export default function App() {
   return (
     <div className="stage">
       <ZineDefs />
-      {/* The pill menu, phones and desktop alike: back (when there's somewhere to go back to) and the two sections. Sync,
-          haptics and binders live in Collection's binder menu (owner's call, Nov 6: no hamburger).
-      */}
+      {/* One nav (THE OVERHAUL, part 1): a 48px top bar on tablets and desktop (logo · DISCOVER DECKS COLLECTION · ⚙),
+          a compact floating pill on phones (back + the three sections). Sync, haptics and binders also sit in Collection's
+          binder menu; ⚙ opens sync from anywhere on wide screens. */}
       <nav className={`pillnav${navAway ? ' away' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
+        {/* The back arrow shows only when there's somewhere to go back to */}
+        {backFn && (
+          <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
+            <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="2.5" />
+            </svg>
+          </button>
+        )}
+        <button className="ulogo" aria-label="DeckMage home" title="Discover" onClick={() => (haptic('select'), goDiscover())}>
+          <img src="/icon.svg" alt="" width={24} height={24} />
+          <span>DECKMAGE</span>
+        </button>
         <div className="pill">
-          {/* The back arrow grows out of the pill when there's somewhere to go back to, and folds away when not */}
-          {backFn && (
-            <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
-              <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="3" />
-              </svg>
-            </button>
-          )}
           {NAV.map(([t, label]) => (
             <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : t === 'decks' ? goDecks() : goTab(t))}>
               {label}
             </button>
           ))}
         </div>
+        <button className={`ugear${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-label="Sync and settings" title={`Sync: ${SYNC_LABEL[syncSt.status]}`} onClick={() => (haptic('open'), setSync(true))}>
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)" />
+          </svg>
+        </button>
       </nav>
       {sync && (
         <Suspense fallback={null}>
