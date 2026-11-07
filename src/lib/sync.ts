@@ -1,7 +1,7 @@
 import { db, type Deck, type Entry, type Profile } from './db';
 import { resolveRows } from './scryfall';
 import { cleanCode, keysFor, newCode, seal, unseal, type Keys } from './synccode';
-import { clearDirty, lastVersion, quietly, setLastVersion, setSyncCode, syncCode } from './syncstate';
+import { clearDirty, lastVersion, quietly, setLastVersion, setSyncCode, setSyncState, syncCode } from './syncstate';
 
 /** Device sync with a sync code (no account): this device's binders and decks go up as one encrypted snapshot to the
  *  CollectionHub sync Worker (worker/sync.js). The Worker only sees a hash of the code and bytes it can't read. */

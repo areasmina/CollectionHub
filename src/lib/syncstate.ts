@@ -50,6 +50,10 @@ export const legacyLastVersion = () => store.get(LEGACY_LAST);
 export const setLegacyLastVersion = (v: number | null) => store.set(LEGACY_LAST, v);
 
 /** This device's sync code ('' = sync off). Kept in localStorage: it's the key to the cloud copy. */
+const codeSubs = new Set<() => void>();
+export const onCodeChange = (f: () => void) => (codeSubs.add(f), () => void codeSubs.delete(f));
+export const useSyncCode = () => useSyncExternalStore(onCodeChange, syncCode);
+
 export function syncCode() {
   try {
     return localStorage.getItem(CODE) || '';
@@ -64,6 +68,7 @@ export function setSyncCode(c: string | null) {
   } catch {
     /* private mode: sync can't stay on after a reload */
   }
+  codeSubs.forEach((f) => f());
 }
 /** Whether this device is still signed in to the old (Supabase) sync, read without loading Supabase. */
 export function hasLegacySession() {

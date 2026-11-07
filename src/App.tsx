@@ -9,7 +9,7 @@ import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
 import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
 import { codeFromHash } from './lib/synccode';
-import { useSyncState, syncCode, type SyncStatus } from './lib/syncstate';
+import { useSyncState, useSyncCode, syncCode, type SyncStatus } from './lib/syncstate';
 import { turnOn, turnOff } from './lib/sync';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs, Pips } from './views/zine';
@@ -159,17 +159,20 @@ export default function App() {
     }
   };
 
-  const toggleSync = async (e: React.MouseEvent) => {
+  const currentCode = useSyncCode();
+  const handleSyncClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (syncCode()) {
-      turnOff();
-      haptic('undo');
+    if (!currentCode) {
+      haptic('open');
+      setSync(true);
     } else {
+      haptic('tap');
       try {
-        await turnOn();
+        const { syncNow } = await import('./lib/autosync');
+        await syncNow();
         haptic('success');
       } catch {
-        /* fallback */
+        setSync(true);
       }
     }
   };
@@ -299,17 +302,38 @@ export default function App() {
               </button>
             ))}
           </div>
-          {/* Direct 1-click sync toggle: ON/OFF in place, no modal */}
-          <button
-            type="button"
-            className={`ugear syncpill${syncCode() ? ' on' : ' off'}`}
-            aria-label={`Sync: ${syncCode() ? 'On' : 'Off'}. Tap to toggle`}
-            title={`Sync is ${syncCode() ? 'ON' : 'OFF'}. Tap to turn ${syncCode() ? 'off' : 'on'}`}
-            onClick={toggleSync}
-          >
-            <span className="sdot" aria-hidden="true" />
-            <span>SYNC</span>
-          </button>
+          {/* Sync indicator + 1-click sync/setup pill */}
+          <div className={`syncpill ${currentCode ? 'on' : 'off'}`}>
+            <button
+              type="button"
+              className="sync-main"
+              aria-label={`Sync: ${currentCode ? syncSt.status : 'off'}. Tap to refresh`}
+              title={currentCode ? `Sync is ON (${syncSt.status}). Tap to refresh` : 'Sync is OFF. Tap to setup sync'}
+              onClick={handleSyncClick}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setSync(true);
+              }}
+            >
+              <span className={`sdot ${currentCode ? syncSt.status : 'off'}`} aria-hidden="true" />
+              <span>{currentCode ? (syncSt.status === 'syncing' ? 'SYNCING…' : 'SYNC') : 'SYNC'}</span>
+            </button>
+            <button
+              type="button"
+              className="sync-gear"
+              aria-label="Sync Settings"
+              title="Sync settings and link code"
+              onClick={(e) => {
+                e.stopPropagation();
+                haptic('open');
+                setSync(true);
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
+              </svg>
+            </button>
+          </div>
           {/* Gooey venom pull lip at the inner edge of the notch */}
           <button
             type="button"
@@ -325,6 +349,23 @@ export default function App() {
 
         {islandOpen && (
           <div className="island-drawer" role="dialog" aria-label="Dynamic Island Quick Decks">
+            <div className="id-sync-bar">
+              <div className={`id-sync-pill ${currentCode ? syncSt.status : 'off'}`}>
+                <span className={`sdot ${currentCode ? syncSt.status : 'off'}`} />
+                <span>{currentCode ? (syncSt.status === 'syncing' ? 'SYNCING…' : syncSt.status === 'synced' ? 'UP TO DATE' : syncSt.status.toUpperCase()) : 'SYNC OFF'}</span>
+              </div>
+              <button
+                type="button"
+                className="id-sync-btn"
+                onClick={() => {
+                  haptic('open');
+                  setIslandOpen(false);
+                  setSync(true);
+                }}
+              >
+                SYNC SETTINGS ⚙
+              </button>
+            </div>
             {myDecks.length > 0 ? (
               <div className="id-decks" role="group" aria-label="Your saved decks">
                 {myDecks.map((d) => {
