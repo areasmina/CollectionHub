@@ -4,7 +4,7 @@ What exists, its status and what proves it. Read before starting work; update th
 `docs/ROADMAP.md` keeps the original plan and history.
 
 Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps listed) · **Planned** · **Parked**
-(waiting on Guillermo). "manual, no test yet" = works when checked by hand; add a test when it's next touched. Checked against `main` at e0ec5cb (2026-11-06).
+(waiting on Guillermo). "manual, no test yet" = works when checked by hand; add a test when it's next touched. Checked against `main` at 9151ab47 (2026-11-07).
 
 ## Collection
 
@@ -30,13 +30,15 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Commander stats cached on the device (no EDHREC reload on app start) | Live | #3 | `lib/cmdrstats.test.ts`, e2e "Reload: commander stats come back from the device" |
 | Saved commander page shows at once even when EDHREC is down | Live | #3 | e2e "an old saved page shows at once" |
 | Commander page: sections in order with count + cost, grid / list, tags, Built around | Live | #6 | e2e "Commander page (Discover): sections in order", "Deck page (overhaul)" |
-| Overhaul phase 2, deck page: hero (ransom name, one red slash, meta line, match % once, Readiness / Bracket Fit), one strip (POWER · status + deck cost · ⚠ short · TO BUY / PULL · FORGE), one toolbar (themes and pins behind ⋮), flat grid; TO BUY / PULL is a 360px drawer (bottom sheet on phones) | In review | overhaul PR | e2e "Deck page (overhaul)", "B: the TO BUY receipt", "TO BUY groups" |
+| Overhaul phase 2, deck page: hero (ransom name, one red slash, meta line, match % once, Readiness / Bracket Fit), one strip (POWER · status + deck cost · ⚠ short · TO BUY / PULL · FORGE), one toolbar (themes and pins behind ⋮), flat grid; TO BUY / PULL is a 360px drawer (bottom sheet on phones) | Live | #21 | e2e "Deck page (overhaul)", "B: the TO BUY receipt", "TO BUY groups" |
 | POWER ALL · MIN · B3 · MED · B4 · MAX · B5 | Live | #6, #20 | e2e "Commander settings on a wide screen", "A + D" |
 | GEAR 1ST · 2ND · 3RD (EDHREC budget / every budget / expensive); decks from Discover open at MED · 3RD | Live | #17, #20 | e2e "A + D" |
 | Pins drive EDHREC's filter (first 2 📌 as in=, first 2 💀 as out=; under 20 decks falls back) | Live | #20 | `lib/pins.test.ts`, e2e "Pins drive EDHREC" |
 | Coverage line, OWNED ONLY / PREFER OWNED, BUY UNDER CA$N | Live | #17 | `brain/modes.test.ts`, e2e "A + D" |
 | TO BUY receipt: PULL list + PRINT on the back; grouped by EDHREC play rate, cheapest first, GC / COMBO marks | Live | #17, #20 | `brain/modes.test.ts`, e2e "B: the TO BUY receipt", "TO BUY groups" |
 | Build Readiness + Bracket Fit tiles, "Why this card?" in the swap window | Live | #17 | `brain/validate.test.ts`, e2e "Readiness + Bracket Fit tiles" |
+| Build Readiness and Bracket Fit scoring, owned-only builder, "Why this card?" reasons (tested on 48 real decks); blind-test generator: our deck vs EDHREC's consensus deck per commander (BLIND=<file>) | Live | #18 | `brain/validate.test.ts`, `tests/bench/bench.test.ts`, `tests/bench/blind.test.ts` |
+| Themes as rules-text tests with a strategy stack (one primary, up to two secondary) | Live | #19 | `brain/themes.test.ts` |
 | EDHREC With / Without card filter, self-testing with honest fallback | Live | #6 | e2e "EDHREC With / Without card" |
 | Stand-ins ranked by EDHREC lift | Live | #7 | `lib/subs.test.ts` |
 | Partner and Background commanders | Live | #7 | `lib/commander.test.ts` |
@@ -83,7 +85,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Card-spin loader | Live | #4 | manual |
 | Haptics on mobile | Live | #6 | `lib/haptics.test.ts` |
 | Pill nav, back arrow only where there's somewhere to go | Live | #6 | e2e "Pill menu" |
-| Overhaul nav: 48px top bar on tablet and desktop (logo · DISCOVER DECKS COLLECTION · ⚙ sync), 40px bottom pill on phones | In review | overhaul PR | e2e "Pill menu", "Cohesive UI overhaul" |
-| Overhaul phase 1: tokens (one colour one meaning, 4·8·12·16·24·32·48 scale) and the 7 parts in `src/ui.css` + `views/parts.tsx` | In review | overhaul PR | `lib/parts.test.ts` |
+| Overhaul nav: 48px top bar on tablet and desktop (logo · DISCOVER DECKS COLLECTION · ⚙ sync), 40px bottom pill on phones | Live | #21 | e2e "Pill menu", "Cohesive UI overhaul" |
+| Overhaul phase 1: tokens (one colour one meaning, 4·8·12·16·24·32·48 scale) and the 7 parts in `src/ui.css` + `views/parts.tsx` | Live | #21 | `lib/parts.test.ts` |
 | Security headers (frame-ancestors) | Planned | #2 open | – |
 | Card scanning | Parked | – | likely needs a paid service |
