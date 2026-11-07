@@ -102,5 +102,5 @@ export const opts = async (page: Page, scope = '') => {
 /** Opens the Collection dashboard fold (counts, worth, decks, import), closed by default. */
 export const dash = async (page: Page) => {
   const d = page.locator('details.dash');
-  if (!(await d.evaluate((e) => (e as HTMLDetailsElement).open))) await d.locator('> summary').click();
+  if (!(await d.evaluate((e) => (e as HTMLDetailsElement).open))) await d.locator('> summary .dsum').click();
 };
