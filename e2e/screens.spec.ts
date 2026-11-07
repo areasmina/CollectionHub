@@ -105,7 +105,7 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
   const o = await opts(page);
   await expect(o.locator('.tagmore')).toHaveText('+4 MORE');
   const ys = await o.locator('.themes button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
-  expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows
+  expect(new Set(ys).size).toBeLessThanOrEqual(3); // rows (the ⋮ menu is capped at 440px since Nov 7)
   await page.screenshot({ path: 'test-results/commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
@@ -243,6 +243,11 @@ test('Deck page: right-click / press and hold the header opens the deck menu', a
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   const h1 = page.locator('.dhero h1');
+  // the list was scrolled to reach the tile (shelf above the grid): let the page settle at the top first,
+  // so a late scroll event doesn't close the menu we open next
+  await expect(h1).toBeVisible();
+  await h1.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
   if (info.project.name === 'desktop') {
     await h1.click({ button: 'right' });
     if (!(await page.getByRole('menu', { name: 'Tatyova Lands options' }).isVisible({ timeout: 1000 }).catch(() => false))) {
@@ -312,6 +317,9 @@ test('Decks list: right-click / hold a deck opens the deck menu (duplicate, shar
   await go(page, 'decks');
   const tile = page.locator('.dcard').first();
   await expect(tile).toBeVisible();
+  // the My decks shelf now sits above the grid: scroll first, so the late scroll event doesn't close the menu
+  await tile.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
   if (page.viewportSize()!.width >= 1200) {
     await tile.click({ button: 'right' });
     const m = page.getByRole('menu', { name: 'Tatyova Lands options' });
@@ -458,7 +466,7 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await expect(page.locator('.slimbar .btn.forge')).toHaveCount(0); // no FORGE IT button: the first swap starts the Forge
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
-  await page.locator('.forgetop .btn.forge').click();
+  await page.locator('.forgetop .forge').click();
   await expect(page.locator('.forgehint')).toBeVisible();
   await page.getByRole('button', { name: 'Swap Counterspell', exact: true }).click();
   const note = page.getByRole('dialog', { name: 'Swap Counterspell' });
@@ -479,12 +487,12 @@ test('One card menu: ⋯ / right-click on commander page and Collection cards, s
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: 'More for Sol Ring' }).click();
   const m = page.getByRole('menu', { name: 'Sol Ring options' });
-  await expect(m.getByRole('button', { name: /Swap…/ })).toBeVisible();
-  await expect(m.getByRole('button', { name: '💀 Never use' })).toBeVisible();
+  await expect(m.getByRole('button', { name: /SWAP…/i })).toBeVisible();
+  await expect(m.getByRole('button', { name: 'NEVER USE' })).toBeVisible();
   await expect(m.getByText('also in:')).toBeVisible();
   await page.waitForTimeout(300); // the menu drops in with a small tilt first
   await fits(page, ['.cardmenu']);
-  await m.getByRole('button', { name: /Swap…/ }).click();
+  await m.getByRole('button', { name: /SWAP…/i }).click();
   await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();
   await go(page, 'collection');
   await page.locator('li', { hasText: 'Sol Ring' }).first().click({ button: 'right' });
@@ -524,6 +532,7 @@ test('Deck light: active decks mark their cards in use in Collection; off frees 
   await expect(sol.locator('.inuse')).toHaveCount(0);
   await go(page, 'decks');
   await page.locator('.shelf .dlight').first().click();
+  await expect(page.locator('.shelf .dlight').first()).toHaveText(/ACTIVE/); // saved before we reload
   await go(page, 'collection');
   await expect(sol.locator('.inuse')).toHaveCount(1);
 });
@@ -696,7 +705,9 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
   // filter to OWNED cards via toolbar search bar quick segment
-  await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
+  // (quick segments show above 700px; on phones the same filter is SHOW in ⋮)
+  if (page.viewportSize()!.width > 700) await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
+  else await (await opts(page)).locator('.show-pick select').selectOption('owned');
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('OWNED');
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();

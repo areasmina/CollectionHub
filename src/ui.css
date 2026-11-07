@@ -1388,7 +1388,7 @@ main.dpage {
 
 /* Options menu (⋮) overhaul: clean scrolling, no overlapping theme chips, tamed select dropdowns */
 .dtools.tbar {
-  position: relative !important;
+  position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar stays in reach while scrolling */
 }
 .dtools.tbar > .tbmore {
   position: static !important;
@@ -3857,7 +3857,479 @@ main.dpage {
   max-height: min(480px, 70vh) !important;
   overflow-y: auto !important;
 }
+/* Bracket Fit is the right-hand tile: its popup opens leftwards so it stays on screen on phones */
+.vtile.fit .vpop,
+.vhero .vtile.fit .vpop {
+  left: auto !important;
+  right: 0 !important;
+}
 
+
+/* ---------- 9. The Forge: one flat bar on top (FORGE · deck · undo · save · leave) and a flat suggestions panel ---------- */
+.forgetop {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin: 0 calc(-1 * var(--gutter, 16px)) var(--s4);
+  padding: var(--s2) var(--gutter, 16px);
+  min-height: 56px;
+  background: var(--u-ink);
+  border-bottom: 2px solid var(--u-red);
+}
+.forgetop .fstamp {
+  font: 400 20px/1 var(--u-display);
+  letter-spacing: 2px;
+  color: var(--u-red);
+}
+.forgetop .ftitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--s3);
+  border-left: 1px solid var(--u-line2);
+}
+.forgetop .ftitle b {
+  font: 400 17px/1.1 var(--u-display);
+  letter-spacing: 0.02em;
+  color: var(--u-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forgetop .ftitle small,
+.forgetop .fres {
+  font: 400 11px/1.2 var(--u-mono);
+  color: var(--u-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forgetop .fres {
+  margin-left: var(--s2);
+}
+.forgetop .fundo {
+  max-width: 34ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.forgetop .fundo small {
+  font: 400 11px var(--u-mono);
+  color: var(--u-muted);
+  margin-left: var(--s1);
+}
+@media (max-width: 600px) {
+  .forgetop {
+    gap: var(--s2);
+  }
+  .forgetop .fundo small,
+  .forgetop .ftitle small {
+    display: none;
+  }
+  .forgetop .fstamp {
+    font-size: 16px;
+  }
+  .forgetop .u-btn {
+    padding: 0 var(--s3);
+  }
+}
+
+/* Suggestions: dark carbon panel, hairlines, the same chips and tabs as the rest of the app */
+.fsugg {
+  background: var(--u-carbon);
+  color: var(--u-text);
+  border: 1px solid var(--u-line);
+  padding: var(--s4);
+}
+.fsugg h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 var(--s3);
+  font: 400 20px/1 var(--u-display);
+  letter-spacing: 1px;
+}
+.fsugg h3 small,
+.fpanes button small {
+  font: 400 12px var(--u-mono);
+  letter-spacing: 0;
+  color: var(--u-muted);
+}
+.fsugg .fgrab {
+  display: none;
+}
+.fpanes {
+  display: flex;
+  margin: 0 0 var(--s3);
+  border-bottom: 1px solid var(--u-line2);
+}
+.fpanes button {
+  flex: 1 1 0;
+  min-height: var(--tap);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font: 400 17px/1 var(--u-display);
+  letter-spacing: 1px;
+  color: var(--u-muted);
+  cursor: pointer;
+}
+.fpanes [aria-selected='true'] {
+  color: var(--u-text);
+  border-bottom-color: var(--u-red);
+}
+.fbuy > .receipt {
+  margin: 0;
+  box-shadow: none;
+  max-width: none;
+}
+/* sort and own/missing: one segmented row each, the active one red */
+.fsorts,
+.ftabs {
+  display: flex;
+  margin-bottom: var(--s3);
+  border: 1px solid var(--u-line2);
+}
+.fsorts button,
+.ftabs button {
+  flex: 1 1 0;
+  min-height: 36px;
+  padding: 0 var(--s1);
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--u-line2);
+  font: 400 13px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  color: var(--u-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.fsorts button:first-child,
+.ftabs button:first-child {
+  border-left: 0;
+}
+.fsorts [aria-checked='true'],
+.ftabs [aria-selected='true'] {
+  background: var(--u-red);
+  color: #fff;
+}
+.fsugg .fq {
+  display: flex;
+  margin-bottom: var(--s3);
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.fsugg .fq input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--s3);
+  background: var(--u-ink);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  font: 400 15px var(--u-mono);
+}
+.fchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+}
+.fchips button {
+  min-height: 32px;
+  padding: 0 var(--s3);
+  background: none;
+  border: 1px solid var(--u-line2);
+  color: var(--u-text);
+  font: 400 12px/1 var(--u-mono);
+  cursor: pointer;
+}
+.fchips button.need {
+  border-color: var(--u-yellow);
+  color: var(--u-yellow);
+}
+.fchips button.theme {
+  border-style: dashed;
+  color: var(--u-muted);
+}
+.fchips button[aria-pressed='true'] {
+  background: var(--u-red);
+  border-color: var(--u-red);
+  color: #fff;
+}
+.fcf {
+  margin-bottom: var(--s3);
+}
+.fcf > summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font: 400 13px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  color: var(--u-muted);
+  cursor: pointer;
+}
+.fcf form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.fcf form .sbox {
+  grid-column: 1 / -1;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--u-line2);
+  background: var(--u-ink);
+}
+.fcf form .sbox .tab {
+  padding: 0 var(--s2);
+  font: 400 12px var(--u-display);
+  color: var(--u-muted);
+}
+.fcf form .sbox input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  background: none;
+  border: 0;
+  color: var(--u-text);
+  font: 400 14px var(--u-mono);
+}
+.fsugg .fcfnote,
+.fsugg .fsrc,
+.fsugg > .small {
+  margin: 0 0 var(--s3);
+  font: 400 11px/1.4 var(--u-mono);
+  color: var(--u-muted);
+}
+.fsugg .fsrc {
+  margin: var(--s3) 0 0;
+}
+.fplace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0 0 var(--s3);
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--u-red);
+  font: 400 13px/1.4 var(--u-body);
+}
+.fplace button {
+  background: none;
+  border: 0;
+  color: var(--u-muted);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+/* the rows: image · name and reasons · price | + ADD */
+.frows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.frows > li {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--u-line);
+}
+.frows > li:first-child {
+  border-top: 0;
+}
+.frows > li.sel {
+  outline: 2px solid var(--u-red);
+  outline-offset: -2px;
+}
+.frows > li.blocked {
+  opacity: 0.55;
+}
+.frow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: grab;
+  touch-action: pan-y;
+}
+.frow img,
+.frow .noimg {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: #1a1a1a;
+}
+.frow .fbody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+.frow .fbody > b {
+  font: 400 15px/1.15 var(--u-display);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.frow .whys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+}
+.frow .whys > span {
+  padding: 1px var(--s1);
+  border: 1px solid var(--u-line2);
+  background: none;
+  color: var(--u-muted);
+  font: 400 11px/1.3 var(--u-mono);
+  transform: none;
+}
+.frow .whys .cgain {
+  border-color: var(--u-yellow);
+  color: var(--u-yellow);
+}
+.frow .whys .cown {
+  border-color: var(--u-green);
+  color: var(--u-green);
+}
+.frow .whys .cfit {
+  border-style: dashed;
+  color: var(--u-text);
+}
+.frow .whys .cwarn {
+  border-color: var(--u-red);
+  color: var(--u-text);
+}
+.frow .fprice {
+  flex: 0 0 auto;
+  font: 400 12px var(--u-mono);
+  color: var(--u-yellow);
+}
+.frows > li.own .fprice {
+  color: var(--u-green);
+}
+.fadd {
+  flex: 0 0 auto;
+  min-width: 64px;
+  margin-left: var(--s2);
+  background: none;
+  border: 0;
+  border-left: 1px solid var(--u-line);
+  color: var(--u-text);
+  font: 400 14px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.fadd:hover {
+  color: var(--u-red);
+}
+.fmore {
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: var(--s2);
+  background: none;
+  border: 1px solid var(--u-line2);
+  color: var(--u-text);
+  font: 400 14px var(--u-display);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.fsugg.dropover::before {
+  content: 'DROP TO CUT';
+  display: block;
+  margin: calc(-1 * var(--s4)) calc(-1 * var(--s4)) var(--s3);
+  padding: var(--s1);
+  background: var(--u-red);
+  color: #fff;
+  font: 400 15px var(--u-display);
+  text-align: center;
+}
+
+/* Phones: the suggestions become a bottom sheet (a 125px peek with the panes and sorts; tap the handle to pull it up) */
+@media (max-width: 700px) {
+  html.forging .fsugg {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    max-height: 125px;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    padding: 0 var(--s4) var(--s4);
+    border-width: 2px 0 0;
+    border-color: var(--u-red);
+    transition: max-height 0.3s ease;
+  }
+  html.forging .fsugg.up {
+    max-height: 82vh;
+    overflow-y: auto;
+  }
+  html.forging .fsugg:not(.up) .fchips,
+  html.forging .fsugg:not(.up) .fcf,
+  html.forging .fsugg:not(.up) .ftabs,
+  html.forging .fsugg:not(.up) .fsrc,
+  html.forging .fsugg:not(.up) .frows {
+    display: none;
+  }
+  html.forging .fsugg .fgrab {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    width: calc(100% + 2 * var(--s4));
+    height: 24px;
+    margin: 0 calc(-1 * var(--s4)) var(--s1);
+    background: var(--u-carbon);
+    border: 0;
+    cursor: pointer;
+  }
+  html.forging .fsugg .fgrab span {
+    display: block;
+    width: 48px;
+    height: 4px;
+    margin: 0 auto;
+    background: var(--u-line2);
+    border-radius: 2px;
+  }
+  html.forging .fsugg .fpanes button {
+    min-height: 32px;
+    font-size: 15px;
+  }
+  html.forging .fsugg .fsorts button {
+    min-height: 28px;
+  }
+  html.forging main {
+    padding-bottom: 140px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.forging .fsugg {
+    transition: none;
+  }
+}
 
 /* Swap Window header composition: SWAP <CARD> FOR [search...] */
 .swapnote .nh {

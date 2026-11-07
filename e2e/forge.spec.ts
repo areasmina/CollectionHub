@@ -87,12 +87,15 @@ test('Pins drive EDHREC: suggestions come from decks with your 📌 cards and wi
 
 test('ONLY: price bands and Game Changers filter the deck', async ({ page }) => {
   await openDeck(page);
-  const o = await opts(page);
-  await o.locator('select:has(option[value="over20"])').selectOption('over20');
+  // above 700px ONLY is a quick segment on the bar; on phones it stays in ⋮
+  const wide = page.viewportSize()!.width > 700;
+  const seg = page.locator('.lists > .tbar .qsegs[aria-label="Ownership filter"]');
+  const only = async (v: string, label: RegExp) => (wide ? seg.getByRole('button', { name: label }).click() : (await opts(page)).locator('select:has(option[value="over20"])').selectOption(v));
+  await only('over20', /CA\$20 AND UP/);
   await expect(page.locator('.lists [data-card]')).toHaveCount(1);
   await expect(page.locator('.lists [data-card="Rhystic Study"]')).toHaveCount(1);
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('CA$20 AND UP');
-  await o.locator('select:has(option[value="over20"])').selectOption('all');
+  await only('all', /EVERY CARD/);
   await expect(page.locator('.lists [data-card="Sol Ring"]')).toHaveCount(1);
 });
 
