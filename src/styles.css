@@ -11385,6 +11385,41 @@ details.dash > summary .dimp.ddeck {
     padding: 8px 12px;
     font-size: 13px;
   }
+  .shortalert.chip summary {
+    min-height: 32px;
+    padding: 4px 10px;
+    gap: 6px;
+    font-size: 12px;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .shortalert.chip summary b {
+    font-size: 13px;
+  }
+  .shortalert.chip summary span {
+    display: inline !important;
+    font-size: 11px;
+    opacity: 0.9;
+  }
+  .dcard {
+    padding: 30px 14px 14px;
+    gap: 12px;
+  }
+  .dcard .xart {
+    width: 72px;
+    height: 100px;
+  }
+  .dcard .t b {
+    font-size: 19px;
+  }
+  .dgrid li.dtile > .dlight {
+    top: 6px;
+    right: 8px;
+    min-height: 24px;
+    padding: 0 6px;
+    font-size: 11px;
+  }
 
   /* Pill navigation: sleek 42px on phones so it never dominates screen */
   .pillnav {
@@ -11403,13 +11438,46 @@ details.dash > summary .dimp.ddeck {
 
   /* RESCUE THE FORGE: Compact header on mobile (title stays visible for tests & navigation) */
   .dhero {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
     padding: 6px 10px;
     margin: 4px 0 6px;
-    gap: 6px;
+    gap: 8px;
   }
-  .dhero .cimg,
   .dhero .banner.ht {
     display: none;
+  }
+  .dhero .cimg {
+    flex: 0 0 54px;
+    width: 54px;
+    height: 75px;
+    min-height: 75px;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  .dhero .cimg .cmdrbtn {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    display: block;
+  }
+  .dhero .cimg .cmdrbtn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 3px;
+  }
+  .dhero .cimg .cmdrhint,
+  .dhero .cimg .cmdrmore,
+  .dhero .cimg .doodles {
+    display: none;
+  }
+  .dhero .cright,
+  .dhero .ctitle {
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .dhero .ctitle h1 {
     font-size: 20px;
