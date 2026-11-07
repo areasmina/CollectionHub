@@ -107,12 +107,26 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
   await page.screenshot({ path: 'test-results/commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
-test('Collection: counters, widget, grid tiles with tally marks', async ({ page }) => {
+test('Collection (overhaul): one ribbon says the facts once, grid tiles with tally marks', async ({ page }) => {
   await go(page, 'collection');
   await expect(page.locator('details.dash')).not.toHaveAttribute('open', ''); // the collection comes first
-  await expect(page.locator('details.dash .dsum')).toContainText('cards');
+  // one ribbon: cards · unique · commanders · ≈CA$ worth · decks, then + DECK and IMPORT
+  const sum = page.locator('details.dash > summary .dsum');
+  await expect(sum).toContainText('20 cards');
+  await expect(sum).toContainText('8 unique');
+  await expect(sum).toContainText('1 commander');
+  await expect(sum).toContainText(/≈CA\$236/);
+  await expect(sum).toContainText('1 deck');
+  // say it once: no stat tiles or appraisal slip repeat the numbers, and the ribbon stays when the overview is open
   await dash(page);
-  await expect(page.locator('.stats .stat')).toHaveCount(3);
+  await expect(page.locator('.stats, .slip')).toHaveCount(0);
+  await expect(sum).toContainText('20 cards');
+  await expect(page.locator('main.coll .tape, main.coll .doodle')).toHaveCount(0);
+  // IMPORT opens the import box (and keeps the overview open)
+  await page.locator('details.dash > summary .dimp').click();
+  await expect(page.locator('details.dash')).toHaveAttribute('open', '');
+  await expect(page.locator('.importbox textarea')).toBeVisible();
+  await fits(page, ['details.dash', '.importbox']);
   await expect(page.locator('.topwidget')).toHaveCount(0); // decks row replaced the top 3
   await expect(page.locator('.ctile').first()).toBeVisible();
   // no name title outside the card; the copy pips sit on the card and show once it's selected (tap / focus / hover)
@@ -127,7 +141,7 @@ test('Collection: counters, widget, grid tiles with tally marks', async ({ page 
   const n = Number(await t.locator('.tstep b').innerText());
   await t.locator('.tstep button').last().click();
   await expect(t.locator('.tstep b')).toHaveText(String(n + 1));
-  await fits(page, ['.stats', '.ctile', 'details.dash']);
+  await fits(page, ['.ctile', 'details.dash']);
 });
 
 test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, info) => {

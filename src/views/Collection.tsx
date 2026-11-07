@@ -18,7 +18,7 @@ import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { snapshot } from '../lib/pricewatch';
 import { priced, priceSum, Progress } from './shared';
-import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
+import { Title } from './zine';
 
 export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
   return (
@@ -164,187 +164,133 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
     </svg>
   );
 
-  return (
-    <>
-      <PageDecor seed={821} rays="18% 18%" sheet={{ side: 'right', top: 120, rot: 7 }} />
-      <main>
-        <section className="chead2">
-          {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
-              control (switch, add, rename, reset, delete, plus sync and haptics). */}
-          <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />} />
-        </section>
+  // One ribbon says the binder's facts once (owner's Overhaul: "N cards · N commanders · CA$X · N decks").
+  const facts: [string, string, string?][] = [
+    [total.toLocaleString(), total === 1 ? 'card' : 'cards'],
+    [unique.toLocaleString(), 'unique'],
+    [commanders.toLocaleString(), commanders === 1 ? 'commander' : 'commanders'],
+    ...(value > 0 ? [[`≈${cad(value)}`, '', `${PRICE_METHOD} · ${fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}`] as [string, string, string]] : []),
+    ...(decks > 0 ? [[String(decks), decks === 1 ? 'deck' : 'decks'] as [string, string]] : []),
+  ];
 
-        {/* Dashboard fold (owner's call, Nov 6): counts, worth, your decks and import live together, closed by default,
-            so the collection comes first. The closed fold still says the numbers in one line. */}
-        <details className="dash" open={dashOpen} onToggle={(e) => setDash(e.currentTarget.open)}>
-          <summary aria-label={`Binder overview: ${total} cards, ${commanders} commanders${decks ? `, ${decks} decks` : ''}`}>
-            {dashOpen ? (
-              <span className="dsum dhide">HIDE THE OVERVIEW</span>
-            ) : (
-            <span className="dsum">
-              <span className="dsum-chip">
-                <b>{total.toLocaleString()}</b> cards
+  // THE OVERHAUL, Collection: the loud frame (ransom title + binder tag) → one ribbon of facts and actions → the cards with
+  // their one toolbar. Your decks and the import fold open under the ribbon.
+  return (
+    <main className="dpage coll">
+      <section className="chead2">
+        {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
+            control (switch, add, rename, reset, delete, plus sync and haptics). */}
+        <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />} />
+      </section>
+
+      <details className="dash" open={dashOpen} onToggle={(e) => setDash(e.currentTarget.open)}>
+        <summary aria-label={`Binder overview: ${total} cards, ${commanders} commanders${decks ? `, ${decks} decks` : ''}`}>
+          <span className="dsum">
+            {facts.map(([n, w, tip]) => (
+              <span key={w || 'value'} title={tip}>
+                <b>{n}</b>
+                {w && ` ${w}`}
               </span>
-              <span className="dsum-chip cmdr-chip">
-                <b>{commanders.toLocaleString()}</b> {commanders === 1 ? 'commander' : 'commanders'}
-              </span>
-              {value > 0 && (
-                <span className="dsum-chip val-chip">
-                  <b>{cad(value).replace(/\.\d\d$/, '')}</b>
-                </span>
-              )}
-              {decks > 0 && (
-                <span className="dsum-chip deck-chip">
-                  <b>{decks}</b> {decks === 1 ? 'deck' : 'decks'}
-                </span>
-              )}
+            ))}
+          </span>
+          <span className="dacts2">
+            <span role="button" tabIndex={0} className="u-btn ghost ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
+              + DECK
             </span>
-            )}
-            {!dashOpen && (
-              <div className="dash-quick-actions">
-                <span className="dimp ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
-                  + DECK
-                </span>
-                <span className="dimp" onClick={() => setImportOpen(true)}>
-                  IMPORT ▼
-                </span>
-              </div>
-            )}
+            <span role="button" tabIndex={0} className="u-btn dimp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), setDash(true), setImportOpen(true))}>
+              IMPORT
+            </span>
+            <span className="chev" aria-hidden="true">
+              ▾
+            </span>
+          </span>
+        </summary>
+
+        {/* MY DECKS and Collection Import are separate sections so pasting a deck never gets confused with importing owned cards into the binder */}
+        <MyDecks s={s} />
+
+        <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
+          <summary>
+            <b>+ IMPORT CARDS</b>
+            <small>cards you own in {name} (not a deck)</small>
             <span className="chev" aria-hidden="true">
               ▾
             </span>
           </summary>
-          <section className="stats">
-            <div className="stat gbox" style={{ transform: 'rotate(-1deg)' }}>
-              <span className="worn" aria-hidden="true" />
-              <span className="spray" aria-hidden="true" />
-              <b>{total.toLocaleString()}</b>
-              <span>cards</span>
-              <Doodles n={377} count={1} spots={[[70, -24]]} />
-            </div>
-            <div className="stat" style={{ transform: 'rotate(.8deg)' }}>
-              <span className="worn" aria-hidden="true" />
-              <span className="spray" aria-hidden="true" />
-              <b>{unique.toLocaleString()}</b>
-              <span>unique cards</span>
-            </div>
-            <div className="stat red gbox" style={{ transform: 'rotate(-1.4deg)' }}>
-              <span className="worn" aria-hidden="true" />
-              <span className="spray" aria-hidden="true" />
-              <b>{commanders.toLocaleString()}</b>
-              <span>commanders</span>
-              <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
-                <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
-                <path d="M5 40 C20 37 42 42 58 38" />
-                <circle cx="30" cy="4" r="2.6" />
-                <circle cx="4" cy="10" r="2.2" />
-                <circle cx="58" cy="8" r="2.2" />
-              </svg>
-            </div>
-            <div className="slip">
-              <span className="se">worth about</span>
-              <b>{value > 0 ? cad(value) : 'CA$—'}</b>
-              <span className="se small" title={PRICE_METHOD}>
-                est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
-              </span>
-              <span className="warn">warning</span>
-              {value > 0 && <span className="stamp">APPRAISED</span>}
-            </div>
-          </section>
-
-          {/* MY DECKS and Collection Import are separate sections so pasting a deck never gets confused with importing owned cards into the binder */}
-          <MyDecks s={s} />
-
-          <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
-            <summary>
-              <span className="stripe" aria-hidden="true" />
-              <b>+ IMPORT CARDS</b>
-              <small>cards you own in {name} (not a deck)</small>
-              <span className="chev" aria-hidden="true">
-                ▾
-              </span>
-            </summary>
-            <section className="importrow">
-              <div className="flyer gbox">
-                <Doodles n={433} count={1} spots={[[70, 60]]} paper />
-                <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
-                <p>Add cards you own to <b>{name}</b>: ManaBox CSV, a CSV with name/quantity columns, or a card list ("1 Sol Ring"). To add a deck without adding its cards to your collection, use <b>+ ADD A DECK</b> above.</p>
-                <label className="btn ink file">
-                  {upload}
-                  CHOOSE A FILE
-                  <input
-                    type="file"
-                    accept=".csv,.txt,text/csv,text/plain"
-                    disabled={!!busy}
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      e.target.value = '';
-                      if (f) setText(await f.text());
-                    }}
-                  />
-                </label>
-              </div>
-              <div className="pastecol">
-                <label className="notebook">
-                  <span>…or paste cards you own here</span>
-                  <textarea className="ruled" rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
-                </label>
-                {deckLike && (
-                  <div className="deckwarn" role="status">
-                    <span>
-                      <b>⚠ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
-                    </span>
-                    <button type="button" className="btn" disabled={!!busy} onClick={() => void saveAsDeckInstead()}>
-                      SAVE AS A DECK INSTEAD →
-                    </button>
-                  </div>
-                )}
-                <div className="btnrow slimbtns">
-                  <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
-                    + ADD
-                  </button>
-                  <button className="btn secondary" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
-                    REPLACE
-                  </button>
-                </div>
-
-                {busy && <Progress {...busy} />}
-                {error && <p className="error">{error}</p>}
-                {result && <ImportReport r={result} />}
-              </div>
-            </section>
-          </details>
-
-          {illegal > 0 && (
-            <p className="count">
-              {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
+          <section className="importrow">
+            <p className="ihelp">
+              Add cards you own to <b>{name}</b>: ManaBox CSV, a CSV with name/quantity columns, or a card list ("1 Sol Ring"). To add a deck without adding its cards to your collection, use <b>+ DECK</b>.
             </p>
-          )}
-
-          </details>
-
-        <section>
-          <CardsView
-            entries={shown}
-            cards={cards}
-            profile={profile}
-            binderName={name}
-            q={q}
-            setQ={setQ}
-            more={
-              <>
-                <button className="sticker" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
-                  EXPORT CSV
+            <label className="u-btn file">
+              {upload}
+              CHOOSE A FILE
+              <input
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+                disabled={!!busy}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (f) setText(await f.text());
+                }}
+              />
+            </label>
+            <label className="ipaste">
+              <span>…or paste cards you own</span>
+              <textarea rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
+            </label>
+            {deckLike && (
+              <div className="deckwarn" role="status">
+                <span>
+                  <b>⚠ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
+                </span>
+                <button type="button" className="u-btn" disabled={!!busy} onClick={() => void saveAsDeckInstead()}>
+                  SAVE AS A DECK INSTEAD →
                 </button>
-                <button className="sticker" disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
-                  EXPORT TEXT
-                </button>
-              </>
-            }
-          />
-        </section>
-      </main>
-    </>
+              </div>
+            )}
+            <div className="ibtns">
+              <button className="u-btn primary" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
+                + ADD
+              </button>
+              <button className="u-btn" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
+                REPLACE
+              </button>
+            </div>
+            {busy && <Progress {...busy} />}
+            {error && <p className="error">{error}</p>}
+            {result && <ImportReport r={result} />}
+          </section>
+        </details>
+      </details>
+
+      {illegal > 0 && (
+        <p className="count">
+          {illegal} {illegal === 1 ? 'card is' : 'cards are'} not legal in Commander (tokens, Un-cards, banned): kept in the binder, not counted as owned for decks.
+        </p>
+      )}
+
+      <section>
+        <CardsView
+          entries={shown}
+          cards={cards}
+          profile={profile}
+          binderName={name}
+          q={q}
+          setQ={setQ}
+          more={
+            <>
+              <button className="u-chip" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
+                EXPORT CSV
+              </button>
+              <button className="u-chip" disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
+                EXPORT TEXT
+              </button>
+            </>
+          }
+        />
+      </section>
+    </main>
   );
 }
 

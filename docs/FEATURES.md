@@ -27,7 +27,8 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
 | Commanders in your binder, ranked; search any commander | Live | v1 | e2e "Discover (overhaul)" |
-| Overhaul phase 3, Discover: loud frame (ransom title, the eye, tagline, "N DECKS" answer), one toolbar (search, Enter opens; SORT and COLOUR behind ⋮, chosen ones named on the bar), flat commander tiles (art, name + pips, match % + green meter, decks · price, READY / N MISSING), two across on phones | In PR | – | e2e "Discover (overhaul)", "Title answer" |
+| Overhaul phase 3, Discover: loud frame (ransom title, the eye, tagline, "N DECKS" answer), one toolbar (search, Enter opens; SORT and COLOUR behind ⋮, chosen ones named on the bar), flat commander tiles (art, name + pips, match % + green meter, decks · price, READY / N MISSING), two across on phones | Live | #24 | e2e "Discover (overhaul)", "Title answer" |
+| Overhaul phase 4, Collection: loud frame (ransom title + binder tag), one ribbon (N cards · N unique · N commanders · ≈CA$ worth · N decks, + DECK, IMPORT) that stays when the overview opens; your decks and a flat import underneath; the stat tiles and appraisal slip that repeated the numbers are gone | In PR | – | e2e "Collection (overhaul)", "Import: when Scryfall stops answering" |
 | Commander stats cached on the device (no EDHREC reload on app start) | Live | #3 | `lib/cmdrstats.test.ts`, e2e "Reload: commander stats come back from the device" |
 | Saved commander page shows at once even when EDHREC is down | Live | #3 | e2e "an old saved page shows at once" |
 | Commander page: sections in order with count + cost, grid / list, tags, Built around | Live | #6 | e2e "Commander page (Discover): sections in order", "Deck page (overhaul)" |

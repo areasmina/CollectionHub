@@ -2229,6 +2229,170 @@ main.dpage {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* ---------- 6. Collection: loud frame (title + binder tag) → one ribbon of facts → the cards and their toolbar ---------- */
+.coll .chead2 {
+  margin: 0;
+  padding: var(--s5) 0 var(--s4);
+}
+.coll .dash {
+  margin: 0 0 var(--s4);
+  border-top: 1px solid var(--u-line2);
+  border-bottom: 1px solid var(--u-line2);
+}
+.coll .dash > summary {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s4);
+  min-height: 56px;
+  padding: var(--s2) 0;
+  cursor: pointer;
+}
+.coll .dash > summary::-webkit-details-marker {
+  display: none;
+}
+.coll .dsum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s1) var(--s4);
+  font: 400 13px var(--u-mono);
+  color: var(--u-muted);
+}
+.coll .dsum b {
+  font: 400 20px var(--u-display);
+  color: var(--u-text);
+  letter-spacing: 0.02em;
+}
+.coll .dacts2 {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.coll .dash .chev {
+  display: inline-block;
+  width: 24px;
+  text-align: center;
+  color: var(--u-muted);
+  transition: transform 0.2s;
+}
+.coll .dash[open] > summary .chev {
+  transform: rotate(180deg);
+}
+.coll .dash[open] > summary {
+  border-bottom: 1px solid var(--u-line);
+}
+.coll .dash > :not(summary) {
+  margin-top: var(--s4);
+}
+.coll .dash > :last-child {
+  margin-bottom: var(--s4);
+}
+
+/* Import: flat, under its own one-line header */
+.coll .importbox {
+  border: 1px solid var(--u-line2);
+  border-radius: 4px;
+  background: var(--u-carbon);
+}
+.coll .importbox > summary {
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s3);
+  padding: var(--s3) var(--s4);
+  cursor: pointer;
+}
+.coll .importbox > summary::-webkit-details-marker {
+  display: none;
+}
+.coll .importbox > summary b {
+  font: 400 16px var(--u-display);
+  letter-spacing: 0.04em;
+}
+.coll .importbox > summary small {
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.coll .importbox > summary .chev {
+  margin-left: auto;
+}
+.coll .importbox[open] > summary .chev {
+  transform: rotate(180deg);
+}
+.coll .importrow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s3);
+  padding: 0 var(--s4) var(--s4);
+}
+.coll .ihelp {
+  margin: 0;
+  font: 400 13px/1.5 var(--u-mono);
+  color: var(--u-muted);
+}
+.coll .ihelp b {
+  color: var(--u-text);
+}
+.coll .importrow .file {
+  position: relative;
+  gap: var(--s2);
+}
+.coll .importrow .file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.coll .ipaste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  width: 100%;
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.coll .ipaste textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: var(--s3);
+  border: 1px solid var(--u-line2);
+  border-radius: 2px;
+  background: var(--u-ink);
+  color: var(--u-text);
+  font: 400 14px/1.5 var(--u-mono);
+  resize: vertical;
+}
+.coll .ipaste textarea:focus {
+  outline: 2px solid var(--u-yellow);
+  outline-offset: 1px;
+}
+.coll .ibtns {
+  display: flex;
+  gap: var(--s2);
+}
+.coll .deckwarn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding: var(--s3);
+  border: 1px solid var(--u-yellow);
+  font: 400 13px/1.4 var(--u-mono);
+}
+.coll .collbar .tbar {
+  border-width: 1px;
+  border-color: var(--u-line2);
+  box-shadow: none;
+}
+.coll > .count {
+  margin: 0 0 var(--s4);
+}
+
 /* ==========================================================================
    DYNAMIC ISLAND ENHANCEMENTS & HATSUNE MIKU SYNC STYLING
    ========================================================================== */
@@ -2639,92 +2803,6 @@ main.dpage {
 }
 .arsenal-console .decks-overview-bar .ov-stat.bracket .ov-val {
   color: #ffd400;
-}
-
-/* ==========================================================================
-   COLLECTION HEADER & SEARCH BAR (IMAGE 4 REDESIGN)
-   ========================================================================== */
-
-details.dash > summary {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  flex-wrap: wrap !important;
-  gap: 12px !important;
-  background: #111114 !important;
-  border: 2px solid #2c2c36 !important;
-  border-radius: 8px !important;
-  box-shadow: 3px 3px 0 var(--u-red, #e5141f) !important;
-  padding: 8px 14px !important;
-}
-details.dash > summary .dsum {
-  display: flex !important;
-  align-items: center !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
-}
-.dsum-chip {
-  background: #1a1a20;
-  border: 1px solid #30303c;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font: 400 12px/1 var(--u-mono, monospace);
-  text-transform: uppercase;
-  color: #cccccc;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.dsum-chip b {
-  font: 700 14px/1 var(--u-display, sans-serif);
-  color: #ffffff;
-  letter-spacing: 0.04em;
-}
-.dsum-chip.cmdr-chip {
-  border-left: 3px solid #ffd400;
-}
-.dsum-chip.cmdr-chip b {
-  color: #ffd400;
-}
-.dsum-chip.val-chip {
-  border-left: 3px solid var(--miku-green, #00f5a0);
-  color: var(--miku-green, #00f5a0);
-}
-.dsum-chip.val-chip b {
-  color: var(--miku-green, #00f5a0);
-}
-.dsum-chip.deck-chip {
-  border-left: 3px solid #38bdf8;
-}
-.dsum-chip.deck-chip b {
-  color: #38bdf8;
-}
-.dash-quick-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-details.dash > summary .dimp.ddeck {
-  background: var(--u-red, #e60012) !important;
-  color: #ffffff !important;
-  border: 1px solid #000000 !important;
-  font: 700 12px/1 var(--u-display, sans-serif) !important;
-  letter-spacing: 0.05em !important;
-  padding: 6px 12px !important;
-  border-radius: 4px !important;
-  transform: none !important;
-  cursor: pointer !important;
-}
-details.dash > summary .dimp {
-  background: #ffd400 !important;
-  color: #000000 !important;
-  border: 1px solid #000000 !important;
-  font: 700 12px/1 var(--u-display, sans-serif) !important;
-  letter-spacing: 0.05em !important;
-  padding: 6px 12px !important;
-  border-radius: 4px !important;
-  transform: none !important;
-  cursor: pointer !important;
 }
 
 /* ==========================================================================
