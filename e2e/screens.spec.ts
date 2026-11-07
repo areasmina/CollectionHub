@@ -663,7 +663,7 @@ test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', asyn
   expect(t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
   await expect(page.locator('.dlist .stamp, .dlist .doodles, .addpage .holes')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '⚒ NEW BLANK DECK' })).toBeVisible();
-  await fits(page, ['.decksbar', '.dribbon', '.dgrid', '.addpage']);
+  await fits(page, ['.decksbar', '.dribbon', '.dgrid']);
 });
 
 test('My decks shelf: a long deck name never makes its tile bigger', async ({ page }) => {

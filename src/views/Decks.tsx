@@ -979,11 +979,19 @@ export function Decks(s: Shared) {
     scrollTo(0, 0);
   }
 
+  const [importOpen, setImportOpen] = useState(false);
+
   function jumpToAdd() {
-    const el = document.querySelector<HTMLElement>('.addpage');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el?.querySelector<HTMLInputElement>('input')?.focus();
+    haptic('open');
+    setImportOpen(true);
   }
+
+  useEffect(() => {
+    if (!importOpen) return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setImportOpen(false);
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+  }, [importOpen]);
 
   return (
     <>
@@ -1027,38 +1035,54 @@ export function Decks(s: Shared) {
           </p>
         )}
         <MyDecks s={s} onAdd={jumpToAdd} onSeeAll={() => document.querySelector('.dgrid')?.scrollIntoView({ behavior: 'smooth' })} />
-        <section className="addpage u-panel" aria-label="Add a deck">
-            <h2>ADD A DECK</h2>
-            <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
-            <label>
-              deck name
-              <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} />
-            </label>
-            <label className="u-btn file">
-              CHOOSE A FILE
-              <input
-                type="file"
-                accept=".txt,.csv,text/plain,text/csv"
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (!f) return;
-                  setText(await f.text());
-                  if (!name) setName(f.name.replace(/\.\w+$/, ''));
-                }}
-              />
-            </label>
-            <label>
-              …or paste the list
-              <textarea rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
-            </label>
-            <button className="u-btn primary" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
-              SAVE DECK
-            </button>
-            {busy && <Progress {...busy} />}
-            {error && <p className="error">{error}</p>}
-            {result && <ImportReport r={result} deck />}
-          </section>
+      {importOpen && (
+        <>
+          <div className="backdrop" onClick={() => setImportOpen(false)} />
+          <div className="addpage-pop note-pop" role="dialog" aria-modal="true" aria-label="Import or paste a deck" onClick={(e) => e.stopPropagation()}>
+            <div className="nh">
+              <span>IMPORT <mark>A DECK</mark></span>
+              <button type="button" className="close" onClick={() => setImportOpen(false)} aria-label="Close dialog">✕</button>
+            </div>
+            <section className="addpage u-panel" aria-label="Add a deck">
+              <h2>ADD A DECK</h2>
+              <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
+              <label>
+                deck name
+                <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+              </label>
+              <label className="u-btn file">
+                CHOOSE A FILE
+                <input
+                  type="file"
+                  accept=".txt,.csv,text/plain,text/csv"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!f) return;
+                    setText(await f.text());
+                    if (!name) setName(f.name.replace(/\.\w+$/, ''));
+                  }}
+                />
+              </label>
+              <label>
+                …or paste the list
+                <textarea rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
+              </label>
+              <div className="addpage-actions">
+                <button className="u-btn primary" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
+                  SAVE DECK
+                </button>
+                <button type="button" className="u-btn ghost" onClick={() => setImportOpen(false)}>
+                  CANCEL
+                </button>
+              </div>
+              {busy && <Progress {...busy} />}
+              {error && <p className="error">{error}</p>}
+              {result && <ImportReport r={result} deck />}
+            </section>
+          </div>
+        </>
+      )}
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid cgrid">
           {decks.map((d) => {

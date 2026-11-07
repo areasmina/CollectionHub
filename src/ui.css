@@ -1388,7 +1388,7 @@ main.dpage {
 
 /* Options menu (⋮) overhaul: clean scrolling, no overlapping theme chips, tamed select dropdowns */
 .dtools.tbar {
-  position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar stays in reach while scrolling */
+position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar stays in reach while scrolling */
 }
 .dtools.tbar > .tbmore {
   position: static !important;
@@ -4568,4 +4568,65 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 .vhero .vtile.fit .vpop {
   left: auto !important;
   right: 0 !important;
+}
+
+/* Import deck popup dialog (replaces redundant inline add chart) */
+.addpage-pop {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(600px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 48px) !important;
+  overflow-y: auto !important;
+  z-index: 1000 !important;
+  background: #141416 !important;
+  border: 2px solid #33333e !important;
+  border-radius: 8px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.98), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+  padding: 16px !important;
+}
+
+.addpage-pop .nh {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+  font: 800 16px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.04em !important;
+}
+
+.addpage-pop .nh .close {
+  background: transparent !important;
+  border: 1px solid #444455 !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  width: 32px !important;
+  height: 32px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.addpage-pop .nh .close:hover {
+  background: #2a2a32 !important;
+  border-color: #ffd400 !important;
+  color: #ffd400 !important;
+}
+
+.addpage-pop .addpage {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.addpage-actions {
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
 }
