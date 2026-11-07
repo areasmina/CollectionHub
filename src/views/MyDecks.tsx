@@ -23,7 +23,7 @@ export function MyDecks({ s }: { s: Shared }) {
             MY DECKS ({decks.length}) →
           </button>
         </h2>
-        <button type="button" className="adddeckbtn" onClick={() => (haptic('open'), openDeckList())}>
+        <button type="button" className="u-btn ghost adddeckbtn" onClick={() => (haptic('open'), openDeckList())}>
           + ADD A DECK
         </button>
       </div>
@@ -37,7 +37,7 @@ export function MyDecks({ s }: { s: Shared }) {
               <button onClick={() => (haptic('open'), openDeck(d.name))} aria-label={`${d.name}, ${pct}% owned: open in the Forge`}>
                 <span className="art">{img && <img src={img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}</span>
                 <b>{d.name}</b>
-                <small>{pct}% owned · ⚒ forge</small>
+                <small>{pct}% owned</small>
               </button>
               <DeckLight deck={d} />
             </li>

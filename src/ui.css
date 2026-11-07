@@ -904,7 +904,7 @@ main.dpage {
   gap: var(--s1);
 }
 /* salt: a quiet line in the meta row (its saltiest cards one tap away) */
-.vmeta .scrap.salt {
+.vmeta .scrap:is(.salt, .bracket) {
   position: relative;
   margin: 0;
   padding: 0;
@@ -915,11 +915,11 @@ main.dpage {
   filter: none;
   clip-path: none;
 }
-.vmeta .scrap.salt::before,
-.vmeta .scrap.salt::after {
+.vmeta .scrap:is(.salt, .bracket)::before,
+.vmeta .scrap:is(.salt, .bracket)::after {
   display: none;
 }
-.vmeta .scrap.salt > summary {
+.vmeta .scrap:is(.salt, .bracket) > summary {
   min-height: 0;
   transform: none;
   border: 0;
@@ -933,8 +933,8 @@ main.dpage {
   color: var(--u-muted);
   background: none;
 }
-.vmeta .scrap.salt .k,
-.vmeta .scrap.salt .amt {
+.vmeta .scrap:is(.salt, .bracket) .k,
+.vmeta .scrap:is(.salt, .bracket) .amt {
   font: inherit;
   color: inherit;
   letter-spacing: 0;
@@ -943,10 +943,10 @@ main.dpage {
   transform: none;
   text-shadow: none;
 }
-.vmeta .scrap.salt .amt {
+.vmeta .scrap:is(.salt, .bracket) .amt {
   color: var(--u-text);
 }
-.vmeta .scrap.salt .popnote {
+.vmeta .scrap:is(.salt, .bracket) .popnote {
   background: var(--u-carbon);
   color: var(--u-text);
   border: 1px solid var(--u-line2);
@@ -2121,61 +2121,7 @@ main.dpage {
   }
 }
 
-/* 9. Decks Arsenal Overview Bar (Item 8) */
-.decks-overview-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
-  margin: 12px 0 20px;
-  padding: 12px 16px;
-  background: #141414;
-  border: 1px solid #282828;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-}
-.decks-overview-bar .ov-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: left;
-}
-.decks-overview-bar .ov-val {
-  font: 700 20px/1 var(--u-display, Impact, sans-serif);
-  color: #ffffff;
-  letter-spacing: 0.04em;
-}
-.decks-overview-bar .ov-lbl {
-  font: 400 10px/1 var(--u-mono, monospace);
-  color: var(--u-muted, #888888);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.decks-overview-bar .ov-colors .ov-pips {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 2px;
-}
-.decks-overview-bar .ov-pip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font: 700 11px/1 var(--u-display, sans-serif);
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: #222222;
-  color: #777777;
-  border: 1px solid #333333;
-}
-.decks-overview-bar .ov-pip.active {
-  color: #ffffff;
-  border-color: #555555;
-}
-.decks-overview-bar .ov-pip.pip-w.active { background: rgba(248, 246, 216, 0.15); border-color: #f8f6d8; }
-.decks-overview-bar .ov-pip.pip-u.active { background: rgba(14, 104, 171, 0.25); border-color: #0e68ab; }
-.decks-overview-bar .ov-pip.pip-b.active { background: rgba(21, 11, 0, 0.6); border-color: #a69f9d; }
-.decks-overview-bar .ov-pip.pip-r.active { background: rgba(211, 32, 42, 0.25); border-color: #d3202a; }
-.decks-overview-bar .ov-pip.pip-g.active { background: rgba(0, 115, 62, 0.25); border-color: #00733e; }
+/* 9. Card filter buttons above the bar (Item 8) */
 
 .tbar .fbody .cfilter .cfbtns {
   position: relative !important;
@@ -2724,88 +2670,6 @@ main.dpage {
 }
 
 /* ==========================================================================
-   DECKS ARSENAL CONSOLE (IMAGE 3 REDESIGN)
-   ========================================================================== */
-
-.arsenal-console {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: #111114;
-  border: 2px solid #282830;
-  border-radius: 10px;
-  box-shadow: 4px 4px 0 #000000;
-  padding: 16px 20px;
-  margin: 16px 0 24px;
-}
-.arsenal-console .decksbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin: 0;
-}
-.arsenal-console .decksbar .count {
-  margin: 4px 0 0;
-  font: 400 13px/1 var(--u-mono, monospace);
-  color: #aaaaaa;
-}
-.arsenal-console .decksactions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.arsenal-console .decksactions .btn.save {
-  background: var(--u-red, #e60012);
-  color: #ffffff;
-  border: 2px solid #000000;
-  box-shadow: 3px 3px 0 #000000;
-  font: 700 13px/1 var(--u-display, sans-serif);
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: transform 0.1s ease;
-}
-.arsenal-console .decksactions .btn.save:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0 #000000;
-}
-.arsenal-console .decksactions .btn.ink {
-  background: #1d1d22;
-  color: #ffffff;
-  border: 2px solid #3d3d48;
-  box-shadow: 3px 3px 0 #000000;
-  font: 700 13px/1 var(--u-display, sans-serif);
-  padding: 10px 16px;
-  cursor: pointer;
-}
-.arsenal-console .shortalert {
-  margin: 0;
-  background: #ffd400;
-  border: 2px solid #000000;
-  box-shadow: 3px 3px 0 #000000;
-  color: #000000;
-  border-radius: 4px;
-  padding: 8px 12px;
-}
-.arsenal-console .shortalert summary b {
-  color: #000000;
-}
-.arsenal-console .decks-overview-bar {
-  margin: 0;
-  background: #0d0d10;
-  border: 1px solid #222228;
-}
-.arsenal-console .decks-overview-bar .ov-stat.ready .ov-val {
-  color: var(--miku-green, #00f5a0);
-  text-shadow: 0 0 10px rgba(0, 245, 160, 0.4);
-}
-.arsenal-console .decks-overview-bar .ov-stat.bracket .ov-val {
-  color: #ffd400;
-}
-
-/* ==========================================================================
    DISCOVER EYE INTEGRATION ON DESKTOP (IMAGE 5)
    ========================================================================== */
 
@@ -2821,6 +2685,476 @@ main.dpage {
     pointer-events: none !important;
     z-index: 0 !important;
   }
+}
+
+/* ---------- 7. Saved deck: the deck page's hero (.vhero) and strip (.dstrip) → toolbar → cards | flat side panel ---------- */
+.forgemain .vhero .vname .dlight {
+  align-self: center;
+  margin-left: var(--s2);
+}
+.dhero.hasmenu {
+  cursor: context-menu;
+}
+.vhero.noimg {
+  grid-template-columns: minmax(0, 1fr);
+}
+.vhero.noimg .vname {
+  grid-column: 1;
+}
+.dhero .vmeta .scrap.bracket {
+  position: relative;
+}
+.vmeta .scrap.bracket .bstamp,
+.vmeta .scrap.bracket .caret {
+  font: inherit;
+  color: var(--u-text);
+  background: none;
+  border: 0;
+  padding: 0;
+  transform: none;
+  box-shadow: none;
+}
+.dhero .vmeta .scrap.bracket .popnote {
+  width: min(340px, 86vw);
+  padding: var(--s3) var(--s4);
+  list-style: none;
+}
+.dhero .vmeta .scrap.bracket .popnote li + li {
+  margin-top: var(--s2);
+}
+.dhero .vmeta .scrap.bracket .popnote .small {
+  color: var(--u-muted);
+  font-size: 12px;
+}
+.forgemain .dstrip .dmiss {
+  color: var(--u-yellow);
+}
+.forgehint {
+  margin: 0 0 var(--s3);
+  font: 400 12px/1.4 var(--u-mono);
+  color: var(--u-muted);
+}
+
+/* Side panel: flat, hairlines only; folds to one line below desktop */
+.dpanel .fmeters {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+@media (max-width: 999px) {
+  html.forging .dpanel .fmeters {
+    background: var(--u-carbon);
+    box-shadow: none;
+    border-bottom: 1px solid var(--u-line);
+  }
+}
+.dpanel {
+  background: var(--u-carbon);
+  border: 1px solid var(--u-line);
+  padding: var(--s4);
+}
+.dpanel h2 {
+  margin: var(--s4) 0 0;
+  padding-top: var(--s4);
+  border-top: 1px solid var(--u-line);
+  font: 400 20px/1 var(--u-display);
+  letter-spacing: 1px;
+}
+.dpanel > h2:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.dfold {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  pointer-events: none;
+}
+.dfold .dsum,
+.dfold .pm {
+  display: none;
+}
+@media (max-width: 999px) {
+  .dfold {
+    pointer-events: auto;
+    cursor: pointer;
+    min-height: var(--tap);
+  }
+  .dfold .dsum {
+    display: block;
+    flex: 1;
+    font: 400 12px/1.3 var(--u-mono);
+    letter-spacing: 0;
+    color: var(--u-muted);
+  }
+  .dfold .pm {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--u-text);
+    border-bottom: 2px solid var(--u-text);
+    transform: rotate(45deg);
+    transition: transform 0.15s;
+  }
+  .dpanel.closed .dfold .pm {
+    transform: rotate(-45deg);
+  }
+  .dpanel.closed .dbody {
+    display: none;
+  }
+}
+.dsec {
+  padding-top: var(--s4);
+  margin-top: var(--s4);
+  border-top: 1px solid var(--u-line);
+}
+.dbody > .dsec:first-child {
+  border-top: 0;
+  margin-top: var(--s2);
+}
+.dsec h3 {
+  margin: 0 0 var(--s2);
+  font: 400 12px/1 var(--u-mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--u-muted);
+}
+.dsec h3 small {
+  margin-left: var(--s2);
+  text-transform: none;
+}
+.dtypes,
+.dread {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dtypes li {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--s1) 0;
+  font: 400 13px/1.3 var(--u-body);
+}
+.dtypes b {
+  font-family: var(--u-mono);
+}
+.dread li {
+  position: relative;
+  padding: var(--s1) 0 var(--s1) var(--s4);
+  font: 400 13px/1.4 var(--u-body);
+}
+.dread li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 6px;
+  height: 6px;
+  background: var(--u-yellow);
+}
+.dread li.ok::before {
+  background: var(--u-green);
+}
+.dread li.high::before {
+  background: var(--u-red);
+}
+.dsec .fetched {
+  display: block;
+  margin-top: var(--s2);
+  font: 400 11px/1.4 var(--u-mono);
+  color: var(--u-muted);
+}
+.pipbar {
+  display: flex;
+  height: 24px;
+  border: 1px solid var(--u-line2);
+}
+.pipbar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 400 12px/1 var(--u-mono);
+}
+.decknotes textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--s2) var(--s3);
+  background: var(--u-ink);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  font: 400 13px/1.5 var(--u-body);
+  resize: vertical;
+}
+.tagrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+.dtag {
+  min-height: 32px;
+  padding: 0 var(--s3);
+  background: none;
+  border: 1px solid var(--u-line2);
+  color: var(--u-text);
+  font: 400 12px/1 var(--u-mono);
+  cursor: pointer;
+}
+.tagrow input {
+  min-height: 32px;
+  width: 96px;
+  padding: 0 var(--s2);
+  background: none;
+  border: 1px dashed var(--u-line2);
+  color: var(--u-text);
+  font: 400 12px/1 var(--u-mono);
+}
+
+/* ---------- 8. My decks: loud title → one ribbon of facts → flat deck tiles (same as Discover's) → flat add form ---------- */
+.dlist .decksbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding: var(--s5) 0 var(--s4);
+}
+.decksactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.dribbon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s5);
+  margin: 0 0 var(--s5);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--u-line);
+  border-bottom: 1px solid var(--u-line);
+  font: 400 13px/1.3 var(--u-mono);
+  color: var(--u-muted);
+}
+.dribbon b {
+  font: 400 20px/1 var(--u-display);
+  color: var(--u-text);
+  letter-spacing: 0.02em;
+}
+.dribbon .dcols {
+  display: inline-flex;
+  gap: var(--s2);
+}
+.dribbon .ov-pip b {
+  font-size: 15px;
+}
+.dribbon .pip-w b { color: #e9ddb5; }
+.dribbon .pip-u b { color: #6f9be6; }
+.dribbon .pip-b b { color: #b8a8c8; }
+.dribbon .pip-r b { color: #e86a5c; }
+.dribbon .pip-g b { color: #4fc27a; }
+.dgrid > li {
+  position: relative;
+}
+.dgrid > li > .dlight {
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  min-height: 28px;
+  padding: 0 var(--s2);
+  border-width: 1px;
+  font-size: 12px;
+}
+.dgrid > li.off .dcard {
+  opacity: 0.55;
+}
+.dcard .nm > b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+}
+.dcard .dtags {
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.dcard .nocmdr {
+  font: 400 12px/1.3 var(--u-mono);
+  color: var(--u-yellow);
+}
+.dempty {
+  grid-column: 1 / -1;
+  padding: var(--s5) 0;
+  font: 400 13px var(--u-mono);
+  color: var(--u-muted);
+}
+.addpage {
+  display: grid;
+  gap: var(--s3);
+  max-width: 720px;
+  margin: 0 0 var(--s7);
+  padding: var(--s4);
+}
+.addpage.u-panel > * + * {
+  border-top: 0;
+}
+.addpage h2 {
+  margin: 0;
+  font: 400 24px/1 var(--u-display);
+  letter-spacing: 1px;
+}
+.addpage .small {
+  margin: 0;
+  font: 400 12px/1.4 var(--u-mono);
+  color: var(--u-muted);
+}
+.addpage > label:not(.file) {
+  display: grid;
+  gap: var(--s1);
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.addpage input:not([type='file']),
+.addpage textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  min-height: var(--tap);
+  background: var(--u-ink);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  font: 400 14px/1.5 var(--u-mono);
+}
+.addpage .file {
+  justify-self: start;
+}
+.addpage .file input {
+  display: none;
+}
+.addpage > .u-btn.primary {
+  justify-self: start;
+}
+.addpage .error {
+  color: var(--u-red);
+}
+
+/* My decks shelf (on Collection): one sideways row of flat tiles, SEE ALL at the end */
+.shelf {
+  margin: 0 0 var(--s5);
+}
+.shelfhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+.shelfhead h2 {
+  margin: 0;
+}
+.shelftitle {
+  padding: 0;
+  min-height: var(--tap);
+  background: none;
+  border: 0;
+  color: var(--u-text);
+  font: 400 20px/1 var(--u-display);
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.shelftitle:hover {
+  color: var(--u-yellow);
+}
+.shelf ul.shelfrow {
+  display: flex;
+  gap: var(--s3);
+  margin: 0;
+  padding: 0 0 var(--s2);
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+.shelf li {
+  position: relative;
+  flex: 0 0 176px;
+  width: 176px;
+  scroll-snap-align: start;
+}
+.shelf li > button:not(.dlight) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  width: 100%;
+  height: 100%;
+  padding: 0 0 var(--s3);
+  background: var(--u-carbon);
+  border: 1px solid var(--u-line);
+  border-radius: 4px;
+  color: var(--u-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.shelf li > button:not(.dlight):hover,
+.shelf li > button:not(.dlight):focus-visible {
+  border-color: var(--u-line2);
+}
+.shelf .art {
+  display: block;
+  aspect-ratio: 4 / 3;
+  background: #1a1a1a;
+  margin-bottom: var(--s1);
+}
+.shelf .art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shelf li b,
+.shelf li small {
+  padding: 0 var(--s3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shelf li b {
+  font: 400 15px/1.2 var(--u-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.shelf li small {
+  font: 400 11px var(--u-mono);
+  color: var(--u-muted);
+}
+.shelf li > .dlight {
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  min-height: 28px;
+  padding: 0 var(--s2);
+  border-width: 1px;
+  font-size: 12px;
+}
+.shelf li.off > button {
+  opacity: 0.55;
+}
+.shelf li.seeall > button {
+  justify-content: center;
+  padding: var(--s3) 0;
+}
+.shelf li.seeall .arr {
+  padding: 0 var(--s3);
+  font: 400 24px/1 var(--u-display);
 }
 
 /* ==========================================================================
