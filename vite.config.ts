@@ -34,5 +34,9 @@ export default defineConfig({
       },
     },
   },
-  test: { environment: 'node', exclude: ['e2e/**', 'node_modules/**'] },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts', 'worker/**/*.test.ts', 'tests/**/*.test.ts'],
+    exclude: ['e2e/**', 'node_modules/**', 'reference/**', 'legacy/**'],
+  },
 });
