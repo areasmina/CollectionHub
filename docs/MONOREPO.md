@@ -3,10 +3,9 @@
 | Folder | What it is | Status |
 |---|---|---|
 | `/` (`src/`, `e2e/`, `worker/`) | **CollectionHub**, the web app | Active |
-| `legacy/DeckWizard/` | **DeckWizard**: the original Python / ManaBox deck builder | Reference only. Its ideas live on in `src/brain/` |
+| `legacy/DeckWizard/` | **DeckWizard**: the original Python / ManaBox deck builder | Reference only. Its collection-first deck logic lives on in `src/brain/` |
+| `reference/mtg-commander-deck-generator/` | **MTG Commander Deck Generator** (Manafoundry, MIT): full EDH deck generation & optimization engine | Reference only. Source for deck generator algorithms, curve tuning, combos & explainers |
 
-DeckWizard was imported with its **full git history** (83 commits), so `git log -- legacy/DeckWizard` and `git blame` still work. The original repo on GitHub was not touched or archived.
+Both repos were imported with their **full git history**, so `git log -- <folder>` and `git blame` work seamlessly. Original repositories on GitHub are preserved.
 
-**Card Hunt** (`areasmina/card-hunt`) is deliberately *not* merged yet. It will come later, as `integrations/card-hunt/`, when we wire it into the "buy the missing cards" flow.
-
-Ideas worth borrowing from the MIT-licensed Manafoundry deck generator (keep its copyright notice on any copied code): share links with Discord previews, "what to add since you last touched this deck", curve / land analysis, and "explain why" on each pick.
+**Card Hunt** (`areasmina/card-hunt`) will be brought in later under `integrations/card-hunt/` when ready to connect to the "buy missing cards" feature.

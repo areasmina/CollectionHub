@@ -41,5 +41,5 @@ CI (`.github/workflows/ci.yml`) runs all four checks on every pull request.
 - Check every UI change at phone, tablet and desktop width. Dark mode only.
 - Deck-building rules come from the Python Deck Wizard, now in `legacy/DeckWizard/` (read its `CLAUDE.md`); port its rules
   rather than reinventing them, with a test per rule.
-- `legacy/` is reference only: read it, never edit it. If Card Hunt is added later it goes in `integrations/card-hunt/`:
+- `legacy/` and `reference/` are reference only: read them, never edit them. `reference/mtg-commander-deck-generator/` is the MIT-licensed Manafoundry engine (source for algorithms, curve modeling, and generators). If Card Hunt is added later it goes in `integrations/card-hunt/`:
   its own web page with no build step, and the app talks to it only through a small link or API, never by importing its code.
