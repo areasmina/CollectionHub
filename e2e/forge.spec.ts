@@ -80,7 +80,7 @@ test('Pins drive EDHREC: suggestions come from decks with your 📌 cards and wi
   });
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: '💀 NEVER USE' }).click();
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: 'NEVER USE' }).click();
   await expect(page.locator('.dstrip .dstatus')).toContainText('suggestions from 312 EDHREC decks that fit your pins');
   expect(asked.some((u) => u.includes('f=out=Sol Ring'))).toBe(true);
 });

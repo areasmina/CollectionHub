@@ -3825,6 +3825,12 @@ main.dpage {
   max-height: min(480px, 70vh) !important;
   overflow-y: auto !important;
 }
+/* Bracket Fit is the right-hand tile: its popup opens leftwards so it stays on screen on phones */
+.vtile.fit .vpop,
+.vhero .vtile.fit .vpop {
+  left: auto !important;
+  right: 0 !important;
+}
 
 
 /* ---------- 9. The Forge: one flat bar on top (FORGE · deck · undo · save · leave) and a flat suggestions panel ---------- */

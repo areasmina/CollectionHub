@@ -312,6 +312,9 @@ test('Decks list: right-click / hold a deck opens the deck menu (duplicate, shar
   await go(page, 'decks');
   const tile = page.locator('.dcard').first();
   await expect(tile).toBeVisible();
+  // the My decks shelf now sits above the grid: scroll first, so the late scroll event doesn't close the menu
+  await tile.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(200);
   if (page.viewportSize()!.width >= 1200) {
     await tile.click({ button: 'right' });
     const m = page.getByRole('menu', { name: 'Tatyova Lands options' });
@@ -524,6 +527,7 @@ test('Deck light: active decks mark their cards in use in Collection; off frees 
   await expect(sol.locator('.inuse')).toHaveCount(0);
   await go(page, 'decks');
   await page.locator('.shelf .dlight').first().click();
+  await expect(page.locator('.shelf .dlight').first()).toHaveText(/ACTIVE/); // saved before we reload
   await go(page, 'collection');
   await expect(sol.locator('.inuse')).toHaveCount(1);
 });

@@ -54,14 +54,15 @@ test('Title answer: deck count tucked behind the title letters', async ({ page }
   await page.locator('.discohero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
 });
 
-test('One slim bar: search + ⋮ (GEAR inside, POWER on the strip), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {
+test('One slim bar: search + ⋮ (GEAR inside, POWER in Bracket Fit), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
   const bar = page.locator('.lists > .tbar');
   await expect(page.locator('.slimbar')).toHaveCount(0);
   await expect(bar.locator('.tsearch input')).toBeVisible();
   expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52); // one slim row at every width
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
-  await expect(page.locator('.dstrip .power summary')).toHaveText(/MIN|ALL|MED|MAX/); // POWER is said once: on the strip
+  await expect(page.locator('.dstrip .power')).toHaveCount(0); // POWER is said once: inside the Bracket Fit tile (Nov 7)
+  await expect(page.locator('.vtile.fit summary')).toContainText('BRACKET FIT');
   await expect(bar.locator('.fnow')).not.toContainText(/MED|B4/);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Power' })).toHaveCount(0);
