@@ -110,19 +110,19 @@ export function CardMenu({
         <ul>
           {onSwap && (
             <li>
-              <button onClick={act(() => (haptic('open'), onSwap()))}>⇄ Swap… <small>· top 3 from your binder, or search</small></button>
+              <button onClick={act(() => (haptic('open'), onSwap()))}>SWAP… <small>· top 3 from your binder, or search</small></button>
             </li>
           )}
           {pin && !isCmdr && (
             <>
               <li>
                 <button disabled={!pin.canIn && pin.side !== 'in'} onClick={act(() => (haptic(pin.side === 'in' ? 'undo' : 'success'), pin.onPin('in')))}>
-                  {pin.side === 'in' ? '📌 Unpin (always in)' : '📌 Always in'}
+                  {pin.side === 'in' ? 'UNPIN (ALWAYS IN)' : 'ALWAYS IN'}
                   {!pin.canIn && pin.side !== 'in' && <small> · cards you own only</small>}
                 </button>
               </li>
               <li>
-                <button onClick={act(() => (haptic(pin.side === 'out' ? 'undo' : 'success'), pin.onPin('out')))}>{pin.side === 'out' ? '💀 Use it again' : '💀 Never use'}</button>
+                <button onClick={act(() => (haptic(pin.side === 'out' ? 'undo' : 'success'), pin.onPin('out')))}>{pin.side === 'out' ? 'ALLOW CARD (CLEAR NEVER)' : 'NEVER USE'}</button>
               </li>
             </>
           )}

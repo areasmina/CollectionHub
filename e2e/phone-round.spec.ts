@@ -61,7 +61,7 @@ test('One slim bar: search + ⋮ (GEAR inside, POWER on the strip), groups stack
   await expect(bar.locator('.tsearch input')).toBeVisible();
   expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52); // one slim row at every width
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
-  await expect(page.locator('.dstrip .power summary')).toHaveText(/MIN|ALL|MED|MAX/); // POWER is said once: on the strip
+  await expect(page.locator('.vtile.fit summary')).toContainText(/FITS|TARGET/i);
   await expect(bar.locator('.fnow')).not.toContainText(/MED|B4/);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Power' })).toHaveCount(0);

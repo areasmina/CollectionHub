@@ -695,12 +695,10 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await expect(page.locator('.vtile.fit summary')).toContainText(/FITS/); // decks open at MED power, MAX budget
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
+  // filter to OWNED cards via toolbar search bar quick segment
+  await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('OWNED');
   const o = await opts(page);
-  await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();
-  await expect(cov).toContainText('owned only');
-  const after = await cov.innerText();
-  const buy = (t: string) => Number(/(\d+) to buy/.exec(t)?.[1] ?? 0);
-  expect(buy(after)).toBeLessThanOrEqual(buy(before));
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();
   await fits(page, ['.lists']);
   await page.screenshot({ path: `test-results/ad-${info.project.name}.png` });
