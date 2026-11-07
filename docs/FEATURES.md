@@ -37,7 +37,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | POWER ALL · MIN · B3 · MED · B4 · MAX · B5 | Live | #6, #20 | e2e "Commander settings on a wide screen", "A + D" |
 | GEAR 1ST · 2ND · 3RD (EDHREC budget / every budget / expensive); decks from Discover open at MED · 3RD | Live | #17, #20 | e2e "A + D" |
 | Pins drive EDHREC's filter (first 2 📌 as in=, first 2 💀 as out=; under 20 decks falls back) | Live | #20 | `lib/pins.test.ts`, e2e "Pins drive EDHREC" |
-| Coverage line, OWNED ONLY / PREFER OWNED, BUY UNDER CA$N | Live | #17 | `brain/modes.test.ts`, e2e "A + D" |
+| Coverage line, PREFER OWNED, BUY UNDER CA$N (OWNED ONLY removed Nov 7; a saved OWNED ONLY falls back to PREFER OWNED) | Live | #17, #28 | `brain/modes.test.ts`, e2e "A + D" |
 | TO BUY receipt: PULL list + PRINT on the back; grouped by EDHREC play rate, cheapest first, GC / COMBO marks | Live | #17, #20 | `brain/modes.test.ts`, e2e "B: the TO BUY receipt", "TO BUY groups" |
 | Build Readiness + Bracket Fit tiles, "Why this card?" in the swap window | Live | #17 | `brain/validate.test.ts`, e2e "Readiness + Bracket Fit tiles" |
 | EDHREC With / Without card filter, self-testing with honest fallback | Live | #6 | e2e "EDHREC With / Without card" |
@@ -61,7 +61,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Combo warnings in the swap window | Live | #7 | `brain/round2.test.ts` |
 | Forge: first swap starts it, leaving asks to save, change commander with undo | Live | #6, #8 | e2e "Forging zone", "Forge: the big commander card is its menu" |
 | Full Forge: focus mode + top bar (undo, save, leave, RESERVED), ANALYSIS meters, live suggestions (OUR PICK / EDHREC LIFT / POPULAR, needs + theme chips, own-card search), tap-tap and drag incl. touch, phone bottom sheet, TO BUY pane | Live | #20 | `brain/brain.test.ts` (theme part), `e2e/forge.spec.ts` |
-| Overhaul phase 6, Forge: flat top bar (SAVE primary, LEAVE / UNDO ghost), suggestions panel on carbon with the overhaul tokens (segmented sorts and tabs, flat chips and rows), same phone bottom sheet | In PR | #27 | e2e "Forging zone", `e2e/forge.spec.ts` |
+| Overhaul phase 6, Forge: flat top bar (SAVE primary, LEAVE / UNDO ghost), suggestions panel on carbon with the overhaul tokens (segmented sorts and tabs, flat chips and rows), same phone bottom sheet | Live | #27 | e2e "Forging zone", `e2e/forge.spec.ts` |
 | Swap window "in <deck>" chip | Live | #17 | `brain/modes.test.ts` |
 | ONLY filter: Game Changers, CA$ price bands (both deck pages) | Live | #20 | `lib/arrange.test.ts`, e2e "ONLY" |
 | Compact list (name · mana · price · owned), default on phones | Live | #20 | e2e "Phones start on the compact list", "Compact list: names stay readable" |
@@ -72,7 +72,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Salt (EDHREC top 1,000) | Live | 2026-10-12 | `lib/salt.test.ts` |
 | Legality and completeness checks (100 cards, singleton, colour identity) | Partial | – | banned cards flagged (#11); the rest not done |
 | Physical copy reservations (optional per deck: shared or reserved; shared stays default), copy status per deck | Live | #12, #14 | `lib/allocation.test.ts` |
-| Deck generation modes: Owned only / Prefer owned / Budget | Partial | #17 | OWNED ONLY / PREFER OWNED / BUY UNDER live on commander pages (`brain/modes.test.ts`) |
+| Deck generation modes: Prefer owned / Budget | Partial | #17 | PREFER OWNED / BUY UNDER live on commander pages; OWNED ONLY removed Nov 7 (the brain's `ownedOnly` stays, unused) (`brain/modes.test.ts`) |
 | Playtesting (draw 7, mulligan, turns) | Parked | – | Guillermo: "much later"; plan in `/mnt/project-files/playtest-plan/` |
 
 ## Sync and app
