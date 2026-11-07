@@ -11,22 +11,53 @@ const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'coll
   await page.reload();
 };
 
-test('Discover: title, eye art, filters and commanders fit the screen', async ({ page }, info) => {
-  await expect(page.locator('.hero .titlewrap')).toBeVisible();
+test('Discover (overhaul): loud title + eye + tagline, one toolbar (sort and colours behind ⋮), flat commander grid', async ({ page }, info) => {
+  await expect(page.locator('.discohero .titlewrap')).toBeVisible();
   await expect(page.locator('.eyedoodle')).toBeVisible();
-  await expect(page.locator('.ccard').first()).toBeVisible();
+  await expect(page.locator('.discohero .tagline')).toHaveText('Your collection. Real decks. No guesswork.');
+  // the title answers itself: how many decks this binder can build
+  await expect(page.locator('.titlewrap > .tanswer')).toHaveAttribute('aria-label', '1 commander decks you can build');
+  // one slim toolbar at every width: search + ⋮ (no FILTERS tag, no taped panel)
+  const bar = page.locator('.disc .dfind > .tbar');
+  await expect(bar.getByRole('searchbox', { name: 'Search commander' })).toBeVisible();
+  await expect(page.locator('.ftag, .fpanel')).toHaveCount(0);
+  expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52);
+  await expect(bar.locator('.fnow')).toHaveText(/% OWNED/);
+  // flat tiles: no tilt, no tape; name, colour pips, match % with the green meter, decks · price, state
+  const card = page.locator('.ccard').first();
+  await expect(card).toBeVisible();
+  expect(await card.evaluate((e) => getComputedStyle(e).transform)).toBe('none');
+  await expect(page.locator('.cgrid .tape, .cgrid .doodle')).toHaveCount(0);
+  await expect(card.locator('.nm')).toContainText(/TATYOVA/i);
+  await expect(card.locator('.cmatch b')).toHaveText('100%');
+  await expect(card.locator('.u-meter i.on')).toHaveCount(10);
+  await expect(card.locator('.cfoot')).toContainText('4,321 decks');
+  await expect(card.locator('.cstate')).toHaveText('READY');
+  // phones: two tiles across
   if (info.project.name === 'phone') {
-    // filters fold into the tag under the eye
-    await expect(page.locator('.hero .fpanel')).toBeHidden();
-    await page.locator('.ftag').tap();
-    await expect(page.locator('.hero .fpanel input[type=search]')).toBeVisible();
-  } else await expect(page.locator('.hero .fpanel input[type=search]')).toBeVisible();
-  await expect(page.locator('.colours button')).toHaveCount(5);
-  if (info.project.name === 'phone') {
-    // the big eye behind the title bleeds past the letters; the title clips it at its own edges
-    expect(await page.locator('.hero .titlewrap').evaluate((e) => getComputedStyle(e).overflowX)).toBe('clip');
-    await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.ccard']);
-  } else await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.eyedoodle', '.ccard']);
+    const cols = await page.locator('.cgrid').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length);
+    expect(cols).toBe(2);
+  }
+  await fits(page, ['.discohero', '.dfind', '.ccard']);
+  // ⋮ holds SORT and COLOUR; picking a colour the commander lacks filters it out, the title answer says so
+  await bar.locator('summary').click();
+  await expect(bar.getByRole('radiogroup', { name: 'Sort' })).toBeVisible();
+  await expect(bar.locator('.colours button')).toHaveCount(5);
+  await fits(page, ['.tbar .fbody']);
+  await bar.getByRole('button', { name: 'Red' }).click();
+  await expect(page.locator('.ccard')).toHaveCount(0);
+  await expect(page.locator('.tanswer')).toHaveAttribute('aria-label', '0 of 1 commanders shown');
+  await expect(bar.locator('.fnow')).toContainText('R');
+  await bar.getByRole('button', { name: 'Red' }).click();
+  // picking a sort does not open a commander (the toolbar sits in the search form)
+  await bar.getByRole('radio', { name: 'NAME A→Z' }).click();
+  await expect(page.locator('.ccard')).toHaveCount(1);
+  await expect(bar.locator('.fnow')).toContainText('NAME A→Z');
+  // Enter in the search opens the first match
+  await page.keyboard.press('Escape');
+  await bar.getByRole('searchbox').fill('taty');
+  await bar.getByRole('searchbox').press('Enter');
+  await expect(page.locator('.vhero h1')).toBeVisible();
 });
 
 test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes behind ⋮', async ({ page }, info) => {
@@ -125,6 +156,8 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
     await page.waitForTimeout(650);
   }
   await expect(page.locator('.cardmenu')).toBeVisible();
+  // measure where it lands, not mid-way through its 0.18 s drop-in (rotated, so its box pokes past the edge on slow runners)
+  await page.locator('.cardmenu').evaluate((e) => Promise.all(e.getAnimations().map((a) => a.finished)));
   const menu = await page.locator('.cardmenu').boundingBox();
   const vw = page.viewportSize()!.width;
   expect(menu!.x).toBeGreaterThanOrEqual(0);
