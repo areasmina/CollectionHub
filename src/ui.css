@@ -470,6 +470,7 @@ html.forging .pillnav {
 
 /* ---------- 4. Deck page: hero → one strip → one toolbar → flat grid ---------- */
 main.dpage {
+  z-index: 4; /* above the credits footer (z 3), so the page's popups (swap window, menus) are never covered by it */
   padding-left: var(--gutter);
   padding-right: var(--gutter);
 }
