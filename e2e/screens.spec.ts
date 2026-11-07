@@ -262,7 +262,7 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   await deckMenu(page, 'Duplicate');
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
   // the warning leads the Forge line, which turns yellow; tapping ⚠ N SHORT opens its list
-  await expect(page.locator('.forgehint.warn .shortin')).toBeVisible();
+  await expect(page.locator('.dstrip .shortin')).toBeVisible();
   await page.locator('.shortin summary').first().click();
   const other = page.locator('.shortin .decklink', { hasText: /^Tatyova Lands$/ }).first();
   await other.scrollIntoViewIfNeeded();
@@ -603,12 +603,40 @@ test('Forge: the big commander card is its menu; Change commander picks a legend
   await expect(page.getByRole('button', { name: 'Tatyova, Benthic Druid: commander options' })).toBeVisible();
 });
 
-test('Forge: collection match sits above ANALYSIS, not by the title', async ({ page }) => {
+test('Saved deck (overhaul): same hero and strip as the commander page, each fact once', async ({ page }) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dhero .bigpct')).toHaveCount(0);
-  await expect(page.locator('.dpanel .dmatch .num')).toHaveText(/\d+%/);
-  await fits(page, ['.dpanel .dmatch']);
+  // THE_OVERHAUL rule 3: the match % lives in the hero, nowhere else
+  await expect(page.locator('.dhero .vmatch .num')).toHaveText('100%');
+  await expect(page.locator('.dpanel .dmatch')).toHaveCount(0);
+  await expect(page.locator('.dhero .vmeta')).toContainText('46 cards');
+  await expect(page.locator('.dhero .vmeta')).toContainText('40 lands');
+  // the strip: the deck's price and what's missing, once
+  await expect(page.locator('.dstrip .dcost')).toHaveText(/^deck ≈CA\$/);
+  await expect(page.locator('.dstrip .dstatus')).toContainText('every card is yours');
+  await expect(page.locator('.dpanel .misscost')).toHaveCount(0);
+  // flat: no decoration on the hero or the side panel
+  await expect(page.locator('.dhero .stamp, .dhero .tape, .dpanel .tape')).toHaveCount(0);
+  const shadow = await page.locator('.dpanel').evaluate((e) => getComputedStyle(e).boxShadow);
+  expect(shadow).toBe('none');
+  await fits(page, ['.dhero', '.dstrip', '.dpanel']);
+});
+
+test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', async ({ page }) => {
+  await go(page, 'decks');
+  const ribbon = page.getByRole('region', { name: 'Deck collection overview' });
+  await expect(ribbon).toContainText('1 deck in');
+  await expect(ribbon).toContainText('1 ready to play');
+  await expect(ribbon).toContainText('avg power');
+  const tile = page.locator('.dcard').first();
+  await expect(tile.locator('.cmatch b')).toHaveText('100%');
+  await expect(tile.locator('.cstate.ready')).toHaveText('READY');
+  await expect(tile.locator('.u-meter i')).toHaveCount(10);
+  const t = await tile.evaluate((e) => getComputedStyle(e).transform);
+  expect(t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
+  await expect(page.locator('.dlist .stamp, .dlist .doodles, .addpage .holes')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '⚒ NEW BLANK DECK' })).toBeVisible();
+  await fits(page, ['.decksbar', '.dribbon', '.dgrid', '.addpage']);
 });
 
 test('My decks shelf: a long deck name never makes its tile bigger', async ({ page }) => {
@@ -717,7 +745,7 @@ test('Readiness + Bracket Fit tiles beside Match; the swap window says why the c
   // the saved deck shows the same tiles in its analysis
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dpanel .vtile.ready')).toBeVisible();
+  await expect(page.locator('.dhero .vtile.ready')).toBeVisible();
 });
 
 test('Platform space pass: multi-column open deck categories on wide screens, side-by-side workbench on tablet and desktop', async ({ page }, info) => {

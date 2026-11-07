@@ -18,6 +18,7 @@ import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain
 import { whyCard } from '../brain/why';
 import { commanderThemes } from '../brain/themes';
 import { ReadyTiles } from './Verdict';
+import { Meter } from './parts';
 import { allocate } from '../lib/allocation';
 import { inUseChip } from '../brain/chips';
 import { SwapNote, type SwapOption } from './SwapNote';
@@ -26,7 +27,7 @@ import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, type BracketCall, type DeckStats, type RefShape } from '../lib/deckstats';
 import { deckArena, deckCsv, deckText, download } from '../lib/export';
 import { norm, slug } from '../lib/names';
-import { cad, fetchedNote, shopUrl, toCad } from '../lib/prices';
+import { cad, fetchedNote, PRICE_METHOD, shopUrl, toCad } from '../lib/prices';
 import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
@@ -34,8 +35,8 @@ import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from '
 import { ImportReport } from './Collection';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, CmdrCard, HeroStats, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
-import { CompactIcon, Doodles, PageDecor, Pips, Ransom, RiseBars, ownColour, Tape, Title, Xgrain, GridIcon, ListIcon } from './zine';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -47,12 +48,9 @@ function DeckNotes({ deck }: { deck: Deck }) {
     setTag('');
   };
   return (
-    <section className="decknotes gbox" aria-label="Deck note and tags">
-      {/* straddles the paper's top edge (the section's 16px padding puts the paper's edge at y = 16) */}
-      <Tape style={{ top: 5, left: 22, width: 64, height: 22, transform: 'rotate(-5deg)' }} />
+    <section className="decknotes" aria-label="Deck note and tags">
       <label className="notebook">
-        <span>note</span>
-        <textarea className="ruled" rows={3} placeholder="game plan, who it's for, what to swap next_" defaultValue={deck.note ?? ''} key={deck.id} onBlur={(e) => e.target.value !== (deck.note ?? '') && db.decks.update(deck.id!, { note: e.target.value })} />
+        <textarea aria-label="Deck note" rows={3} placeholder="game plan, who it's for, what to swap next_" defaultValue={deck.note ?? ''} key={deck.id} onBlur={(e) => e.target.value !== (deck.note ?? '') && db.decks.update(deck.id!, { note: e.target.value })} />
       </label>
       <div className="tagrow">
         {tags.map((t) => (
@@ -200,112 +198,76 @@ function Curve({ curve }: { curve: number[] }) {
 
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
-/** Side panel: curve, types, colour pips, roles, a short read of the deck, then what the missing cards cost. */
-function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit, meters }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; missingCost: number; pricesIn: boolean; sum: ReturnType<typeof summarize>; s: Shared; ready?: Readiness; fit?: BracketFit; meters?: ReactNode }) {
+/** Side panel: the Forge's live meters, then the details (types, colour pips, the read, note and tags). The match %,
+ *  readiness and bracket fit sit in the hero; deck cost and what's missing in the strip (each fact once). */
+function DeckPanel({ deck, st, read, meters }: { deck: Deck; st: DeckStats; read: ReturnType<typeof analysis>; meters?: ReactNode }) {
   const pipTotal = Object.values(st.pips).reduce((a, b) => a + b, 0);
-  // Phones / tablets (analysis sits above the cards): folds to one line, remembered. Desktop: always open.
+  // Phones / tablets (details sit above the cards): folds to one line, remembered. Desktop: always open.
   const [fold, setFold] = useStored<'open' | 'closed'>('ch:analysis', 'closed', ['open', 'closed']);
   const low = read.filter((a) => a.tone !== 'ok').length;
   return (
     <aside className={`dpanel ${fold}`} aria-label="Deck analysis">
-      <Tape style={{ top: -12, left: 30, width: 80, height: 22, transform: 'rotate(-4deg)' }} />
-      <div className="dmatch">
-        <span className="lbl">COLLECTION MATCH</span>
-        <div className="match" role="img" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
-          <span className="burst" aria-hidden="true" />
-          <span className="meter">
-            <span className="cells10" aria-hidden="true" style={{ '--own': ownColour(sum.pct) } as React.CSSProperties}>
-              {Array.from({ length: 10 }, (_, i) => (
-                <span key={i} className={(i + 1) * 10 <= sum.pct + 5 ? 'on' : ''} />
-              ))}
-            </span>
-            <small>
-              You own {sum.owned} of {sum.total} in {s.binderName}
-            </small>
-          </span>
-          <span className="num">{sum.pct}%</span>
-        </div>
-      </div>
-      {ready && <ReadyTiles ready={ready} fit={fit} />}
       {/* The Forge's live meters (lands, ramp, draw, removal, wipes, curve) stay open on every screen */}
       {meters}
       <h2>
         <button className="dfold" aria-expanded={fold === 'open'} onClick={() => (haptic('open'), setFold(fold === 'open' ? 'closed' : 'open'))}>
-          ANALYSIS
-          <span className="dsum">
-            avg {st.avgMv.toFixed(2)} · {low ? `${low} to look at` : 'looks solid'}
-            {pricesIn && sum.missing + sum.other > 0 ? ` · ${cad(missingCost)} to complete` : ''}
-          </span>
+          DETAILS
+          <span className="dsum">{low ? `${low} to look at` : 'looks solid'}</span>
           <span className="pm" aria-hidden="true" />
         </button>
       </h2>
       <div className="dbody">
-      {!meters && (
-        <div className="dsec">
-          <h3>
-            mana curve <small>avg {st.avgMv.toFixed(2)}</small>
-          </h3>
-          <Curve curve={st.curve} />
-        </div>
-      )}
-      <div className="dsec">
-        <h3>types</h3>
-        <ul className="dtypes">
-          {GROUPS.filter((g) => st.groups.get(g)).map((g) => (
-            <li key={g}>
-              <span>{g}</span>
-              <span className="dots" aria-hidden="true" />
-              <b>{st.groups.get(g)}</b>
-            </li>
-          ))}
-        </ul>
-      </div>
-      {pipTotal > 0 && (
-        <div className="dsec">
-          <h3>colour pips</h3>
-          <div className="pipbar" role="img" aria-label={Object.entries(st.pips).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')}>
-            {Object.entries(st.pips)
-              .filter(([, n]) => n)
-              .map(([k, n]) => (
-                <span key={k} style={{ flex: n, background: PIPC[k], color: k === 'W' ? '#1a1a1a' : '#fff' }}>
-                  {k} {n}
-                </span>
-              ))}
+        {!meters && (
+          <div className="dsec">
+            <h3>
+              mana curve <small>avg {st.avgMv.toFixed(2)}</small>
+            </h3>
+            <Curve curve={st.curve} />
           </div>
-        </div>
-      )}
-      <div className="dsec">
-        <h3>the read</h3>
-        <ul className="dread">
-          {read.map((a) => (
-            <li key={a.text} className={a.tone}>
-              {a.text}
-            </li>
-          ))}
-        </ul>
-        <small className="fetched">
-          Roles come from Scryfall Tagger ({deck.cards.filter((c) => roleSource(c.name) === 'Scryfall Tagger').length} of {deck.cards.length} cards), the rest from rules text.
-          {st.unknown ? ` ${st.unknown} cards still loading.` : ''}
-        </small>
-      </div>
-      <div className="dsec">
-        <h3>to complete</h3>
-        {/* Missing cost = money, so yellow tape (no hazard stripes: nothing is wrong). Nothing missing: a quiet line. */}
-        {sum.missing + sum.other > 0 ? (
-          <>
-            <span className="misscost" role="img" aria-label={`Missing cards cost about ${pricesIn ? cad(missingCost) : 'an unknown amount'}`}>
-              <small>{sum.missing + sum.other} MISSING</small> {pricesIn ? `≈${cad(missingCost)}` : 'price unknown'}
-            </span>
-            {sum.other > 0 && <small className="fetched">{sum.other} of them in {s.otherName}</small>}
-          </>
-        ) : (
-          <small className="fetched">Nothing missing: every card is yours.</small>
         )}
-      </div>
-      <div className="dsec dnotes">
-        <h3>note &amp; tags</h3>
-        <DeckNotes deck={deck} />
-      </div>
+        <div className="dsec">
+          <h3>the read</h3>
+          <ul className="dread">
+            {read.map((a) => (
+              <li key={a.text} className={a.tone}>
+                {a.text}
+              </li>
+            ))}
+          </ul>
+          <small className="fetched">
+            Roles come from Scryfall Tagger ({deck.cards.filter((c) => roleSource(c.name) === 'Scryfall Tagger').length} of {deck.cards.length} cards), the rest from rules text.
+            {st.unknown ? ` ${st.unknown} cards still loading.` : ''}
+          </small>
+        </div>
+        <div className="dsec">
+          <h3>types</h3>
+          <ul className="dtypes">
+            {GROUPS.filter((g) => st.groups.get(g)).map((g) => (
+              <li key={g}>
+                <span>{g}</span>
+                <b>{st.groups.get(g)}</b>
+              </li>
+            ))}
+          </ul>
+        </div>
+        {pipTotal > 0 && (
+          <div className="dsec">
+            <h3>colour pips</h3>
+            <div className="pipbar" role="img" aria-label={Object.entries(st.pips).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')}>
+              {Object.entries(st.pips)
+                .filter(([, n]) => n)
+                .map(([k, n]) => (
+                  <span key={k} style={{ flex: n, background: PIPC[k], color: k === 'W' ? '#1a1a1a' : '#fff' }}>
+                    {k} {n}
+                  </span>
+                ))}
+            </div>
+          </div>
+        )}
+        <div className="dsec dnotes">
+          <h3>note &amp; tags</h3>
+          <DeckNotes deck={deck} />
+        </div>
       </div>
     </aside>
   );
@@ -317,7 +279,7 @@ function DeckPanel({ deck, st, read, missingCost, pricesIn, sum, s, ready, fit, 
 function DeckTile({ onClick, onMenu, label, children }: { onClick: () => void; onMenu: (x: number, y: number) => void; label: string; children: ReactNode }) {
   const press = useMenuPress(onMenu);
   return (
-    <button className="dcard gbox hasmenu" onClick={onClick} {...press} aria-label={`${label}: open (right-click or hold for options)`}>
+    <button className="dcard ccard hasmenu" onClick={onClick} {...press} aria-label={`${label}: open (right-click or hold for options)`}>
       {children}
     </button>
   );
@@ -490,6 +452,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardFor(c), qty: c.qty })));
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
+  const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
   const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
   const [toast, setToastNow] = useState<{ text: string; undo?: () => unknown } | null>(null);
   // The Forge's top bar keeps the last undo after the toast is gone (Ctrl+Z works too).
@@ -678,50 +641,74 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
   return (
     <>
-      <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
-      <main className="forgemain">
+      <main className="dpage forgemain">
         <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 
-        <section className={`chero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} title="Right-click (or press and hold) for deck options">
-          <span className="worn" aria-hidden="true" />
+        {/* THE OVERHAUL, saved deck: the same hero → strip → toolbar → cards as the commander page. The hero is the loud
+            frame (ransom name, one red slash) and holds the match %; the strip holds what the deck costs and what it lacks. */}
+        <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
           {cmdr?.img && (
-            <div className="cimg gbox">
-              <span className="xart cmdrimg">
-                <Tape style={{ top: -12, left: '50%', width: 90, height: 24, transform: 'translateX(-50%) rotate(-3deg)' }} />
-                <CmdrCard
-                  src={cmdr.img.replace('/small/', '/normal/')}
-                  name={cmdr.name}
-                  onMenu={(x, y) => setMenu({ card: deck.cards.find((c) => c.name === deck.commander) ?? { name: cmdr.name, qty: 1 }, x, y })}
-                />
-                <Xgrain />
-              </span>
+            <div className="vcard">
+              <CmdrCard
+                src={cmdr.img.replace('/small/', '/normal/')}
+                name={cmdr.name}
+                onMenu={(x, y) => setMenu({ card: deck.cards.find((c) => c.name === deck.commander) ?? { name: cmdr.name, qty: 1 }, x, y })}
+              />
             </div>
           )}
-          <div className="cright">
-            <div className="ctitle">
-              <div className="banner ht" aria-hidden="true" />
-              <div className="titlerow">
-                <h1 aria-label={deck.name}>
-                  <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={deck.name.length > 28 ? 38 : 50} seed={33} />
-                </h1>
-                {/* Active / off sits at the end of the name, in the deck's own colour */}
-                <DeckLight deck={deck} />
-              </div>
-              <div className="namerow">
-                <Pips ci={ci} size={30} />
-                <HeroStats price={pricesIn ? deckCost : undefined} fetched={fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))} names={deck.cards.map((c) => c.name)}>
-                  <BracketStat call={call} cedh={deck.source === 'cedh'} />
-                </HeroStats>
-              </div>
+          <div className="vinfo">
+            <div className="vname">
+              <span className="vslash" aria-hidden="true" />
+              <h1 aria-label={deck.name}>
+                <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={narrow ? (deck.name.length > 16 ? 22 : 28) : deck.name.length > 28 ? 34 : 46} seed={33} />
+              </h1>
+              {/* Active / off sits at the end of the name, in the deck's own colour */}
+              <DeckLight deck={deck} />
             </div>
-            <div className="cmeta">
-              <span className="typed">
-                {[deck.commander ? `COMMANDER: ${deck.commander.split(' // ')[0].toUpperCase()}` : '', `${st.total} CARDS`, `${st.lands} LANDS`, st.avgMv ? `AVG MV ${st.avgMv.toFixed(2)}` : ''].filter(Boolean).join(' · ')}
+            {/* the quiet monospace line: colours · commander · cards · lands · avg MV · salt · bracket */}
+            <p className="vmeta" onClick={(e) => e.stopPropagation()}>
+              <Pips ci={ci} size={20} />
+              {deck.commander && <span>{deck.commander.split(' // ')[0]}</span>}
+              <span>{st.total} cards</span>
+              <span>{st.lands} lands</span>
+              {st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
+              <SaltStat names={deck.cards.map((c) => c.name)} />
+              <BracketStat call={call} cedh={deck.source === 'cedh'} />
+            </p>
+            <div className="vmatch" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
+              <b className="num">{sum.pct}%</b>
+              <span className="vbar">
+                <Meter pct={sum.pct} label={`Collection match ${sum.pct}%`} />
+                <small>
+                  collection match · you own {sum.owned} of {sum.total}
+                  {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
+                </small>
               </span>
-              {/* The collection match lives above ANALYSIS on the right, so the commander and title stay clean */}
             </div>
+            <ReadyTiles ready={ready} fit={fit} />
           </div>
-          {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
+        </section>
+
+        {/* The one strip: what the deck costs, what it still lacks, copies short. */}
+        <section className="dstrip" aria-label="Deck status">
+          <p className="dstatus" role="status">
+            {pricesIn && (
+              <span className="dcost" title={`${PRICE_METHOD} ${fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}`}>
+                deck ≈{cad(deckCost)}
+              </span>
+            )}
+            {sum.missing + sum.other > 0 ? (
+              <span className="dmiss">
+                {sum.missing + sum.other} missing{pricesIn ? ` ≈${cad(missingCost)}` : ''}
+                {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
+              </span>
+            ) : (
+              <span>every card is yours</span>
+            )}
+          </p>
+          <div className="dacts">
+            <ShortAlert items={shortHere} inline />
+          </div>
         </section>
 
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
@@ -731,10 +718,6 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         <div className="deckgrid after-sw">
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className="lists" {...drop}>
-            <div className={`forgehint${shortHere.length ? ' warn' : ''}`}>
-              <ShortAlert items={shortHere} inline />
-              <b>⚒ THE FORGE</b> tap any card to swap it · drag a suggestion onto a card to swap, or onto the deck to add · drag a card back to the list to cut it
-            </div>
             {/* How the cards are split and ordered, right above them */}
             <ToolBar
               q={q}
@@ -780,6 +763,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </div>
               </OptRow>
             </ToolBar>
+            <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {
@@ -843,7 +827,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               })}
           </div>
           <div className="dside">
-            <DeckPanel deck={deck} st={st} read={read} missingCost={missingCost} pricesIn={pricesIn} sum={sum} s={s} ready={ready} fit={fit} meters={<ForgeMeters st={st} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} />} />
+            <DeckPanel deck={deck} st={st} read={read} meters={<ForgeMeters st={st} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} />} />
             <ForgeSuggest
               profile={s.profile}
               deck={deck.cards}
@@ -925,6 +909,7 @@ export function Decks(s: Shared) {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   // Deck Arsenal Overview Stats
+  const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
   const readyDecks = decks.filter((d) => summarize(d.cards.map((c) => c.name), s.mine, s.other).pct === 100).length;
   const uniqueCardsInDecks = new Set(decks.flatMap((d) => d.cards.map((c) => norm(c.name)))).size;
   const colorCounts: Record<string, number> = { W: 0, U: 0, B: 0, R: 0, G: 0 };
@@ -986,122 +971,93 @@ export function Decks(s: Shared) {
 
   return (
     <>
-      <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
-      <main>
-        <div className="arsenal-console" role="region" aria-label="Deck Arsenal Console">
-          <div className="decksbar">
-            <div>
-              <section style={{ display: 'inline-block', marginTop: 12 }}>
-                <Title text="MY DECKS" label="My decks" size={68} seed={33} />
-              </section>
-              <p className="count" style={{ color: 'var(--text)' }}>
-                {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
-                <span className="cur">_</span>
-              </p>
-            </div>
-            <div className="decksactions">
-              <button type="button" className="btn save" onClick={jumpToAdd}>
-                + IMPORT / PASTE DECK ↓
-              </button>
-              <button type="button" className="btn ink" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-                ⚒ NEW BLANK DECK
-              </button>
-            </div>
+      <main className="dpage dlist">
+        {/* THE OVERHAUL, my decks: loud title → one ribbon of facts → flat deck tiles → the add form. */}
+        <div className="decksbar">
+          <Title text="MY DECKS" label="My decks" size={narrow ? 44 : 64} seed={33} />
+          <div className="decksactions">
+            <button type="button" className="u-btn ghost" onClick={jumpToAdd}>
+              + IMPORT / PASTE
+            </button>
+            <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+              ⚒ NEW BLANK DECK
+            </button>
           </div>
-          <ShortAlert items={short} />
-          {decks.length > 0 && (
-            <div className="decks-overview-bar" role="region" aria-label="Deck collection overview">
-              <div className="ov-stat">
-                <span className="ov-val">{decks.length}</span>
-                <span className="ov-lbl">TOTAL DECKS</span>
-              </div>
-              <div className="ov-stat ready">
-                <span className="ov-val">{readyDecks}</span>
-                <span className="ov-lbl">READY TO PLAY</span>
-              </div>
-              <div className="ov-stat">
-                <span className="ov-val">{uniqueCardsInDecks}</span>
-                <span className="ov-lbl">CARDS IN PLAY</span>
-              </div>
-              <div className="ov-stat ov-colors">
-                <span className="ov-lbl">COLOR IDENTITY</span>
-                <div className="ov-pips">
-                  {(['W', 'U', 'B', 'R', 'G'] as const).map((c) => (
-                    <span key={c} className={`ov-pip pip-${c.toLowerCase()} ${colorCounts[c] ? 'active' : ''}`} title={`${colorCounts[c]} decks include ${c}`}>
-                      {c} <small>{colorCounts[c] || 0}</small>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="ov-stat">
-                <span className="ov-val">B{avgBracket}</span>
-                <span className="ov-lbl">AVG POWER</span>
-              </div>
-            </div>
-          )}
         </div>
+        <ShortAlert items={short} />
+        {decks.length > 0 && (
+          <p className="dribbon" role="region" aria-label="Deck collection overview">
+            <span>
+              <b>{decks.length}</b> {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
+            </span>
+            <span>
+              <b>{readyDecks}</b> ready to play
+            </span>
+            <span>
+              <b>{uniqueCardsInDecks}</b> cards in play
+            </span>
+            <span className="dcols" title="How many decks use each colour">
+              {(['W', 'U', 'B', 'R', 'G'] as const)
+                .filter((c) => colorCounts[c])
+                .map((c) => (
+                  <span key={c} className={`ov-pip pip-${c.toLowerCase()}`} title={`${colorCounts[c]} decks include ${c}`}>
+                    {c} <b>{colorCounts[c]}</b>
+                  </span>
+                ))}
+            </span>
+            <span>
+              avg power <b>B{avgBracket}</b>
+            </span>
+          </p>
+        )}
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
-        <ul className="dgrid">
-          {decks.map((d, i) => {
+        <ul className="dgrid cgrid">
+          {decks.map((d) => {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
             // No commander set: show the deck's most expensive card instead of a blank tile.
             const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
-            const art = d.commander ?? c?.name ?? '';
             return (
               <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d) } as React.CSSProperties}>
-                <DeckLight deck={d} />
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
-                  {i === 0 && <Doodles n={433} count={2} spots={[[64, 50], [70, -8]]} paper />}
-                  <span className="rule" aria-hidden="true" />
-                  <span className="ytape" aria-hidden="true" />
-                  <span className={statusOf(art, s.mine) === 'owned' ? 'xart owned' : 'xart'} aria-hidden="true">
-                    {c?.img && <img src={c.img.replace('/small/', '/normal/')} alt="" loading="lazy" />}
-                    {statusOf(art, s.mine) !== 'owned' && <Xgrain />}
+                  <span className="cart" aria-hidden="true">
+                    {c?.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}
                   </span>
-                  <span className="t">
-                    <b>{d.name}</b>
-                    <span>
-                      {d.cards.reduce((n, x) => n + x.qty, 0)} cards · {sum.pct}% owned
+                  <span className="cinfo">
+                    <span className="nm">
+                      <b>{d.name}</b>
+                      {lead && <Pips ci={lead.ci} size={16} />}
                     </span>
-                    {priced.size > 0 && <span className={`price tapey y${i % 5} t${(i * 3) % 4}`}>≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</span>}
+                    <span className="cmatch">
+                      <b>{sum.pct}%</b>
+                      <Meter pct={sum.pct} label={`${sum.pct}% owned`} />
+                    </span>
                     {d.tags?.length ? <span className="dtags">{d.tags.map((t) => `#${t}`).join(' ')}</span> : null}
-                    {lead && <Pips ci={lead.ci} size={24} />}
                     {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
+                    <span className="cfoot">
+                      <span>
+                        {d.cards.reduce((n, x) => n + x.qty, 0)} cards
+                        {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
+                      </span>
+                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.pct === 100 ? 'READY' : `${sum.total - sum.owned} MISSING`}</span>
+                    </span>
                   </span>
-                  {sum.pct === 100 && <span className="stamp">READY TO SLEEVE!</span>}
                 </DeckTile>
+                <DeckLight deck={d} />
               </li>
             );
           })}
-          {decks.length === 0 && (
-            <li className="dempty">
-              your next deck goes here.
-              <br />
-              save one from a commander page
-              <br />
-              or paste a list below ↓
-            </li>
-          )}
+          {decks.length === 0 && <li className="dempty">No decks yet. Save one from a commander page, or paste a list below.</li>}
         </ul>
 
-        <section className="addpage graph gbox">
-          <Doodles n={477} count={2} spots={[[70, 4], [78, 60]]} paper />
-          <span className="holes" aria-hidden="true" />
-          <Tape style={{ top: -10, right: 50, width: 100, height: 24, transform: 'rotate(6deg)' }} />
-          <div className="hd">
-            <div className="stripe" aria-hidden="true" />
-            <h2>ADD A DECK</h2>
-          </div>
+        <section className="addpage u-panel" aria-label="Add a deck">
+          <h2>ADD A DECK</h2>
           <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
           <label>
             deck name
             <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
-          <label className="btn ink file">
-            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-              <path d="M3 12 V15 H15 V12 M9 3 V11 M5 7 L9 3 L13 7" fill="none" stroke="currentColor" strokeWidth="2" />
-            </svg>
+          <label className="u-btn file">
             CHOOSE A FILE
             <input
               type="file"
@@ -1117,9 +1073,9 @@ export function Decks(s: Shared) {
           </label>
           <label>
             …or paste the list
-            <textarea className="graph" rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
+            <textarea rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
           </label>
-          <button className="btn save" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
+          <button className="u-btn primary" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
             SAVE DECK
           </button>
           {busy && <Progress {...busy} />}

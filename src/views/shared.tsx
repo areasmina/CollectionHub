@@ -378,24 +378,6 @@ export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }:
   </div>
 );
 
-/** Header stats in the title banner, beside the colour pips: deck price on yellow tape, salt on a torn paper scrap,
- *  optional extras (bracket stamp); the price note sits under the row. */
-export function HeroStats({ price, fetched, names, children }: { price?: number; fetched: string; names: string[]; children?: ReactNode }) {
-  return (
-    <div className="hstats" onClick={(e) => e.stopPropagation()}>
-      {/* How the price is worked out stays in the tooltip, not as a line under the header */}
-      {/* One loud price per page (what's missing); the deck's total is quiet grey text, how it's worked out in the tooltip */}
-      {price !== undefined && (
-        <span className="price quiet" title={`${PRICE_METHOD} ${fetched}`} aria-label={`Whole deck costs about ${cad(price)}`}>
-          deck ≈{cad(price)}
-        </span>
-      )}
-      <SaltStat names={names} />
-      {children}
-    </div>
-  );
-}
-
 /** The deck's salt (sum of EDHREC salt scores) on a torn paper scrap; tap shows the saltiest cards. */
 export function SaltStat({ names }: { names: string[] }) {
   const [salt, setSalt] = useState<Map<string, number> | null>(null);

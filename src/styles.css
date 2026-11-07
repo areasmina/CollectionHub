@@ -153,13 +153,7 @@ h2 {
 .jag {
   clip-path: polygon(0 6%, 5% 0, 40% 3%, 72% 0, 100% 4%, 97% 35%, 100% 70%, 96% 100%, 60% 96%, 25% 100%, 0 95%, 3% 55%);
 }
-.worn {
-  position: absolute;
-  inset: 0;
-  border: 3px solid var(--white);
-  filter: url(#worn);
-  pointer-events: none;
-}
+
 .warn {
   position: relative;
   display: inline-block;
@@ -761,14 +755,7 @@ a.price:hover {
 }
 
 /* ---------- commander page ---------- */
-.chero {
-  position: relative;
-  margin-top: 10px;
-  padding: 16px 16px 24px;
-}
-.chero > .worn {
-  border-color: var(--text);
-}
+
 .chead {
   position: relative;
   display: flex;
@@ -806,28 +793,7 @@ a.price:hover {
   align-items: center;
   margin-top: 24px;
 }
-.cimg {
-  position: relative;
-  z-index: 2;
-  width: min(250px, 70vw);
-  flex: none;
-}
-.cimg .xart {
-  position: relative;
-  aspect-ratio: 63 / 88;
-  border: 3px solid var(--white);
-  border-radius: 10px;
-  transform: rotate(-4deg);
-  box-shadow: 9px 9px 0 var(--ink);
-  overflow: hidden;
-  background: #333;
-}
-.cimg img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
+
 .cbody .titlewrap {
   flex: 999 1 420px;
   min-width: 0;
@@ -891,15 +857,7 @@ a.price:hover {
   gap: 14px;
   padding: 0 70px 0 12px;
 }
-.match .burst {
-  position: absolute;
-  right: -16px;
-  top: -30px;
-  width: 92px;
-  height: 92px;
-  background: var(--accent);
-  clip-path: polygon(50% 0, 61% 30%, 95% 18%, 72% 45%, 100% 62%, 66% 66%, 72% 100%, 50% 74%, 26% 100%, 32% 66%, 0 62%, 28% 45%, 6% 18%, 40% 30%);
-}
+
 .match .num {
   position: relative;
   font-family: var(--an);
@@ -914,19 +872,7 @@ a.price:hover {
   flex-direction: column;
   gap: 6px;
 }
-.cells10 {
-  display: flex;
-  gap: 3px;
-}
-.cells10 span {
-  flex: 1;
-  height: 8px;
-  background: var(--white);
-  transform: skewX(-20deg);
-}
-.cells10 span.on {
-  background: var(--own, var(--accent));
-}
+
 .match .meter small {
   font-size: 12px;
   line-height: 1.2;
@@ -1356,30 +1302,6 @@ a.price:hover {
   display: none;
 }
 
-.notebook {
-  display: flex;
-  flex-direction: column;
-  transform: rotate(0.6deg);
-  clip-path: polygon(0 0, 100% 0, 100% 96%, 94% 99%, 87% 95%, 79% 100%, 70% 96%, 61% 99%, 52% 95%, 43% 100%, 34% 96%, 25% 99%, 16% 95%, 8% 100%, 0 97%);
-}
-.notebook > span {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--se);
-  font-size: 14px;
-  padding: 10px 14px 0 56px;
-}
-.ruled {
-  width: 100%;
-  color: var(--ink);
-  border: 0;
-  font-family: var(--se);
-  font-size: 17px;
-  line-height: 32px;
-  padding: 6px 14px 24px 56px;
-  resize: vertical;
-  background: linear-gradient(90deg, transparent 46px, rgba(230, 0, 18, 0.55) 46px 48px, transparent 48px), repeating-linear-gradient(180deg, var(--paper) 0 31px, var(--rule-blue) 31px 32px);
-}
 .btnrow {
   display: flex;
   flex-wrap: wrap;
@@ -1507,184 +1429,12 @@ a.price:hover {
 }
 
 /* ---------- Decks ---------- */
-.dgrid {
-  margin-top: 30px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px;
-  list-style: none;
-  padding: 0;
-}
-.dcard {
-  position: relative;
-  width: 100%;
-  display: flex;
-  gap: 16px;
-  text-align: left;
-  color: var(--ink);
-  background: var(--white);
-  background-image: repeating-linear-gradient(180deg, transparent 0 27px, rgba(80, 130, 190, 0.35) 27px 28px);
-  border: 0;
-  padding: 46px 18px 18px;
-  transform: rotate(-1.5deg);
-  box-shadow: 6px 6px 0 var(--ink), 6px 6px 0 2px var(--white);
-  transition: transform 0.18s, box-shadow 0.18s;
-  min-height: 190px;
-}
-.dgrid li:nth-child(even) .dcard {
-  transform: rotate(1deg);
-}
-.dcard:hover,
-.dcard:focus-visible {
-  transform: rotate(0deg) translateY(-5px) !important;
-  box-shadow: 10px 12px 0 var(--accent);
-}
-.dcard .rule {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 30px;
-  height: 2px;
-  background: var(--accent);
-}
-.dcard .ytape {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  width: 90px;
-  height: 24px;
-  margin-left: -45px;
-  background: rgba(255, 204, 0, 0.85);
-  transform: rotate(3deg);
-}
-.dcard .xart {
-  position: relative;
-  overflow: hidden;
-  flex: 0 0 auto;
-  width: 90px;
-  height: 126px;
-  border: 3px solid var(--ink);
-  border-radius: 4px;
-  background: #555;
-  transform: rotate(2deg);
-}
-.dcard .xart img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.dcard .t {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.dcard .t b {
-  font-family: var(--an);
-  font-weight: 400;
-  font-size: 24px;
-  line-height: 1.05;
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-.dcard .t span {
-  font-family: var(--se);
-  font-size: 15px;
-}
-.dcard .stamp {
-  right: 14px;
-  bottom: 14px;
-  border-style: double;
-  font-size: 18px;
-  transform: rotate(-14deg);
-  mix-blend-mode: multiply;
-}
-.dempty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 190px;
-  border: 3px dashed var(--raised);
-  font-family: var(--se);
-  font-size: 16px;
-  color: var(--muted);
-  text-align: center;
-  padding: 20px;
-}
+
 .graph {
   background: linear-gradient(rgba(70, 120, 190, 0.38) 1px, transparent 1px) 0 0/20px 20px, linear-gradient(90deg, rgba(70, 120, 190, 0.38) 1px, transparent 1px) 0 0/20px 20px,
     linear-gradient(rgba(70, 120, 190, 0.18) 1px, transparent 1px) 0 0/100px 100px, #f7f7f2;
 }
-.addpage {
-  position: relative;
-  margin-top: 64px;
-  max-width: 760px;
-  color: var(--ink);
-  padding: 34px 20px 26px 60px;
-  transform: rotate(0.6deg);
-  clip-path: polygon(0 3%, 6% 0, 13% 3%, 21% 0, 30% 4%, 39% 0, 48% 3%, 57% 0, 66% 4%, 75% 0, 84% 3%, 92% 0, 100% 2%, 100% 100%, 0 100%);
-}
-.addpage .holes {
-  position: absolute;
-  left: 14px;
-  top: 0;
-  bottom: 0;
-  width: 22px;
-  background: radial-gradient(circle at 50% 50%, var(--ink) 7px, transparent 7.5px) 0 40px/100% 120px repeat-y;
-}
-.addpage .hd {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.addpage .hd .stripe {
-  width: 26px;
-  height: 40px;
-}
-.addpage h2 {
-  background: var(--ink);
-  color: var(--white);
-  font-family: var(--an);
-  font-size: 30px;
-  letter-spacing: 1px;
-  padding: 2px 14px;
-  transform: skewX(-8deg);
-}
-.addpage label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 18px;
-  font-family: var(--se);
-  font-size: 14px;
-}
-.addpage input {
-  background: transparent;
-  color: var(--ink);
-  border: 0;
-  border-bottom: 3px solid var(--ink);
-  font-family: var(--se);
-  font-size: 20px;
-  padding: 6px 2px;
-  min-height: 44px;
-}
-.addpage textarea {
-  color: var(--ink);
-  border: 0;
-  border-left: 2px solid rgba(230, 0, 18, 0.6);
-  font-family: var(--se);
-  font-size: 17px;
-  line-height: 20px;
-  padding: 10px 14px;
-  resize: vertical;
-}
-.addpage .btn {
-  margin-top: 18px;
-}
-.addpage .btn.save {
-  margin-top: 20px;
-  box-shadow: 6px 6px 0 var(--ink);
-}
+
 .credits {
   position: relative;
   z-index: 1;
@@ -1819,12 +1569,10 @@ a.price:hover {
 .xart,
 .xerox,
 .crow,
-.zrow,
-.dcard {
+.zrow {
     transition: none;
   }
-  .dcard:hover,
-.crow:hover {
+  .crow:hover {
     transform: none;
   }
 }
@@ -1990,121 +1738,6 @@ button.logo {
 .ransom.loose .rword > span:last-child {
   margin-right: var(--wg) !important;
 }
-.chero {
-  position: relative;
-  margin-top: 10px;
-  padding: 18px 20px 20px;
-  display: grid;
-  grid-template-columns: minmax(180px, 250px) minmax(0, 1fr);
-  gap: 10px 28px;
-  align-items: start;
-}
-.chero > .worn {
-  border-color: var(--text);
-}
-.chero .cimg {
-  width: 100%;
-  margin-top: 6px;
-}
-.cright {
-  position: relative;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.ctitle .banner {
-  position: absolute;
-  left: -110px;
-  right: -20px;
-  top: 0;
-  bottom: 0;
-  background-color: var(--accent);
-  clip-path: polygon(0 18%, 100% 0, 96% 100%, 2% 94%);
-  pointer-events: none;
-  animation: slashIn 0.7s cubic-bezier(0.2, 0.9, 0.2, 1) both;
-}
-.ctitle {
-  position: relative;
-  z-index: 1;
-  padding: 30px 8px 26px 24px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.ctitle .pips {
-  gap: 6px;
-}
-.cmeta {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 10px 20px;
-}
-.cmeta .typed {
-  font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  letter-spacing: 1px;
-  color: var(--muted);
-  min-width: 0;
-}
-.cmeta .typed a {
-  color: var(--text);
-  display: inline-block;
-  min-height: 44px;
-  line-height: 44px;
-}
-.cmeta .score {
-  display: flex;
-  align-items: flex-end;
-  gap: 18px;
-  margin-left: auto;
-}
-.cmeta .mono {
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-.cmeta .pct {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-.cmeta .bigpct {
-  font-family: 'Archivo', sans-serif;
-  font-weight: 800;
-  font-size: 40px;
-  line-height: 1;
-}
-
-@media (max-width: 700px) {
-  .chero {
-    grid-template-columns: 1fr;
-    padding: 14px 12px 16px;
-  }
-  .chero .cimg {
-    width: min(170px, 50vw);
-    justify-self: center;
-  }
-  .ctitle .banner {
-    left: -12px;
-    right: -12px;
-  }
-  .ctitle {
-    padding: 22px 6px 20px 12px;
-  }
-}
-
-.ctitle > h1,
-.ctitle > .pips {
-  position: relative;
-}
 
 /* Owned cards in full colour, cards you don't own in black-and-white (colour on hover). */
 .xart.owned,
@@ -2115,66 +1748,13 @@ button.logo {
 }
 
 /* Commander header image: full colour, xerox treatment (punchy contrast, halftone, grain) */
-.cimg .cmdrimg,
-.cimg .cmdrimg:hover {
-  filter: contrast(1.3) saturate(1.25);
-}
-.cimg .cmdrimg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(rgba(0, 0, 0, 0.35) 1px, transparent 1.5px) 0 0/4px 4px;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-}
-.cimg .cmdrimg .xg {
-  opacity: 0.45;
-}
 
 /* Meta line: compact text, bigger tap area kept invisibly */
-.cmeta .typed {
-  line-height: 1.7;
-}
-.cmeta .typed a {
-  position: relative;
-  min-height: 0;
-  line-height: inherit;
-}
-.cmeta .typed a::after {
-  content: '';
-  position: absolute;
-  inset: -12px -8px;
-}
 
 /* Phones: less clutter in the commander header */
 @media (max-width: 700px) {
   .sheet {
     display: none;
-  }
-  .chero {
-    gap: 14px;
-  }
-  .chero .cimg {
-    width: min(150px, 42vw);
-  }
-  .cmeta {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  .cmeta .score {
-    margin-left: 0;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 10px;
-    border-top: 1px dashed var(--raised);
-  }
-  .cmeta .bigpct {
-    font-size: 34px;
-  }
-  .cmeta .typed {
-    font-size: 11px;
-    letter-spacing: 0.5px;
   }
 
 }
@@ -2304,23 +1884,6 @@ button.logo {
 
 /* Commander card: the frame is a block sized to the card, so the image fills it (was an inline span, leaving the
    card small inside a taller frame). Bigger on phones; tape centred above it. */
-.cimg .xart {
-  display: block;
-  width: 100%;
-  overflow: visible;
-}
-.cimg .xart img {
-  border-radius: 8px;
-}
-.cimg .xart > .tape {
-  z-index: 4;
-}
-@media (max-width: 700px) {
-  .chero .cimg {
-    width: min(300px, 80vw);
-    margin-top: 14px;
-  }
-}
 
 /* Desktop: Discover / Collection / Decks sit in the hidden HUB drawer; phones keep the bottom bar. */
 @media (min-width: 900px) {
@@ -2535,10 +2098,6 @@ button.logo {
   font-family: var(--se);
   font-size: 14px;
 }
-.cimg a {
-  display: block;
-  height: 100%;
-}
 
 /* Deck price on yellow tape (commander / deck headers) */
 .price.tapey.big {
@@ -2548,52 +2107,6 @@ button.logo {
   margin-top: 4px;
 }
 /* Deck note + tags */
-.decknotes {
-  position: relative;
-  margin: 18px 0;
-  padding: 16px;
-}
-.tagrow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-  align-items: center;
-}
-.dtag {
-  min-height: 44px;
-  padding: 0 12px;
-  border: 2px solid var(--ink);
-  background: #ff2fa0;
-  color: var(--white, #fff);
-  font-family: var(--an);
-  font-size: 16px;
-  transform: rotate(-1.5deg);
-  box-shadow: 2px 2px 0 var(--ink);
-}
-.dtag:nth-child(even) {
-  background: #19d3e6;
-  color: #141414;
-  transform: rotate(1.5deg);
-}
-.tagrow input {
-  min-height: 44px;
-  width: 130px;
-  border: 2px dashed var(--text);
-  background: transparent;
-  color: var(--text);
-  font-family: var(--se);
-  font-size: 16px;
-  padding: 0 10px;
-}
-.dcard .dtags {
-  font-family: var(--se);
-  font-size: 13px;
-  color: var(--accent);
-}
-.dcard .price.tapey {
-  align-self: flex-start;
-}
 
 /* Copies alert: decks sharing more copies than you own */
 .shortalert {
@@ -2666,20 +2179,7 @@ button.logo {
 }
 
 /* Deck page: commander-style header, toolbar, cards + analysis side panel (Moxfield-like) */
-.dhero.noimg {
-  grid-template-columns: minmax(0, 1fr);
-}
-.dhero .ctitle {
-  cursor: default;
-}
-.dhero > .stamp {
-  right: 22px;
-  top: 18px;
-  z-index: 3;
-  font-size: 22px;
-  transform: rotate(-12deg);
-  background: rgba(10, 10, 10, 0.55);
-}
+
 .dtools {
   display: flex;
   flex-wrap: wrap;
@@ -2711,47 +2211,7 @@ button.logo {
     top: 16px;
   }
 }
-.dside .decknotes {
-  margin: 0;
-}
-.dpanel {
-  position: relative;
-  background: var(--surface);
-  border: 3px solid var(--text);
-  box-shadow: 6px 6px 0 var(--accent);
-  padding: 18px 16px 16px;
-}
-.dpanel h2 {
-  margin: 0 0 6px;
-  font-family: var(--an);
-  font-size: 30px;
-  letter-spacing: 1px;
-  line-height: 1;
-  text-shadow: 3px 3px 0 var(--accent);
-}
-.dsec {
-  padding: 14px 0 4px;
-  border-top: 1px dashed var(--raised);
-  margin-top: 10px;
-}
-.dsec h3 {
-  margin: 0 0 10px;
-  font-family: 'Space Mono', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-}
-.dsec h3 small {
-  font-family: var(--se);
-  font-size: 13px;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--text);
-}
+
 .curve {
   display: flex;
   align-items: flex-end;
@@ -2788,86 +2248,9 @@ button.logo {
   font-size: 12px;
   color: var(--muted);
 }
-.dtypes {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.dtypes li {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  font-family: var(--se);
-  font-size: 15px;
-}
-.dtypes .dots {
-  flex: 1;
-  border-bottom: 2px dotted var(--raised);
-}
-.dtypes b {
-  font-family: var(--an);
-  font-weight: 400;
-  font-size: 18px;
-}
-.pipbar {
-  display: flex;
-  height: 30px;
-  border: 2px solid var(--text);
-  overflow: hidden;
-}
-.pipbar span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 34px;
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.pipbar span + span {
-  border-left: 2px solid var(--text);
-}
-.dread {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
-  line-height: 1.4;
-}
-.dread li {
-  padding-left: 22px;
-  position: relative;
-}
-.dread li::before {
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-family: var(--an);
-}
-.dread li.ok::before {
-  content: '✓';
-  color: #2f9e57;
-}
-.dread li.low::before {
-  content: '▼';
-  color: var(--hazard);
-}
-.dread li.high::before {
-  content: '▲';
-  color: var(--accent);
-}
+
 @media (max-width: 700px) {
-  .dhero > .stamp {
-    font-size: 15px;
-    right: 10px;
-    top: 10px;
-  }
+
   .dtools .grow {
     display: none;
   }
@@ -2927,30 +2310,7 @@ ul.popnote .small {
 
 /* Under the commander / deck name, on the red banner: pips, price on yellow tape, salt on a torn paper scrap,
    bracket stamped on paper. No box behind them: the banner shows through. */
-.namerow {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 18px;
-}
-.hstats {
-  display: contents;
-  cursor: default;
-}
-.hstats .price.tapey.big {
-  margin: 0;
-  font-size: 22px;
-  padding: 5px 14px 4px;
-  color: #0a0a0a;
-  box-shadow: 3px 3px 0 #0a0a0a;
-}
-.hstats .price small {
-  font-family: var(--se);
-  font-size: 12px;
-  letter-spacing: 1px;
-  margin-right: 2px;
-}
+
 .scrap {
   position: relative;
 }
@@ -3003,24 +2363,9 @@ ul.popnote .small {
   border-width: 3px;
   background: none;
 }
-.namerow .fetched {
-  flex-basis: 100%;
-  margin: -4px 0 0;
-  font-family: var(--se);
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
-}
-.namerow .popnote {
-  margin-top: 8px;
-}
+
 @media (max-width: 700px) {
-  .namerow {
-    gap: 10px 12px;
-  }
-  .hstats .price.tapey.big {
-    font-size: 19px;
-    padding: 4px 10px 3px;
-  }
+
   .scrap > summary {
     padding: 3px 10px 3px 9px;
   }
@@ -3042,35 +2387,6 @@ ul.popnote .small {
 }
 
 /* Header meta in one row: built-around chips on the left, deck count + EDHREC link + owned % on the right */
-.cright {
-  gap: 10px;
-}
-.cmeta {
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 10px 24px;
-}
-
-.cmeta .score {
-  flex: none;
-}
-.cmeta .mono a {
-  color: var(--text);
-  position: relative;
-}
-.cmeta .mono a::after {
-  content: '';
-  position: absolute;
-  inset: -12px -8px;
-}
-.chero {
-  padding-bottom: 14px;
-}
-@media (max-width: 899px) {
-  .cmeta {
-    flex-wrap: wrap;
-  }
-}
 
 /* Dropdowns next to GRID / LIST (group, sort, show) */
 .dtools .sbox.pick {
@@ -3101,42 +2417,10 @@ ul.popnote .small {
   color: #ffffff;
 }
 /* Deck header: smaller commander art so it doesn't leave a gap under the stats */
-@media (min-width: 701px) {
-  .dhero {
-    grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
-  }
-}
 
 /* Phones: price + salt on one line under the name (pips / bracket follow when they don't fit), compact meta */
 @media (max-width: 700px) {
-  .namerow {
-    gap: 8px 10px;
-  }
-  .namerow .price.tapey {
-    order: 1;
-  }
-  .namerow .scrap.salt {
-    order: 2;
-  }
-  .namerow .scrap.bracket {
-    order: 3;
-  }
-  .namerow .pips {
-    order: 4;
-  }
-  .namerow .fetched {
-    order: 5;
-    margin: 0;
-  }
-  .namerow .pip {
-    width: 26px !important;
-    height: 26px !important;
-    font-size: 13px !important;
-  }
-  .hstats .price.tapey.big {
-    font-size: 18px;
-    padding: 4px 9px 3px;
-  }
+
   .scrap > summary {
     min-height: 40px;
     gap: 5px;
@@ -3148,65 +2432,13 @@ ul.popnote .small {
   .scrap.salt .amt {
     font-size: 20px;
   }
-  .ctitle {
-    gap: 12px;
-    padding-bottom: 16px;
-  }
-  /* meta: score on one line, then the tag chips with the label beside them */
-  .cmeta {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .cmeta .score {
-    border-top: 0;
-    padding-top: 0;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .cmeta .bigpct {
-    font-size: 30px;
-  }
 
-  .chero {
-    padding-bottom: 12px;
-    gap: 10px;
-  }
+  /* meta: score on one line, then the tag chips with the label beside them */
+
 }
 /* READY TO SLEEVE! stamped across the bottom of the commander art, clear of the title */
-.dhero > .stamp {
-  left: 34px;
-  right: auto;
-  top: auto;
-  bottom: 44px;
-  transform: rotate(-14deg);
-}
-@media (max-width: 700px) {
-  .dhero > .stamp {
-    left: 50%;
-    top: 40px;
-    bottom: auto;
-    transform: translateX(-50%) rotate(-12deg);
-  }
-}
-@media (max-width: 700px) {
-  .cmeta .score {
-    margin-left: 0;
-    width: 100%;
-    flex: 0 0 auto;
-  }
-}
-/* Phones: the tag row scrolls inside the frame and fades out at the right (as on desktop) instead of widening the header */
-@media (max-width: 700px) {
-  .chero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .cmeta {
-    min-width: 0;
-    max-width: 100%;
-  }
 
-}
+/* Phones: the tag row scrolls inside the frame and fades out at the right (as on desktop) instead of widening the header */
 
 .pickcmdr mark {
   background: var(--hazard);
@@ -3217,11 +2449,6 @@ ul.popnote .small {
   margin: 6px 0 0;
   font-size: 17px;
   padding: 0 14px;
-}
-.dcard .nocmdr {
-  font-family: var(--se);
-  font-size: 12px;
-  color: var(--accent);
 }
 
 /* Card menu (deck page): right-click / press and hold a card */
@@ -3611,16 +2838,6 @@ ul.popnote .small {
 /* Discover: a light halftone dot screen over the commander art (eases off on hover) */
 
 /* Deck page header art: lighter halftone and grain than the commander page */
-.dhero .cimg .cmdrimg::after {
-  opacity: 0.45;
-}
-.dhero .cimg .cmdrimg .xg {
-  opacity: 0.2;
-}
-.dhero .cimg .cmdrimg,
-.dhero .cimg .cmdrimg:hover {
-  filter: contrast(1.12) saturate(1.12);
-}
 
 /* Card frames everywhere: no clean white border; a scratchy double pen line in worn sepia-grey on top of the art */
 .thumb,
@@ -4863,13 +4080,7 @@ ul.popnote .small {
   font-weight: 700;
 }
 /* Right-click / hold the deck header for the same menu */
-.dhero.hasmenu {
-  cursor: context-menu;
-}
-.dhero.hasmenu a,
-.dhero.hasmenu button {
-  cursor: pointer;
-}
+
 /* Grid / list: two small icon buttons in the first card section, beside the commander */
 .viewsw.mini {
   float: right;
@@ -4997,80 +4208,7 @@ details.cat {
 }
 
 /* Analysis heading is a fold toggle on phones / tablets; on desktop it's a plain heading */
-.dfold {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  text-shadow: inherit;
-  text-align: left;
-  pointer-events: none;
-}
-.dfold .dsum,
-.dfold .pm {
-  display: none;
-}
-@media (max-width: 999px) {
-  .dfold {
-    pointer-events: auto;
-    cursor: pointer;
-    flex-wrap: wrap;
-    position: relative;
-    padding-right: 52px;
-    min-height: 40px;
-  }
-  .dfold .pm {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 40px;
-    background: var(--accent);
-    color: var(--white);
-    font-size: 24px;
-    text-shadow: none;
-  }
-  .dfold .pm::before {
-    content: '−';
-  }
-  .dpanel.closed .dfold .pm::before {
-    content: '+';
-  }
-  .dpanel.closed .dfold .pm {
-    background: var(--ink);
-    border: 2px solid var(--text);
-  }
-  .dpanel.closed .dfold .dsum {
-    display: block;
-    flex-basis: 100%;
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0;
-    line-height: 1.3;
-    text-shadow: none;
-    color: var(--muted);
-  }
-  .dpanel.closed .dbody {
-    display: none;
-  }
-  .dpanel.closed h2 {
-    margin: 0;
-  }
-  .dpanel.closed {
-    padding-top: 14px;
-    padding-bottom: 12px;
-  }
-}
+
 /* Result of the haptics test buzz, under the hub buttons */
 .hapnote {
   margin: 10px 0 0;
@@ -5092,16 +4230,6 @@ details.cat {
 /* ---------- Fit pass (Nov 2026): phones and wide screens ---------- */
 /* Doodles never sit on top of a commander's name. */
 
-@media (max-width: 700px) {
-  /* Discover: two commanders per row instead of one card per screen. */
-
-  /* Small cards: the marker doodles would sit on the text, so they stay on the wider layouts. */
-
-  /* Commander page: the card image no longer fills the first screen. */
-  .chero .cimg {
-    width: min(165px, 44vw);
-  }
-}
 /* Doodles stay under a card's text (name, tags, numbers). */
 
 /* Copies warning: title and summary on one line (it was a tall band holding one sentence). */
@@ -5121,20 +4249,6 @@ details.cat {
 }
 
 /* Desktop / tablet commander page: room to breathe. */
-@media (min-width: 900px) {
-  /* Header: tags get their own full row (they wrap, none hidden behind a fade); the number + % sit above them, right. */
-  .cmeta {
-    flex-wrap: wrap;
-    row-gap: 14px;
-  }
-  .cmeta .score {
-    order: -1;
-    margin-left: auto;
-  }
-
-  /* Settings strip: even columns with air between them, match gets the extra width. */
-
-}
 
 /* Swap window round 2: every card swappable, search your binder, pins (always in / never use) */
 .swapbtn.quiet {
@@ -5211,87 +4325,7 @@ details.cat {
 }
 
 /* Decks home: your saved decks on a shelf above the commanders you can build */
-.shelf {
-  margin: 18px 0 8px;
-}
-.shelfhead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.shelfhead h2 {
-  font-family: var(--an);
-  font-size: 26px;
-  font-weight: 400;
-  margin: 0;
-  background: var(--accent);
-  color: var(--white);
-  padding: 0 10px;
-  transform: skewX(-8deg);
-}
-.shelfhead .link {
-  background: none;
-  border: 0;
-  color: var(--text);
-  font-family: var(--se);
-  font-size: 14px;
-  text-decoration: underline;
-  min-height: 44px;
-}
-.shelf ul.shelfrow {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0 0 10px;
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-}
-.shelf li {
-  flex: 0 0 200px;
-  scroll-snap-align: start;
-}
-.shelf li > button:not(.dlight) {
-  width: 100%;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--paper);
-  color: var(--ink);
-  border: 3px solid var(--ink);
-  padding: 8px;
-  box-shadow: 5px 5px 0 var(--accent);
-}
-.shelf li > button:not(.dlight):hover,
-.shelf li > button:not(.dlight):focus-visible {
-  transform: rotate(-1.5deg);
-}
-.shelf .art {
-  display: block;
-  aspect-ratio: 16 / 10;
-  background: #333;
-  overflow: hidden;
-}
-.shelf .art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.shelf li b {
-  font-family: var(--an);
-  font-weight: 400;
-  font-size: 17px;
-  line-height: 1.1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.shelf li small {
-  font-family: var(--se);
-  font-size: 12px;
-}
+
 .count .canbuild {
   font-family: var(--an);
   font-weight: 400;
@@ -5300,26 +4334,9 @@ details.cat {
   padding: 0 8px;
   margin-right: 6px;
 }
-@media (max-width: 700px) {
-  .shelf li {
-    flex-basis: 156px;
-  }
-}
 
 /* The Forge: deck page hint + the commander page's FORGE IT button */
-.forgehint {
-  font-family: var(--se);
-  font-size: 14px;
-  margin: 0 0 10px;
-}
-.forgehint b {
-  font-family: var(--an);
-  font-weight: 400;
-  background: var(--ink);
-  color: var(--hazard);
-  padding: 1px 8px;
-  margin-right: 8px;
-}
+
 .btn.forge {
   background: var(--accent);
   color: var(--white);
@@ -5414,34 +4431,11 @@ details.cat {
   background: #2bd65a;
   box-shadow: 0 0 8px #2bd65a;
 }
-.shelf li,
-.dgrid li.dtile {
-  position: relative;
-}
-.shelf li > .dlight,
-.dgrid li.dtile > .dlight {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  min-height: 32px;
-  padding: 0 8px;
-  font-size: 12px;
-  z-index: 4;
-}
-.shelf li.off > button,
-.dgrid li.dtile.off > .dcard {
-  filter: grayscale(1);
-  opacity: 0.7;
-}
+
 .inuse {
   font-family: var(--se);
   font-size: 12px;
   color: #2bd65a;
-}
-.cmeta > .dlight {
-  align-self: flex-start;
-  width: auto;
-  margin: 8px 8px 0 0;
 }
 
 /* Forging zone: the spinning card says you're tuning this deck; leaving asks to save */
@@ -5603,30 +4597,6 @@ details.cat {
   --sp6: 32px;
   --sp7: 48px;
 }
-.shelf {
-  margin: var(--sp5) 0 var(--sp2);
-}
-.shelf ul.shelfrow {
-  gap: var(--sp4);
-  margin-top: var(--sp3);
-}
-.forgehint {
-  margin: var(--sp4) 0;
-}
-@media (max-width: 700px) {
-  /* Phone commander hero: smaller card, tighter padding, so the deck starts on the first screen */
-  .chero {
-    padding: var(--sp3) var(--sp3) var(--sp4);
-    gap: var(--sp3);
-  }
-  .chero .cimg {
-    width: min(132px, 36vw);
-    margin-top: var(--sp2);
-  }
-  .ctitle {
-    padding: var(--sp4) var(--sp2) var(--sp4) var(--sp3);
-  }
-}
 
 /* Loading card: the black-and-white pixel card spin from card-hunt (CardSpin.tsx) */
 .cardspin {
@@ -5734,12 +4704,7 @@ details.cat {
   padding: 0 0 0 12px;
   gap: 10px;
 }
-.match .burst {
-  right: -14px;
-  top: -26px;
-  width: 112px;
-  height: 112px;
-}
+
 .match .num {
   flex: 0 0 auto;
   min-width: 78px;
@@ -6066,16 +5031,7 @@ details.cat {
 /* Built around: EDHREC's top 6 tags as slim chips, the rest behind +N MORE (24 big tags buried the header) */
 
 /* Copies warning lives in the strip's bottom line: the line turns hazard yellow and leads with ⚠ N SHORT (tap = list) */
-.forgehint.warn {
-  background: var(--hazard);
-  color: var(--ink);
-  border-top: 0;
-  margin-top: var(--sp2);
-  padding: var(--sp2) var(--sp3);
-}
-.forgehint.warn {
-  border: 2px solid var(--ink);
-}
+
 .shortin {
   display: inline-block;
   vertical-align: middle;
@@ -6114,9 +5070,6 @@ details.cat {
   margin: var(--sp2) 0;
   padding-left: var(--sp4);
   font-size: 13px;
-}
-.forgehint.warn > b {
-  margin-left: 0;
 }
 
 /* Clean tiles (Nov 6): the art stays readable. ⋯ fades in on hover / focus (faint on touch screens); prices are
@@ -6285,38 +5238,9 @@ details.cat {
 }
 
 /* Forge: collection match sits on top of the ANALYSIS panel (the commander header stays clean) */
-.dmatch {
-  margin: 0 0 var(--sp4);
-}
-.dmatch .lbl {
-  display: block;
-  font-family: var(--an);
-  font-size: 18px;
-  letter-spacing: 0.5px;
-  color: var(--white);
-  margin-bottom: var(--sp2);
-}
-.dmatch .match {
-  min-height: 64px;
-}
 
 /* My decks shelf: every tile the same width. A flex item's default min-width is its content, so a long deck name
    (kept on one line) used to stretch its tile; now the name is cut with … instead. */
-.shelf li {
-  min-width: 0;
-}
-.shelf li > button:not(.dlight) {
-  min-width: 0;
-  overflow: hidden;
-}
-.shelf li b,
-.shelf li small {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 /* Save this deck? — compact: spinning card beside the title, one row of buttons, "keep forging" as a quiet link */
 .note-pop.leavenote {
@@ -6487,21 +5411,10 @@ details.cat {
 }
 
 /* Commander card: halftone dots 30% lighter; the hint tape and ⋯ corner sit on top of the dots */
-.cimg .cmdrimg::after {
-  background: radial-gradient(rgba(0, 0, 0, 0.245) 1px, transparent 1.5px) 0 0/4px 4px;
-}
-.cimg .cmdrimg .xg {
-  opacity: 0.315;
-}
+
 .cmdrbtn .cmdrhint,
 .cmdrbtn .cmdrmore {
   z-index: 4;
-}
-.dhero .cimg .cmdrimg::after {
-  opacity: 0.315;
-}
-.dhero .cimg .cmdrimg .xg {
-  opacity: 0.14;
 }
 
 /* Card menu: Change artwork — a small grid of your card's printings, the one you own outlined */
@@ -6780,46 +5693,7 @@ details.cat {
 /* the strip below keeps the match bar (shown once), built around and the line of notes */
 
 /* 2. One loud price: the missing cost is the only price on yellow tape; totals are quiet grey text */
-.misscost {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--sp1);
-  padding: 3px 10px 2px;
-  background: var(--hazard);
-  color: var(--ink);
-  font-family: var(--an);
-  font-size: 18px;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  text-decoration: none;
-  transform: rotate(-2deg);
-  box-shadow: 2px 2px 0 var(--ink);
-  clip-path: polygon(2% 0, 98% 4%, 100% 50%, 97% 100%, 1% 94%, 0 45%);
-}
-.misscost small {
-  font-family: var(--se);
-  font-size: 11px;
-  letter-spacing: 0;
-}
-a.misscost:hover {
-  text-decoration: underline;
-}
-.dpanel .misscost {
-  align-self: flex-start;
-  margin: var(--sp1) 0 var(--sp2);
-}
-.hstats .price.quiet {
-  background: none;
-  box-shadow: none;
-  clip-path: none;
-  transform: none;
-  padding: 0;
-  font-family: var(--se);
-  font-size: 13px;
-  color: var(--muted);
-  align-self: center;
-  white-space: nowrap;
-}
+
 .cat > summary .gval {
   background: none;
   box-shadow: none;
@@ -7027,25 +5901,9 @@ a.misscost:hover {
   background: var(--dc, #2bd65a);
   box-shadow: 0 0 8px var(--dc, #2bd65a);
 }
-.shelf li:not(.off) > button,
-.dgrid li.dtile:not(.off) > .dcard {
-  box-shadow: inset 0 -5px 0 var(--dc, transparent);
-}
+
 /* deck page: ACTIVE / OFF sits at the end of the deck's name */
-.dhero .titlerow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp2) var(--sp3);
-}
-.dhero .titlerow > h1 {
-  margin: 0;
-}
-.dhero .titlerow > .dlight {
-  position: relative;
-  z-index: 2;
-  transform: rotate(-3deg);
-}
+
 /* deck menu: colour swatches */
 .deckmenu .colourrow {
   display: flex;
@@ -8000,40 +6858,6 @@ main {
 }
 
 /* the decks row scrolls sideways and ends with SEE ALL */
-.shelf ul.shelfrow {
-  display: flex;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  padding-bottom: 8px;
-  -webkit-overflow-scrolling: touch;
-}
-.shelf ul.shelfrow > li.seeall {
-  flex: 0 0 140px;
-}
-.shelf ul.shelfrow > li.seeall > button {
-  height: 100%;
-  min-height: 120px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px;
-  background: var(--r, #e5141f);
-  color: #fff;
-  border: 2px solid #141414;
-  box-shadow: 4px 4px 0 #141414;
-  transform: rotate(-1deg);
-}
-.shelf ul.shelfrow > li.seeall b {
-  font-family: var(--an);
-  font-size: 22px;
-}
-.shelf ul.shelfrow > li.seeall .arr {
-  font-size: 22px;
-}
 
 /* Phones: the eye sits a little further right so its art shows past the letters */
 @media (max-width: 700px) {
@@ -8152,11 +6976,6 @@ main {
 }
 .chead2 .titlewrap > .bindermenu > .bmbtn {
   transform: rotate(-2deg);
-}
-
-.shelf .shelfhead {
-  flex-wrap: wrap;
-  align-items: center;
 }
 
 /* the binder menu opens over the sticky tool bar below the title */
@@ -9114,31 +7933,6 @@ ul.zcompact > li.zrow .price.tapey {
 /* ===== Platform Space & Layout Pass (Phone / Tablet / Desktop) ===== */
 
 /* 4. Add a Deck entry points: always reachable even when 0 decks exist */
-.shelfhead h2 > .shelftitle {
-  background: none;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  padding: 0;
-  cursor: pointer;
-}
-.shelfhead > .adddeckbtn {
-  min-height: 44px;
-  padding: 0 14px;
-  background: var(--paper, #f4f1ea);
-  color: var(--ink, #0a0a0a);
-  border: 2px solid var(--ink, #0a0a0a);
-  box-shadow: 4px 4px 0 var(--accent, #e60012);
-  font-family: var(--an);
-  font-size: 18px;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transform: rotate(-1deg);
-}
-.shelfhead > .adddeckbtn:hover,
-.shelfhead > .adddeckbtn:focus-visible {
-  background: var(--hazard, #ffcc00);
-}
 
 /* 1. Desktop (1200px+): wider stage, denser commander grid, multi-column open card categories, scrollable workbench */
 @media (min-width: 1200px) {
@@ -9228,13 +8022,12 @@ ul.zcompact > li.zrow .price.tapey {
 @media (max-width: 700px) {
   /* Suppress native browser long-press menu overlay */
   .cardmenu,
-  .cardmenu *,
-  .ctile,
-  .crow,
-  .ztile,
-  .xart,
-  .cimg,
-  .timg {
+.cardmenu *,
+.ctile,
+.crow,
+.ztile,
+.xart,
+.timg {
     -webkit-touch-callout: none !important;
     user-select: none;
   }
@@ -9244,8 +8037,7 @@ ul.zcompact > li.zrow .price.tapey {
     margin-top: 8px;
     margin-bottom: 6px;
   }
-  .chead2 .ztitle,
-  .decksbar .ztitle {
+  .chead2 .ztitle {
     font-size: 38px;
   }
   .colltitle {
@@ -9253,30 +8045,7 @@ ul.zcompact > li.zrow .price.tapey {
   }
 
   /* Compact My Decks action row */
-  .decksbar {
-    margin-top: 8px;
-    margin-bottom: 8px;
-    gap: 8px;
-  }
-  .decksbar section {
-    margin-top: 4px !important;
-  }
-  .decksactions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .decksactions .btn {
-    min-height: 40px;
-    padding: 4px 8px;
-    font-size: 13px;
-    text-align: center;
-    justify-content: center;
-  }
-  .dgrid {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom));
-  }
+
   .shortalert {
     margin: 8px 0;
     padding: 8px 12px;
@@ -9299,98 +8068,17 @@ ul.zcompact > li.zrow .price.tapey {
     font-size: 11px;
     opacity: 0.9;
   }
-  .dcard {
-    padding: 30px 14px 14px;
-    gap: 12px;
-  }
-  .dcard .xart {
-    width: 72px;
-    height: 100px;
-  }
-  .dcard .t b {
-    font-size: 19px;
-  }
-  .dgrid li.dtile > .dlight {
-    top: 6px;
-    right: 8px;
-    min-height: 24px;
-    padding: 0 6px;
-    font-size: 11px;
-  }
 
   /* Pill navigation: sleek 42px on phones so it never dominates screen */
 
   /* RESCUE THE FORGE: Compact header on mobile (title stays visible for tests & navigation) */
-  .dhero {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    padding: 6px 10px;
-    margin: 4px 0 6px;
-    gap: 8px;
-  }
-  .dhero .banner.ht {
-    display: none;
-  }
-  .dhero .cimg {
-    flex: 0 0 54px;
-    width: 54px;
-    height: 75px;
-    min-height: 75px;
-    margin: 0;
-    padding: 0;
-    position: relative;
-  }
-  .dhero .cimg .cmdrbtn {
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    display: block;
-  }
-  .dhero .cimg .cmdrbtn img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 3px;
-  }
-  .dhero .cimg .cmdrhint,
-  .dhero .cimg .cmdrmore,
-  .dhero .cimg .doodles {
-    display: none;
-  }
-  .dhero .cright,
-  .dhero .ctitle {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .dhero .ctitle h1 {
-    font-size: 20px;
-    line-height: 1.1;
-  }
-  .dhero .titlerow {
-    align-items: center;
-    gap: 6px;
-  }
-  .dhero .cmeta {
-    font-size: 11px;
-    margin-top: 2px;
-  }
-  .dhero .namerow {
-    gap: 4px;
-    margin-top: 2px;
-  }
+
   /* In the Forge, place the analysis box below the cards instead of squishing them */
   html.forging .deckgrid > .dside {
     order: 1;
     margin-top: 16px;
   }
   /* Slim 28px forge hint */
-  .forgehint {
-    font-size: 12px;
-    padding: 6px 10px;
-    margin: 6px 0 10px;
-    line-height: 1.3;
-  }
 
   /* When forging, .forgetop and .fmeters stick; toolbar scrolls naturally */
   html.forging .dtools.tbar,
@@ -9413,9 +8101,6 @@ ul.zcompact > li.zrow .price.tapey {
 }
 
 /* 5. Separate MY DECKS from Collection Import + Deck-list guard in Collection Import */
-.shelfhead > .adddeckbtn {
-  margin-left: auto;
-}
 
 /* ==========================================================================
    6. Cohesive UI & UX Overhaul:
@@ -9485,21 +8170,4 @@ ul.zcompact > li.zrow .price.tapey {
 }
 
 /* MY DECKS top header bar + instant actions */
-.decksbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 10px;
-}
-.decksbar .count {
-  margin-bottom: 0;
-}
-.decksactions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
 
