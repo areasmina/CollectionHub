@@ -988,56 +988,58 @@ export function Decks(s: Shared) {
     <>
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
       <main>
-        <div className="decksbar">
-          <div>
-            <section style={{ display: 'inline-block', marginTop: 24 }}>
-              <Title text="MY DECKS" label="My decks" size={72} seed={33} />
-            </section>
-            <p className="count" style={{ color: 'var(--text)' }}>
-              {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
-              <span className="cur">_</span>
-            </p>
+        <div className="arsenal-console" role="region" aria-label="Deck Arsenal Console">
+          <div className="decksbar">
+            <div>
+              <section style={{ display: 'inline-block', marginTop: 12 }}>
+                <Title text="MY DECKS" label="My decks" size={68} seed={33} />
+              </section>
+              <p className="count" style={{ color: 'var(--text)' }}>
+                {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
+                <span className="cur">_</span>
+              </p>
+            </div>
+            <div className="decksactions">
+              <button type="button" className="btn save" onClick={jumpToAdd}>
+                + IMPORT / PASTE DECK ↓
+              </button>
+              <button type="button" className="btn ink" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+                ⚒ NEW BLANK DECK
+              </button>
+            </div>
           </div>
-          <div className="decksactions">
-            <button type="button" className="btn save" onClick={jumpToAdd}>
-              + IMPORT / PASTE DECK ↓
-            </button>
-            <button type="button" className="btn ink" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-              ⚒ NEW BLANK DECK
-            </button>
-          </div>
-        </div>
-        <ShortAlert items={short} />
-        {decks.length > 0 && (
-          <div className="decks-overview-bar" role="region" aria-label="Deck collection overview">
-            <div className="ov-stat">
-              <span className="ov-val">{decks.length}</span>
-              <span className="ov-lbl">TOTAL DECKS</span>
-            </div>
-            <div className="ov-stat">
-              <span className="ov-val">{readyDecks}</span>
-              <span className="ov-lbl">READY TO PLAY</span>
-            </div>
-            <div className="ov-stat">
-              <span className="ov-val">{uniqueCardsInDecks}</span>
-              <span className="ov-lbl">CARDS IN PLAY</span>
-            </div>
-            <div className="ov-stat ov-colors">
-              <span className="ov-lbl">COLOR IDENTITY</span>
-              <div className="ov-pips">
-                {(['W', 'U', 'B', 'R', 'G'] as const).map((c) => (
-                  <span key={c} className={`ov-pip pip-${c.toLowerCase()} ${colorCounts[c] ? 'active' : ''}`} title={`${colorCounts[c]} decks include ${c}`}>
-                    {c} <small>{colorCounts[c] || 0}</small>
-                  </span>
-                ))}
+          <ShortAlert items={short} />
+          {decks.length > 0 && (
+            <div className="decks-overview-bar" role="region" aria-label="Deck collection overview">
+              <div className="ov-stat">
+                <span className="ov-val">{decks.length}</span>
+                <span className="ov-lbl">TOTAL DECKS</span>
+              </div>
+              <div className="ov-stat ready">
+                <span className="ov-val">{readyDecks}</span>
+                <span className="ov-lbl">READY TO PLAY</span>
+              </div>
+              <div className="ov-stat">
+                <span className="ov-val">{uniqueCardsInDecks}</span>
+                <span className="ov-lbl">CARDS IN PLAY</span>
+              </div>
+              <div className="ov-stat ov-colors">
+                <span className="ov-lbl">COLOR IDENTITY</span>
+                <div className="ov-pips">
+                  {(['W', 'U', 'B', 'R', 'G'] as const).map((c) => (
+                    <span key={c} className={`ov-pip pip-${c.toLowerCase()} ${colorCounts[c] ? 'active' : ''}`} title={`${colorCounts[c]} decks include ${c}`}>
+                      {c} <small>{colorCounts[c] || 0}</small>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="ov-stat">
+                <span className="ov-val">B{avgBracket}</span>
+                <span className="ov-lbl">AVG POWER</span>
               </div>
             </div>
-            <div className="ov-stat">
-              <span className="ov-val">B{avgBracket}</span>
-              <span className="ov-lbl">AVG POWER</span>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid">
           {decks.map((d, i) => {
