@@ -62,7 +62,7 @@ test('One slim bar: search + ⋮ (GEAR inside, POWER in Bracket Fit), groups sta
   expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52); // one slim row at every width
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
   await expect(page.locator('.dstrip .power')).toHaveCount(0); // POWER is said once: inside the Bracket Fit tile (Nov 7)
-  await expect(page.locator('.vtile.fit summary')).toContainText('BRACKET FIT');
+  await expect(page.locator('.vtile.fit summary')).toContainText(/FITS|TARGET/i);
   await expect(bar.locator('.fnow')).not.toContainText(/MED|B4/);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Power' })).toHaveCount(0);

@@ -442,6 +442,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     gameChangers().then(setGc);
   }, [deck.id]);
   const [view, setView] = useStored<'grid' | 'list' | 'compact'>('ch:view', typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches ? 'compact' : 'grid', ['grid', 'list', 'compact']);
+  const [zoom, setZoom] = useStored<'s' | 'm' | 'l'>('ch:cmdrzoom', 'm', ['s', 'm', 'l']);
   const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
   const [q, setQ] = useState(''); // search the deck by name or rules text
@@ -716,7 +717,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
-        <div className="deckgrid after-sw">
+        <div className="deckgrid after-sw" data-zoom={zoom}>
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className="lists" {...drop}>
             {/* How the cards are split and ordered, right above them */}
@@ -744,12 +745,26 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                       <CompactIcon />
                     </button>
                   </div>
+                  {view === 'grid' && (
+                    <button
+                      type="button"
+                      className="u-btn ghost qzoom-btn"
+                      title={{ s: 'Size: Small. Tap for Medium', m: 'Size: Medium. Tap for Large', l: 'Size: Large. Tap for Small' }[zoom]}
+                      aria-label={`Card size ${zoom.toUpperCase()}: tap to cycle size`}
+                      onClick={() => {
+                        haptic('select');
+                        setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
+                      }}
+                    >
+                      SIZE {zoom.toUpperCase()}
+                    </button>
+                  )}
                 </>
               }
             >
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
-              <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
+              <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
               <OptRow label="VIEW">
                 <div className="viewsw mini" role="group" aria-label="Card view">
                   <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
@@ -787,7 +802,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                       </span>
                     </summary>
                     
-                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'}>
+                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'} data-zoom={view === 'grid' ? zoom : undefined}>
                       {cs.map((c) => (
                         <Item
                           key={c.name}

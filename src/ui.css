@@ -1387,17 +1387,26 @@ main.dpage {
 }
 
 /* Options menu (⋮) overhaul: clean scrolling, no overlapping theme chips, tamed select dropdowns */
-.dtools.tbar > .tbmore > .fbody {
-  width: min(440px, calc(100vw - 24px)) !important;
-  max-height: min(600px, calc(100vh - 120px)) !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain;
-  background: #141414 !important;
-  border: 1px solid #333333 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
-  padding: 16px !important;
-  gap: 12px !important;
+.dtools.tbar {
+  position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar stays in reach while scrolling */
+}
+.dtools.tbar > .tbmore {
+  position: static !important;
+}
+/* Tablet & Desktop: anchor right; Mobile: anchor left */
+@media (min-width: 701px) {
+  .dtools.tbar > .tbmore > .fbody {
+    right: 0 !important;
+    left: auto !important;
+    max-width: min(440px, calc(100vw - 24px)) !important;
+  }
+}
+@media (max-width: 700px) {
+  .dtools.tbar > .tbmore > .fbody {
+    left: 0 !important;
+    right: auto !important;
+    max-width: min(440px, calc(100vw - 24px)) !important;
+  }
 }
 .dtools.tbar > .tbmore .optrow {
   padding-top: 10px;
@@ -3248,9 +3257,21 @@ main.dpage {
 
 /* 2. Theme Pills rounded capsule styling (matching user reference Image 4) */
 @media (min-width: 1024px) {
+  /* Tablet & Desktop: anchor right; Mobile: anchor left */
+@media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
-    width: min(500px, calc(100vw - 24px)) !important;
+    right: 0 !important;
+    left: auto !important;
+    max-width: min(440px, calc(100vw - 24px)) !important;
   }
+}
+@media (max-width: 700px) {
+  .dtools.tbar > .tbmore > .fbody {
+    left: 0 !important;
+    right: auto !important;
+    max-width: min(440px, calc(100vw - 24px)) !important;
+  }
+}
 }
 .dtools .fbody .optrow:has(.themes),
 .dtools.tbar > .tbmore .optrow:has(.themes) {
@@ -3577,15 +3598,26 @@ main.dpage {
 }
 
 /* Options dropdown anchors to the left underneath the options button */
-.dtools.tbar > .tbmore > .fbody {
-  left: -2px !important;
-  right: auto !important;
+/* Tablet & Desktop: anchor right; Mobile: anchor left */
+@media (min-width: 701px) {
+  .dtools.tbar > .tbmore > .fbody {
+    right: 0 !important;
+    left: auto !important;
+    max-width: min(440px, calc(100vw - 24px)) !important;
+  }
+}
+@media (max-width: 700px) {
+  .dtools.tbar > .tbmore > .fbody {
+    left: 0 !important;
+    right: auto !important;
+    max-width: min(440px, calc(100vw - 24px)) !important;
+  }
 }
 
-@media (max-width: 960px) {
-  .dtools.tbar > .tquick {
-    display: none !important;
-  }
+/* Keep quick buttons visible and horizontally scrollable */
+.dtools.tbar > .tquick,
+.tbar > .tquick {
+  display: inline-flex !important;
 }
 
 /* ==========================================================================
@@ -4432,4 +4464,108 @@ main.dpage {
 }
 .swapnote .pin-hint b {
   color: #ffffff !important;
+}
+
+/* Deck Grid Card Zoom (Small / Medium / Large) */
+.deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid,
+ul.zgrid[data-zoom='s'] {
+  gap: 12px 10px !important;
+}
+
+.deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid > li,
+ul.zgrid[data-zoom='s'] > li {
+  flex: 0 0 114px !important;
+  width: 114px !important;
+}
+
+ul.zgrid[data-zoom='s'] .ztile .tname {
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  word-break: break-word !important;
+}
+
+ul.zgrid[data-zoom='s'] .ztile .misstape,
+ul.zgrid[data-zoom='s'] .ztile .bannedtape {
+  font-size: 10px !important;
+  padding: 1px 4px !important;
+}
+
+ul.zgrid[data-zoom='s'] .ztile .tnote {
+  font-size: 11px !important;
+}
+
+.deckgrid[data-zoom='m'] > .lists > details.cat > ul.zgrid > li,
+ul.zgrid[data-zoom='m'] > li {
+  flex: 0 0 148px !important;
+  width: 148px !important;
+}
+
+.deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid,
+ul.zgrid[data-zoom='l'] {
+  gap: 22px 18px !important;
+}
+
+.deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid > li,
+ul.zgrid[data-zoom='l'] > li {
+  flex: 0 0 216px !important;
+  width: 216px !important;
+}
+
+ul.zgrid[data-zoom='l'] .ztile .tname {
+  font-size: 17px !important;
+  line-height: 1.2 !important;
+}
+
+ul.zgrid[data-zoom='l'] .ztile .tnote {
+  font-size: 13px !important;
+}
+
+@media (max-width: 700px) {
+  .deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid > li,
+  ul.zgrid[data-zoom='s'] > li {
+    flex-basis: calc((100% - 16px) / 3) !important;
+    width: calc((100% - 16px) / 3) !important;
+  }
+
+  .deckgrid[data-zoom='m'] > .lists > details.cat > ul.zgrid > li,
+  ul.zgrid[data-zoom='m'] > li {
+    flex-basis: calc((100% - 12px) / 2) !important;
+    width: calc((100% - 12px) / 2) !important;
+  }
+
+  .deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid > li,
+  ul.zgrid[data-zoom='l'] > li {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    max-width: 280px !important;
+    margin: 0 auto !important;
+  }
+}
+
+/* Hide redundant SHOW pick from filter menu on desktop/tablet where it is in the search bar */
+@media (min-width: 701px) {
+  .tbar .pickgrid .sbox.show-pick,
+  .tbar .sbox.show-pick {
+    display: none !important;
+  }
+}
+
+/* Quick pills visible on desktop & tablet (> 700px); on phones (<= 700px), hide so toolbar stays <= 52px */
+.dtools.tbar > .tquick,
+.tbar > .tquick {
+  display: inline-flex !important;
+}
+
+@media (max-width: 700px) {
+  .dtools.tbar > .tquick,
+  .tbar > .tquick {
+    display: none !important;
+  }
+}
+
+/* Target Bracket popover inside vtile.fit aligns to right: 0 to prevent phone viewport spill */
+.vtile.fit .vpop,
+.vhero .vtile.fit .vpop {
+  left: auto !important;
+  right: 0 !important;
 }

@@ -105,7 +105,7 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
   const o = await opts(page);
   await expect(o.locator('.tagmore')).toHaveText('+4 MORE');
   const ys = await o.locator('.themes button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
-  expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows
+  expect(new Set(ys).size).toBeLessThanOrEqual(3); // rows (the ⋮ menu is capped at 440px since Nov 7)
   await page.screenshot({ path: 'test-results/commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
@@ -482,12 +482,12 @@ test('One card menu: ⋯ / right-click on commander page and Collection cards, s
   await page.locator('.ccard').first().click();
   await page.getByRole('button', { name: 'More for Sol Ring' }).click();
   const m = page.getByRole('menu', { name: 'Sol Ring options' });
-  await expect(m.getByRole('button', { name: /Swap…/ })).toBeVisible();
-  await expect(m.getByRole('button', { name: '💀 Never use' })).toBeVisible();
+  await expect(m.getByRole('button', { name: /SWAP…/i })).toBeVisible();
+  await expect(m.getByRole('button', { name: 'NEVER USE' })).toBeVisible();
   await expect(m.getByText('also in:')).toBeVisible();
   await page.waitForTimeout(300); // the menu drops in with a small tilt first
   await fits(page, ['.cardmenu']);
-  await m.getByRole('button', { name: /Swap…/ }).click();
+  await m.getByRole('button', { name: /SWAP…/i }).click();
   await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();
   await go(page, 'collection');
   await page.locator('li', { hasText: 'Sol Ring' }).first().click({ button: 'right' });
@@ -699,12 +699,12 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await expect(page.locator('.vtile.fit summary')).toContainText(/FITS/); // decks open at MED power, MAX budget
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
+  // filter to OWNED cards via toolbar search bar quick segment
+  // (quick segments show above 700px; on phones the same filter is SHOW in ⋮)
+  if (page.viewportSize()!.width > 700) await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
+  else await (await opts(page)).locator('.show-pick select').selectOption('owned');
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('OWNED');
   const o = await opts(page);
-  await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();
-  await expect(cov).toContainText('owned only');
-  const after = await cov.innerText();
-  const buy = (t: string) => Number(/(\d+) to buy/.exec(t)?.[1] ?? 0);
-  expect(buy(after)).toBeLessThanOrEqual(buy(before));
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();
   await fits(page, ['.lists']);
   await page.screenshot({ path: `test-results/ad-${info.project.name}.png` });

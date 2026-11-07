@@ -499,6 +499,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
   const Item = view === 'grid' ? CardTile : CardLine;
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
+  const [zoom, setZoom] = useStored<'s' | 'm' | 'l'>('ch:cmdrzoom', 'm', ['s', 'm', 'l']);
   const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useState<Show>('all');
   useEffect(() => {
@@ -829,7 +830,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {error && <p className="error">{error}</p>}
         {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
-          <div className={`deckgrid after-sw${forging ? ' forge-split' : ''}`}>
+          <div className={`deckgrid after-sw${forging ? ' forge-split' : ''}`} data-zoom={zoom}>
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             {forging && (
               <div className="dside forge-analysis">
@@ -841,7 +842,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <ToolBar
                 q={q}
                 setQ={setQ}
-                now={[tag ? `#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag}` : '', `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+                now={[tag ? `#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag}` : '', `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', show !== 'all' ? show.toUpperCase() : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
                 quick={
                   <>
                     <div className="qsegs" role="group" aria-label="Quick filter">
@@ -862,6 +863,20 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         <CompactIcon />
                       </button>
                     </div>
+                    {view === 'grid' && (
+                      <button
+                        type="button"
+                        className="u-btn ghost qzoom-btn"
+                        title={{ s: 'Size: Small. Tap for Medium', m: 'Size: Medium. Tap for Large', l: 'Size: Large. Tap for Small' }[zoom]}
+                        aria-label={`Card size ${zoom.toUpperCase()}: tap to cycle size`}
+                        onClick={() => {
+                          haptic('select');
+                          setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
+                        }}
+                      >
+                        SIZE {zoom.toUpperCase()}
+                      </button>
+                    )}
                   </>
                 }
               >
@@ -907,7 +922,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       {(['in', 'out'] as const).flatMap((side) =>
                         pins[side].map((n) => (
                           <button key={side + n} type="button" className="u-chip pinchip" onClick={() => (haptic('undo'), setPin(n, side))} aria-label={`Unpin ${n}`} title="Tap to unpin">
-                            {side === 'in' ? '📌' : '💀'} {n} ×
+                            {side === 'in' ? 'PIN' : 'NEVER'} {n} ×
                           </button>
                         )),
                       )}
@@ -917,11 +932,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
-                {kind === 'average' && (
-                  <OptRow label="CARDS">
-                    <Segs label="Cards" value={ownMode} options={OWN_MODES.map(([v, t]) => [v, t, v === 'owned' ? 'Only cards you own: missing ones get your best stand-in' : 'Your cards win unless a missing one is clearly better'])} onChange={(v) => setOwnMode(v as OwnMode)} />
-                  </OptRow>
-                )}
                 {kind === 'average' && (
                   <OptRow label="BUY UNDER">
                     <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
@@ -942,7 +952,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 </OptRow>
                 <div className="pickgrid">
                   <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                  <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                  <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} className="show-pick" />
                   <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
                 </div>
                     {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
@@ -1163,7 +1173,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       </span>
                     </summary>
                     
-                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'}>
+                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'} data-zoom={view === 'grid' ? zoom : undefined}>
                       {cs.map((c) => {
                         // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.
                         const swappable = kind === 'average' && norm(c.name) !== norm(name);
@@ -1173,7 +1183,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         const bc = repl && !rc ? binderCard.get(norm(repl)) : undefined;
                         const now = repl ?? c.name;
                         const pin = pinOf(pins, now);
-                        const mark = repl ? `${slot!.why === 'pin' ? '📌' : slot!.why === 'never' ? '💀' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? '📌 always in' : pin === 'out' ? '💀 no card of yours fits' : undefined;
+                        const mark = repl ? `${slot!.why === 'pin' ? 'PIN' : slot!.why === 'never' ? 'NEVER' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? 'always in' : pin === 'out' ? 'no card fits' : undefined;
                         const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
                         return (
                           <Item

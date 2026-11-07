@@ -331,9 +331,9 @@ export function snapTick(e: React.UIEvent<HTMLElement>) {
 }
 
 /** Dropdown in the Discover SORT-box style: black tab label, select, red arrow. */
-export function Pick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
+export function Pick<T extends string>({ label, value, options, onChange, className }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void; className?: string }) {
   return (
-    <label className="sbox pick">
+    <label className={`sbox pick${className ? ` ${className}` : ''}`}>
       <span className="tab">{label}</span>
       <select value={value} onChange={(e) => (haptic('select'), onChange(e.target.value as T))}>
         {options.map(([v, t]) => (

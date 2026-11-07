@@ -7691,10 +7691,10 @@ ul.zcompact > li.zrow .price.tapey {
 }
 
 /* Keep .tbar strictly single-row (<= 52px) on narrower viewports */
-@media (max-width: 960px) {
-  .tbar > .tquick {
-    display: none;
-  }
+/* Keep quick buttons visible and horizontally scrollable */
+.dtools.tbar > .tquick,
+.tbar > .tquick {
+  display: inline-flex !important;
 }
 
 /* MY DECKS top header bar + instant actions */
