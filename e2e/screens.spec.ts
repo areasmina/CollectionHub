@@ -58,7 +58,7 @@ test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes
   await expect(themes).toHaveCount(10);
   await themes.first().click();
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('#LANDFALL');
-  await expect(page.locator('.dstrip')).toBeVisible(); // the theme's EDHREC page loaded
+  await expect(page.locator('.dstrip .dcost')).toBeVisible(); // the theme's EDHREC page loaded (the strip stays while it loads)
   await fits(page, ['.vhero', '.dstrip', '.tbar .fbody']);
   await page.screenshot({ path: `test-results/overhaul-deck-${info.project.name}.png` });
 });

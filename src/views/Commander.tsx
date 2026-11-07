@@ -678,14 +678,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        {/* The one strip: POWER · what the deck needs and costs · short / TO BUY / FORGE. Everything else is behind ⋮. */}
-        {page && (
-          <section className={`dstrip${forging ? ' forging' : ''}`} aria-label="Deck status">
+        {/* The one strip: POWER · what the deck needs and costs · short / TO BUY / FORGE. Everything else is behind ⋮.
+            It stays while a new power or theme loads (no jump), saying so in its status line. */}
+        {!error && (
+          <section className={`dstrip${forging ? ' forging' : ''}`} aria-label="Deck status" aria-busy={!page}>
             <Menu className="power" label={`Power: ${powerLabel}. Change it`} summary={<><span className="k">POWER</span> {powerLabel} <span className="car" aria-hidden="true">▾</span></>}>
               <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
             </Menu>
             <p className="dstatus" role="status">
-              {kind === 'average' ? (
+              {!page ? (
+                <span>loading EDHREC data…</span>
+              ) : kind === 'average' ? (
                 <>
                   <span className="coverage">{covText}</span>
                   {pricesIn && deckCost > 0 && (
@@ -702,7 +705,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             </p>
             <div className="dacts">
               <ShortAlert items={short} inline />
-              {receipt && !forging && (
+              {page && receipt && !forging && (
                 <button type="button" className={`u-btn tobuy${missing.length ? ' money' : ''}`} aria-haspopup="dialog" aria-expanded={buyOpen} onClick={() => (haptic('open'), setBuyOpen(true))}>
                   {missing.length > 0 ? (
                     <>
@@ -716,7 +719,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   )}
                 </button>
               )}
-              {kind === 'average' && !forging && (
+              {page && kind === 'average' && !forging && (
                 <button type="button" className="u-btn primary forge" onClick={() => (haptic('open'), setManualForge(true))} title="Open The Forge: live role meters and ranked suggestions">
                   ⚒ FORGE
                 </button>
