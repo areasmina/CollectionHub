@@ -209,3 +209,94 @@ export function commanderThemes(cmdr?: C, edhTags?: { value: string; count?: num
   }
   return out;
 }
+
+
+export interface CardSynergyMatch {
+  card: string;
+  themeLabel: string;
+  themeSlug?: string;
+  explanation: string;
+}
+
+/**
+ * Detect synergies between a pinned/searched card and the commander\'s available theme tags.
+ * E.g., Elesh Norn, Mother of Machines matches Blink / ETB, doubling enter-the-battlefield triggers!
+ */
+export function detectCardSynergies(cardName: string, card?: C, availableTags?: { slug: string; value: string }[]): CardSynergyMatch | null {
+  if (!cardName) return null;
+  const text = (card?.text ?? '') + ' ' + cardName;
+  const type = card?.type ?? '';
+
+  let matchedTheme: string | null = null;
+  let explanation = '';
+
+  if (/\bentering the battlefield causes a triggered ability|triggers an additional time|\bblink|\bflicker/i.test(text)) {
+    matchedTheme = 'Blink';
+    explanation = 'doubles Enter-the-Battlefield triggers';
+  } else if (/create[s]? [^.]{0,40}\btokens?\b|\bpopulate\b/i.test(text)) {
+    matchedTheme = 'Tokens';
+    explanation = 'generates tokens and powers up army scaling';
+  } else if (/\+1\/\+1 counters?|\bproliferate\b/i.test(text)) {
+    matchedTheme = '+1/+1 Counters';
+    explanation = 'boosts counter scaling and board growth';
+  } else if (/whenever you gain life|you gain .* life|\blifelink\b/i.test(text)) {
+    matchedTheme = 'Lifegain';
+    explanation = 'fuels lifegain engines and lifelink payoffs';
+  } else if (/\bsacrifice (a|another) creature\b|whenever [^.]{0,40}dies/i.test(text)) {
+    matchedTheme = 'Aristocrats';
+    explanation = 'fuels sacrifice engines and death triggers';
+  } else if (/whenever you cast (an|a) (instant|sorcery)/i.test(text)) {
+    matchedTheme = 'Spellslinger';
+    explanation = 'triggers on every instant and sorcery cast';
+  } else if (/\blandfall\b|whenever a land (you control )?enters/i.test(text)) {
+    matchedTheme = 'Landfall';
+    explanation = 'triggers whenever lands enter the battlefield';
+  } else if (/\bartifacts? you control\b|\btreasure\b/i.test(text)) {
+    matchedTheme = 'Artifacts';
+    explanation = 'synergizes with artifact engines and metalcraft';
+  }
+
+  // Cross-reference with availableTags
+  if (matchedTheme && availableTags?.length) {
+    const normMatched = matchedTheme.toLowerCase();
+    const tag = availableTags.find(
+      (t) =>
+        t.value.toLowerCase() === normMatched ||
+        t.slug.toLowerCase().includes(normMatched.replace(/[^a-z]/g, '')) ||
+        normMatched.includes(t.value.toLowerCase()),
+    );
+    if (tag) {
+      return {
+        card: cardName,
+        themeLabel: tag.value,
+        themeSlug: tag.slug,
+        explanation: `${explanation} (matches ${tag.value})`,
+      };
+    }
+  }
+
+  // Check if any available tag mechanic triggers directly on this card's text
+  if (availableTags?.length) {
+    for (const tag of availableTags) {
+      const rx = MECHANICS[tag.value.toLowerCase()];
+      if (rx && (rx.test(text) || rx.test(type))) {
+        return {
+          card: cardName,
+          themeLabel: tag.value,
+          themeSlug: tag.slug,
+          explanation: `synergizes with ${tag.value} strategies`,
+        };
+      }
+    }
+  }
+
+  if (matchedTheme) {
+    return {
+      card: cardName,
+      themeLabel: matchedTheme,
+      explanation,
+    };
+  }
+
+  return null;
+}
