@@ -244,7 +244,7 @@ export function Discover(s: Shared) {
           label="What can I build?"
           size={phone ? 50 : 44}
           seed={7}
-          behind={eyeOnLogo ? <EyeDoodle bare /> : undefined}
+          behind={<EyeDoodle bare />}
           after={
             commanders.length > 0 && (
               // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
@@ -254,7 +254,6 @@ export function Discover(s: Shared) {
             )
           }
         />
-        {!eyeOnLogo && <EyeDoodle />}
         <p className="tagline">Your collection. Real decks. No guesswork.</p>
       </section>
 
