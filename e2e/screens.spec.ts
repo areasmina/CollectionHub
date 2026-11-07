@@ -434,7 +434,7 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
   await expect(page.locator('.swapmark', { hasText: '↔ for Sol Ring' })).toBeVisible();
   // Pin the new card in, then undo the swap from its window
   await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
-  await page.getByRole('dialog', { name: 'Swap Arcane Signet' }).getByRole('button', { name: '📌 ALWAYS IN' }).click();
+  await page.getByRole('dialog', { name: 'Swap Arcane Signet' }).getByRole('button', { name: /ALWAYS IN/ }).click();
   // pins sit behind ⋮ (the bar says how many), each one tap to unpin
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('1 PINNED');
   await (await opts(page)).locator('.pinchip', { hasText: 'Arcane Signet' }).click();
@@ -445,7 +445,7 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
   await expect(page.locator('.swapmark', { hasText: 'for Sol Ring' })).toHaveCount(0);
   // Never use: no other card of yours fits, so Sol Ring stays, marked, and the pin can be taken off
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: '💀 NEVER USE' }).click();
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: /NEVER USE/ }).click();
   await (await opts(page)).locator('.pinchip', { hasText: 'Sol Ring' }).click();
   await expect(page.locator('.pinchip')).toHaveCount(0);
 });
@@ -462,7 +462,7 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await expect(page.locator('.forgehint')).toBeVisible();
   await page.getByRole('button', { name: 'Swap Counterspell', exact: true }).click();
   const note = page.getByRole('dialog', { name: 'Swap Counterspell' });
-  await expect(note.getByRole('button', { name: '📌 ALWAYS IN' })).toBeVisible();
+  await expect(note.getByRole('button', { name: /ALWAYS IN/ })).toBeVisible();
   await note.getByRole('searchbox', { name: 'Search your binder' }).fill('cob');
   await expect(note.getByText(/No card of yours/).last()).toBeVisible();
   await note.getByRole('button', { name: 'Close' }).click();
