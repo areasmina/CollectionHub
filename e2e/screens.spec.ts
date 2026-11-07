@@ -243,6 +243,11 @@ test('Deck page: right-click / press and hold the header opens the deck menu', a
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   const h1 = page.locator('.dhero h1');
+  // the list was scrolled to reach the tile (shelf above the grid): let the page settle at the top first,
+  // so a late scroll event doesn't close the menu we open next
+  await expect(h1).toBeVisible();
+  await h1.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(250);
   if (info.project.name === 'desktop') {
     await h1.click({ button: 'right' });
     if (!(await page.getByRole('menu', { name: 'Tatyova Lands options' }).isVisible({ timeout: 1000 }).catch(() => false))) {
