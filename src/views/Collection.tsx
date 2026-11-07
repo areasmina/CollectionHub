@@ -325,11 +325,6 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
 
         <section>
           <CardsView
-            title={
-              <h2 aria-label="Card collection" className="colltitle">
-                <Ransom text="CARD COLLECTION" size={30} seed={5} />
-              </h2>
-            }
             entries={shown}
             cards={cards}
             profile={profile}

@@ -305,7 +305,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const listed = placed.filter((l) => l.header !== 'Commander');
 
   async function setSwap(missingName: string, replacement: string | null) {
-    const p = (await db.profiles.get(s.profile))!;
+    let p = await db.profiles.get(s.profile);
+    if (!p) {
+      p = { id: s.profile, name: s.binderName ?? 'Binder 1' };
+      await db.profiles.put(p);
+    }
     const deck = { ...(p.swaps?.[path] ?? {}) };
     const was = deck[missingName] ?? missingName;
     if (replacement && !fits(replacement)) return; // never write a card outside the commander's colours
@@ -321,7 +325,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     setMenuFor(null);
   }
   async function toggleBought(cardName: string) {
-    const p = (await db.profiles.get(s.profile))!;
+    let p = await db.profiles.get(s.profile);
+    if (!p) {
+      p = { id: s.profile, name: s.binderName ?? 'Binder 1' };
+      await db.profiles.put(p);
+    }
     const set = new Set(p.bought ?? []);
     const k = norm(cardName);
     if (set.has(k)) set.delete(k);
@@ -350,7 +358,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     }
   }
   async function clearSwaps() {
-    const p = (await db.profiles.get(s.profile))!;
+    let p = await db.profiles.get(s.profile);
+    if (!p) return;
     const { [path]: _, ...rest } = p.swaps ?? {};
     await db.profiles.update(s.profile, { swaps: rest });
   }
@@ -811,7 +820,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             )}
           </section>
         )}
-        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => setManualForge(false) : onBack} onSave={() => saveDeck()} saving={saving} />}
+        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
         {leaving && (
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />

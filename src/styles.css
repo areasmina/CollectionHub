@@ -3750,6 +3750,8 @@ ul.popnote .small {
   position: fixed;
   z-index: 61;
   width: min(300px, calc(100vw - 16px));
+  -webkit-touch-callout: none !important;
+  user-select: none;
   padding: 14px 10px 10px;
   background: #f4efe2;
   color: #141414;
@@ -11049,23 +11051,47 @@ html.dragging * {
 html.forging .forgebar {
   display: none;
 }
-/* Phones: the lowered sheet peeks at sorts, search and the top rows; filters show once it is pulled up */
+/* Phones: suggestions collapsed into a sleek 48px bottom drawer bar; slides up to 82vh on tap */
 @media (max-width: 700px) {
   html.forging .fsugg:not(.up) {
-    max-height: 40vh;
+    max-height: 48px !important;
+    overflow: hidden;
+    border-top: 3px solid var(--accent);
+    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.6);
   }
+  html.forging .fsugg:not(.up) .fgrab {
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--paper);
+    cursor: pointer;
+  }
+  html.forging .fsugg:not(.up) .fgrab::after {
+    content: '💡 SUGGESTIONS ▴';
+    font-family: var(--an);
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: var(--ink);
+    font-weight: 800;
+  }
+  html.forging .fsugg:not(.up) .fpanes,
+  html.forging .fsugg:not(.up) .fsorts,
+  html.forging .fsugg:not(.up) .fq,
+  html.forging .fsugg:not(.up) .frows,
   html.forging .fsugg:not(.up) .fchips,
   html.forging .fsugg:not(.up) .fcf,
   html.forging .fsugg:not(.up) .ftabs,
   html.forging .fsugg:not(.up) .fsrc {
-    display: none;
+    display: none !important;
   }
-  html.forging .fsugg .fpanes {
-    margin-bottom: 6px;
+  html.forging .fsugg.up {
+    max-height: 82vh !important;
+    overflow-y: auto;
   }
-  html.forging .fsugg .fpanes button {
-    min-height: 34px;
-    font-size: 16px;
+  html.forging main {
+    padding-bottom: 64px !important;
   }
 }
 .fsugg .fcfnote {
@@ -11264,17 +11290,19 @@ details.dash > summary .dimp.ddeck {
 @media (min-width: 701px) and (max-width: 1199px) {
   .deckgrid {
     flex-wrap: nowrap;
-    gap: 20px;
+    gap: 16px;
   }
   .deckgrid > .lists {
     flex: 1 1 0;
     min-width: 0;
+    column-gap: 12px;
+    row-gap: 14px;
   }
   .dside,
   .deckgrid > .receipt {
     order: 0;
-    flex: 0 0 300px;
-    max-width: 300px;
+    flex: 0 0 250px;
+    max-width: 250px;
     position: sticky;
     top: 14px;
   }
@@ -11288,8 +11316,13 @@ details.dash > summary .dimp.ddeck {
   }
   /* Open grid categories can also share rows on tablet when small */
   .deckgrid > .lists > details.cat[open]:has(> ul.zgrid) {
-    flex: 1 1 auto;
-    min-width: 220px;
+    flex: 1 1 calc(50% - 16px);
+    min-width: 160px;
+    max-width: calc(50% - 6px);
+  }
+  .deckgrid > .lists > details.cat > summary {
+    font-size: 13px;
+    gap: 4px;
   }
   .deckgrid > .lists > details.cat:not([open]) {
     flex: 1 1 100%;
@@ -11302,22 +11335,105 @@ details.dash > summary .dimp.ddeck {
   }
 }
 
-/* 3. Phones (<= 700px): un-cramp the Forge viewport, prevent sticky bar collisions, tighten vertical stacks */
+/* 3. Phones (<= 700px): un-cramp the Forge viewport, rescue card visibility, clean headers */
 @media (max-width: 700px) {
-  /* When forging, only .forgetop and .fmeters stick at the top; .dtools.tbar scrolls naturally so 3 bars don't collide */
+  /* Suppress native browser long-press menu overlay */
+  .cardmenu,
+  .cardmenu *,
+  .ctile,
+  .crow,
+  .ztile,
+  .xart,
+  .cimg,
+  .timg {
+    -webkit-touch-callout: none !important;
+    user-select: none;
+  }
+
+  /* Compact header on Collection and My Decks */
+  .chead2 {
+    margin-top: 8px;
+    margin-bottom: 6px;
+  }
+  .chead2 .ztitle,
+  .decksbar .ztitle {
+    font-size: 38px;
+  }
+  .colltitle {
+    display: none !important;
+  }
+
+  /* Compact My Decks action row */
+  .decksbar {
+    margin-top: 8px;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  .decksbar section {
+    margin-top: 4px !important;
+  }
+  .decksactions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .decksactions .btn {
+    min-height: 40px;
+    padding: 4px 8px;
+    font-size: 13px;
+    text-align: center;
+    justify-content: center;
+  }
+  .dgrid {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom));
+  }
+  .shortalert {
+    margin: 8px 0;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* Pill navigation: sleek 42px on phones so it never dominates screen */
+  .pillnav {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+  .pillnav .pill {
+    padding: 3px;
+    gap: 2px;
+  }
+  .pillnav .pill button {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  /* RESCUE THE FORGE: Hide 220px hero banner when in the Forge on mobile */
+  html.forging .dhero {
+    display: none;
+  }
+  /* In the Forge, place the analysis box below the cards instead of squishing them */
+  html.forging .deckgrid > .dside {
+    order: 1;
+    margin-top: 16px;
+  }
+  /* Slim 28px forge hint */
+  .forgehint {
+    font-size: 12px;
+    padding: 6px 10px;
+    margin: 6px 0 10px;
+    line-height: 1.3;
+  }
+
+  /* When forging, .forgetop and .fmeters stick; toolbar scrolls naturally */
   html.forging .dtools.tbar,
   html.forging .lists > .dtools.tbar {
     position: relative;
     top: auto;
     z-index: 10;
   }
-  /* Slimmer bottom sheet peek (30vh instead of 40vh) so more of the deck is visible while forging */
-  html.forging .fsugg:not(.up) {
-    max-height: 30vh;
-  }
-  html.forging main {
-    padding-bottom: 34vh;
-  }
+
   /* Tighter Commander strip on phones */
   .strip {
     margin-top: var(--sp2, 8px);

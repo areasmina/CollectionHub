@@ -64,7 +64,11 @@ export async function replaceInDeck(deck: Deck, from: string, to: string) {
 
 /** Pins a card for every deck of a commander (📌 always in / 💀 never use); the same side again un-pins it. */
 export async function savePin(profile: number, commander: string, card: string, side: PinSide) {
-  const p = (await db.profiles.get(profile))!;
+  let p = await db.profiles.get(profile);
+  if (!p) {
+    p = { id: profile, name: 'Binder 1' };
+    await db.profiles.put(p);
+  }
   await db.profiles.update(profile, { pins: { ...(p.pins ?? {}), [commander]: togglePin(p.pins?.[commander] ?? noPins(), card, side) } });
 }
 

@@ -96,7 +96,7 @@ export function CardMenu({
   const act = (f: () => unknown) => () => (f(), onClose());
   const link = (href: string, text: string) => (
     <li>
-      <a href={href} target="_blank" rel="noreferrer" onClick={() => (haptic('tap'), onClose())}>
+      <a href={href} target="_blank" rel="noreferrer" onContextMenu={(e) => e.preventDefault()} onClick={() => (haptic('tap'), onClose())}>
         {text} ↗
       </a>
     </li>
@@ -104,7 +104,7 @@ export function CardMenu({
   return (
     <>
       <div className="backdrop menuback" onClick={onClose} onContextMenu={(e) => (e.preventDefault(), onClose())} />
-      <div ref={ref} className="cardmenu" role="menu" aria-label={`${name} options`} style={pos} onClick={(e) => e.stopPropagation()}>
+      <div ref={ref} className="cardmenu" role="menu" aria-label={`${name} options`} style={pos} onContextMenu={(e) => e.preventDefault()} onClick={(e) => e.stopPropagation()}>
         <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
         <div className="mh">{name}</div>
         <ul>

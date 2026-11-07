@@ -210,7 +210,6 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
   };
   const fetchAll = async (idents: Ident[], base: number, total: number) => {
     const missed: Ident[] = [];
-    let consecutiveFails = 0;
     for (let i = 0; i < idents.length; i += 75) {
       const batch = idents.slice(i, i + 75);
       let lastErr = '';
@@ -224,14 +223,9 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
         }
       }
       if (!res) {
-        consecutiveFails++;
-        if (consecutiveFails >= 2) {
-          down = lastErr || 'Could not reach Scryfall';
-          break;
-        }
-        continue;
+        down = lastErr || 'Could not reach Scryfall';
+        break;
       }
-      consecutiveFails = 0;
       const byKey = new Map<string, Card>();
       await storeCards(res.data, byKey);
       for (const b of batch) {
