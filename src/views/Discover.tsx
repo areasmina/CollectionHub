@@ -9,7 +9,7 @@ import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edh
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
-import { OptRow, Progress, ToolBar, usd, type Shared } from './shared';
+import { OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
 import { Pips, Ransom, Title, EyeDoodle, ManaIcon } from './zine';
 import { Meter } from './parts';
 
@@ -81,6 +81,7 @@ export function Discover(s: Shared) {
   const [q, setQ] = useState('');
   const [sort, setSort] = useState('match'); // most owned first
   const [colours, setColours] = useState<string[]>([]);
+  const [zoom, setZoom] = useStored<'s' | 'm' | 'l'>('ch:discozoom', 'm', ['s', 'm', 'l']);
   const [phone, setPhone] = useState(() => (typeof matchMedia === 'function' ? matchMedia('(max-width: 700px)').matches : window.innerWidth <= 700));
   // up to tablets the eye sits on the logo (behind the letters) instead of taking a third of the first screen
   const [eyeOnLogo, setEyeOnLogo] = useState(() => (typeof matchMedia === 'function' ? matchMedia('(max-width: 1024px)').matches : window.innerWidth <= 1024));
@@ -257,23 +258,55 @@ export function Discover(s: Shared) {
         <p className="tagline">Your collection. Real decks. No guesswork.</p>
       </section>
 
-      {/* One tool bar: search (Enter opens the first match, or any commander by name), ⋮ holds sort and colours. */}
+      {/* One tool bar: search (Enter opens the first match, or any commander by name), ⋮ holds colours and sort. */}
       <form className="dfind" aria-label="Find a commander" onSubmit={(e) => (e.preventDefault(), open1())}>
-        <ToolBar q={q} setQ={setQ} placeholder="commander_" searchLabel="Search commander" label="Commanders: search and options" now={empty ? '' : [sortName, colours.join(' ')].filter(Boolean).join(' · ')}>
+        <ToolBar
+          q={q}
+          setQ={setQ}
+          placeholder="commander_"
+          searchLabel="Search commander"
+          label="Commanders: search and options"
+          now={empty ? '' : [colours.join(' '), sortName].filter(Boolean).join(' · ')}
+          quick={
+            <div className="qsegs qzoom" role="group" aria-label="Deck card size">
+              {(['s', 'm', 'l'] as const).map((z) => (
+                <button
+                  key={z}
+                  type="button"
+                  aria-pressed={zoom === z}
+                  title={{ s: 'Small: see more', m: 'Medium: balanced', l: 'Large: read cards' }[z]}
+                  onClick={() => (haptic('select'), setZoom(z))}
+                >
+                  {z.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {/* Mana identity filters first (owner request) */}
+          <OptRow label="COLOUR">
+            <div className="colours" role="group" aria-label="Filter by colour identity">
+              {COLOURS.map(([l, n]) => (
+                <button
+                  type="button"
+                  key={l}
+                  data-c={l}
+                  className="u-chip mana-filter-btn"
+                  aria-pressed={colours.includes(l)}
+                  aria-label={n}
+                  title={n}
+                  onClick={() => (haptic(colours.includes(l) ? 'tap' : 'select'), toggle(l))}
+                >
+                  <ManaIcon c={l} />
+                </button>
+              ))}
+            </div>
+          </OptRow>
           <OptRow label="SORT">
             <div className="sorts" role="radiogroup" aria-label="Sort">
               {SORTS.map(([v, t]) => (
                 <button type="button" key={v} role="radio" className="u-chip" aria-checked={sort === v} onClick={() => (haptic('select'), setSort(v))}>
                   {t}
-                </button>
-              ))}
-            </div>
-          </OptRow>
-          <OptRow label="COLOUR">
-            <div className="colours" role="group" aria-label="Filter by colour identity">
-              {COLOURS.map(([l, n]) => (
-                <button type="button" key={l} className="u-chip" aria-pressed={colours.includes(l)} aria-label={n} title={n} onClick={() => (haptic(colours.includes(l) ? 'tap' : 'select'), toggle(l))}>
-                  <ManaIcon c={l} />
                 </button>
               ))}
             </div>
@@ -287,7 +320,7 @@ export function Discover(s: Shared) {
       )}
       {/* The commander count is the title's answer ("335 DECKS"), so no count line here */}
       {!commanders.length && data && <Welcome empty={s.mine.size === 0} />}
-      <ul className="cgrid" ref={gridRef}>
+      <ul className="cgrid" data-zoom={zoom} ref={gridRef}>
         {shown.map((c, i) => {
           const st = stats.get(c.key);
           const ready = st && st.pct >= 90;

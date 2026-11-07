@@ -864,6 +864,25 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   </>
                 }
               >
+                {/* Primary CTA at top: Just build it! */}
+                {kind === 'average' && binder.length > 0 && (
+                  <div className="just-build-banner top-action">
+                    <button
+                      type="button"
+                      className="btn-just-build"
+                      onClick={() => void forgeFromBinder()}
+                      disabled={saving}
+                      title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)"
+                    >
+                      <span className="build-icon">⚡</span>
+                      <span className="build-text">
+                        <strong>⚡ JUST BUILD IT!</strong>
+                        <small>Auto-craft 100 cards from your binder</small>
+                      </span>
+                      <span className="build-arrow">⚒ BUILD 100 →</span>
+                    </button>
+                  </div>
+                )}
                 {/* EDHREC's themes (built around): its top tags, the rest one tap away; the chosen one always shows */}
                 {tags.length > 0 && (
                   <OptRow label="THEME">
@@ -893,24 +912,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       )}
                     </div>
                   </OptRow>
-                )}
-                {kind === 'average' && binder.length > 0 && (
-                  <div className="just-build-banner">
-                    <button
-                      type="button"
-                      className="btn-just-build"
-                      onClick={() => void forgeFromBinder()}
-                      disabled={saving}
-                      title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)"
-                    >
-                      <span className="build-icon">⚡</span>
-                      <span className="build-text">
-                        <strong>⚡ JUST BUILD IT!</strong>
-                        <small>Auto-craft 100 cards from your binder</small>
-                      </span>
-                      <span className="build-arrow">⚒ BUILD 100 →</span>
-                    </button>
-                  </div>
                 )}
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />

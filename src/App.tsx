@@ -58,12 +58,12 @@ export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
-  type IslandDock = 'top' | 'bottom';
-  // Island Dock: default to 'bottom' on phones/mobile (<= 700px), 'top' on desktop
+  type IslandDock = 'top' | 'bottom' | 'left' | 'right';
+  // Island Dock: default to 'bottom' on phones/mobile (<= 700px), 'top' on desktop. Allows 4-way edge docking.
   const [dock, setDock] = useState<IslandDock>(() => {
     try {
       const saved = localStorage.getItem('ch:island_dock') as IslandDock | null;
-      if (saved === 'top' || saved === 'bottom') return saved;
+      if (saved === 'top' || saved === 'bottom' || saved === 'left' || saved === 'right') return saved;
       return typeof window !== 'undefined' && window.innerWidth <= 700 ? 'bottom' : 'top';
     } catch {
       return typeof window !== 'undefined' && window.innerWidth <= 700 ? 'bottom' : 'top';
@@ -74,6 +74,7 @@ export default function App() {
   const [islandTab, setIslandTab] = useState<'decks' | 'sync'>('decks');
   const [pullDist, setPullDist] = useState(0); // rubber-band stretch in pixels
   const [isRepositioning, setIsRepositioning] = useState(false); // dragging across screen
+  const [dragX, setDragX] = useState(0);
   const [dragY, setDragY] = useState(0);
 
   const dragRef = useRef({
@@ -108,18 +109,30 @@ export default function App() {
         dragRef.current.didDrag = true;
       }
 
-      // Dragging > 75px vertically detaches the island so user can reposition it!
-      if (Math.abs(dy) > 75) {
+      // Dragging > 75px detaches the island so user can reposition it to any of 4 edges!
+      if (dist > 75) {
         setIsRepositioning(true);
+        setDragX(e.clientX);
         setDragY(e.clientY);
         setPullDist(0);
         return;
       }
 
-      // Otherwise calculate elastic pull towards the screen interior
-      const stretch = dock === 'top' ? dy : -dy;
+      if (isRepositioning) {
+        setDragX(e.clientX);
+        setDragY(e.clientY);
+        return;
+      }
+
+      // Otherwise calculate elastic pull towards the screen interior based on current dock
+      let stretch = 0;
+      if (dock === 'top') stretch = dy;
+      else if (dock === 'bottom') stretch = -dy;
+      else if (dock === 'left') stretch = dx;
+      else if (dock === 'right') stretch = -dx;
+
       if (stretch > 0) {
-        // Non-linear organic viscoelastic damping (Venom goo stretch)
+        // Non-linear organic viscoelastic damping (Melted cheese / Venom goo stretch)
         const damped = Math.min(80, Math.log1p(stretch * 0.12) * 24 + stretch * 0.22);
         setPullDist(damped);
       } else {
@@ -138,7 +151,17 @@ export default function App() {
       setIsRepositioning(false);
 
       if (wasRepositioning) {
-        const newDock: IslandDock = e.clientY > window.innerHeight / 2 ? 'bottom' : 'top';
+        const distTop = e.clientY;
+        const distBottom = window.innerHeight - e.clientY;
+        const distLeft = e.clientX;
+        const distRight = window.innerWidth - e.clientX;
+        const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+
+        let newDock: IslandDock = 'top';
+        if (minDist === distBottom) newDock = 'bottom';
+        else if (minDist === distLeft) newDock = 'left';
+        else if (minDist === distRight) newDock = 'right';
+
         setDock(newDock);
         try {
           localStorage.setItem('ch:island_dock', newDock);
@@ -250,14 +273,44 @@ export default function App() {
         onPointerDown={onIslandDown()}
         style={{
           transform: isRepositioning
-            ? `translate(-50%, ${dragY - window.innerHeight / 2}px)`
+            ? `translate(-50%, -50%)`
             : pullDist > 0
               ? (dock === 'top'
                   ? `translateX(-50%) translateY(${pullDist * 0.4}px)`
-                  : `translateX(-50%) translateY(${-pullDist * 0.4}px)`)
+                  : dock === 'bottom'
+                    ? `translateX(-50%) translateY(${-pullDist * 0.4}px)`
+                    : dock === 'left'
+                      ? `translateY(-50%) translateX(${pullDist * 0.4}px)`
+                      : `translateY(-50%) translateX(${-pullDist * 0.4}px)`)
               : undefined,
+          left: isRepositioning ? `${dragX}px` : undefined,
+          top: isRepositioning ? `${dragY}px` : undefined,
         }}
       >
+        {/* Viscous gooey melted cheese / symbiote tendrils when pulling away from dock edge */}
+        {pullDist > 4 && !isRepositioning && (
+          <div className={`cheese-tendrils-wrap dock-${dock}`} aria-hidden="true" style={{ height: `${pullDist * 0.45}px` }}>
+            <svg className="cheese-tendrils" viewBox={`0 0 360 ${Math.max(1, Math.round(pullDist * 0.45))}`} preserveAspectRatio="none">
+              {dock === 'top' ? (
+                <>
+                  <path d={`M 20 0 Q 30 ${(pullDist * 0.45) * 0.6} 36 ${pullDist * 0.45} L 44 ${pullDist * 0.45} Q 40 ${(pullDist * 0.45) * 0.6} 56 0 Z`} fill="#000000" />
+                  <path d={`M 90 0 Q 105 ${(pullDist * 0.45) * 0.7} 110 ${pullDist * 0.45} L 118 ${pullDist * 0.45} Q 124 ${(pullDist * 0.45) * 0.7} 140 0 Z`} fill="#000000" />
+                  <path d={`M 170 0 Q 178 ${(pullDist * 0.45) * 0.85} 180 ${pullDist * 0.45} L 184 ${pullDist * 0.45} Q 186 ${(pullDist * 0.45) * 0.85} 195 0 Z`} fill="#000000" />
+                  <path d={`M 230 0 Q 242 ${(pullDist * 0.45) * 0.7} 248 ${pullDist * 0.45} L 256 ${pullDist * 0.45} Q 262 ${(pullDist * 0.45) * 0.7} 275 0 Z`} fill="#000000" />
+                  <path d={`M 310 0 Q 320 ${(pullDist * 0.45) * 0.6} 326 ${pullDist * 0.45} L 334 ${pullDist * 0.45} Q 338 ${(pullDist * 0.45) * 0.6} 348 0 Z`} fill="#000000" />
+                </>
+              ) : (
+                <>
+                  <path d={`M 20 ${pullDist * 0.45} Q 30 ${(pullDist * 0.45) * 0.4} 36 0 L 44 0 Q 40 ${(pullDist * 0.45) * 0.4} 56 ${pullDist * 0.45} Z`} fill="#000000" />
+                  <path d={`M 90 ${pullDist * 0.45} Q 105 ${(pullDist * 0.45) * 0.3} 110 0 L 118 0 Q 124 ${(pullDist * 0.45) * 0.3} 140 ${pullDist * 0.45} Z`} fill="#000000" />
+                  <path d={`M 170 ${pullDist * 0.45} Q 178 ${(pullDist * 0.45) * 0.15} 180 0 L 184 0 Q 186 ${(pullDist * 0.45) * 0.15} 195 ${pullDist * 0.45} Z`} fill="#000000" />
+                  <path d={`M 230 ${pullDist * 0.45} Q 242 ${(pullDist * 0.45) * 0.3} 248 0 L 256 0 Q 262 ${(pullDist * 0.45) * 0.3} 275 ${pullDist * 0.45} Z`} fill="#000000" />
+                  <path d={`M 310 ${pullDist * 0.45} Q 320 ${(pullDist * 0.45) * 0.4} 326 0 L 334 0 Q 338 ${(pullDist * 0.45) * 0.4} 348 ${pullDist * 0.45} Z`} fill="#000000" />
+                </>
+              )}
+            </svg>
+          </div>
+        )}
         {/* Gooey black membrane background layer with volume preservation */}
         <div
           className="island-membrane"
@@ -266,7 +319,7 @@ export default function App() {
             transform: pullDist > 0
               ? `scaleY(${1 + pullDist / 38}) scaleX(${1 / Math.sqrt(1 + pullDist / 38)})`
               : undefined,
-            transformOrigin: dock === 'top' ? 'top center' : 'bottom center',
+            transformOrigin: dock === 'top' ? 'top center' : dock === 'bottom' ? 'bottom center' : dock === 'left' ? 'left center' : 'right center',
           }}
         />
 
