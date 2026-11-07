@@ -1,0 +1,156 @@
+/** Filtering rules behind the Export Deck modal's per-collection chips. Operates on the
+ *  deck text `generateDeckList` produces, so the chip counts and the exported text can
+ *  never disagree. Pure and React-free — see deckExportFilter.test.ts. */
+
+import { BASIC_LAND_NAMES } from '@/services/scryfall/client';
+
+export interface DeckLine {
+  quantity: number;
+  name: string;
+}
+
+/** Parses `"9 Nazgûl"` lines. A line with no leading count is quantity 1, matching the
+ *  card-count behaviour ExportModal already uses. Blank lines are dropped. */
+export function parseDeckLines(text: string): DeckLine[] {
+  return text
+    .split('\n')
+    .filter(l => l.trim())
+    .map(line => {
+      const match = line.match(/^(\d+)\s+(.+)/);
+      if (!match) return { quantity: 1, name: line.trim() };
+      return { quantity: parseInt(match[1], 10), name: match[2].trim() };
+    });
+}
+
+/** Card name → the collections holding it, across every binder. Same shape as
+ *  getCollectionBinderEntries returns. */
+export type BinderEntries = Map<string, { id: string; name: string }[]>;
+
+export type ExportTarget =
+  | { kind: 'all' }
+  | { kind: 'collection'; binderId: string }
+  | { kind: 'missing' };
+
+/** Stable identity for a target — for React keys and active-chip comparison. */
+export function targetKey(target: ExportTarget): string {
+  return target.kind === 'collection' ? `collection:${target.binderId}` : target.kind;
+}
+
+function frontFace(name: string): string {
+  return name.includes(' // ') ? name.split(' // ')[0] : name;
+}
+
+/** The collections holding this card. Falls back to the front face so EDHREC-style
+ *  front-face-only names match, the same rule getCollectionNameSet uses. */
+function bindersFor(name: string, entries: BinderEntries): { id: string; name: string }[] {
+  return entries.get(name) ?? entries.get(frontFace(name)) ?? [];
+}
+
+/** Basics are owned-by-default in the deck view (see isCardOwned in DeckDisplay), so they
+ *  belong to neither a collection chip nor the missing chip. */
+function isBasic(name: string): boolean {
+  return BASIC_LAND_NAMES.has(frontFace(name));
+}
+
+export function matchesTarget(line: DeckLine, target: ExportTarget, entries: BinderEntries): boolean {
+  if (target.kind === 'all') return true;
+  const holders = bindersFor(line.name, entries);
+  if (target.kind === 'collection') return holders.some(h => h.id === target.binderId);
+  return holders.length === 0 && !isBasic(line.name);
+}
+
+export interface ExportChip {
+  target: ExportTarget;
+  label: string;
+  /** Sum of deck quantities matching this target. */
+  count: number;
+}
+
+/** Collection chips sorted by count desc (matching the stats-bar Owned popover order),
+ *  then the missing chip. Zero-count chips are omitted. Returns [] outright when no
+ *  collection chip survives, so a lone missing chip — which would just be the whole deck
+ *  under a confusing label — never renders. Does NOT include the "Full deck" chip; the
+ *  caller prepends that. */
+export function buildExportChips(lines: DeckLine[], entries: BinderEntries | null): ExportChip[] {
+  if (!entries || entries.size === 0) return [];
+
+  const counts = new Map<string, { id: string; name: string; count: number }>();
+  let missing = 0;
+
+  for (const line of lines) {
+    const holders = bindersFor(line.name, entries);
+    if (holders.length > 0) {
+      for (const h of holders) {
+        const cur = counts.get(h.id);
+        if (cur) cur.count += line.quantity;
+        else counts.set(h.id, { id: h.id, name: h.name, count: line.quantity });
+      }
+    } else if (!isBasic(line.name)) {
+      missing += line.quantity;
+    }
+  }
+
+  const collections = [...counts.values()].sort((a, b) => b.count - a.count);
+  if (collections.length === 0) return [];
+
+  const chips: ExportChip[] = collections.map(c => ({
+    target: { kind: 'collection', binderId: c.id },
+    label: c.name,
+    count: c.count,
+  }));
+  if (missing > 0) {
+    chips.push({ target: { kind: 'missing' }, label: 'Not in a collection', count: missing });
+  }
+  return chips;
+}
+
+/** Renders the lines matching `target` back to deck text, preserving input order and
+ *  quantities. Takes parsed lines rather than text so the caller parses once and derives
+ *  both the chips and the filtered output from the same data. */
+export function filterDeckLines(lines: DeckLine[], target: ExportTarget, entries: BinderEntries): string {
+  return lines
+    .filter(line => matchesTarget(line, target, entries))
+    .map(line => `${line.quantity} ${line.name}`)
+    .join('\n');
+}
+
+/** Number of collection chips kept inline before the rest fold into the popover. */
+export const VISIBLE_COLLECTION_CHIPS = 3;
+
+/** Splits buildExportChips' output into an inline row and a popover tail, so the chip row
+ *  stays one line at any collection count.
+ *
+ *  `visible` is the inline row: up to `visibleCount` collection chips followed by the
+ *  missing chip, which is pinned — always inline, never counted against the budget.
+ *  `overflow` is the collection chips that did not fit, still in count-desc order.
+ *
+ *  Folding exactly one chip buys nothing, so a lone straggler stays inline. If `active`
+ *  names a chip that would overflow, it takes the last visible slot rather than being
+ *  re-sorted into place, so the row does not reshuffle as the selection moves; the chip it
+ *  displaces heads the overflow list, where its count already belongs.
+ *
+ *  Does NOT include the "Full deck" chip; the caller still prepends that. */
+export function splitChipOverflow(
+  chips: ExportChip[],
+  active: ExportTarget,
+  visibleCount: number = VISIBLE_COLLECTION_CHIPS,
+): { visible: ExportChip[]; overflow: ExportChip[] } {
+  const collections = chips.filter(c => c.target.kind === 'collection');
+  const pinned = chips.filter(c => c.target.kind === 'missing');
+
+  if (collections.length <= visibleCount + 1) {
+    return { visible: [...collections, ...pinned], overflow: [] };
+  }
+
+  const visible = collections.slice(0, visibleCount);
+  const overflow = collections.slice(visibleCount);
+
+  const activeIdx = overflow.findIndex(c => targetKey(c.target) === targetKey(active));
+  if (activeIdx !== -1 && visible.length > 0) {
+    const promoted = overflow.splice(activeIdx, 1)[0];
+    overflow.unshift(visible.pop()!);
+    visible.push(promoted);
+  }
+
+  return { visible: [...visible, ...pinned], overflow };
+}

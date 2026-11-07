@@ -1,0 +1,3 @@
+{
+  "app": "node ./node_modules/ts-node/dist/bin.js --prefer-ts-exts bin/infra.ts"
+}

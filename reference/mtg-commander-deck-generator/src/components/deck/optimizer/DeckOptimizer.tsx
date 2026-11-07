@@ -1,0 +1,2515 @@
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import {
+  Loader2, Sparkles, RefreshCw,
+  Zap, ArrowLeft, ExternalLink, Bookmark, Copy, Check,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import type { ScryfallCard, IntendedBracket, GapAnalysisCard } from '@/types';
+import { fetchCommanderData, fetchPartnerCommanderData, fetchCommanderThemeData, fetchPartnerThemeData, fetchTagPageData, edhrecColorSegment } from '@/services/edhrec/client';
+import { generateStrategyLabel, buildDetectionMessage, PACING_PHRASE, type DetectedThemeResult, type Pacing, type ThemeMatchResult } from '@/services/deckBuilder/themeDetector';
+import { useThemeTaxonomy } from '@/hooks/useThemeTaxonomy';
+import { persistListThemes } from '@/services/lists/listThemes';
+import {
+  inspectorOverrideRef,
+  loadInspectorOverrides,
+  saveInspectorOverrides,
+  hasInspectorOverrides,
+  type InspectorOverrides,
+} from '@/services/inspectorOverrides/storage';
+import { loadTaggerData } from '@/services/tagger/client';
+import { overBracketGroups } from '@/services/deckBuilder/overBracket';
+import { analyzeDeck, getDeckSummaryData, computeOptimizeSwaps, pairSwaps, type DeckAnalysis, type RecommendedCard, type CurvePhase, type OptimizeSwaps } from '@/services/deckBuilder/deckAnalyzer';
+import { recomputeRoleTargetsForPacing, getDynamicRoleTargets, STAPLE_BACKFILL_INCLUSION } from '@/services/deckBuilder/roleTargets';
+import { getCardByName, getCardsByNames, getCardPrice, WUBRG } from '@/services/scryfall/client';
+import { detectDeckThemes } from '@/services/deckBuilder/detectDeckThemes';
+import { CardPreviewModal } from '@/components/ui/CardPreviewModal';
+import { type CardAction } from '@/components/deck/DeckDisplay';
+import { useStore } from '@/store';
+import { useUserLists } from '@/hooks/useUserLists';
+import { useDeckConnectivity } from '@/hooks/useDeckConnectivity';
+import { useLiftScan } from '@/hooks/useLiftScan';
+import { blendClusterIntoRecommendations } from '@/services/optimizer/recommendationBlend';
+import { RecsLoadingState } from './shared';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { getCollectionNameSet } from '@/services/collection/db';
+import { buildThemeMembership } from '@/components/analyze/themeMembership';
+import { buildThemeFit, EMPTY_THEME_FIT, type ThemeFit } from '@/services/deckBuilder/themeFit';
+import { blendArchetypeData, buildArchetypeSourceLabel, pageConfidence } from '@/services/deckBuilder/archetypeBlend';
+import { blendBracketData, bracketPageWeight, declaredBracketDecks, indexInclusion, type BracketBlend, type BracketBasis } from '@/services/deckBuilder/bracketBlend';
+import { buildGapAnalysis } from '@/services/deckBuilder/gapAnalysisBuilder';
+
+import { type DeckOptimizerProps, type TabKey, type LandSection, TABS, TAB_SLUG_BY_KEY, PACING_LABELS, HEALTH_GRADE_STYLES, BRACKET_COLORS } from './constants';
+import { buildShareUrl, deckToSharePayload, DeckLinkError } from '@/services/share/deckLink';
+import { trackEvent } from '@/services/analytics';
+import { AdjustPopoverContent } from './OverviewTab';
+import { DashboardSummary } from './DashboardSummary';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { RolesTabContent } from './RolesTab';
+import { LandsTabContent } from './LandsTab';
+import { CurveSummaryStrip, ManaCurveLineChart, CurveDetailPanel, type RoleGroupKey, ROLE_GROUP_ORDER } from './CurveTab';
+import { BracketTabContent } from './BracketTab';
+import { CostTab } from './CostTab';
+import { OptimizeTabContent } from './optimize/OptimizeTabContent';
+import { scoreAgainstSwaps } from '@/services/deckBuilder/planScore';
+import { LiftClustersTab } from './LiftClustersTab';
+import { NewCardsTab } from './NewCardsTab';
+
+// ═══════════════════════════════════════════════════════════════════════
+// Main Component
+// ═══════════════════════════════════════════════════════════════════════
+export function DeckOptimizer({
+  commanderName,
+  partnerCommanderName,
+  currentCards,
+  deckSize: propDeckSize,
+  roleCounts,
+  roleTargets,
+  cardInclusionMap,
+  onAddCards,
+  onRemoveCards,
+  onRemoveFromBoard,
+  onAddBasicLand: onAddBasicLandProp,
+  onRemoveBasicLand: onRemoveBasicLandProp,
+  sideboardNames,
+  maybeboardNames,
+  activeTab: controlledActiveTab,
+  onTabChange,
+  getTabHref,
+  initialSelectedCmc,
+  initialLiftView,
+  commander,
+  partnerCommander,
+  colorIdentity: commanderColorIdentity,
+  sourceLabel,
+  deckName,
+  onChangeDeck,
+  onThemeMembershipChange,
+  onMisfitNamesChange,
+  onFocusedMisfitChange,
+  onSaveAsDeck,
+  onOpenInDeckView,
+  intendedThemes,
+  sourceListId,
+  sourceListUpdatedAt,
+}: DeckOptimizerProps) {
+  const [analysis, setAnalysis] = useState<DeckAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [shareState, setShareState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [shareError, setShareError] = useState<string | null>(null);
+  // Derived from the live deck rather than tracked by hand: a card removed via
+  // any route the Inspector doesn't own (deck view, applied swap plan) used to
+  // leave a stale entry behind, which kept its "Added" button disabled.
+  const addedCards = useMemo(
+    () => new Set(currentCards.map(c => c.name)),
+    [currentCards],
+  );
+  // Explicit in-deck context for the preview modal's similar-card filter.
+  const previewInDeckNames = useMemo(() => currentCards.map(c => c.name), [currentCards]);
+  /**
+   * Stable content key for the deck's cards.
+   *
+   * AnalyzePage passes `currentCards={Object.values(generatedDeck.categories).flat()}`, a fresh
+   * array on every one of its renders, so the prop's identity is meaningless. Any effect that both
+   * depends on it AND writes to parent state (onThemeMembershipChange is setThemeMembership) becomes
+   * a render loop. Depend on this string instead — same reason prevCardKeyRef above compares a
+   * joined key rather than a reference.
+   */
+  const deckCardKey = useMemo(() => currentCards.map(c => c.name).join('\0'), [currentCards]);
+  const [previewCard, setPreviewCard] = useState<ScryfallCard | null>(null);
+  const cachedEdhrecDataRef = useRef<import('@/types').EDHRECCommanderData | null>(null);
+  const prevCardKeyRef = useRef(currentCards.map(c => c.name).join('\0'));
+  const [internalActiveTab, setInternalActiveTab] = useState<TabKey>('overview');
+  const activeTab = controlledActiveTab ?? internalActiveTab;
+  const setActiveTab = useCallback((tab: TabKey, opts?: { view?: string }) => {
+    if (onTabChange) onTabChange(tab, opts);
+    if (controlledActiveTab === undefined) setInternalActiveTab(tab);
+    if (tab === 'cost') {
+      document.dispatchEvent(new CustomEvent('analyze-set-sort', { detail: { sortKey: 'price' } }));
+    }
+  }, [onTabChange, controlledActiveTab]);
+
+  // The whole decklist rides in the link's fragment, so a share needs no
+  // backend — and the link reopens on whichever tab is being shared.
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      const url = await buildShareUrl(
+        `analyze/${TAB_SLUG_BY_KEY[activeTab]}`,
+        deckToSharePayload({ cards: currentCards, commander, partnerCommander }),
+      );
+      await navigator.clipboard.writeText(url);
+      setShareState('copied');
+      setShareError(null);
+      trackEvent('share_link_copied', { tab: activeTab, cardCount: currentCards.length });
+      setTimeout(() => setShareState('idle'), 2000);
+    } catch (e) {
+      console.error('[DeckOptimizer] share link failed', e);
+      setShareState('error');
+      setShareError(
+        e instanceof DeckLinkError && e.reason === 'too-large'
+          ? 'This deck is too large to share as a link.'
+          : 'Could not copy the share link.',
+      );
+      setTimeout(() => setShareState('idle'), 3000);
+    }
+  }, [activeTab, commander, partnerCommander, currentCards]);
+  // When a dashboard suggestion sends us to the optimize tab with a specific
+  // card, stash it so OptimizeTabContent can pre-check the right tile.
+  const [pendingOptimizeSelection, setPendingOptimizeSelection] =
+    useState<{ cardName: string; side: 'add' | 'remove'; comboId?: string; pairs?: { out: string; in: string }[] } | null>(null);
+  // When the Overview's lift tile is clicked, jump the Lift Web straight to Your deck with
+  // islands revealed and lands hidden, so the outliers it teased are immediately visible.
+  const [liftDeckView, setLiftDeckView] = useState<{ seq: number } | null>(null);
+  const navigateFromDashboard = useCallback(
+    (tab: TabKey, opts?: { cardName: string; side: 'add' | 'remove'; comboId?: string; pairs?: { out: string; in: string }[] } | { liftView: 'islands' }) => {
+      if (tab === 'optimize' && opts && 'cardName' in opts) setPendingOptimizeSelection(opts);
+      if (tab === 'lift' && opts && 'liftView' in opts) {
+        setLiftDeckView(prev => ({ seq: (prev?.seq ?? 0) + 1 }));
+        setActiveTab(tab, { view: opts.liftView });
+        return;
+      }
+      setActiveTab(tab);
+    },
+    [setActiveTab],
+  );
+  // Seed the same "Your deck, islands shown, lands hidden" jump from a shared/reloaded URL
+  // (e.g. /analyze/<id>/lift?view=islands) — mirrors the in-app click above.
+  useEffect(() => {
+    if (initialLiftView === 'islands') {
+      setLiftDeckView(prev => ({ seq: (prev?.seq ?? 0) + 1 }));
+    }
+  }, [initialLiftView]);
+  const [activeRole, setActiveRole] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<LandSection | null>(null);
+  const [activeCurvePhases, setActiveCurvePhases] = useState<Set<CurvePhase>>(new Set());
+  const [activeRoleGroups, setActiveRoleGroups] = useState<Set<RoleGroupKey>>(new Set([ROLE_GROUP_ORDER[0]]));
+  const [selectedCmc, setSelectedCmc] = useState<number | null>(null);
+  // Apply `initialSelectedCmc` whenever the prop changes (e.g. when the user
+  // clicks a CMC column in the play area). null clears the focus.
+  useEffect(() => {
+    if (initialSelectedCmc !== undefined) {
+      setSelectedCmc(initialSelectedCmc);
+    }
+  }, [initialSelectedCmc]);
+  // Listen for "See more" from deck grade badge
+  const handleOptimizeRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    const handler = () => { handleOptimizeRef.current?.(); };
+    document.addEventListener('deck-optimizer-open', handler);
+    return () => document.removeEventListener('deck-optimizer-open', handler);
+  }, []);
+
+  // Listen for re-analyze requests from external triggers
+  // (e.g. the Re-analyze button rendered by CommanderStrip on /analyze).
+  // handleOptimize already runs a full fresh analysis — same hook the
+  // old in-component Re-analyze button used.
+  useEffect(() => {
+    const handler = () => { handleOptimizeRef.current?.(); };
+    document.addEventListener('deck-optimizer-reanalyze', handler);
+    return () => document.removeEventListener('deck-optimizer-reanalyze', handler);
+  }, []);
+
+  // Focus a card in the Lift Web from elsewhere (e.g. right-click → "Focus on graph" in the
+  // deck-building area). Switch to the lift tab and hand the card name down to LiftClustersTab.
+  const [liftFocus, setLiftFocus] = useState<{ name: string; seq: number } | null>(null);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent<{ name?: string }>).detail?.name;
+      if (!name) return;
+      setActiveTab('lift');
+      setLiftFocus(prev => ({ name, seq: (prev?.seq ?? 0) + 1 }));
+    };
+    document.addEventListener('lift-focus-card', handler);
+    return () => document.removeEventListener('lift-focus-card', handler);
+  }, [setActiveTab]);
+
+  // When AnalyzePage adds cards via the UI, it dispatches 'analyze-cards-added'
+  // with the added card names so we can patch the store with real EDHREC
+  // inclusion/synergy instead of the 0 that AnalyzePage would stamp.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const names: string[] = (e as CustomEvent<{ names?: string[] }>).detail?.names ?? [];
+      if (names.length === 0) return;
+      const edhrecData = cachedEdhrecDataRef.current;
+      if (!edhrecData) return;
+      const deck = useStore.getState().generatedDeck;
+      if (!deck) return;
+
+      // Build a lookup from the EDHREC payload (allNonLand + lands).
+      const edhrecInclusion: Record<string, number> = {};
+      const edhrecSynergy: Record<string, number> = {};
+      const indexCard = (c: { name: string; inclusion: number; synergy?: number }) => {
+        edhrecInclusion[c.name] = c.inclusion;
+        if (c.synergy != null) edhrecSynergy[c.name] = c.synergy;
+        // Also index front face of DFCs.
+        if (c.name.includes(' // ')) {
+          const front = c.name.split(' // ')[0];
+          edhrecInclusion[front] = c.inclusion;
+          if (c.synergy != null) edhrecSynergy[front] = c.synergy;
+        }
+      };
+      for (const c of edhrecData.cardlists.allNonLand) indexCard(c);
+      for (const c of edhrecData.cardlists.lands) indexCard(c);
+
+      let changed = false;
+      const newInclusionMap = { ...(deck.cardInclusionMap ?? {}) };
+      const newSynergyMap = deck.cardSynergyMap ? { ...deck.cardSynergyMap } : undefined;
+      let scoreDelta = 0;
+
+      for (const name of names) {
+        const realInclusion = edhrecInclusion[name];
+        if (realInclusion != null && newInclusionMap[name] === 0) {
+          // Correct the stamped-zero with the real EDHREC value.
+          scoreDelta += realInclusion; // previously added 0, now add the real value
+          newInclusionMap[name] = realInclusion;
+          changed = true;
+        }
+        const realSynergy = edhrecSynergy[name];
+        if (realSynergy != null && newSynergyMap && newSynergyMap[name] === 0) {
+          newSynergyMap[name] = realSynergy;
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        useStore.setState({
+          generatedDeck: {
+            ...deck,
+            cardInclusionMap: newInclusionMap,
+            cardSynergyMap: newSynergyMap,
+            deckScore: (deck.deckScore ?? 0) + scoreDelta,
+          },
+        });
+      }
+    };
+    document.addEventListener('analyze-cards-added', handler);
+    return () => document.removeEventListener('analyze-cards-added', handler);
+  }, []);
+
+  // Card key of the last completed analysis. Compared against currentCards
+  // each render to surface a "dirty" indicator on the Re-analyze button
+  // when the deck has changed since the last analysis snapshot.
+  const [analyzedCardKey, setAnalyzedCardKey] = useState<string>('');
+  // Card key of the last FULL analysis (handleOptimize with theme merge).
+  // Unlike analyzedCardKey this is NOT refreshed by the baseOnly re-runs
+  // that fire on card add/remove, so it tracks how stale the theme-merged
+  // overview really is.
+  const fullAnalyzedCardKeyRef = useRef<string>('');
+  // Auto-trigger the initial analysis once on mount so users don't have to
+  // click "Analyze Deck" every time the page loads.
+  const hasAutoAnalyzedRef = useRef(false);
+
+  // Lists are needed up here: saved themes must be readable before the theme
+  // state below is seeded, and handleThemeSelect persists through updateList.
+  // useUserLists reads localStorage at module load, so this is populated on the
+  // very first render — the seeding below can rely on it.
+  const { lists: userLists, updateList, createList } = useUserLists();
+  const sourceList = sourceListId ? userLists.find(l => l.id === sourceListId) : undefined;
+  const savedThemes = sourceList?.themes;
+  const savedThemesRef = useRef(savedThemes);
+  savedThemesRef.current = savedThemes;
+
+  // Persisted "Adjust" menu overrides (themes / tempo / land target / deck size).
+  // Seeded via lazy useState initialisers rather than an effect: the auto-analyze
+  // effect fires in the same commit as any hydration effect would, and it closes
+  // over the FIRST render's values — so anything set by an effect would arrive
+  // too late and the first analysis would run un-overridden.
+  const overrideRef = inspectorOverrideRef(sourceListId, commanderName, partnerCommanderName);
+  const bootRef = useRef<InspectorOverrides | null>(null);
+  if (!bootRef.current) bootRef.current = loadInspectorOverrides(overrideRef);
+  const boot = bootRef.current;
+  // Saved lists declare their themes on the list itself; only unsaved decks read
+  // the pair back out of the overrides record.
+  const bootThemes = savedThemes ?? boot.themes ?? [];
+
+  // Theme detection state
+  const [themeDetection, setThemeDetection] = useState<DetectedThemeResult | null>(null);
+  const [, setThemeLoading] = useState(false);
+  const [primaryThemeSlug, setPrimaryThemeSlug] = useState<string | null>(bootThemes[0]?.slug ?? null);
+  const [secondaryThemeSlug, setSecondaryThemeSlug] = useState<string | null>(bootThemes[1]?.slug ?? null);
+  // Whether the user has personally set the theme pair (a cleared pair counts).
+  // Gates auto-detection from overwriting a deliberate choice on re-analysis.
+  const [themesTouched, setThemesTouched] = useState(boot.themesTouched ?? false);
+
+  // The bracket Card Fit judges the deck at. The player's pick wins; then the bracket an unsaved deck
+  // was generated at; then the estimate — its upper end, so "Bracket 1 or 2" is judged as 2.
+  const savedBracket = sourceList?.intendedBracket;
+  const savedBracketRef = useRef(savedBracket);
+  savedBracketRef.current = savedBracket;
+  const [userBracket, setUserBracket] = useState<IntendedBracket | null>(savedBracket ?? boot.intendedBracket ?? null);
+  const generatedAtBracket = useStore(s => s.generatedDeck?.intendedBracket);
+  const bracketEstimation = useStore(s => s.generatedDeck?.bracketEstimation);
+  const bracketBasis = useMemo<BracketBasis | null>(() => (
+    userBracket
+      ? { bracket: userBracket, source: 'set' }
+      : !sourceListId && generatedAtBracket
+        ? { bracket: generatedAtBracket, source: 'generated' }
+        : bracketEstimation
+          ? { bracket: bracketEstimation.bracketMax, source: 'estimated' }
+          : null
+  ), [userBracket, sourceListId, generatedAtBracket, bracketEstimation]);
+  const bracketBasisRef = useRef(bracketBasis);
+  bracketBasisRef.current = bracketBasis;
+  // The commander's bracket page blended into its all-brackets page, plus the gap list built from
+  // it. Null when there's no bracket to judge at or its page is too thin to be worth a request.
+  // Loaded by handleOptimize; read through fitInputs.
+  const bracketBlendRef = useRef<(BracketBlend & { gapAnalysis?: GapAnalysisCard[] }) | null>(null);
+  const themeDataCacheRef = useRef<Map<string, import('@/types').EDHRECCommanderData>>(new Map());
+  const themeEnhancedDataRef = useRef<import('@/types').EDHRECCommanderData | null>(null);
+  // Classifier theme fit, refreshed whenever the selected themes or the deck's cards change. Held
+  // in a ref for the same reason themeDataCacheRef is: every consumer reads it inside a computation
+  // that already has its own dependency list, and a re-render per resolve would thrash the analyze
+  // pipeline. themeFitVersion below is what tells those memos it changed.
+  const themeFitRef = useRef<ThemeFit>(EMPTY_THEME_FIT);
+  const [themeFitVersion, setThemeFitVersion] = useState(0);
+  // The same classifier fit, but over cards NOT in the deck — the pool the ADD surfaces rank.
+  // Kept separate from themeFitRef on purpose: that one answers "is this card of mine on theme"
+  // (cut protection, chips on the deck), this one answers "would this card be" (suggestions).
+  // A single fit can't serve both, which is why the theme term in the recommendation blend was
+  // silently inert: it was handed the deck fit, and no recommendation is ever a deck card.
+  const candidateFitRef = useRef<ThemeFit>(EMPTY_THEME_FIT);
+  const [candidateFitVersion, setCandidateFitVersion] = useState(0);
+
+  /** The ONLY place this component builds membership. Every call site routes through here so the
+   *  classifier evidence can never be attached at some surfaces and missing at others. */
+  const membershipFor = useCallback(
+    (
+      primary: { slug: string; name: string } | null,
+      secondary: { slug: string; name: string } | null,
+    ) => buildThemeMembership(primary, secondary, themeDataCacheRef.current, themeFitRef.current),
+    // themeFitVersion is not read here — it exists so consumers re-run when the ref is replaced.
+    [themeFitVersion],
+  );
+
+  // Full EDHREC taxonomy — resolves names for themes outside the commander's
+  // taglinks (custom picks, saved off-list themes). One cached fetch.
+  const themeTaxonomy = useThemeTaxonomy(true);
+
+  /** Resolve a theme slug to {slug, name} from any known source:
+   *  detection results → commander taglinks → full taxonomy → saved list themes. */
+  const resolveThemeInfo = useCallback((slug: string | null): { slug: string; name: string } | null => {
+    if (!slug) return null;
+    const fromDetection = themeDetection?.evaluatedThemes.find(t => t.theme.slug === slug);
+    if (fromDetection) return { slug, name: fromDetection.theme.name };
+    const fromTaglinks = cachedEdhrecDataRef.current?.themes?.find(t => t.slug === slug);
+    if (fromTaglinks) return { slug, name: fromTaglinks.name };
+    const fromTaxonomy = themeTaxonomy.tags.find(t => t.slug === slug);
+    if (fromTaxonomy) return { slug, name: fromTaxonomy.name };
+    const fromSaved = savedThemes?.find(t => t.slug === slug);
+    if (fromSaved) return { slug, name: fromSaved.name };
+    return null;
+  }, [themeDetection, themeTaxonomy.tags, savedThemes]);
+
+  // Store subscriptions used inside the analysis handlers below — declared
+  // here so handlers (and fetchThemeData) can reference them in dep arrays.
+  const colorIdentity = useStore(s => s.colorIdentity);
+  const chosenColor = useStore(s => s.chosenColor);
+  const pushDeckHistory = useStore(s => s.pushDeckHistory);
+  // EDHREC serves a page per resulting identity for "choose a color" commanders
+  // (Clara Oswald &c); '' for every normal commander. Held back until the identity is
+  // populated — the chosen color alone would resolve to the wrong mono page.
+  const colorSeg = colorIdentity?.length ? edhrecColorSegment(colorIdentity, chosenColor) : '';
+
+  // Fetch theme data helper (cached). Commander+theme page first; when the commander
+  // has no EDHREC page for the theme (403 = not found), fall back to the color-filtered
+  // archetype tag page so ANY theme is pickable. Fallback inclusion percentages come
+  // from the archetype-wide population (systematically higher than commander-specific
+  // numbers) — the base-staple merge in the callers dampens the skew.
+  const fetchThemeData = useCallback(async (
+    slug: string,
+    /** Skip the commander+theme page entirely. Set when the caller already knows EDHREC lists no
+     *  such page for this commander — asking anyway costs a round trip and logs a 403 that reads
+     *  like a failure when it is the expected answer. */
+    opts?: { archetypeOnly?: boolean },
+  ) => {
+    let data = themeDataCacheRef.current.get(slug);
+    if (!data) {
+      const fromArchetypePage = async () => {
+        const tagData = await fetchTagPageData(slug, colorIdentity ?? []);
+        if (!tagData) throw new Error(`No EDHREC data for theme "${slug}"`);
+        const baseStats = cachedEdhrecDataRef.current?.stats;
+        return {
+          themes: [],
+          stats: baseStats ?? {
+            avgPrice: 0, numDecks: 0, deckSize: 81, manaCurve: {},
+            typeDistribution: { creature: 0, instant: 0, sorcery: 0, artifact: 0, enchantment: 0, land: 0, planeswalker: 0, battle: 0 },
+            landDistribution: { basic: 0, nonbasic: 0, total: 0 },
+          },
+          cardlists: tagData.cardlists,
+          similarCommanders: [],
+        };
+      };
+
+      if (opts?.archetypeOnly) {
+        data = await fromArchetypePage();
+      } else {
+        try {
+          data = partnerCommanderName
+            ? await fetchPartnerThemeData(commanderName, partnerCommanderName, slug, undefined, undefined, colorSeg)
+            : await fetchCommanderThemeData(commanderName, slug, undefined, undefined, colorSeg);
+        } catch {
+          data = await fromArchetypePage();
+        }
+      }
+      themeDataCacheRef.current.set(slug, data);
+    }
+    return data;
+  }, [commanderName, partnerCommanderName, colorIdentity, colorSeg]);
+
+  // Notify parent (AnalyzePage) when the user's selected themes change so it can
+  // tag cards with the matching theme chips in the visual stacks. BOTH themes'
+  // data must be in the cache first — a freshly picked secondary isn't warmed
+  // yet, so without this its chip would stamp no cards until a later re-render.
+  useEffect(() => {
+    if (!onThemeMembershipChange) return;
+    const primary = resolveThemeInfo(primaryThemeSlug);
+    const secondary = resolveThemeInfo(secondaryThemeSlug);
+    if (!primary && !secondary) {
+      onThemeMembershipChange(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      await Promise.all(
+        [primary, secondary].filter(Boolean).map(t => fetchThemeData(t!.slug).catch(() => null)),
+      );
+      if (cancelled) return;
+
+      // Classifier fit first: membership unions it with the EDHREC page lists, so it has to be in
+      // the ref before any membership is built from it. Bumping the version is what makes the
+      // cut/recommendation memos re-run with the fit attached.
+      themeFitRef.current = await buildThemeFit(
+        currentCards,
+        [primary, secondary].filter((t): t is { slug: string; name: string } => !!t),
+      );
+      if (cancelled) return;
+      setThemeFitVersion(v => v + 1);
+
+      onThemeMembershipChange(membershipFor(primary, secondary));
+    })();
+    return () => { cancelled = true; };
+    // deckCardKey, NOT currentCards: see its definition. This effect writes to parent state, so
+    // depending on the array's identity loops. currentCards is read through the closure, which is
+    // correct — the key only changes when the contents actually change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [primaryThemeSlug, secondaryThemeSlug, resolveThemeInfo, onThemeMembershipChange, fetchThemeData, deckCardKey]);
+
+  // Emit the misfit name set so the deck-building area can highlight matching cards.
+  useEffect(() => {
+    if (!onMisfitNamesChange) return;
+    const names = new Set<string>();
+    for (const m of analysis?.misfits ?? []) names.add(m.card.name);
+    onMisfitNamesChange(names);
+  }, [analysis, onMisfitNamesChange]);
+
+  // User-overridable tempo (null = use auto-detected)
+  const [userPacing, setUserPacing] = useState<Pacing | null>(boot.pacing ?? null);
+  // The deck's own tempo, as read by the analyzer. State rather than a ref because
+  // effectiveRoleTargets rebases the override off it — a ref would leave that memo
+  // stuck on whatever baseline it first guessed.
+  const [detectedPacing, setDetectedPacing] = useState<Pacing | null>(null);
+
+  // User-overridable land target (null = use auto-computed)
+  const [userLandTarget, setUserLandTarget] = useState<number | null>(boot.landTarget ?? null);
+
+  // User-overridable intended deck size (null = use loaded deck's actual size)
+  const [userDeckSize, setUserDeckSize] = useState<number | null>(boot.deckSize ?? null);
+  const deckSize = userDeckSize ?? propDeckSize;
+
+  // The effective pacing: user override > theme-detected > base analysis
+  const effectivePacing: Pacing | undefined = userPacing ?? themeDetection?.pacing ?? analysis?.pacing ?? undefined;
+
+  // Role targets adjusted for user pacing override
+  const effectiveRoleTargets = useMemo(() => {
+    if (!userPacing) return roleTargets;
+    return recomputeRoleTargetsForPacing(roleTargets, detectedPacing ?? 'balanced', userPacing);
+  }, [roleTargets, userPacing, detectedPacing]);
+
+
+  // Rebuild the detection banner message reflecting user overrides
+  const rebuildBannerMessage = useCallback((opts: {
+    pacingOverride?: Pacing | null;
+    primarySlug?: string | null;
+    secondarySlug?: string | null;
+  } = {}) => {
+    setThemeDetection(prev => {
+      if (!prev) return prev;
+      const allThemes = cachedEdhrecDataRef.current?.themes || [];
+      const primary = opts.primarySlug !== undefined ? opts.primarySlug : primaryThemeSlug;
+      const secondary = opts.secondarySlug !== undefined ? opts.secondarySlug : secondaryThemeSlug;
+      const pacingVal = opts.pacingOverride !== undefined ? opts.pacingOverride : userPacing;
+      const hasUserOverride = pacingVal != null || primary !== prev.matchedThemes[0]?.theme.slug;
+
+      const pacingKey = pacingVal ?? detectedPacing ?? prev.pacing;
+      const pacingLabel = PACING_PHRASE[pacingKey] || prev.pacingLabel;
+
+      // Carries only what buildDetectionMessage reads (the theme's name). Typed rather than cast so
+      // a new required field on ThemeMatchResult surfaces here instead of arriving as undefined.
+      const dummyMatch = (slug: string): ThemeMatchResult | null => {
+        const t = allThemes.find(th => th.slug === slug);
+        return t ? {
+          theme: t, cardOverlap: 0, themePoolSize: 0, weightedOverlap: 0, synergySum: 0,
+          memberCount: 0, literalCount: 0, memberNames: [], basis: 'none', score: 0,
+          components: { overlap: 0, inclusion: 0, membership: 0, pageDecks: 0 },
+        } : null;
+      };
+      const matchedThemes = [primary, secondary]
+        .filter(Boolean)
+        .map(s => dummyMatch(s!))
+        .filter((m): m is ThemeMatchResult => m !== null);
+      const strategyLabel = primary ? generateStrategyLabel(allThemes.find(t => t.slug === primary)?.name || '') : prev.strategyLabel;
+
+      const newMessage = buildDetectionMessage(
+        commanderName, matchedThemes, pacingLabel, strategyLabel,
+        matchedThemes.length > 0 || prev.isConfident, matchedThemes.length >= 2,
+        hasUserOverride,
+      );
+      return { ...prev, detectionMessage: newMessage, strategyLabel, pacingLabel };
+    });
+  }, [commanderName, primaryThemeSlug, secondaryThemeSlug, userPacing, detectedPacing]);
+
+  // Swap every override when the deck underneath us changes. /analyze/:listA →
+  // /analyze/:listB rehydrates in place without unmounting, so without this a
+  // land target or deck size set on one deck would silently drive the next
+  // deck's mana math. Skipped on mount — the lazy initialisers above already
+  // seeded this deck, and re-running here would clobber them before the first
+  // analysis reads them.
+  const commanderKey = `${commanderName}|${partnerCommanderName ?? ''}`;
+  const prevCommanderKeyRef = useRef(commanderKey);
+  const prevOverrideRefRef = useRef(overrideRef);
+  useEffect(() => {
+    const sameCommander = prevCommanderKeyRef.current === commanderKey;
+    if (sameCommander && prevOverrideRefRef.current === overrideRef) return;
+    const prevRef = prevOverrideRefRef.current;
+    prevCommanderKeyRef.current = commanderKey;
+    prevOverrideRefRef.current = overrideRef;
+
+    let next = loadInspectorOverrides(overrideRef);
+    // "Save as deck" re-keys the record mid-session (unsaved:<commander> → the
+    // new list id). Same deck, same commander — so carry the settings across
+    // rather than resetting the menu the user just finished dialling in.
+    if (sameCommander && !hasInspectorOverrides(next)) {
+      const carried = loadInspectorOverrides(prevRef);
+      if (hasInspectorOverrides(carried)) {
+        next = carried;
+        saveInspectorOverrides(overrideRef, carried);
+      }
+    }
+
+    // A genuinely different commander invalidates the detection and the theme
+    // pages; re-keying the same deck must not throw either away.
+    if (!sameCommander) {
+      setThemeDetection(null);
+      setThemeLoading(false);
+      setDetectedPacing(null);
+      themeDataCacheRef.current = new Map();
+      themeEnhancedDataRef.current = null;
+    }
+
+    setThemesTouched(next.themesTouched ?? false);
+    const themes = savedThemesRef.current ?? next.themes ?? [];
+    setPrimaryThemeSlug(themes[0]?.slug ?? null);
+    setSecondaryThemeSlug(themes[1]?.slug ?? null);
+    setUserPacing(next.pacing ?? null);
+    setUserLandTarget(next.landTarget ?? null);
+    setUserDeckSize(next.deckSize ?? null);
+    setUserBracket(savedBracketRef.current ?? next.intendedBracket ?? null);
+    bracketBlendRef.current = null;
+  }, [commanderKey, commanderName, partnerCommanderName, overrideRef]);
+
+  // Initialize sub-tab defaults once when analysis arrives
+  useEffect(() => {
+    if (!analysis) return;
+    if (activeRole === null && analysis.roleBreakdowns.length > 0) {
+      setActiveRole(analysis.roleBreakdowns[0].role);
+    }
+    if (activeSection === null) {
+      setActiveSection('landCount');
+    }
+    if (activeCurvePhases.size === 0 && analysis.curvePhases.length > 0) {
+      setActiveCurvePhases(new Set([analysis.curvePhases[0].phase]));
+    }
+  }, [analysis]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Build inclusion map from EDHREC data, handling DFC front-face lookups.
+   *  The EDHREC-derived portion is cached per data reference (it doesn't
+   *  change once fetched) so we don't re-iterate ~3000 entries on every
+   *  card-add re-analysis. */
+  const inclusionMapCacheRef = useRef(new WeakMap<import('@/types').EDHRECCommanderData, Record<string, number>>());
+  const buildInclusionMap = useCallback((edhrecData: import('@/types').EDHRECCommanderData): Record<string, number> => {
+    if (cardInclusionMap) return cardInclusionMap;
+    let base = inclusionMapCacheRef.current.get(edhrecData);
+    if (!base) {
+      base = {};
+      const indexCard = (name: string, inclusion: number) => {
+        base![name] = inclusion;
+        if (name.includes(' // ')) base![name.split(' // ')[0]] = inclusion;
+      };
+      for (const c of edhrecData.cardlists.allNonLand) indexCard(c.name, c.inclusion);
+      for (const c of edhrecData.cardlists.lands) indexCard(c.name, c.inclusion);
+      inclusionMapCacheRef.current.set(edhrecData, base);
+    }
+    // Layer on DFC entries from the current deck — cheap (only DFCs in deck).
+    let withDfc: Record<string, number> | null = null;
+    for (const card of currentCards) {
+      if (card.name.includes(' // ') && base[card.name] === undefined) {
+        const front = card.name.split(' // ')[0];
+        if (base[front] !== undefined) {
+          if (!withDfc) withDfc = { ...base };
+          withDfc[card.name] = base[front];
+        }
+      }
+    }
+    return withDfc ?? base;
+  }, [cardInclusionMap, currentCards]);
+
+  /** Card Fit inputs for one analyzeDeck call. With a bracket blend loaded, the deck's own cards are
+   *  judged on the blended figures rather than the all-brackets ones. Every analyzeDeck call spreads
+   *  this in, so no surface judges the same card on different data. Reads refs only — stable. */
+  const fitInputs = useCallback((inclusionMap: Record<string, number>) => {
+    const blend = bracketBlendRef.current;
+    const stored = useStore.getState().generatedDeck;
+    return {
+      cardInclusionMap: blend ? { ...inclusionMap, ...blend.inclusionMap } : inclusionMap,
+      cardSynergyMap: blend ? { ...stored?.cardSynergyMap, ...blend.synergyMap } : stored?.cardSynergyMap,
+      gapCandidates: blend?.gapAnalysis ?? stored?.gapAnalysis,
+      bracket: bracketBasisRef.current?.bracket,
+      bracketTargets: blend ? { bracket: blend.bracket, scale: blend.roleScale } : undefined,
+    };
+  }, []);
+
+  /** Merge two recommendation pools (e.g. primary + secondary theme).
+   *  `primary` recs are the main source; `secondary` supplements.
+   *  Cards in both pools get a synergy boost. */
+  const mergeRecommendations = useCallback((
+    primary: RecommendedCard[],
+    secondary: RecommendedCard[],
+    limit = 30,
+  ): RecommendedCard[] => {
+    const merged = new Map<string, RecommendedCard>();
+
+    for (const rec of primary) {
+      merged.set(rec.name, { ...rec });
+    }
+    for (const rec of secondary) {
+      if (merged.has(rec.name)) {
+        // In both pools → boost score (strong cross-theme signal)
+        const existing = merged.get(rec.name)!;
+        merged.set(rec.name, { ...existing, score: (existing.score ?? 0) + 20 });
+      } else {
+        merged.set(rec.name, { ...rec });
+      }
+    }
+
+    return Array.from(merged.values())
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, limit);
+  }, []);
+
+  /**
+   * Theme-first merge: theme data drives, commander staples backfill. Cards in both pools get
+   * boosted — on-theme AND widely played is the strongest signal available.
+   *
+   * Being off-theme is NOT a reason to hide a good card. The backfill bar used to be 50% inclusion,
+   * which sounds permissive and is not: on Sapling of Colfenor's 476-deck page, Sol Ring is 63% and
+   * Command Tower 75%, but Assassin's Trophy is 34%, Beast Within 39%, Putrefy 32% and Bojuka Bog
+   * 47%. Only true auto-includes cleared it, so the entire mid-tier Golgari removal suite was
+   * dropped for not being a self-damage card — including from the per-role suggestion lists, where a
+   * Removal list that omits Assassin's Trophy is plainly wrong.
+   *
+   * Two changes. The bar drops to STAPLE_BACKFILL_INCLUSION, because inclusion percentages for
+   * genuinely good cards are modest even on a well-sampled page. And a card that fills a role the
+   * deck is short on comes through regardless: "you are low on removal" and "here is the removal
+   * this commander plays" belong together, whatever the theme is.
+   *
+   * Flooding is held off by the sort and slice below, not by the gate — the gate was removing cards
+   * before the ranking got a chance to judge them.
+   */
+  const mergeThemeWithBaseStaples = useCallback((
+    themeRecs: RecommendedCard[],
+    baseRecs: RecommendedCard[],
+    limit = 30,
+  ): RecommendedCard[] => {
+    const merged = new Map<string, RecommendedCard>();
+
+    // Theme recs are the primary pool
+    for (const rec of themeRecs) {
+      merged.set(rec.name, { ...rec, isThemeSynergy: true });
+    }
+
+    for (const rec of baseRecs) {
+      if (merged.has(rec.name)) {
+        // On-theme AND a commander staple → strong signal, boost
+        const existing = merged.get(rec.name)!;
+        merged.set(rec.name, { ...existing, score: (existing.score ?? 0) + 25 });
+      } else if (rec.inclusion >= STAPLE_BACKFILL_INCLUSION || rec.fillsDeficit) {
+        merged.set(rec.name, { ...rec, isThemeSynergy: false });
+      }
+    }
+
+    return Array.from(merged.values())
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+      .slice(0, limit);
+  }, []);
+
+  /** Supplement an existing theme rec-set with a SECOND theme's card pool —
+   *  the same "secondary supplements primary" merge the theme-picker uses.
+   *  Centralizing it means the auto-detect path and every runAnalysisFor
+   *  recompute reflect BOTH selected themes' pools, not just the primary.
+   *  Callers pass secondary data already in hand (warmed into the cache). */
+  const mergeSecondaryTheme = useCallback((
+    current: {
+      recommendations: RecommendedCard[];
+      roleBreakdowns: DeckAnalysis['roleBreakdowns'];
+      landRecommendations: RecommendedCard[];
+    },
+    secondaryData: import('@/types').EDHRECCommanderData,
+    opts: { targets: Parameters<typeof analyzeDeck>[0]['roleTargets']; pacing?: Pacing; landTarget?: number },
+  ) => {
+    const secondaryResult = analyzeDeck({
+      edhrecData: secondaryData, currentCards, roleCounts, roleTargets: opts.targets, deckSize,
+      ...fitInputs(buildInclusionMap(secondaryData)), colorIdentity,
+      overridePacing: opts.pacing, overrideLandTarget: opts.landTarget,
+      commanderNames: partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName],
+    });
+    return {
+      recommendations: mergeRecommendations(current.recommendations, secondaryResult.recommendations),
+      roleBreakdowns: current.roleBreakdowns.map((rb, idx) => {
+        const themeRb = secondaryResult.roleBreakdowns[idx];
+        if (!themeRb) return rb;
+        return { ...rb, suggestedReplacements: mergeRecommendations(rb.suggestedReplacements, themeRb.suggestedReplacements) };
+      }),
+      landRecommendations: mergeRecommendations(current.landRecommendations, secondaryResult.landRecommendations, 15),
+    };
+  }, [currentCards, roleCounts, deckSize, buildInclusionMap, fitInputs, mergeRecommendations, colorIdentity, commanderName, partnerCommanderName]);
+
+  /** Run base + (optional) theme analysis and merge results.
+   *  Returns null when no cached EDHREC data is available.
+   *
+   *  `baseOnly: true` skips the theme analyzeDeck call, halving the work for
+   *  card-add/remove updates. Role counts, curve, and the cards-filling-this-role
+   *  list all come from baseResult either way; only suggestedReplacements
+   *  loses its theme bias until the next full re-analyze. */
+  const runAnalysisFor = useCallback((opts: {
+    targets: Record<string, number>;
+    pacing?: Pacing;
+    landTarget?: number;
+    baseOnly?: boolean;
+  }) => {
+    const baseData = bracketBlendRef.current?.data ?? cachedEdhrecDataRef.current;
+    if (!baseData) return null;
+
+    const commanderNamesForAnalyze = partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName];
+
+    // Keep plan/strategy scoring theme-aware on EVERY recompute. Without the
+    // theme context (membership + primaryThemeData + planName) analyzeDeck
+    // returns strategy 0, so adding a card / changing pacing/land/size would
+    // collapse the Strategy tile to 0 until the user re-touched the theme.
+    const primaryInfo = resolveThemeInfo(primaryThemeSlug);
+    const secondaryInfo = resolveThemeInfo(secondaryThemeSlug);
+    const themeContext = {
+      themeMembership: (primaryInfo || secondaryInfo)
+        ? membershipFor(primaryInfo, secondaryInfo)
+        : undefined,
+      primaryThemeData: themeEnhancedDataRef.current ?? undefined,
+      planName: primaryInfo?.name ?? undefined,
+    };
+
+    const baseInclusionMap = buildInclusionMap(baseData);
+    const baseResult = analyzeDeck({
+      edhrecData: baseData, currentCards, roleCounts, roleTargets: opts.targets, deckSize,
+      ...fitInputs(baseInclusionMap), colorIdentity,
+      overridePacing: opts.pacing, overrideLandTarget: opts.landTarget,
+      commanderNames: commanderNamesForAnalyze,
+      ...themeContext,
+    });
+
+    const themeData = themeEnhancedDataRef.current;
+    if (!themeData || opts.baseOnly) return baseResult;
+
+    const themeInclusionMap = buildInclusionMap(themeData);
+    const themeResult = analyzeDeck({
+      edhrecData: themeData, currentCards, roleCounts, roleTargets: opts.targets, deckSize,
+      ...fitInputs(themeInclusionMap), colorIdentity,
+      overridePacing: opts.pacing, overrideLandTarget: opts.landTarget,
+      commanderNames: commanderNamesForAnalyze,
+      ...themeContext,
+    });
+    let merged = {
+      recommendations: mergeRecommendations(baseResult.recommendations, themeResult.recommendations),
+      roleBreakdowns: baseResult.roleBreakdowns.map((baseRb, idx) => {
+        const themeRb = themeResult.roleBreakdowns[idx];
+        if (!themeRb) return baseRb;
+        return { ...baseRb, suggestedReplacements: mergeRecommendations(baseRb.suggestedReplacements, themeRb.suggestedReplacements) };
+      }),
+      landRecommendations: mergeRecommendations(baseResult.landRecommendations, themeResult.landRecommendations, 15),
+    };
+
+    // The secondary theme contributes to the pool too. Read its data straight
+    // from the warmed cache so this recompute stays synchronous — the cache is
+    // populated by applyThemeSelection / auto-detect before this path runs.
+    const secondaryData = secondaryThemeSlug ? themeDataCacheRef.current.get(secondaryThemeSlug) : undefined;
+    if (secondaryData) {
+      merged = mergeSecondaryTheme(merged, secondaryData, {
+        targets: opts.targets, pacing: opts.pacing, landTarget: opts.landTarget,
+      });
+    }
+
+    return { ...baseResult, recommendations: merged.recommendations, roleBreakdowns: merged.roleBreakdowns, landRecommendations: merged.landRecommendations };
+  }, [currentCards, roleCounts, deckSize, buildInclusionMap, fitInputs, mergeRecommendations, colorIdentity, resolveThemeInfo, primaryThemeSlug, secondaryThemeSlug, commanderName, partnerCommanderName, mergeSecondaryTheme]);
+
+  // When user adjusts the intended deck size, re-run analysis. The new
+  // deckSize takes effect on the next render via the `deckSize` derivation
+  // above, but runAnalysisFor closes over the *current* render's deckSize —
+  // so we schedule the re-run after state has flushed.
+  const handleDeckSizeChange = useCallback((newSize: number | null) => {
+    setUserDeckSize(newSize);
+    saveInspectorOverrides(overrideRef, { deckSize: newSize });
+  }, [overrideRef]);
+
+  // Re-run analysis whenever the effective deckSize changes via user override.
+  useEffect(() => {
+    if (!analysis) return;
+    const result = runAnalysisFor({
+      targets: effectiveRoleTargets,
+      pacing: userPacing ?? undefined,
+      landTarget: userLandTarget ?? undefined,
+    });
+    if (result) setAnalysis(result);
+    // We deliberately only react to userDeckSize here — other deps would
+    // double-fire the analysis loop that already exists for them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userDeckSize]);
+
+  // When user changes land target, re-run analysis with the new override
+  const handleLandTargetChange = useCallback((newTarget: number | null) => {
+    setUserLandTarget(newTarget);
+    saveInspectorOverrides(overrideRef, { landTarget: newTarget });
+    if (!analysis) return;
+    const result = runAnalysisFor({
+      targets: effectiveRoleTargets,
+      pacing: userPacing ?? undefined,
+      landTarget: newTarget ?? undefined,
+    });
+    if (result) setAnalysis(result);
+  }, [analysis, effectiveRoleTargets, userPacing, runAnalysisFor, overrideRef]);
+
+  // When user changes pacing, re-run full analysis with adjusted role targets
+  const handlePacingChange = useCallback((newPacing: Pacing | null) => {
+    setUserPacing(newPacing);
+    saveInspectorOverrides(overrideRef, { pacing: newPacing });
+    if (!analysis) {
+      rebuildBannerMessage({ pacingOverride: newPacing });
+      return;
+    }
+    const detPacing = detectedPacing ?? 'balanced';
+    const newTargets = newPacing
+      ? recomputeRoleTargetsForPacing(roleTargets, detPacing, newPacing)
+      : roleTargets;
+    const result = runAnalysisFor({
+      targets: newTargets,
+      pacing: newPacing ?? undefined,
+      landTarget: userLandTarget ?? undefined,
+    });
+    if (result) setAnalysis(result);
+    rebuildBannerMessage({ pacingOverride: newPacing });
+  }, [analysis, rebuildBannerMessage, roleTargets, userLandTarget, runAnalysisFor, overrideRef, detectedPacing]);
+
+  // A new bracket means a different EDHREC page: fetch it, then recompute in place the way a tempo
+  // or land change does. Not handleOptimize — that blanks the whole Inspector behind its loading
+  // screen, which is no way to answer a click on the Bracket tab. Runs once the state has flushed,
+  // so the blend and fitInputs read the new basis.
+  const [bracketChangeSeq, setBracketChangeSeq] = useState(0);
+  const [bracketRefreshing, setBracketRefreshing] = useState(false);
+  const handleBracketChange = useCallback((bracket: IntendedBracket | null) => {
+    setUserBracket(bracket);
+    // Saved decks keep it on the list (never evicted); the overrides copy covers unsaved ones.
+    if (sourceListId) updateList(sourceListId, { intendedBracket: bracket ?? undefined });
+    saveInspectorOverrides(overrideRef, { intendedBracket: bracket });
+    setBracketChangeSeq(n => n + 1);
+  }, [sourceListId, updateList, overrideRef]);
+  useEffect(() => {
+    if (bracketChangeSeq === 0) return;
+    const allBrackets = cachedEdhrecDataRef.current;
+    if (!allBrackets || !analysis) {
+      handleOptimizeRef.current?.();
+      return;
+    }
+    let cancelled = false;
+    setBracketRefreshing(true);
+    loadBracketBlend(allBrackets).then(blend => {
+      if (cancelled) return;
+      bracketBlendRef.current = blend;
+      const result = runAnalysisFor({
+        targets: effectiveRoleTargets,
+        pacing: userPacing ?? undefined,
+        landTarget: userLandTarget ?? undefined,
+      });
+      if (result) setAnalysis(result);
+      setBracketRefreshing(false);
+    });
+    // A quicker second click supersedes this one.
+    return () => { cancelled = true; };
+    // Keyed on the click alone; everything else is read as of that render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bracketChangeSeq]);
+
+  /** The commander's page at the bracket the deck is judged at, blended into the all-brackets page
+   *  by sample size. That page's decks are the ones here that declared the bracket, so its size is
+   *  known before asking and a page too thin to move the numbers is never fetched. Null on failure:
+   *  the all-brackets page stays in charge. */
+  const loadBracketBlend = async (allBrackets: import('@/types').EDHRECCommanderData) => {
+    const bracket = bracketBasisRef.current?.bracket;
+    if (!bracket || bracketPageWeight(declaredBracketDecks(allBrackets, bracket)) === 0) return null;
+    try {
+      const page = partnerCommanderName
+        ? await fetchPartnerCommanderData(commanderName, partnerCommanderName, undefined, bracket, colorSeg)
+        : await fetchCommanderData(commanderName, undefined, bracket, colorSeg);
+      const blend = blendBracketData(allBrackets, page, bracket);
+      const deckNames = new Set<string>([commanderName, ...(partnerCommanderName ? [partnerCommanderName] : [])]);
+      for (const c of currentCards) {
+        deckNames.add(c.name);
+        if (c.name.includes(' // ')) deckNames.add(c.name.split(' // ')[0]);
+      }
+      const gapAnalysis = await buildGapAnalysis({ edhrecData: blend.data, deckCardNames: deckNames })
+        .catch(() => undefined);
+      return { ...blend, gapAnalysis };
+    } catch (err) {
+      console.warn(`[DeckOptimizer] Bracket ${bracket} page unavailable — judging on all brackets`, err);
+      return null;
+    }
+  };
+
+  const handleOptimize = async () => {
+    setLoading(true);
+    setError(null);
+    // Only the DETECTION is thrown away and recomputed here — the user's applied
+    // themes are carried through. Nulling the slugs is what made "add a card,
+    // come back to Overview" silently revert to the auto-detected guess, and it
+    // also blanked the theme chips for the length of the EDHREC round-trip.
+    const keptPrimary = primaryThemeSlug;
+    const keptSecondary = secondaryThemeSlug;
+    const keptThemesTouched = themesTouched;
+    setThemeDetection(null);
+    themeEnhancedDataRef.current = null;
+
+    try {
+      // ── Phase 1: Base analysis (blocking) ──
+      await loadTaggerData();
+      const edhrecData = partnerCommanderName
+        ? await fetchPartnerCommanderData(commanderName, partnerCommanderName, undefined, undefined, colorSeg)
+        : await fetchCommanderData(commanderName, undefined, undefined, colorSeg);
+      cachedEdhrecDataRef.current = edhrecData;
+      bracketBlendRef.current = await loadBracketBlend(edhrecData);
+      const pageData = bracketBlendRef.current?.data ?? edhrecData;
+
+      const effectiveInclusionMap = buildInclusionMap(pageData);
+
+      const analyzeBase = (targets: Record<string, number>) => analyzeDeck({
+        edhrecData: pageData,
+        currentCards,
+        roleCounts,
+        // The tempo override has to ride along here the same way it does in
+        // applyThemeSelection. Without it a re-analysis quietly recomputed the
+        // curve and phase-role targets from the DETECTED tempo while the strip
+        // above still advertised the user's choice.
+        roleTargets: targets,
+        deckSize,
+        ...fitInputs(effectiveInclusionMap),
+        colorIdentity,
+        overridePacing: userPacing ?? undefined,
+        overrideLandTarget: userLandTarget ?? undefined,
+        commanderNames: partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName],
+      });
+
+      // effectiveRoleTargets rebases the override off detectedPacing, which is
+      // empty on the first pass — and a tempo override restored from storage is
+      // live before any pass has run, so that first guess uses 'balanced'. Once
+      // the deck's real tempo is known, rebase and redo the pass if the guess was
+      // wrong. Only ever a second analyze on the first load of a deck that has a
+      // stored tempo and doesn't detect as balanced.
+      const guessedBaseline: Pacing = detectedPacing ?? 'balanced';
+      let effectiveTargets = effectiveRoleTargets;
+      let baseResult = analyzeBase(effectiveTargets);
+      if (userPacing && baseResult.detectedPacing !== guessedBaseline) {
+        effectiveTargets = recomputeRoleTargetsForPacing(roleTargets, baseResult.detectedPacing, userPacing);
+        baseResult = analyzeBase(effectiveTargets);
+      }
+
+      // Enrich recommendations with Scryfall prices/colors
+      const allRecs: RecommendedCard[] = [
+        ...baseResult.recommendations,
+        ...baseResult.landRecommendations,
+        ...(baseResult.colorFixing.fixingRecommendations || []),
+        ...baseResult.roleBreakdowns.flatMap(rb => rb.suggestedReplacements),
+      ];
+      const needsFetch = [...new Set(allRecs.filter(r => !r.price || !r.producedColors?.length || r.cmc == null).map(r => r.name))];
+
+      if (needsFetch.length > 0) {
+        try {
+          const scryfallCards = await getCardsByNames(needsFetch);
+          const priceMap = new Map<string, string>();
+          const colorMap = new Map<string, string[]>();
+          const cmcMap = new Map<string, number>();
+          for (const [name, card] of scryfallCards) {
+            const p = getCardPrice(card);
+            if (p) priceMap.set(name, p);
+            if (card.cmc != null) cmcMap.set(name, card.cmc);
+            const produced = (card.produced_mana || []).filter((c: string) => (WUBRG as readonly string[]).includes(c));
+            if (produced.length > 0) {
+              colorMap.set(name, [...new Set(produced)]);
+            } else if (card.color_identity?.length) {
+              colorMap.set(name, card.color_identity.map((c: string) => c.toUpperCase()));
+            }
+          }
+          for (const rec of allRecs) {
+            if (!rec.price) rec.price = priceMap.get(rec.name) || undefined;
+            if (!rec.producedColors?.length) rec.producedColors = colorMap.get(rec.name) || undefined;
+            if (rec.cmc == null) rec.cmc = cmcMap.get(rec.name);
+          }
+        } catch { /* prices/colors are nice-to-have */ }
+      }
+
+      // detectedPacing, NOT pacing: with an override in play the latter echoes
+      // the override back, and recomputeRoleTargetsForPacing would then divide
+      // out the very multipliers it is meant to apply.
+      setDetectedPacing(baseResult.detectedPacing);
+      fullAnalyzedCardKeyRef.current = currentCards.map(c => c.name).join('\0');
+      setAnalysis(baseResult);
+      setLoading(false); // Dashboard visible NOW
+
+      // Emit grade to sidebar so both display the same result
+      const baseSummary = getDeckSummaryData(baseResult);
+      document.dispatchEvent(new CustomEvent('deck-optimizer-grade', {
+        detail: { letter: baseSummary.gradeLetter, headline: baseSummary.headline },
+      }));
+
+      // ── Phase 2: Theme detection (non-blocking) ──
+      const topThemes = (edhrecData.themes || []).slice(0, 8);
+      if (topThemes.length === 0) return; // no themes available
+
+      setThemeLoading(true);
+
+      // Classifier pass, off-list promotion, page fetches and the composite detector — all in the
+      // shared service, so the deck view's picker runs identical logic instead of its own variant.
+      const detected = await detectDeckThemes({
+        cards: currentCards,
+        commanderName,
+        commanderThemes: edhrecData.themes || [],
+        fetchThemeData,
+        curveAnalysis: baseResult.curveAnalysis,
+        logLabel: 'DeckOptimizer',
+      });
+      const { themeDataMap } = detected;
+
+      // Merge rather than replace: a kept theme's data may have come from the
+      // on-demand archetype tag-page fallback and so isn't in themeDataMap.
+      // Cross-commander staleness is handled by the reset effect, not here.
+      for (const [slug, data] of themeDataMap) themeDataCacheRef.current.set(slug, data);
+
+      if (!detected.detection) {
+        setThemeLoading(false);
+        return;
+      }
+      const detection = detected.detection;
+      setThemeDetection(detection);
+
+      // Applied themes, most authoritative first: the user's own pick, then the
+      // list's saved declaration, and only then detection's guess.
+      // handleOptimize is reassigned to a ref every render, so savedThemes here
+      // is current at call time.
+      let appliedPrimary: string | null = null;
+      let appliedSecondary: string | null = null;
+      if (keptThemesTouched) {
+        // A pick the user made themselves wins outright — including a deliberate
+        // "no themes at all", which is why this branch is taken even when both
+        // slugs are null rather than falling through to detection.
+        appliedPrimary = keptPrimary;
+        appliedSecondary = keptSecondary;
+      } else if (savedThemes && savedThemes.length > 0) {
+        appliedPrimary = savedThemes[0]?.slug ?? null;
+        appliedSecondary = savedThemes[1]?.slug ?? null;
+      } else if (detection.isConfident && detection.matchedThemes.length > 0) {
+        appliedPrimary = detection.matchedThemes[0].theme.slug;
+        appliedSecondary = detection.hasSecondaryTheme && detection.matchedThemes.length >= 2
+          ? detection.matchedThemes[1].theme.slug
+          : null;
+      }
+
+      // Assigned unconditionally: the slugs are no longer cleared at the top of
+      // this function, so a stale secondary would otherwise survive a pass that
+      // resolved to a primary only.
+      setPrimaryThemeSlug(appliedPrimary);
+      setSecondaryThemeSlug(appliedSecondary);
+
+      // Resolve the classifier fit HERE, before anything builds membership from it.
+      //
+      // The membership effect also populates themeFitRef, but it fires on the slug state change
+      // queued immediately above — so it cannot have run yet, and it awaits buildThemeFit on top.
+      // Everything below (plan score, and critically the misfit list) would otherwise be computed
+      // against an empty fit on first load, leaving the "a literal theme member is never a misfit"
+      // exemption inert until a tab switch happened to re-run this function. Cheap to do twice:
+      // every dependency is cached by now and computeThemeFit is pure over ~99 cards x 1-2 models.
+      themeFitRef.current = await buildThemeFit(
+        currentCards,
+        [resolveThemeInfo(appliedPrimary), resolveThemeInfo(appliedSecondary)]
+          .filter((t): t is { slug: string; name: string } => !!t),
+      );
+      setThemeFitVersion(v => v + 1);
+
+      if (appliedPrimary) {
+        // Saved themes may sit outside the detected top-8 — fetch on demand
+        // (fetchThemeData falls back to the archetype tag page).
+        let bestThemeData = themeDataMap.get(appliedPrimary);
+        if (!bestThemeData) {
+          try { bestThemeData = await fetchThemeData(appliedPrimary); } catch { /* both sources missing */ }
+        }
+        if (appliedSecondary && !themeDataCacheRef.current.has(appliedSecondary)) {
+          try { await fetchThemeData(appliedSecondary); } catch { /* membership just skips it */ }
+        }
+
+        if (bestThemeData) {
+          themeDataCacheRef.current.set(appliedPrimary, bestThemeData);
+
+          // Backfill the declared theme's pool from the color-filtered archetype pool.
+          //
+          // A unique deck is the case this exists for. Detection can now name a theme the commander
+          // is rarely built around, and EDHREC's page for that pairing is then close to empty:
+          // Sapling of Colfenor + Self-Damage is TWO decks, whose 127 cards all read 50-100%
+          // inclusion because that is what a denominator of two produces. Recommending from it
+          // means recommending what two strangers happened to play, and those inflated percentages
+          // would flow on into cut ranking, the misfit floor and the deck score.
+          //
+          // The archetype pool for the same theme is pooled across every commander, so it has real
+          // percentages and real payoffs. Same blendArchetypeData call deckEnricher already makes
+          // for saved lists, so the Inspector and the deck view now agree rather than diverging on
+          // which pool a themed deck is judged against. archetypeWeight scales the injected
+          // inclusion by the commander-theme deck count, so a healthy pairing is barely touched
+          // while a two-deck one is mostly backfilled.
+          let themePool = bestThemeData;
+          try {
+            const tagPool = await fetchTagPageData(appliedPrimary, colorIdentity ?? []);
+            if (tagPool) {
+              // Copy the cardlists — blendArchetypeData mutates, and bestThemeData is the cached page.
+              const cardlists = Object.fromEntries(
+                Object.entries(bestThemeData.cardlists).map(([k, v]) => [k, [...v]]),
+              ) as typeof bestThemeData.cardlists;
+              const themeDeckCount = bestThemeData.stats?.numDecks ?? 0;
+
+              // Smooth the page's OWN percentages before injecting anything, so the archetype cards
+              // added below keep their well-sampled numbers. A 2-deck page reports 50% and 100% for
+              // everything; unsmoothed those read as auto-includes to the cut ranking, the misfit
+              // floor, the deck score and the role targets alike.
+              const confidence = pageConfidence(themeDeckCount);
+              if (confidence < 1) {
+                for (const key of Object.keys(cardlists) as (keyof typeof cardlists)[]) {
+                  cardlists[key] = cardlists[key].map(c => ({ ...c, inclusion: c.inclusion * confidence }));
+                }
+              }
+
+              const blend = blendArchetypeData(
+                cardlists,
+                [{
+                  pool: tagPool.cardlists,
+                  sourceLabel: buildArchetypeSourceLabel(
+                    colorIdentity ?? [],
+                    resolveThemeInfo(appliedPrimary)?.name ?? appliedPrimary,
+                    tagPool.potentialDecks,
+                  ),
+                }],
+                themeDeckCount,
+              );
+              themePool = { ...bestThemeData, cardlists };
+              console.log(`[DeckOptimizer] Theme backfill for ${appliedPrimary} (${themeDeckCount} decks, confidence ${confidence.toFixed(2)}): ${blend.overlapCount} overlap, ${blend.injectedCount} injected`);
+            }
+          } catch (err) {
+            console.warn('[DeckOptimizer] Archetype backfill unavailable:', err);
+          }
+          bestThemeData = themePool;
+          themeEnhancedDataRef.current = bestThemeData;
+
+          // Build theme membership for plan score computation. Name resolution
+          // must work for off-detection slugs, hence resolveThemeInfo.
+          const primaryThemeInfo = resolveThemeInfo(appliedPrimary) ?? { slug: appliedPrimary, name: appliedPrimary };
+          const secondaryThemeInfo = resolveThemeInfo(appliedSecondary);
+          const themeMembershipForScore = membershipFor(primaryThemeInfo, secondaryThemeInfo);
+
+          const themeInclusionMap = buildInclusionMap(bestThemeData);
+
+          // Role targets from the DECLARED THEME's pool, not the commander's base page.
+          //
+          // A self-damage deck runs more sweeper-tagged cards than the commander's average deck, and
+          // judging it against the base page is what produced "nine excess board wipes" on a deck
+          // whose sweepers are the engine. Safe only because the pool above is smoothed and
+          // backfilled first: computeEdhrecRoleTargets counts cards over an 18% threshold, so an
+          // unsmoothed 2-deck page (everything at 50-100%) would have counted all 127 of its cards
+          // and produced nonsense. Post-smoothing a thin page contributes almost nothing and targets
+          // fall back toward the baseline via BASELINE_SOFT_FLOOR — an honest "we don't know" — while
+          // the injected archetype cards, which DO have real percentages, carry the signal.
+          const themeTargetsRaw = getDynamicRoleTargets(
+            deckSize, undefined, bestThemeData.stats, bestThemeData,
+          ).targets;
+          const themeTargets = userPacing
+            ? recomputeRoleTargetsForPacing(themeTargetsRaw, baseResult.detectedPacing, userPacing)
+            : themeTargetsRaw;
+
+          const themeResult = analyzeDeck({
+            edhrecData: bestThemeData,
+            currentCards,
+            roleCounts,
+            roleTargets: themeTargets,
+            deckSize,
+            ...fitInputs(themeInclusionMap),
+            colorIdentity,
+            overridePacing: userPacing ?? undefined,
+            overrideLandTarget: userLandTarget ?? undefined,
+            themeMembership: themeMembershipForScore,
+            primaryThemeData: bestThemeData,
+            planName: primaryThemeInfo.name,
+            commanderNames: partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName],
+          });
+
+          // Theme drives; base staples (50%+ inclusion) backfill
+          let finalRecs = mergeThemeWithBaseStaples(themeResult.recommendations, baseResult.recommendations);
+          let finalRoleBreakdowns = themeResult.roleBreakdowns.map((themeRb, idx) => {
+            const baseRb = baseResult.roleBreakdowns[idx];
+            if (!baseRb) return themeRb;
+            return { ...themeRb, suggestedReplacements: mergeThemeWithBaseStaples(themeRb.suggestedReplacements, baseRb.suggestedReplacements) };
+          });
+          let finalLandRecs = mergeThemeWithBaseStaples(themeResult.landRecommendations, baseResult.landRecommendations, 15);
+
+          // A detected secondary supplements the auto-applied primary, so the
+          // initial pool reflects BOTH themes (its data was warmed above).
+          const secondaryData = appliedSecondary ? themeDataCacheRef.current.get(appliedSecondary) : undefined;
+          if (secondaryData) {
+            const merged = mergeSecondaryTheme(
+              { recommendations: finalRecs, roleBreakdowns: finalRoleBreakdowns, landRecommendations: finalLandRecs },
+              secondaryData,
+              { targets: themeTargets, pacing: userPacing ?? undefined, landTarget: userLandTarget ?? undefined },
+            );
+            finalRecs = merged.recommendations;
+            finalRoleBreakdowns = merged.roleBreakdowns;
+            finalLandRecs = merged.landRecommendations;
+          }
+
+          // Enrich theme-only recs with prices/cmc/colors BEFORE committing the
+          // analysis. Rows are React.memo'd, so mutating a rec after setAnalysis
+          // wouldn't trigger a re-render — the values must be in place when the
+          // new rec objects first land in state. cmc in particular must be
+          // present here or the CMC sort has nothing to sort by.
+          const allFinalRecs: RecommendedCard[] = [
+            ...finalRecs,
+            ...finalLandRecs,
+            ...finalRoleBreakdowns.flatMap(rb => rb.suggestedReplacements),
+          ];
+          const newRecs = allFinalRecs.filter(r => !r.price || r.cmc == null || !r.producedColors?.length);
+          if (newRecs.length > 0) {
+            try {
+              const cards = await getCardsByNames([...new Set(newRecs.map(r => r.name))]);
+              for (const rec of allFinalRecs) {
+                const card = cards.get(rec.name);
+                if (!card) continue;
+                if (!rec.price) {
+                  const p = getCardPrice(card);
+                  if (p) rec.price = p;
+                }
+                if (rec.cmc == null && card.cmc != null) rec.cmc = card.cmc;
+                if (!rec.producedColors?.length) {
+                  const produced = (card.produced_mana || []).filter((c: string) => (WUBRG as readonly string[]).includes(c));
+                  if (produced.length > 0) rec.producedColors = [...new Set(produced)];
+                  else if (card.color_identity?.length) rec.producedColors = card.color_identity.map((c: string) => c.toUpperCase());
+                }
+              }
+            } catch { /* non-critical */ }
+          }
+
+          setAnalysis(prev => prev ? {
+            ...prev,
+            recommendations: finalRecs,
+            roleBreakdowns: finalRoleBreakdowns,
+            landRecommendations: finalLandRecs,
+            planScore: themeResult.planScore,
+            misfits: themeResult.misfits,
+          } : prev);
+        }
+      }
+
+      setThemeLoading(false);
+    } catch (err) {
+      setError('Failed to fetch EDHREC data. Please try again.');
+      console.error('[DeckOptimizer]', err);
+      setLoading(false);
+      setThemeLoading(false);
+    }
+  };
+
+  handleOptimizeRef.current = handleOptimize;
+
+  // Auto-fire the initial analysis once on mount when we have a commander.
+  useEffect(() => {
+    if (hasAutoAnalyzedRef.current) return;
+    if (analysis || loading || !commanderName) return;
+    hasAutoAnalyzedRef.current = true;
+    handleOptimizeRef.current?.();
+  }, [commanderName, analysis, loading]);
+
+  // Coming (back) to the Overview tab re-runs the full analysis when the deck
+  // has changed since the last full pass. Card edits made from other tabs only
+  // trigger the baseOnly re-run below (no theme merge), so the overview's
+  // grade and theme-biased numbers go stale. EDHREC data is already cached at
+  // this point, so the refresh is near-instant.
+  useEffect(() => {
+    if (activeTab !== 'overview') return;
+    if (!analysis || loading) return;
+    const cardKey = currentCards.map(c => c.name).join('\0');
+    if (cardKey === fullAnalyzedCardKeyRef.current) return;
+    handleOptimizeRef.current?.();
+  // Fire only on tab switches — card edits made while ON overview are already
+  // reflected instantly by the baseOnly effect.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Re-run analysis when cards change (add/remove). Runs synchronously on
+  // each card-key change so the role panel updates instantly. Skips theme
+  // re-analysis (baseOnly) to keep this path snappy — the user gets fresh
+  // role counts and rb.cards instantly, and a full theme re-merge happens
+  // on the next explicit Re-analyze.
+  const hasAnalysis = analysis != null;
+  useEffect(() => {
+    if (!cachedEdhrecDataRef.current || !hasAnalysis) return;
+    const cardKey = currentCards.map(c => c.name).join('\0');
+    if (cardKey === prevCardKeyRef.current) return;
+    prevCardKeyRef.current = cardKey;
+    const result = runAnalysisFor({
+      targets: effectiveRoleTargets,
+      pacing: userPacing ?? undefined,
+      landTarget: userLandTarget ?? undefined,
+      baseOnly: true,
+    });
+    if (result) setAnalysis(result);
+  }, [currentCards, effectiveRoleTargets, userPacing, userLandTarget, hasAnalysis, runAnalysisFor]);
+
+  // Snapshot the card key whenever a new analysis lands, so we can show a
+  // "deck has changed since last analysis" indicator on the Re-analyze button.
+  useEffect(() => {
+    if (analysis) {
+      setAnalyzedCardKey(currentCards.map(c => c.name).join('\0'));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysis]);
+
+  const handleAddCard = useCallback((name: string) => {
+    if (!onAddCards) return;
+    const scrollY = window.scrollY;
+    onAddCards([name], 'deck');
+    pushDeckHistory({ action: 'add', cardName: name });
+    // Adding a card can shrink a suggestions list (e.g. moving a card out
+    // of "suggested"), shortening the page. If that happens while we're
+    // scrolled deep in, the browser clamps scrollY to the new max, which
+    // reads as being "shot" to the bottom. Re-pin to where we were.
+    requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'instant' }));
+  }, [onAddCards, pushDeckHistory]);
+
+  const handlePreview = useCallback(async (name: string) => {
+    try {
+      const card = await getCardByName(name);
+      if (card) setPreviewCard(card);
+    } catch { /* silently fail */ }
+  }, []);
+
+  // Apply theme selection — uses theme data directly (base only when no themes selected)
+  const applyThemeSelection = useCallback(async (primary: string | null, secondary: string | null) => {
+    const cachedBase = bracketBlendRef.current?.data ?? cachedEdhrecDataRef.current;
+    if (!cachedBase || !analysis) return;
+
+    // No themes → revert to base-only analysis
+    if (!primary && !secondary) {
+      themeEnhancedDataRef.current = null;
+      const baseInclusionMap = buildInclusionMap(cachedBase);
+      const baseResult = analyzeDeck({
+        edhrecData: cachedBase, currentCards, roleCounts, roleTargets: effectiveRoleTargets, deckSize,
+        ...fitInputs(baseInclusionMap), colorIdentity,
+        overridePacing: userPacing ?? undefined, overrideLandTarget: userLandTarget ?? undefined,
+        commanderNames: partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName],
+      });
+
+      setAnalysis(prev => prev ? {
+        ...prev,
+        recommendations: baseResult.recommendations,
+        roleBreakdowns: baseResult.roleBreakdowns,
+        landRecommendations: baseResult.landRecommendations,
+        planScore: baseResult.planScore,
+        misfits: baseResult.misfits,
+      } : prev);
+
+      // Restore detection message (still reflects user tempo override if any)
+      rebuildBannerMessage({ primarySlug: null, secondarySlug: null });
+      setThemeLoading(false);
+      return;
+    }
+
+    setThemeLoading(true);
+
+    // Base analysis (for staple backfill — only high-inclusion cards leak through)
+    const baseInclusionMap = buildInclusionMap(cachedBase);
+    const baseResult = analyzeDeck({
+      edhrecData: cachedBase, currentCards, roleCounts, roleTargets: effectiveRoleTargets, deckSize,
+      ...fitInputs(baseInclusionMap), colorIdentity,
+      overridePacing: userPacing ?? undefined, overrideLandTarget: userLandTarget ?? undefined,
+      commanderNames: partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName],
+    });
+
+    // Primary theme → main data source, backfilled with base staples
+    try {
+      const primaryData = await fetchThemeData(primary!);
+      // Warm the secondary's data BEFORE building membership so its chip stamps
+      // cards immediately (membership + the parent's visual stacks read the cache).
+      const secondaryData = secondary
+        ? await fetchThemeData(secondary).catch(err => {
+            console.error('[DeckOptimizer] Failed to fetch secondary theme data:', err);
+            return null;
+          })
+        : null;
+      themeEnhancedDataRef.current = primaryData;
+      const primaryIncMap = buildInclusionMap(primaryData);
+
+      // Resolve theme info (name) for plan scoring
+      const primaryThemeInfo = resolveThemeInfo(primary);
+      const secondaryThemeInfo = resolveThemeInfo(secondary);
+      const themeMembershipForScore = membershipFor(primaryThemeInfo, secondaryThemeInfo);
+      const planNameForScore = primaryThemeInfo?.name ?? null;
+
+      const primaryResult = analyzeDeck({
+        edhrecData: primaryData, currentCards, roleCounts, roleTargets: effectiveRoleTargets, deckSize,
+        ...fitInputs(primaryIncMap), colorIdentity,
+        overridePacing: userPacing ?? undefined, overrideLandTarget: userLandTarget ?? undefined,
+        themeMembership: themeMembershipForScore,
+        primaryThemeData: primaryData,
+        planName: planNameForScore,
+        commanderNames: partnerCommanderName ? [commanderName, partnerCommanderName] : [commanderName],
+      });
+
+      // Theme drives recommendations; base staples (50%+ inclusion) backfill gaps
+      let finalRecs = mergeThemeWithBaseStaples(primaryResult.recommendations, baseResult.recommendations);
+      let finalRoleBreakdowns = primaryResult.roleBreakdowns.map((themeRb, idx) => {
+        const baseRb = baseResult.roleBreakdowns[idx];
+        if (!baseRb) return themeRb;
+        return { ...themeRb, suggestedReplacements: mergeThemeWithBaseStaples(themeRb.suggestedReplacements, baseRb.suggestedReplacements) };
+      });
+      let finalLandRecs = mergeThemeWithBaseStaples(primaryResult.landRecommendations, baseResult.landRecommendations, 15);
+
+      // Secondary theme supplements the primary (data warmed above)
+      if (secondaryData) {
+        const merged = mergeSecondaryTheme(
+          { recommendations: finalRecs, roleBreakdowns: finalRoleBreakdowns, landRecommendations: finalLandRecs },
+          secondaryData,
+          { targets: effectiveRoleTargets, pacing: userPacing ?? undefined, landTarget: userLandTarget ?? undefined },
+        );
+        finalRecs = merged.recommendations;
+        finalRoleBreakdowns = merged.roleBreakdowns;
+        finalLandRecs = merged.landRecommendations;
+      }
+
+      // Enrich theme-driven recs with prices/cmc/colors BEFORE committing.
+      // Rows are React.memo'd, so values must be in place when the new rec
+      // objects first land in state — cmc especially, or the CMC sort no-ops.
+      const allFinalRecs: RecommendedCard[] = [
+        ...finalRecs,
+        ...finalLandRecs,
+        ...finalRoleBreakdowns.flatMap(rb => rb.suggestedReplacements),
+      ];
+      const newRecs = allFinalRecs.filter(r => !r.price || r.cmc == null || !r.producedColors?.length);
+      if (newRecs.length > 0) {
+        try {
+          const cards = await getCardsByNames([...new Set(newRecs.map(r => r.name))]);
+          for (const rec of allFinalRecs) {
+            const card = cards.get(rec.name);
+            if (!card) continue;
+            if (!rec.price) {
+              const p = getCardPrice(card);
+              if (p) rec.price = p;
+            }
+            if (rec.cmc == null && card.cmc != null) rec.cmc = card.cmc;
+            if (!rec.producedColors?.length) {
+              const produced = (card.produced_mana || []).filter((c: string) => (WUBRG as readonly string[]).includes(c));
+              if (produced.length > 0) rec.producedColors = [...new Set(produced)];
+              else if (card.color_identity?.length) rec.producedColors = card.color_identity.map((c: string) => c.toUpperCase());
+            }
+          }
+        } catch { /* non-critical */ }
+      }
+
+      setAnalysis(prev => prev ? {
+        ...prev,
+        recommendations: finalRecs,
+        roleBreakdowns: finalRoleBreakdowns,
+        landRecommendations: finalLandRecs,
+        planScore: primaryResult.planScore,
+        misfits: primaryResult.misfits,
+      } : prev);
+    } catch (err) {
+      console.error('[DeckOptimizer] Failed to fetch primary theme data:', err);
+      setThemeLoading(false);
+      return;
+    }
+
+    // Update banner detection message
+    rebuildBannerMessage({ primarySlug: primary, secondarySlug: secondary });
+
+    setThemeLoading(false);
+  }, [analysis, currentCards, roleCounts, effectiveRoleTargets, deckSize, buildInclusionMap, fitInputs, mergeSecondaryTheme, mergeThemeWithBaseStaples, fetchThemeData, rebuildBannerMessage, userPacing, userLandTarget, colorIdentity, resolveThemeInfo]);
+
+  // Sequential-pick theme selection handler
+  const handleThemeSelect = useCallback(async (slug: string) => {
+    let newPrimary = primaryThemeSlug;
+    let newSecondary = secondaryThemeSlug;
+
+    if (slug === primaryThemeSlug) {
+      // Deselect primary → promote secondary
+      newPrimary = secondaryThemeSlug;
+      newSecondary = null;
+    } else if (slug === secondaryThemeSlug) {
+      // Deselect secondary
+      newSecondary = null;
+    } else if (!primaryThemeSlug) {
+      // No primary → set as primary
+      newPrimary = slug;
+    } else if (!secondaryThemeSlug) {
+      // Primary exists, no secondary → set as secondary
+      newSecondary = slug;
+    } else {
+      // Both exist → replace secondary
+      newSecondary = slug;
+    }
+
+    setPrimaryThemeSlug(newPrimary);
+    setSecondaryThemeSlug(newSecondary);
+    setThemesTouched(true);
+    await applyThemeSelection(newPrimary, newSecondary);
+
+    const primaryInfo = resolveThemeInfo(newPrimary);
+    const secondaryInfo = resolveThemeInfo(newSecondary);
+
+    // Persist the declaration to the saved list so the deck view (and the next
+    // analyze) share the same themes. No-op for pasted/generated sources.
+    if (sourceListId) {
+      persistListThemes(updateList, sourceListId, primaryInfo, secondaryInfo);
+    }
+    // Recorded for every source, saved or not. The list copy above is what the
+    // deck view reads; this one survives for unsaved decks, and its
+    // themesTouched flag is what stops re-detection from overruling a cleared
+    // pair on either.
+    saveInspectorOverrides(overrideRef, {
+      themesTouched: true,
+      themes: [primaryInfo, secondaryInfo].filter((t): t is { slug: string; name: string } => t !== null),
+    });
+  }, [primaryThemeSlug, secondaryThemeSlug, applyThemeSelection, sourceListId, updateList, resolveThemeInfo, overrideRef]);
+
+  /**
+   * The runner-up when detection declared nothing — offered by the dashboard prompt, never applied
+   * automatically. Measured: 20 of 20 decks built from random cards also clear the classifier's
+   * floor, so no available guard separates a real off-meta deck from a pile. The person who built
+   * the deck settles that in one glance; the machine cannot.
+   */
+  const closestUndeclaredTheme = useMemo(() => {
+    if (primaryThemeSlug || secondaryThemeSlug) return null;
+    return themeDetection?.evaluatedThemes.find(t => t.cardOverlap > 0 || t.memberCount > 0) ?? null;
+  }, [primaryThemeSlug, secondaryThemeSlug, themeDetection]);
+
+  // Context menu support
+  const customization = useStore(s => s.customization);
+  const updateCustomization = useStore(s => s.updateCustomization);
+  const storeSelectedThemes = useStore(s => s.selectedThemes);
+  const usedThemes = useStore(s => s.generatedDeck?.usedThemes);
+  const bracketLevel = bracketEstimation?.bracket;
+  const displayThemeNames = useMemo(() => {
+    // 1. If user selected themes in the optimizer, show those
+    if (primaryThemeSlug || secondaryThemeSlug) {
+      const names = [resolveThemeInfo(primaryThemeSlug), resolveThemeInfo(secondaryThemeSlug)]
+        .filter((t): t is { slug: string; name: string } => t !== null)
+        .map(t => t.name);
+      if (names.length > 0) return names;
+    }
+    // A user who cleared the picker meant it — the fallbacks below would put the
+    // auto-detected guess back in the strip while nothing was actually applied.
+    if (themesTouched) return undefined;
+    // 2. Store-selected themes from BuilderPage
+    const selected = storeSelectedThemes.filter(t => t.isSelected).map(t => t.name);
+    if (selected.length > 0) return selected;
+    // 3. Themes baked into the generated deck
+    if (usedThemes && usedThemes.length > 0) return usedThemes;
+    // 4. Auto-detected themes
+    if (themeDetection?.matchedThemes?.length) return themeDetection.matchedThemes.map(t => t.theme.name);
+    return undefined;
+  }, [primaryThemeSlug, secondaryThemeSlug, themesTouched, storeSelectedThemes, usedThemes, themeDetection, resolveThemeInfo]);
+  const handleCardAction = useCallback((card: ScryfallCard, action: CardAction) => {
+    const name = card.name;
+    switch (action.type) {
+      case 'remove':
+        onRemoveCards?.([name]);
+        pushDeckHistory({ action: 'remove', cardName: name });
+        break;
+      case 'addToDeck':
+        onAddCards?.([name], 'deck');
+        pushDeckHistory({ action: 'add', cardName: name });
+        break;
+      case 'sideboard': {
+        if (sideboardNames?.includes(name)) {
+          onRemoveFromBoard?.(name, 'sideboard');
+          pushDeckHistory({ action: 'remove', cardName: name });
+        } else {
+          onAddCards?.([name], 'sideboard');
+          pushDeckHistory({ action: 'sideboard', cardName: name });
+        }
+        break;
+      }
+      case 'maybeboard': {
+        if (maybeboardNames?.includes(name)) {
+          onRemoveFromBoard?.(name, 'maybeboard');
+          pushDeckHistory({ action: 'remove', cardName: name });
+        } else {
+          onAddCards?.([name], 'maybeboard');
+          pushDeckHistory({ action: 'maybeboard', cardName: name });
+        }
+        break;
+      }
+      case 'mustInclude': {
+        const current = customization.mustIncludeCards;
+        const has = current.includes(name);
+        updateCustomization({ mustIncludeCards: has ? current.filter(n => n !== name) : [...current, name] });
+        break;
+      }
+      case 'exclude': {
+        const currentBanned = customization.bannedCards;
+        const hasBan = currentBanned.includes(name);
+        updateCustomization({ bannedCards: hasBan ? currentBanned.filter(n => n !== name) : [...currentBanned, name] });
+        break;
+      }
+      case 'addToList': {
+        const list = userLists.find(l => l.id === action.listId);
+        if (list && !list.cards.includes(name)) {
+          updateList(action.listId, { cards: [...list.cards, name] });
+        }
+        break;
+      }
+      case 'createListAndAdd': {
+        createList(action.listName, [name]);
+        break;
+      }
+    }
+  }, [customization, updateCustomization, userLists, updateList, createList, onAddCards, onRemoveCards, onRemoveFromBoard, sideboardNames, maybeboardNames, pushDeckHistory]);
+
+  const collectionNames = useLiveQuery(() => getCollectionNameSet(customization.collectionBinderIds), [customization.collectionBinderIds]);
+
+  const menuProps = useMemo(() => ({
+    userLists,
+    mustIncludeNames: new Set(customization.mustIncludeCards),
+    bannedNames: new Set(customization.bannedCards),
+    sideboardNames: new Set(sideboardNames || []),
+    maybeboardNames: new Set(maybeboardNames || []),
+    collectionNames,
+  }), [userLists, customization.mustIncludeCards, customization.bannedCards, sideboardNames, maybeboardNames, collectionNames]);
+
+  const deckExcess = currentCards.length - deckSize;
+
+  // Single source of truth for "what to swap." Both the dashboard's
+  // NextBestMove suggestions and the optimize tab's columns consume this same
+  // list, so they never drift out of sync. Recomputes only when its inputs
+  // actually change.
+  const detectedCombosForSwaps = useStore(s => s.generatedDeck?.detectedCombos);
+  // Lift-graph connectivity for cut ranking — same additive signal the trim
+  // drawer uses. Reuses the shared LIFT_SCAN_CACHE (warmed by the Lift Web tab
+  // and Overview bento); until it resolves, ranking is relevancy-only.
+  const { connectivity: swapConnectivity } = useDeckConnectivity({
+    enabled: !!analysis,
+    commanderName,
+    partnerCommanderName,
+    cards: currentCards,
+  });
+  // Deck-wide lift scan (shared cache) → cluster-aware recommendations. The three rec surfaces
+  // (Optimize / Curve / Roles) wait for this before rendering suggestions, per design.
+  const { candidates: liftCandidates } = useLiftScan({
+    enabled: !!commander,
+    commanderName,
+    partnerCommanderName,
+    cards: currentCards,
+  });
+
+  const deficitRoleSet = useMemo(
+    () => new Set((analysis?.roleBreakdowns ?? []).filter(rb => rb.deficit > 0).map(rb => rb.role)),
+    [analysis],
+  );
+
+  // The Inspector's live theme selection, resolved to {slug, name}. Every add surface should rank
+  // against what the user has picked NOW, not what the list happened to be saved with.
+  const liveThemeRefs = useMemo(
+    () => [resolveThemeInfo(primaryThemeSlug), resolveThemeInfo(secondaryThemeSlug)]
+      .filter((t): t is { slug: string; name: string } => !!t),
+    [resolveThemeInfo, primaryThemeSlug, secondaryThemeSlug],
+  );
+
+  // Every name that can appear in an ADD surface. Sorted+joined into a content key for the same
+  // reason deckCardKey exists: the arrays behind it are rebuilt per render, so depending on their
+  // identity would refetch forever.
+  const candidateNameKey = useMemo(() => {
+    const names = new Set<string>();
+    for (const r of analysis?.recommendations ?? []) names.add(r.name);
+    for (const r of analysis?.landRecommendations ?? []) names.add(r.name);
+    for (const rb of analysis?.roleBreakdowns ?? []) {
+      for (const r of rb.suggestedReplacements) names.add(r.name);
+    }
+    for (const c of liftCandidates ?? []) names.add(c.card.name);
+    return [...names].sort().join('\0');
+  }, [analysis, liftCandidates]);
+
+  // Resolve the candidate-side classifier fit. Unlike the membership effect above, this one writes
+  // no parent state — so it cannot drive the render loop that one had to be keyed against.
+  useEffect(() => {
+    const themes = liveThemeRefs;
+    if (themes.length === 0 || !candidateNameKey) {
+      if (candidateFitRef.current !== EMPTY_THEME_FIT) {
+        candidateFitRef.current = EMPTY_THEME_FIT;
+        setCandidateFitVersion(v => v + 1);
+      }
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      // Lift candidates already carry full Scryfall cards; only the EDHREC-derived names cost a
+      // fetch, and getCardsByNames batches 75 per request behind the persisted card cache — so
+      // this is one or two requests the first time a commander is analyzed, and free after.
+      const have = new Map<string, ScryfallCard>();
+      for (const c of liftCandidates ?? []) have.set(c.card.name, c.card);
+      const missing = candidateNameKey.split('\0').filter(n => n && !have.has(n));
+      let fetched = new Map<string, ScryfallCard>();
+      try {
+        if (missing.length > 0) fetched = await getCardsByNames(missing);
+      } catch {
+        // Offline → fewer members, never a broken surface. The theme term just goes quiet.
+      }
+      if (cancelled) return;
+      const fit = await buildThemeFit([...have.values(), ...fetched.values()], themes);
+      if (cancelled) return;
+      candidateFitRef.current = fit;
+      setCandidateFitVersion(v => v + 1);
+    })();
+    return () => { cancelled = true; };
+  }, [candidateNameKey, liveThemeRefs, liftCandidates]);
+
+  const blendedRecommendations = useMemo(() => {
+    if (!analysis || !liftCandidates) return null; // null = scan pending → gate holds
+    // Raised past the display default so cluster cards have room to reach the general/"other"
+    // (e.g. late-game tempo) bucket, which draws from this global list.
+    return blendClusterIntoRecommendations(analysis.recommendations, liftCandidates, {
+      deficitRoles: deficitRoleSet,
+      excludeNames: menuProps.bannedNames,
+      limit: 40,
+      themeFit: candidateFitRef.current,
+    });
+    // candidateFitVersion, not candidateFitRef: the ref's identity never changes, so the version
+    // counter is what tells this memo the classifier fit has resolved.
+  }, [analysis, liftCandidates, deficitRoleSet, menuProps.bannedNames, candidateFitVersion]);
+
+  const blendedRoleBreakdowns = useMemo(() => {
+    if (!analysis || !liftCandidates) return null;
+    return analysis.roleBreakdowns.map(rb => ({
+      ...rb,
+      // Grow the list beyond its original length so injected cluster tech ADDS to a role's pool
+      // (especially thin ones) rather than only displacing an existing pick.
+      suggestedReplacements: blendClusterIntoRecommendations(rb.suggestedReplacements, liftCandidates, {
+        roleFilter: rb.role,
+        deficitRoles: deficitRoleSet,
+        excludeNames: menuProps.bannedNames,
+        limit: rb.suggestedReplacements.length + 8,
+        themeFit: candidateFitRef.current,
+      }),
+    }));
+  }, [analysis, liftCandidates, deficitRoleSet, menuProps.bannedNames, candidateFitVersion]);
+
+  const blendedAnalysis = useMemo(() => {
+    if (!analysis || !blendedRecommendations || !blendedRoleBreakdowns) return null;
+    return { ...analysis, recommendations: blendedRecommendations, roleBreakdowns: blendedRoleBreakdowns };
+  }, [analysis, blendedRecommendations, blendedRoleBreakdowns]);
+
+  const recsReady = blendedAnalysis !== null;
+
+  // Declared AFTER the blend on purpose. Swaps are built from the recommendation list, so feeding
+  // it the raw one meant the Optimize tab's ADD column — and NextBestMove's headline pick — never
+  // saw the cluster or theme signals at all; only the Roles tab did. Falls back to the raw analysis
+  // while the lift scan is pending so the dashboard still has something to show.
+  const swapAnalysis = blendedAnalysis ?? analysis;
+  const baseSwaps = useMemo<OptimizeSwaps | null>(() => {
+    if (!swapAnalysis) return null;
+    return computeOptimizeSwaps({
+      analysis: swapAnalysis,
+      currentCards,
+      // swapAnalysis changes whenever a new blend is loaded, which re-runs this memo.
+      cardInclusionMap: fitInputs(cardInclusionMap ?? {}).cardInclusionMap,
+      // Whole-page figures at the judged bracket — the scale pairSwaps checks "is this an upgrade" on.
+      commanderInclusion: bracketBlendRef.current?.inclusionMap
+        ?? (cachedEdhrecDataRef.current ? indexInclusion(cachedEdhrecDataRef.current) : undefined),
+      commanderName,
+      partnerCommanderName,
+      mustIncludeNames: menuProps.mustIncludeNames,
+      bannedNames: menuProps.bannedNames,
+      detectedCombos: detectedCombosForSwaps,
+      connectivityMap: swapConnectivity ?? undefined,
+      themeMembership: membershipFor(
+        resolveThemeInfo(primaryThemeSlug),
+        resolveThemeInfo(secondaryThemeSlug),
+      ),
+      // Only a real aim cuts for power — the estimate is the deck's own reading, never a target.
+      aim: bracketBasis && bracketBasis.source !== 'estimated'
+        ? {
+            bracket: bracketBasis.bracket,
+            groups: bracketEstimation
+              ? overBracketGroups(bracketEstimation, detectedCombosForSwaps, bracketBasis.bracket)
+              : [],
+          }
+        : undefined,
+    });
+  }, [swapAnalysis, currentCards, cardInclusionMap, fitInputs, commanderName, partnerCommanderName, menuProps.mustIncludeNames, menuProps.bannedNames, detectedCombosForSwaps, swapConnectivity, membershipFor, resolveThemeInfo, primaryThemeSlug, secondaryThemeSlug, bracketBasis, bracketEstimation]);
+
+  // The plan score as Card Fit can deliver it: charged only for the cuts and staples its columns
+  // offer, so the Overview's path to 100 and the swaps it points at are the same list.
+  const scoredAnalysis = useMemo(() => analysis && scoreAgainstSwaps(analysis, baseSwaps), [analysis, baseSwaps]);
+  const scoredBlended = useMemo(() => blendedAnalysis && scoreAgainstSwaps(blendedAnalysis, baseSwaps), [blendedAnalysis, baseSwaps]);
+
+  // The Bracket tab's "swap them" button: Card Fit, pre-selected on every above-your-bracket swap.
+  const openOverBracketSwaps = useCallback(() => {
+    const over = (baseSwaps?.removals ?? []).filter(r => r.reasonCategory === 'over-bracket');
+    const pairs = pairSwaps(over, baseSwaps?.additions ?? [], over.length);
+    navigateFromDashboard('optimize', over[0]
+      ? { cardName: over[0].name, side: 'remove', pairs: pairs.map(p => ({ out: p.out.name, in: p.in.name })) }
+      : undefined);
+  }, [baseSwaps, navigateFromDashboard]);
+
+  // True when the deck cards differ from what was analyzed — drives the
+  // "this is stale, re-run me" gold treatment on the Re-analyze button.
+  const currentCardKey = useMemo(() => currentCards.map(c => c.name).join('\0'), [currentCards]);
+  const isAnalysisDirty = analysis != null && analyzedCardKey !== '' && analyzedCardKey !== currentCardKey;
+
+  // Broadcast analyzer state so an external Re-analyze button (rendered
+  // by CommanderStrip on /analyze) can reflect dirty/loading visuals.
+  useEffect(() => {
+    // For the Tempo (curve) tab, surface the selected phase + role group so
+    // the play area on the right can desaturate non-matching cards the same
+    // way the Roles tab does.
+    const curvePhase = activeTab === 'curve' && activeCurvePhases.size === 1
+      ? [...activeCurvePhases][0] : null;
+    // A clicked CMC column overrides the phase range — narrow filter wins
+    // so the play area zooms to just that column.
+    const curvePhaseRange: [number, number] | null = activeTab === 'curve' && selectedCmc != null
+      ? [selectedCmc, selectedCmc]
+      : (activeTab === 'curve' && curvePhase != null
+          ? analysis?.curvePhases.find(p => p.phase === curvePhase)?.cmcRange ?? null
+          : null);
+    const curveRoleGroup = activeTab === 'curve' && activeRoleGroups.size === 1
+      ? [...activeRoleGroups][0] : null;
+    document.dispatchEvent(new CustomEvent('deck-optimizer-state', {
+      detail: {
+        dirty: isAnalysisDirty, loading, hasAnalysis: !!analysis, activeTab, activeRole,
+        activeCmcRange: curvePhaseRange,
+        activeRoleGroup: curveRoleGroup,
+      },
+    }));
+  }, [isAnalysisDirty, loading, analysis, activeTab, activeRole, activeCurvePhases, activeRoleGroups, selectedCmc]);
+
+  // Per-tab rollup grades shown in the tab bar — same letters as the
+  // overview summary card so the user sees consistent grading at a glance.
+  // Bracket has no rollup grade (uses level 1-5 instead) so it's omitted.
+  const tabGrades = useMemo<Partial<Record<TabKey, string>>>(() => {
+    if (!analysis) return {};
+    return {
+      overview: getDeckSummaryData(analysis, deckExcess).gradeLetter,
+      roles: analysis.rolesGrade.letter,
+      lands: analysis.manaGrade.letter,
+      curve: analysis.curveGrade.letter,
+    };
+  }, [analysis, deckExcess]);
+
+  // Total deck price for the Cost tab sidebar badge. Cheap sum across cards.
+  const deckTotalPrice = useMemo(() => {
+    let total = 0;
+    for (const card of currentCards) {
+      const raw = getCardPrice(card);
+      const n = raw != null ? Number(raw) : NaN;
+      if (Number.isFinite(n)) total += n;
+    }
+    return total;
+  }, [currentCards]);
+  const costBadgeLabel = useMemo(() => {
+    if (deckTotalPrice >= 1000) return `$${(deckTotalPrice / 1000).toFixed(1)}k`;
+    return `$${Math.round(deckTotalPrice)}`;
+  }, [deckTotalPrice]);
+  const handleBasicLandAdd = useMemo(() => {
+    const base = onAddBasicLandProp ?? (onAddCards ? (name: string) => onAddCards([name], 'deck') : undefined);
+    if (!base) return undefined;
+    return (name: string) => { base(name); pushDeckHistory({ action: 'add', cardName: name }); };
+  }, [onAddBasicLandProp, onAddCards, pushDeckHistory]);
+
+  const handleBasicLandRemove = useMemo(() => {
+    const base = onRemoveBasicLandProp ?? (onRemoveCards ? (name: string) => onRemoveCards([name]) : undefined);
+    if (!base) return undefined;
+    return (name: string) => { base(name); pushDeckHistory({ action: 'remove', cardName: name }); };
+  }, [onRemoveBasicLandProp, onRemoveCards, pushDeckHistory]);
+
+  const handleApplyOptimize = useCallback((removals: string[], additions: string[]) => {
+    // ListsPage handlers use getListById() to read fresh state from the shared
+    // module-level list store, so sequential remove+add is safe (no stale closure).
+    onRemoveCards?.(removals);
+    for (const name of removals) pushDeckHistory({ action: 'remove', cardName: name });
+    if (additions.length > 0) {
+      onAddCards?.(additions, 'deck');
+      for (const name of additions) pushDeckHistory({ action: 'add', cardName: name });
+    }
+  }, [onRemoveCards, onAddCards, pushDeckHistory]);
+
+  // Sideboard + maybeboard never come back as a cheaper stand-in on the Overview's cost job. Memoized:
+  // useCostPlan keys its fetch on this set's identity, so a fresh Set per render would refetch forever.
+  // NOTE: must stay ABOVE the early returns below — a hook after a conditional return breaks hook order.
+  const overviewExcludeNames = useMemo(
+    () => new Set([...(sideboardNames ?? []), ...(maybeboardNames ?? [])]),
+    [sideboardNames, maybeboardNames],
+  );
+
+  // --- Pre-analysis: prominent CTA ---
+  if (!analysis && !loading) {
+    return (
+      <div id="deck-optimizer" className="mt-8 flex flex-col items-center gap-3">
+        <p className="text-xs text-muted-foreground text-center max-w-sm">
+          Inspect your deck's roles, mana base, and curve against EDHREC data with tailored suggestions to fill gaps
+        </p>
+        <Button
+          onClick={handleOptimize}
+          className="btn-shimmer px-8 py-3 text-sm font-semibold gap-2.5"
+          disabled={loading}
+        >
+          <Sparkles className="w-4 h-4" />
+          Analyze Deck
+        </Button>
+      </div>
+    );
+  }
+
+  // --- Loading ---
+  if (loading) {
+    return (
+      <div id="deck-optimizer" className="flex-1 min-h-[60vh] flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-4 p-8 rounded-xl border border-border/30 bg-card/30 backdrop-blur-sm">
+          <div className="relative">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-primary/50 animate-pulse" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium">Inspecting your deck...</p>
+            <p className="text-xs text-muted-foreground mt-1">Fetching EDHREC data for {commanderName}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Error ---
+  if (error) {
+    return (
+      <div className="mt-8 p-6 rounded-xl border border-red-500/20 bg-red-500/5 text-center">
+        <p className="text-sm text-red-400 mb-3">{error}</p>
+        <button
+          onClick={handleOptimize}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-accent text-muted-foreground hover:text-foreground transition-colors mx-auto"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (!analysis) return null;
+
+  // ═════════════════════════════════════════════════════════════════════
+  // Derived values for DashboardSummary
+  // ═════════════════════════════════════════════════════════════════════
+  const dashboardThemeMembership = membershipFor(
+    resolveThemeInfo(primaryThemeSlug),
+    resolveThemeInfo(secondaryThemeSlug),
+  );
+
+  // ═════════════════════════════════════════════════════════════════════
+  // Dashboard Render
+  // ═════════════════════════════════════════════════════════════════════
+  const themePacingStrip = (
+    themeDetection && analysis ? (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            title="Click to adjust themes & tempo"
+            className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap px-2 py-1 rounded-md hover:bg-accent/40 hover:text-foreground transition-colors cursor-pointer"
+          >
+            {effectivePacing && (
+              <span className="flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                {PACING_LABELS[effectivePacing] || 'Balanced'}
+              </span>
+            )}
+            {effectivePacing && displayThemeNames && displayThemeNames.length > 0 && (
+              <span className="text-border">|</span>
+            )}
+            {displayThemeNames && displayThemeNames.length > 0
+              ? `Theme${displayThemeNames.length > 1 ? 's' : ''}: ${displayThemeNames.join(', ')}`
+              : 'No themes selected'}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="end" className="w-80 p-0">
+          <AdjustPopoverContent
+            analysis={analysis}
+            detection={themeDetection}
+            allThemes={cachedEdhrecDataRef.current?.themes || []}
+            primaryThemeSlug={primaryThemeSlug}
+            secondaryThemeSlug={secondaryThemeSlug}
+            onThemeSelect={handleThemeSelect}
+            resolveThemeName={(slug) => resolveThemeInfo(slug)?.name ?? null}
+            userLandTarget={userLandTarget}
+            onLandTargetChange={handleLandTargetChange}
+            deckSize={deckSize}
+            userDeckSize={userDeckSize}
+            onDeckSizeChange={handleDeckSizeChange}
+            detectedPacing={detectedPacing ?? undefined}
+            userPacing={userPacing}
+            onPacingChange={handlePacingChange}
+            bracketBasis={bracketBasis}
+            onBracketChange={handleBracketChange}
+          />
+        </PopoverContent>
+      </Popover>
+    ) : (
+      <span className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap">
+        {effectivePacing && (
+          <span className="flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            {PACING_LABELS[effectivePacing] || 'Balanced'}
+          </span>
+        )}
+        {effectivePacing && displayThemeNames && displayThemeNames.length > 0 && (
+          <span className="text-border">|</span>
+        )}
+        {displayThemeNames && displayThemeNames.length > 0
+          ? `Theme${displayThemeNames.length > 1 ? 's' : ''}: ${displayThemeNames.join(', ')}`
+          : 'No themes selected'}
+      </span>
+    )
+  );
+
+  return (
+    <div id="deck-optimizer" className="flex flex-1 min-h-0 border-b-4 border-border/60 lg:border-b-0">
+      {/* Vertical sidebar */}
+      <aside className="w-12 shrink-0 flex flex-col items-stretch border-r border-border/40 bg-background/60">
+          <TooltipProvider delayDuration={200}>
+          {onChangeDeck && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onChangeDeck}
+                  aria-label="Inspect a different deck"
+                  className="flex items-center justify-center min-h-[52px] text-muted-foreground hover:text-foreground hover:bg-accent/20 border-b border-border/40 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Check a different deck</TooltipContent>
+            </Tooltip>
+          )}
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.key;
+            const tabGrade = tabGrades[tab.key];
+            const gradeStyle = tabGrade ? (HEALTH_GRADE_STYLES[tabGrade] || HEALTH_GRADE_STYLES.C) : null;
+            const bracketBadge = tab.key === 'bracket' && bracketLevel ? BRACKET_COLORS[bracketLevel] : null;
+            const showCostBadge = tab.key === 'cost' && deckTotalPrice > 0;
+            const tabHref = getTabHref?.(tab.key);
+            return (
+              <Tooltip key={tab.key}>
+                <TooltipTrigger asChild>
+                  <a
+                    href={tabHref ?? '#'}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setActiveTab(tab.key);
+                    }}
+                    aria-label={tab.label}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`relative flex flex-col items-center justify-center gap-1 py-3 transition-all duration-200 no-underline ${
+                      isActive
+                        ? 'text-primary bg-accent/30'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/20'
+                    }`}
+                  >
+                    {isActive && (
+                      <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r-sm bg-primary" />
+                    )}
+                    <tab.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : ''}`} />
+                    {gradeStyle && (
+                      <span className={`text-[9px] font-bold leading-none px-1 py-0.5 rounded tabular-nums ${gradeStyle.color} ${gradeStyle.badgeBg}`}>
+                        {tabGrade}
+                      </span>
+                    )}
+                    {bracketBadge && (
+                      <span className={`text-[9px] font-bold leading-none px-1 py-0.5 rounded tabular-nums ${bracketBadge.text} ${bracketBadge.bg}`}>
+                        {bracketLevel}
+                      </span>
+                    )}
+                    {showCostBadge && (
+                      <span className="text-[9px] font-bold leading-none px-1 py-0.5 rounded tabular-nums text-violet-300 bg-violet-500/20">
+                        {costBadgeLabel}
+                      </span>
+                    )}
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="right">{tab.label}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+          </TooltipProvider>
+        </aside>
+
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+        {/* Themes / Pacing strip above tab content */}
+        {themePacingStrip && (
+          <div className="flex items-center justify-between gap-2 px-2 sm:px-4 py-2 min-h-[52px] border-b border-border/40 bg-background/40">
+            <div className="flex items-center gap-2 min-w-0">
+              {(() => {
+                const activeTabInfo = TABS.find(t => t.key === activeTab);
+                if (!activeTabInfo) return null;
+                const Icon = activeTabInfo.icon;
+                return (
+                  <>
+                    <Icon className="w-4 h-4 text-primary/70 shrink-0" />
+                    <span className="truncate text-sm font-bold uppercase tracking-wider">{activeTabInfo.label}</span>
+                  </>
+                );
+              })()}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+            {/* Narrow panels: icons only (labels from xl up), and below sm the theme strip folds into the
+                hero's Adjust plan — at full width this row ran ~400px, pushed the page sideways on
+                phones and drew over the tab title at laptop widths. */}
+            <div className="hidden sm:block">{themePacingStrip}</div>
+            {onOpenInDeckView ? (
+              <button
+                onClick={onOpenInDeckView}
+                aria-label="Open in deck view"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border border-border/50 bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span className="hidden xl:inline">Deck view</span>
+              </button>
+            ) : onSaveAsDeck ? (
+              <button
+                onClick={onSaveAsDeck}
+                aria-label="Save as deck"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border border-border/50 bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Bookmark className="w-3 h-3" />
+                <span className="hidden xl:inline">Save as deck</span>
+              </button>
+            ) : null}
+            <button
+              onClick={handleCopyShareLink}
+              title={shareError ?? 'Copy a link that opens this deck on this tab'}
+              aria-label="Copy share link"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border border-border/50 bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {shareState === 'copied'
+                ? <Check className="w-3 h-3 text-emerald-400" />
+                : <Copy className="w-3 h-3" />}
+              <span className="hidden xl:inline">{shareState === 'copied' ? 'Copied' : shareState === 'error' ? 'Failed' : 'Copy link'}</span>
+            </button>
+            {analysis && (
+              <button
+                onClick={handleOptimize}
+                disabled={loading}
+                title={isAnalysisDirty ? 'Deck has changed since the last analysis — click to refresh' : 'Re-run analysis'}
+                aria-label={isAnalysisDirty ? 'Deck has changed since the last analysis — click to refresh' : 'Re-run analysis'}
+                className={`flex items-center justify-center p-1.5 rounded-lg border transition-colors ${
+                  isAnalysisDirty
+                    ? 'border-amber-500/60 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 animate-pulse'
+                    : 'border-border/50 bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground'
+                } disabled:opacity-60 disabled:pointer-events-none`}
+              >
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              </button>
+            )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab Content */}
+        {/* Tabs that lay themselves out full-bleed opt out of the gutter entirely. */}
+        <div className={`flex-1 min-h-0 overflow-y-auto ${['optimize', 'bracket', 'cost'].includes(activeTab) ? 'p-0' : 'p-3 sm:p-4'} ${activeTab === 'roles' || activeTab === 'optimize' ? 'flex flex-col' : ''}`}>
+
+        {/* ── OVERVIEW TAB ── */}
+        {activeTab === 'overview' && commander && (
+          <DashboardSummary
+            commander={commander}
+            partnerCommander={partnerCommander}
+            colorIdentity={commanderColorIdentity}
+            sourceLabel={sourceLabel ?? ''}
+            analysis={scoredAnalysis ?? analysis}
+            cards={currentCards}
+            themeMembership={dashboardThemeMembership}
+            planName={dashboardThemeMembership?.themes?.[0]?.name ?? null}
+            sampleSize={cachedEdhrecDataRef.current?.stats?.numDecks ?? null}
+            bracketEstimation={bracketEstimation}
+            adjustContent={
+              themeDetection && cachedEdhrecDataRef.current?.themes ? (
+                <AdjustPopoverContent
+                  analysis={analysis}
+                  detection={themeDetection}
+                  allThemes={cachedEdhrecDataRef.current?.themes ?? []}
+                  primaryThemeSlug={primaryThemeSlug}
+                  secondaryThemeSlug={secondaryThemeSlug}
+                  onThemeSelect={handleThemeSelect}
+            resolveThemeName={(slug) => resolveThemeInfo(slug)?.name ?? null}
+                  userLandTarget={userLandTarget}
+                  onLandTargetChange={handleLandTargetChange}
+                  deckSize={deckSize}
+                  userDeckSize={userDeckSize}
+                  onDeckSizeChange={handleDeckSizeChange}
+                  detectedPacing={detectedPacing ?? analysis.detectedPacing}
+                  userPacing={userPacing}
+                  onPacingChange={handlePacingChange}
+                  bracketBasis={bracketBasis}
+                  onBracketChange={handleBracketChange}
+                />
+              ) : undefined
+            }
+            onNavigate={navigateFromDashboard}
+            onOpenInDeckView={onOpenInDeckView}
+            deckTarget={deckSize}
+            baseSwaps={baseSwaps}
+            needsTheme={!primaryThemeSlug && !secondaryThemeSlug}
+            closestTheme={closestUndeclaredTheme}
+            onApplyTheme={handleThemeSelect}
+            launchPad={{
+              commanderName,
+              partnerCommanderName,
+              colorIdentity,
+              currency: customization.currency,
+              mustIncludeNames: menuProps.mustIncludeNames,
+              excludeFromSuggestions: overviewExcludeNames,
+              newCards: {
+                intendedThemes,
+                themeRefs: liveThemeRefs,
+                listId: sourceListId,
+                lastEditedAt: sourceListUpdatedAt,
+              },
+              bracketAim: { basis: bracketBasis, refreshing: bracketRefreshing, onChange: handleBracketChange },
+              onApplySwap: handleApplyOptimize,
+              onPreviewCard: handlePreview,
+              cardMenu: { onAction: handleCardAction, menuProps },
+            }}
+          />
+        )}
+
+        {/* ── ROLES TAB ── */}
+        {activeTab === 'roles' && (recsReady ? (
+          <RolesTabContent
+            roleBreakdowns={blendedRoleBreakdowns!}
+            activeRole={activeRole}
+            onRoleChange={setActiveRole}
+            onPreview={handlePreview}
+            onAdd={handleAddCard}
+            addedCards={addedCards}
+            onCardAction={handleCardAction}
+            menuProps={menuProps}
+          />
+        ) : <RecsLoadingState />)}
+
+        {/* ── LANDS TAB ── */}
+        {activeTab === 'lands' && (
+          <LandsTabContent
+            analysis={analysis}
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+            onPreview={handlePreview}
+            onAdd={handleAddCard}
+            addedCards={addedCards}
+            currentCards={currentCards}
+            onCardAction={handleCardAction}
+            menuProps={menuProps}
+            onAddBasicLand={handleBasicLandAdd}
+            onRemoveBasicLand={handleBasicLandRemove}
+            cardInclusionMap={cardInclusionMap}
+          />
+        )}
+
+        {/* ── CURVE TAB ── */}
+        {activeTab === 'curve' && (() => {
+          const allPhasesActive = activeCurvePhases.size === analysis.curvePhases.length;
+          const selectedPhases = analysis.curvePhases.filter(p => activeCurvePhases.has(p.phase));
+          return (
+            <div className="space-y-3">
+              <ManaCurveLineChart
+                curveAnalysis={analysis.curveAnalysis}
+                curveBreakdowns={analysis.curveBreakdowns}
+                pacing={effectivePacing}
+                activePhases={allPhasesActive ? undefined : activeCurvePhases}
+                selectedCmc={selectedCmc}
+              />
+              <CurveSummaryStrip
+                phases={analysis.curvePhases}
+                activePhases={activeCurvePhases}
+                onPhaseClick={(phase: CurvePhase) => {
+                  const scrollY = window.scrollY;
+                  setActiveCurvePhases(new Set([phase]));
+                  requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'instant' }));
+                }}
+                activeRoleGroups={activeRoleGroups}
+                onRoleGroupClick={(group: RoleGroupKey) => {
+                  const scrollY = window.scrollY;
+                  setActiveRoleGroups(prev => prev.has(group) && prev.size === 1 ? new Set() : new Set([group]));
+                  requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'instant' }));
+                }}
+              />
+              {selectedPhases.length > 0 ? (
+                recsReady ? (
+                  <CurveDetailPanel
+                    phases={selectedPhases}
+                    roleBreakdowns={blendedAnalysis!.roleBreakdowns}
+                    activeRoleGroups={activeRoleGroups}
+                    addedCards={addedCards}
+                    onAdd={handleAddCard}
+                    onPreview={handlePreview}
+                    onCardAction={handleCardAction}
+                    menuProps={menuProps}
+                    allRecommendations={blendedRecommendations!}
+                    detectedCombos={detectedCombosForSwaps}
+                  />
+                ) : <RecsLoadingState />
+              ) : (
+                <div className="bg-card/60 border border-border/30 rounded-lg p-6 text-center">
+                  <p className="text-xs text-muted-foreground">Select Early, Mid, or Late Game above to view cards by role</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── OPTIMIZE TAB ── */}
+        {activeTab === 'optimize' && (analysis ? (recsReady ? (
+          <OptimizeTabContent
+            analysis={scoredBlended!}
+            currentCards={currentCards}
+            commanderName={commanderName}
+            partnerCommanderName={partnerCommanderName}
+            cardInclusionMap={cardInclusionMap}
+            mustIncludeNames={menuProps.mustIncludeNames}
+            bannedNames={menuProps.bannedNames}
+            onApply={handleApplyOptimize}
+            onPreviewCard={handlePreview}
+            onFocusedMisfitChange={onFocusedMisfitChange}
+            onAddCards={onAddCards}
+            onRemoveCards={onRemoveCards}
+            preSelect={pendingOptimizeSelection}
+            onPreSelectConsumed={() => setPendingOptimizeSelection(null)}
+            baseSwaps={baseSwaps ?? undefined}
+            collectionNames={collectionNames}
+            aimBracket={bracketBasis && bracketBasis.source !== 'estimated' ? bracketBasis.bracket : null}
+          />
+        ) : <RecsLoadingState />) : null)}
+
+        {/* ── BRACKET TAB ── */}
+        {activeTab === 'bracket' && (
+          <BracketTabContent
+            onPreview={handlePreview}
+            bracketBasis={bracketBasis}
+            // Read on render: a newly loaded blend always lands with a setAnalysis, which re-renders.
+            bracketBlend={bracketBlendRef.current}
+            commanderName={commanderName}
+            deckNames={addedCards}
+            onAimChange={handleBracketChange}
+            aimRefreshing={bracketRefreshing}
+            onOpenOverBracketSwaps={openOverBracketSwaps}
+            edhrecPage={cachedEdhrecDataRef.current}
+            deckCards={currentCards}
+          />
+        )}
+
+        {activeTab === 'cost' && (
+          <CostTab
+            commanderName={commanderName}
+            partnerCommanderName={partnerCommanderName}
+            currentCards={currentCards}
+            analysis={analysis}
+            sideboardNames={sideboardNames ?? []}
+            maybeboardNames={maybeboardNames ?? []}
+            onPreviewCard={handlePreview}
+            onPreviewCardObject={setPreviewCard}
+            onApplyPlan={async (removeNames, addNames) => {
+              // Suggestions may come from EDHREC recommendations that have never
+              // been hydrated into the Scryfall cache. Some consumers of
+              // onAddCards (notably AnalyzePage) look the card up via
+              // getCachedCard and silently skip names that miss — so prefetch
+              // first to make the add actually happen.
+              await getCardsByNames(addNames);
+              onRemoveCards?.(removeNames);
+              for (const n of removeNames) pushDeckHistory({ action: 'remove', cardName: n });
+              onAddCards?.(addNames, 'deck');
+              for (const n of addNames) pushDeckHistory({ action: 'add', cardName: n });
+            }}
+          />
+        )}
+
+        {/* ── LIFT WEB (experimental) ── */}
+        {activeTab === 'lift' && (
+          <LiftClustersTab
+            currentCards={currentCards}
+            commander={commander}
+            partnerCommander={partnerCommander}
+            commanderName={commanderName}
+            partnerCommanderName={partnerCommanderName}
+            colorIdentity={colorIdentity}
+            onAdd={handleAddCard}
+            addedCards={addedCards}
+            onPreview={handlePreview}
+            onCardAction={handleCardAction}
+            menuProps={menuProps}
+            focusRequest={liftFocus}
+            deckViewRequest={liftDeckView}
+            deckName={deckName}
+          />
+        )}
+
+        {/* ── NEW CARDS ── */}
+        {activeTab === 'newCards' && (
+          <NewCardsTab
+            currentCards={currentCards}
+            commanderName={commanderName}
+            partnerCommanderName={partnerCommanderName}
+            colorIdentity={colorIdentity}
+            intendedThemes={intendedThemes}
+            themeRefs={liveThemeRefs}
+            listId={sourceListId}
+            lastEditedAt={sourceListUpdatedAt}
+            onAdd={handleAddCard}
+            addedCards={addedCards}
+            onPreview={handlePreview}
+          />
+        )}
+
+        </div>
+      </div>
+
+      <CardPreviewModal
+        card={previewCard}
+        onClose={() => setPreviewCard(null)}
+        spellChromaDeckRef={sourceListId ?? 'generated'}
+        inDeckNames={previewInDeckNames}
+        commanderColorIdentity={commanderColorIdentity}
+        cardInclusionMap={cardInclusionMap}
+      />
+    </div>
+  );
+}

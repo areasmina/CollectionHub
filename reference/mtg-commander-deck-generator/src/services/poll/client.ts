@@ -1,0 +1,113 @@
+// src/services/poll/client.ts
+import type { Suggestion, ListResponse, PollComment, CommentsResponse } from './types';
+import { PollApiError } from './types';
+import { getOrCreateAnonId } from './anonId';
+import { getAdminSecret } from './adminSecret';
+
+const URL = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
+
+function requireUrl(): string {
+  if (!URL || !URL.trim()) throw new PollApiError('Poll API not configured', 0, null);
+  return URL.trim();
+}
+
+async function call(
+  action: string,
+  init: RequestInit & { admin?: boolean; query?: Record<string, string> } = {},
+): Promise<unknown> {
+  const base = requireUrl();
+  const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined) };
+  if (!headers['X-Anon-Id']) headers['X-Anon-Id'] = getOrCreateAnonId();
+  if (init.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+  if (init.admin) {
+    const s = getAdminSecret();
+    if (!s) throw new PollApiError('Admin secret not set', 401, null);
+    headers['Authorization'] = `Bearer ${s}`;
+  }
+  const query = init.query
+    ? Object.entries(init.query).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('')
+    : '';
+  const res = await fetch(`${base}?action=${action}${query}&_t=${Date.now()}`, {
+    method: init.method || 'GET',
+    headers,
+    body: init.body,
+    cache: 'no-store',
+  });
+  const text = await res.text();
+  let payload: unknown = null;
+  try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+  if (!res.ok) throw new PollApiError(`Poll API error ${res.status}`, res.status, payload);
+  return payload;
+}
+
+export async function listSuggestions(opts: { admin?: boolean } = {}): Promise<ListResponse> {
+  return (await call('poll-list', { method: 'GET', admin: opts.admin })) as ListResponse;
+}
+
+export async function submitSuggestion(title: string, description: string, email?: string): Promise<{ suggestion: Suggestion }> {
+  return (await call('poll-submit', {
+    method: 'POST',
+    body: JSON.stringify({ title, description, ...(email ? { email } : {}) }),
+  })) as { suggestion: Suggestion };
+}
+
+export async function toggleVote(suggestionId: string, vote: 0 | 1): Promise<{ suggestionId: string; voteCount: number }> {
+  return (await call('poll-vote', {
+    method: 'POST',
+    body: JSON.stringify({ suggestionId, vote }),
+  })) as { suggestionId: string; voteCount: number };
+}
+
+export async function setDevNote(suggestionId: string, devNote: string): Promise<{ suggestion: Suggestion }> {
+  return (await call('poll-devnote', {
+    method: 'POST',
+    admin: true,
+    body: JSON.stringify({ suggestionId, devNote }),
+  })) as { suggestion: Suggestion };
+}
+
+export async function markShipped(suggestionId: string, shippedVersion: string): Promise<{ suggestion: Suggestion }> {
+  return (await call('poll-ship', {
+    method: 'POST',
+    admin: true,
+    body: JSON.stringify({ suggestionId, shippedVersion }),
+  })) as { suggestion: Suggestion };
+}
+
+export async function deleteSuggestion(suggestionId: string): Promise<{ ok: true }> {
+  return (await call('poll-delete', {
+    method: 'POST',
+    admin: true,
+    body: JSON.stringify({ suggestionId }),
+  })) as { ok: true };
+}
+
+export async function listComments(suggestionId: string): Promise<CommentsResponse> {
+  return (await call('poll-comments', {
+    method: 'GET',
+    query: { suggestionId },
+  })) as CommentsResponse;
+}
+
+export async function postComment(
+  suggestionId: string,
+  body: string,
+  opts: { admin?: boolean } = {},
+): Promise<{ comment: PollComment; commentCount: number }> {
+  return (await call('poll-comment', {
+    method: 'POST',
+    admin: opts.admin,
+    body: JSON.stringify({ suggestionId, body }),
+  })) as { comment: PollComment; commentCount: number };
+}
+
+export async function deleteComment(
+  suggestionId: string,
+  commentId: string,
+): Promise<{ ok: true; commentCount: number }> {
+  return (await call('poll-comment-delete', {
+    method: 'POST',
+    admin: true,
+    body: JSON.stringify({ suggestionId, commentId }),
+  })) as { ok: true; commentCount: number };
+}

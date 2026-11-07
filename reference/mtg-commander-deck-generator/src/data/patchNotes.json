@@ -1,0 +1,629 @@
+[
+  {
+    "version": "1.3.52",
+    "notes": [
+      "Inspector > Overview: rebuilt around a \"What are we doing today?\" dashboard. Should be simpler to pick up and will hopefully help newer users understand what can be done in the Inspector",
+      "Inspector > Overview: a score of 100 is now actually reachable, and the score shows how far off you are and what the suggested swaps get you",
+      "Inspector > Card Fit: Slightly new layout with new instrumentation to see what kinds of stats your changes will adjust",
+      "Inspector > Card Fit: Algorithm improvements, considers your bracket choice when scoring cards (more on that below)",
+      "Inspector > Bracket: Reworked a bit, allows you to pick your intended bracket and the page will provide suggestions to help you reach that strength",
+      "Inspector > Roles and Tempo: New filters, allows you to separate mana from utility lands, or split card suggestions by role",
+      "Inspector > Mana: Backfills with extra land suggestions based on whats popular in Scryfall and whats popular in your color identity",      
+      "Deck Generation: A recent EDHRec update saw each commander's signature high-synergy cards being left out of builds - they're back!",      
+      "Collection & commander search: planeswalkers that can be your commander, legendary Vehicles and Grist now count as commanders",
+      "Where pasting a deck is appropriate, Archidekt [Commander] tags pick your commander automatically, and if we can't tell, you can choose from the list or search for it",
+      "Combos: new \"Find a card\" box to show only combos using a card",
+      "You can now use arrow keys and the Enter button when adding a card to your deck (to control the autocomplete dropdown)",
+      "Playtest: defeated bots crumble to dust, new turns are marked in the game log, and lots of sound tweaks",
+      "Playtest: Beast Within / Terastodon give you the right token now"
+    ]
+  },
+  {
+    "version": "1.3.51",
+    "notes": [
+      "Collections > Commanders can now be sorted by Average Bracket Power, or by Popularity ",
+      "Slight visual improvements to the collections commander sections",
+      "Improved pagination in the collection views"
+    ]
+  },
+  {
+    "version": "1.3.50",
+    "notes": [
+      "Foundry > New MTG Arena toggle - should help you find commanders that are legal in Arena, please mind the ones that dont have EDHRec data",
+      "New deck export options (moxfield, arena)"      
+    ]
+  },
+  {
+    "version": "1.3.49",
+    "notes": [
+      "Community Poll > You can now respond to community poll suggestions",
+      "Deck Generation > Combos that need an unnamed piece (persist creatures, mana rocks) have much better generator support, and display as a necessary piece in the combo viewer",
+      "Right click cards in the combo viewer to show/hide combos using that card",
+      "Fixed a bug where combo data could sometimes go stale and cause combos to display in strange ways"      
+    ]
+  },
+  {
+    "version": "1.3.48",
+    "notes": [
+      "Inspector > Tempo: the ramp / interaction / draw / other targets under each phase now add up to that phase's target — they could come up a card short before (thank you LuisMiguelMedina for the report)",
+      "Inspector > Tempo: a phase that holds a card filling two roles now shows a second number in parentheses, so the role counts below it have something to add up to"
+    ]
+  },
+  {
+    "version": "1.3.47",
+    "notes": [
+      "Inspectr > Lands: The color pips bars now fill up as your mana sources reach the intended amount (thank you MITICA2020 for the report)",
+      "Foundry > Deck Tuning: the card type and mana curve targets now add up to exactly 99 alongside your land count"
+    ]
+  },
+  {
+    "version": "1.3.46",
+    "notes": [
+      "New Swap mode available when adding a card to a deck. See at a glance what cards might have a good slot to replace for the card you'd like to add (thank you Noobais for the feature suggestion and code contributions)",
+      "Newly swapped cards are moved to your maybeboard",
+      "Inspector: Adding a card offers the same swap suggestions once your deck is full",      
+      "Combos: Combos that also need an unnamed card — like \"a creature with persist\" — now show that requirement instead of looking complete when they aren't",
+      "You can now mute combo cards you don't want cluttering the combo list"
+    ]
+  },
+  {
+    "version": "1.3.45",
+    "notes": [
+      "Playtest > Large pass addresing faulty card behavior within certain bot decks",      
+      "Playtest > Gave Meren an experience counter UI",
+      "Playtest > Changing a permanent's card types is now a row of buttons",
+      "Playtest > Bots keep steadier opening hands, so they stall out less"
+    ]
+  },
+  {
+    "version": "1.3.44",
+    "notes": [
+      "Playtest > Various improvements to bot reasoning, fixed a few bugs that would occur with certain cards",      
+      "Playtest > Card previews are less likely to cover up bot seats",
+      "Playtest and Community Poll are now both accessible under a New \"More\" menu in the header"
+    ]
+  },
+  {
+    "version": "1.3.43",
+    "notes": [
+      "New TCG Affiliate links! Show your support for the site by buying directly from your decklist or card preview",
+      "Github link expanded to a 'For Developers' page, giving the usual link to github as well as some dev focused info on how to deep link to various pages",
+      "Animation and other QoL improvements in playtest against bots"
+    ]
+  },
+  {
+    "version": "1.3.42",
+    "notes": [
+      "Your own battlefield no longer shifts around when a bot's seat grows or shrinks — cards stay exactly where you put them"
+    ]
+  },
+  {
+    "version": "1.3.41",
+    "notes": [
+      "Added attack animation during combat against bots",
+      "Bots now understand indestructible and hexproof",
+      "Swapped the button above each zone to search that zone, right click the zone for the same actions menu",
+      "Planeswalker emblems can now be created straight from a card's right-click menu",
+      "Card previews now magnify on hover by default rather than asking you to hold Ctrl. If you'd already chosen how you like them, your choice is kept",
+      "Added a Smallest battlefield card size for fitting a very wide board on screen",
+      "Fixed card previews inside the search, scry and token windows"
+    ]
+  },
+  {
+    "version": "1.3.40",
+    "notes": [
+      "Various playtester improvements"
+    ]
+  },
+  {
+    "version": "1.3.39",
+    "notes": [
+      "A new and large undertaking... Play a real game against bot opponents in the playtest! This feature is still rather early in development, so feedback would be much appreciated!",      
+      "Additional UI updates to the Playtest page",
+      "Combat phase introduced while bots are in play: drag a creature onto a seat to attack, draw arrows to declare your blocks, and confirm before damage happens",      
+      "Playtest counter improvements and a new addition in text stickers",            
+      "New Playtest Card Trial option — pin up to 3 cards into your opening hand or on top of your library to help see how they actually play",      
+      "Addressed a bug that was causing large ramp, removal and protection targets in sub 100 card decks"
+    ]
+  },
+  {
+    "version": "1.3.38",
+    "notes": [
+      "A freshly built deck now tells you it isn't saved yet, and points you straight at the buttons to either save it or make a quick swap",
+      "The save button is now available on the deck view on smaller screens, not just desktop",
+      "Your deck's collection metrics are also visible on mobile now",
+      "Fixed a bug where a card's token could quietly take the real card's place — decks with cards like Fanatic of Rhonas could show the wrong colors, a $0 price, or a false 'breaks your commander's color identity' warning"
+    ]
+  },
+  {
+    "version": "1.3.37",
+    "notes": [
+      "Send your decks to other people using the new share button on the deck view",
+      "Foundry partners will no longer be dropped if you go back from the built deck"
+    ]
+  },
+  {
+    "version": "1.3.36",
+    "notes": [
+      "Streamlined the Inspector paste box workflow into a single click",
+      "Fixed a bug that stopped certain EDHREC cards to not cleanly drop into the app",
+      "Trim suggestions are now theme-aware — cards that fit your deck's theme are much less likely to show up as recommended cuts",
+      "When using the Fill deck tool, cards you own will be tagged as such. You can now also choose to have it only recommend cards you own.",
+      "Fixed a bug where deck Roles counts in the deck view now agree with the Inspector and with the cards that actually highlight when you click a role",
+      "The Inspector's Lands tab now offers twice as many suggested lands",      
+      "When making a suggestion in the Community Poll, you can now leave your email. The emails will only be visible to the site developer (me!)"
+    ]
+  },
+  {
+    "version": "1.3.35",
+    "notes": [
+      "Introducing a massive change to the way that the app recognizes deck themes. You should be able to upload off-meta decks to the site and have it reliably identify what your decks theme is meant to be. Card suggestions in the Inspector should be improved as a result.",      
+      "Additional but separate changes to the way that we suggest cards, focused around color staples that should genuinely be showing in your suggestion results",
+      "Combo detection has been massively expanded from the dataset provided by EDHRec, now draws on the full Commander Spellbook catalog",
+      "Clicking a card in your deck view now shows what it could combo with, not only combos you've already assembled",
+      "Fixed a bug where a deck you pasted into the Inspector would wear the themes from the last deck you built in the Foundry",      
+      "The 'New Cards' suggestions should conform to your deck's themes better",      
+      "Fixed the Inspector's role filter hiding cards from the deck panel on the right that the Roles tab was counting on the left",      
+      "The Strategy chart in the Inspector now scales better to decks with smaller datasets"
+    ]
+  },
+  {
+    "version": "1.3.34",
+    "notes": [
+      "The playtest page can now be used by pasting a deck in - there's no obvious way to get to it yet though"          
+    ]
+  },
+  {
+    "version": "1.3.33",
+    "notes": [
+      "Better suport for Relentless Rats and other multi-copy cards across the app",
+      "Fixed a pretty major bug where removals made in the Card Fit tab of the Inspector wouldn't persist after a refresh",
+      "Style, QoL improvements, and a few other extra goodies across the Inspector",
+      "Some visual and wording clarification in the Inspectors Bracket Estimator",      
+      "Updated suggestions algorithm within the Inspectors New Cards tab",
+      "Most card previews in the app will now show similar cards, as well as allow you to add them to your deck",
+      "Made a distinction where many bounce spells were being read as Removal"
+    ]
+  },
+  {
+    "version": "1.3.32",
+    "notes": [
+      "Opening a shared or saved deck in the Inspector now shows how many cards have loaded, so a slow first load no longer looks stuck",
+      "Deck Tuning no longer follows you between commanders — the curve and card type sliders now start from the commander you're actually building, instead of quietly reusing the last one's numbers",
+      "The 'Fix' button in Deck Tuning now always lands exactly on 100%; some totals used to leave it doing nothing at all"
+    ]
+  },
+  {
+    "version": "1.3.31",
+    "notes": [
+      "Share a deck with a link — the Inspector now has a copy-link button that hands someone the exact deck you're looking at, no account or saving required",
+      "Export Deck can now filter your list down to a single collection, or to just the cards you're missing. The option will only be available if you're viewing which cards in your deck are in a collection.",
+      "Fixed decklist imports stating it only imported around 90 cards when it correctly imported the full 100",
+      "You can drag to reorder your collections, rename one straight from its title, and download a collection as a text file",
+      "Retired the 'Classic' build option, the current model is better in every way at this point"
+    ]
+  },
+  {
+    "version": "1.3.30",
+    "notes": [
+      "Visual overhaul to the Inspectors bracket estimation page",
+      "Bracket estimates adjustments around two card combos, fetch lands, and extra turns"
+    ]
+  },
+  {
+    "version": "1.3.29",
+    "notes": [
+      "Commanders that let you pick a color, like Clara Oswald, now base their suggestions on decks actually built in that color",
+      "Your deck's edit history is now persistent (thanks to Tiago Novais for spotting this one)",
+      "Fixed the Add button in the Inspector staying greyed out after you removed the card again (another thanks to Tiago Novais for spotting this)"
+    ]
+  },
+  {
+    "version": "1.3.28",
+    "notes": [
+      "Fixed decks sometimes opening with most of the cards missing and a warning that they couldn't be loaded",
+      "Decks you built from your collection now show a Collection badge in My Decks and at the top of the deck",
+      "When building from multiple or partial collections, the deck view better specifies which collections the cards came from",
+      "SP//dr, Piloted by Peni is now a functional card"
+    ]
+  },
+  {
+    "version": "1.3.27",
+    "notes": [
+      "Building from collection will now fill your landbase more intelligently based on the card you own"      
+    ]
+  },
+  {
+    "version": "1.3.26",
+    "notes": [
+      "Building a deck from your collection now fills open slots with cards you actually own instead of padding with basic lands — limited collections will now produce far more complete decks",
+      "Fixed the Deck Roles panel showing counts that didn't line up when building from Collection",
+      "Added role filters (Ramp, Removal, Board Wipes, Card Draw, Protection) to your collection view",
+      "Tidied up the binder tabs on the collection page"
+    ]
+  },
+  {
+    "version": "1.3.25",
+    "notes": [
+      "Inspector recommendations now factor in what plays well with your whole deck, not just each card on its own",
+      "Fixed decks built with a set filter that lists several sets coming out lopsided with too many artifacts and lands — cards from all the listed sets are now used"
+    ]
+  },
+  {
+    "version": "1.3.24",
+    "notes": [
+      "Improved importer to recognize cards that have been renamed in secret lairs and such",
+      "Improved number suggestions under Inspector > Tempo",
+      "Added curve visualizer when manually setting Tempo in the Foundry",
+      "Updated a few buttons in Inspector > Overview",
+      "Standardized cut recommendations across the app, Inspector cuts especially should make more sense"
+    ]
+  },
+  {
+    "version": "1.3.23",
+    "notes": [
+      "Changed My Collection to Collections, you can now store multiple collections there",
+      "Made the lift web and other links in Inspector more share friendly",
+      "Clicking the liftweb button it the Inspector overview will take you to the 'your deck' view of the feature so you can actually see the island it was talking about",
+      "Updated card tags to present their parent tags more clearly"      
+    ]
+  },
+  {
+    "version": "1.3.22",
+    "notes": [
+      "Added a quick-set button to snap deck size to 40/60/80 when an import doesn't land on 100 (for my brawl homies)",
+      "Spacecraft commanders now show up in legendary pickers alongside legendary creatures when importing a deck"
+    ]
+  },
+  {
+    "version": "1.3.21",
+    "notes": [
+      "When importing decks, removing a non-singleton card (like a land) no longer removes all of them",
+      "Added an Add button to the deck view, you can still add from the toolbar while modifying",
+      "Added free muligan option in the playtester"
+    ]
+  },
+  {
+    "version": "1.3.20",
+    "notes": [
+      "Your browser tab now shows where you are instead of a generic title"     
+    ]
+  },
+  {
+    "version": "1.3.19",
+    "notes": [
+      "You can now replace lands more easily after generating a deck (Edit > Replace)",
+      "Fixed a bug where inclusions scores were not being imported correctly"
+    ]
+  },
+  {
+    "version": "1.3.18",
+    "notes": [
+      "Generated decks now better respect your Bracket setting when adding combos — building at Bracket 3 will no longer intentially put Bracket 4-5 combos into the deck (some combos might naturally appear in the deck however)"
+    ]
+  },
+  {
+    "version": "1.3.17",
+    "notes": [
+      "Replaced the Card Fit card on the Inspector Overview with a Lift Web card",
+      "Mana fixing lands should no longer show up in mono-colored decks",
+      "Add cards to your deck directly from the Inspector view (look for the + button)",
+      "Picking two themes in the Inspector now shapes suggestions from both (Thank you LuisMiguelMedina for the code contribution)",
+      "The Strategy score now stays accurate while you tweak a themed deck instead of dropping to zero after edits (Thank you LuisMiguelMedina for the code contribution)",
+      "Fixed the Inspector sometimes resetting your chosen theme or double-loading on wider screens (Thank you LuisMiguelMedina for the code contribution)"
+    ]
+  },
+  {
+    "version": "1.3.16",
+    "notes": [
+      "New tool: New Cards - quickly see some (hopefully) relevant cards to your deck's gameplan. Also includes a full tab in the Inspector dedicated to showing a larger set.",      
+      "Set the theme of your deck using the new theme picker, affecting what kinds of cards surface as suggestions (hello new cards section)",
+      "Filter and sort My Decks by theme, with search that matches theme names",      
+      "Redesigned the /decks page to make better room for the tag changes",
+      "When assembling a deck that has low data (like for an unpopular commander or theme), cards that get slotted in from the archtype's card pool rather than your commanders card pool get marked with a little icon",
+      "Save a snapshot of a card's web — a camera button downloads a shareable image of the connections graph",
+      "Multiple minor improvements within spellchroma, the lift web, and the cost optimizer",
+      "Excluded cards are now hidden from the lift web",
+      "Added a note when trying to edit a generated deck that saving it opens up much better editing options"
+    ]
+  },
+  {
+    "version": "1.3.15",
+    "notes": [
+      "Add your own combos to a deck — create, edit, or delete custom combos (even straight from a card's menu), shown right alongside the combos we detect for you",
+      "Better card menu: Quickly add a card to the last deck or list you used",
+      "Smarter Trim suggestions — now incorporates data from the card lift system",
+      "You can now drag a card from a browser window with Scryfall, EDHREC, or Moxfield straight into your deck to automatically add it "
+    ]
+  },
+  {
+    "version": "1.3.14",
+    "notes": [
+      "New \"By strategy\" browse on the home page — start from a play style (Aristocrats, Lifegain, Tokens, and more) and discover commanders that do it well",
+      "Clearer heads-up when your selected themes have very little deck data behind them, so you know results may be less consistent"
+    ]
+  },
+  {
+    "version": "1.3.13",
+    "notes": [
+      "Fixed SpellChroma cards sometimes showing no tags when you explore without a deck or refresh the page",
+      "Added a \"New\" sort to SpellChroma so you can browse the most recently released cards first",
+      "When SpellChroma hides cards, the count now tells you why (already in your deck, or not in your collection)",
+      "More mobile polish in the SpellChroma deck view"
+    ]
+  },
+  {
+    "version": "1.3.12",
+    "notes": [
+      "Add your own custom Scryfall query parameters to your Spellchroma exploration (Start typing it out and you'll see the new button to add a query)",      
+      "Added a new icon for the Inspector",
+      "Updated card rarity picker to be multiselect (instead of max rarity)",
+      "Updated a few places in Spellchroma & the deck view to be better suited for mobile"
+    ]
+  },
+  {
+    "version": "1.3.11",
+    "notes": [
+      "Smoother performance and URL paramenters used throughout SpellChroma",
+      "A handful of small adjustments to improve the mobile experience"
+    ]
+  },
+  {
+    "version": "1.3.10",
+    "notes": [
+      "Lots of QoL Spellchroma tweaks, mostly centered around the mobile experience."
+    ]
+  },
+  {
+    "version": "1.3.9",
+    "notes": [
+      "Deck/List selectors got a slight visual refresh across the app",
+      "Smoothed out drag and drop behavior within the playtest area, also added some new background options",
+      "Cleaned up a few spots in the Inspector and added a few new deck metrics there",
+      "You can now add images to your deck primers, yippee"
+    ]
+  },
+  {
+    "version": "1.3.8",
+    "notes": [
+      "Introducing SpellChroma — a new way to explore your decks and lists by tag. Paste a list or load one of your saved decks, then browse cards by what they actually do (ramp, removal, card draw, and more) and add new ones on the fly"      ,
+      "Integrated SpellChroma tags within different parts of the app (top tags in your deck, tags for previewed cards, etc)"
+    ]
+  },
+  {
+    "version": "1.3.7",
+    "notes": [
+      "Commander search improved to showcase more accurate results, as well as recently spoiled commanders (assuming they've made it to scryfall)",
+      "Introduced Protection role (invulnerability, hexproof, counterspells, etc) to deck generation an analysis",
+      "Redesigned the Cost Analyzer (in the Inspector), now shows much better suggestions and swap outs"
+    ]
+  },
+  {
+    "version": "1.3.6",
+    "notes": [
+      "Card prices now always reflect the cheapest available printing, so a pricey foil or special version won't throw off your budget anymore",
+      "Arena-only decks now correctly include every card that's available on MTG Arena, and warn you if your commander isn't on Arena"
+    ]
+  },
+  {
+    "version": "1.3.5",
+    "notes": [
+      "New \"Commanders you don't own\" section in your Collection — discover commanders you already have most of the staples for",
+      "The commander spotlight now plays through your commanders automatically, and can feature standout commanders you don't own yet"
+    ]
+  },
+  {
+    "version": "1.3.4",
+    "notes": [
+      "Explore card relationships on the new Lift Web page, found in the Inspector",
+      "Updated the Inspector's Overview page for a few new graphs",
+      "Put a search bar on the deck building area (in the inspector)"
+    ]
+  },
+  {
+    "version": "1.3.3",
+    "notes": [
+      "Small visual QOL improvements when previewing cards"
+    ]
+  },
+  {
+    "version": "1.3.2",
+    "notes": [
+      "Cards with extra rulings will have those rulings shown when you click a card to open its preview"
+    ]
+  },
+  {
+    "version": "1.3.1",
+    "notes": [
+      "EA features no longer needs to be enabled to see the Inspector.",
+      "If you're a returning use you'll see a little notice notifying you that you can view patch notes and the community poll from this dialog. Hello! 👋"
+    ]
+  },
+  {
+    "version": "1.3.0",
+    "notes": [
+      "Its finally time to bump up our release version, this patch is filled with multiple small fixes that should greatly improve performance across most of the app, especially during long browser sessions"            
+    ]
+  },
+  {
+    "version": "1.2.40",
+    "notes": [
+      "Minor bugfixes and small qol improvements across the app",
+      "Fixed the bug preventing the tagger information from coming to the new site correctly"
+    ]
+  },
+  {
+    "version": "1.2.39",
+    "notes": [
+      "Moved the Inspector out of EA into Beta, its now available for everyone to see and use",
+      "Generate & Inspect now builds a default deck for your commander and drops you straight onto the Inspector — your saved preferences aren't touched."                  
+    ]
+  },
+  {
+    "version": "1.2.38",
+    "notes": [
+      "New Community Poll page — suggest features for ManaFoundry, upvote ones you like, and see what's shipped from the poll.",
+      "Find the link in this popover, right above the patch notes."
+    ]
+  },
+  {
+    "version": "1.2.37",
+    "notes": [
+      "New site url is live! Follow the banner for the new link, as well as a migration tool to bring your decks, lists, and collections over to the new site.",
+      "When you duplicate a deck, you're now taken straight to the new copy instead of staying on the previous one.",
+      "Polish on mobile for creating lists and decks."
+    ]
+  },
+  {
+    "version": "1.2.36",
+    "notes": [
+      "New Commanders tab on the Collection page — every legendary you own, ranked by how many EDHREC staples you have for it. The Spotlight up top shows your top 'Ready to play' pick.",
+      "Basic lands count as owned in deck views automatically — no need to import them. The owned count now includes your commander too, so a fully-owned 100-card deck reads 100, not 99.",
+      "New floating Lists panel in the deck view — drag cards from a list straight onto the deck."
+    ]
+  },
+  {
+    "version": "1.2.35",
+    "notes": [
+      "Split Lists and Decks into their own tabs in the navbar",
+      "Visual and QoL improvements across list and deck importing, management, and viewing",
+      "Clicking in the darkspace with a card preview open will now clsose the preview properly",
+      "Undersized decks now have a 'Fill to X' option to help get you to the deck size you're looking for",
+      "Better warnings for when deck doesnt pass validation (breaking singleton rules, missing commander, etc)"
+    ]
+  },
+  {
+    "version": "1.2.34",
+    "notes": [
+      "Show a deck-list skeleton while card data is being fetched, so the view isn't blank during the first-ever open"
+    ]
+  },
+  {
+    "version": "1.2.33",
+    "notes": [
+      "Saved decks now load instantly on repeat opens — your stats stay cached so you don't wait on the spinner",
+      "First-ever opens fill in progressively: deck list appears first, then role badges, score, combos, and replacements light up as each is ready",
+      "Added a Refresh stats option in the deck's ... menu for when you want to pull fresh numbers"
+    ]
+  },
+  {
+    "version": "1.2.32",
+    "notes": [
+      "Synergy combos — combos your deck happens to assemble even if they aren't listed on your commander's combo page now show up too, with a small Synergy tag",
+      "Combos now show the extra requirements (like 'three Foods') as chips next to the card images so you can see the full setup at a glance",
+      "Hover a card thumbnail in the combo panel to peek at the full card",
+      "Relevancy score now reflects how load-bearing a card is in your current deck — combo pieces and the only card filling a role get a boost"
+
+    ]
+  },
+  {
+    "version": "1.2.31",
+    "notes": [
+      "New trimmer feature, for when your uploaded deck is over the intended amount and you dont know what to cut",
+      "Added a quick + button next to the Sideboard and Maybeboard headers to add cards directly to either board",
+      "Add cards to your deck directly from the suggestions",
+      "scrolling down in a deck produces a little side toolbar, allowing you to sort/show or enter/exit edit even while scrolled down"
+    ]
+  },
+  {
+    "version": "1.2.30",
+    "notes": [
+      "Minor improvements to replacements, replacements made avaialble in your own decks too - not just the generated ones",
+      "Replacements now include additional suggestions from EDHRec",
+      "Minor improvements to the List creation/management experience"
+    ]
+  },
+  {
+    "version": "1.2.29",
+    "notes": [
+      "Some fancy effects for when you click the button to modify a deck",
+      "Improved experience when using the Replace feature while modifying a deck",      
+      "Minor improvements to the combo preview section, click a card name to filter on that card",
+      "Contrast improvements for some purple-on-purple chips across the app",
+      "You can now (finally) use the back/forward buttons to nagivate around a generated deck view"
+    ]
+  },
+  {
+    "version": "1.2.28",
+    "notes": [
+      "An experimental Inspector page has been released to EA (previously the analyzer). Quickly check your deck for role coverage, mana curve strength, and new card suggestions with ease.",
+      "The visual grid deck view now supports stacked cards, as well as all of the show options",
+      "Fixed a bug where you couldn't create lists as lists (they kept wanting to be decks)",
+      "Added clarity to the build page when using a commander with no listed themes on EDHRec"
+    ]
+  },
+  {
+    "version": "1.2.27",
+    "notes": [
+      "Mobile improvements for the new playtest page"
+    ]
+  },
+  {
+    "version": "1.2.26",
+    "notes": [
+      "The app has a name now - ManaFoundry!",
+      "Take your new deck out for a spin with the new playtest feature!",
+      "Made 'EDHRec Rank' available under the 'show' menu",
+      "Majorly improved the mobile experice across many parts of the app (I see you mobile users)"
+    ]
+  },
+  {
+    "version": "1.2.25",
+    "notes": [
+      "Playtest area — drag cards onto a free-position battlefield, tap, add counters, mulligan, scry/mill/surveil, search library, spawn tokens. Open from any deck via the new Playtest button.",
+      "Hotkeys in playtest: D draw, U untap all, S shuffle, M mulligan, 1-7 phases, Ctrl+Z undo."
+    ]
+  },
+  {
+    "version": "1.2.24",
+    "notes": [
+      "Sol Ring and Arcane Signet are now auto-included in every legal deck (respects bans, budget, and collection-only mode)",
+      "New land count target control in the deck optimizer — bump it up or down to match how mana-hungry you want the deck",
+      "Random commander with a color filter now prefers an exact color identity match (e.g. GB filter picks GB commanders, not GBW or GBU)",
+      "EA Features toggle moved to the version/patch notes popover so it's available from anywhere",
+      "Cleaner alignment for combo cards in the combo panel"
+    ]
+  },
+  {
+    "version": "1.2.23",
+    "notes": [
+      "Fixed deck generator not respecting your land count ",
+      "Collection-only decks no longer sneak in combo pieces you don't own"
+    ]
+  },
+  {
+    "version": "1.2.22",
+    "notes": [
+      "Moved the Modify Deck button next to the view toggle for easier access",
+      "Fixed text editor showing false changes for double-faced cards on freshly generated decks",
+      "Owned Cards Skip Rarity feature"
+    ]
+  },
+  {
+    "version": "1.2.21",
+    "notes": [
+      "Greatly rebalanced the way the deck generator handles combos, synergy combos should show up with greater frequency than simply popular combos now",
+      "Category (ramp/card advantage etc) number recommendations are now based on averge decks for your commander",
+      "Two sided cards with '//' in their name should import correctly now",
+      "Channel lands and MDFC lands should show up more frequently when generating decks",
+      "Inclusion score updated to be more accurrate to our internal ranking system",
+      "Fixed deck generator producing too few lands when using a large must-include list",
+      "Cards from include lists are now properly protected during deck balancing"
+    ]
+  },
+  {
+    "version": "1.2.20",
+    "notes": [
+      "Deck generator less likely to leave orphaned combo pieces in the final result",
+      "Deck score visible in the Statistics column as an EA feature",
+      "Improved UI when importing decks or lists"
+    ]
+  },
+  {
+    "version": "1.2.19",
+    "notes": [
+      "Statistics panel now shows how many cards you own from the current deck",
+      "Easily see the number of cards from your collection you own in the shown deck"
+    ]
+  }
+]

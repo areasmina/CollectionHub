@@ -1,0 +1,737 @@
+import { useState } from 'react';
+import { Hand as HandIcon, RotateCcw, Search, Eye, Sparkles, Plus, BookOpen, Trash2, SkipForward, Menu, ChevronLeft, ChevronRight, Layers, Sword, Swords, RefreshCw, Repeat, Shuffle, Dices, Scissors } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { usePlaytestStore } from '@/store/playtestStore';
+import { useOpponentStore } from '@/store/opponentStore';
+import { advanceTurn, isTurnBlocked } from '@/services/playtest/turnFlow';
+import { usePlaytestSettings } from '@/store/playtestSettingsStore';
+import { captureHandBoxes, flyHandToZone } from '@/components/playtest/CardFlight';
+import { ContextMenuShell } from '@/components/playtest/ContextMenuShell';
+import type { SortMode } from '@/components/playtest/types';
+
+// Defined at module scope (not inside the component) so it keeps a stable
+// component identity across renders. If this lived in the render body, every
+// re-render would create a new function reference, and React would unmount and
+// remount everything wrapped in <Group> — silently resetting any uncontrolled
+// popover inside to closed whenever the bar re-rendered.
+//
+// The buttons in a group sit flush: square corners and a -1px pull so adjacent
+// borders collapse into a single hairline, making each group read as one
+// segmented control rather than a row of chips. Groups are told apart by the
+// gap between them, so they need no separator rules.
+const Group = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`flex items-center [&>*+*]:-ml-px ${className}`}>{children}</div>
+);
+
+export function PlaytestActionsBar({ sort, onSortChange }: {
+  /** Hand sort, owned by <Hand />. Only the phone menu shows it — on desktop
+   *  the select beside the hand label is still the control. */
+  sort: SortMode;
+  onSortChange: (mode: SortMode) => void;
+}) {
+  const openModal = usePlaytestStore(s => s.openModal);
+  const closeModal = usePlaytestStore(s => s.closeModal);
+  const modal = usePlaytestStore(s => s.modal);
+
+  // rounded-none + focus-visible:z-10 so the flush borders stay collapsed but a
+  // focused / hovered button still paints its own outline on top of its neighbour.
+  // border-y-0: the row's own top edge and hairline already bound the buttons, so
+  // their horizontal rules would only double up on those lines.
+  const btn = 'relative h-6 px-1.5 sm:px-2 text-[11px] rounded-none border-y-0 focus-visible:z-10 hover:z-10';
+  const icon = 'w-3 h-3 mr-1';
+
+  const tokensOpen = modal?.kind === 'tokens';
+  const createOpen = modal?.kind === 'create';
+
+  return (
+    <div className="flex items-center justify-end md:justify-center gap-1.5 min-w-0 w-full">
+      {/* Untap is a chip in the corner of the table, and on desktop Hand
+          actions and the three zone menus ride on the piles they act on.
+          A phone has no pile row and no room for five chips, so every one of
+          those menus folds into the single button below. */}
+      <div className="md:hidden">
+        <MobileActionsMenu sort={sort} onSortChange={onSortChange} />
+      </div>
+      <Group className="hidden md:flex">
+        <Button variant={tokensOpen ? 'default' : 'outline'} size="sm" className={btn} onClick={() => tokensOpen ? closeModal() : openModal({ kind: 'tokens' })} title="Create token"><Sparkles className={icon} />Tokens</Button>
+        <Button
+          variant={createOpen ? 'default' : 'outline'}
+          size="sm"
+          className={btn}
+          title="Create a counter or die"
+          onClick={() => createOpen ? closeModal() : openModal({ kind: 'create' })}
+        >
+          <Plus className={icon} />Create
+        </Button>
+      </Group>
+    </div>
+  );
+}
+
+/** Which panel the phone menu is showing: the list, or one zone's actions. */
+type MenuView = 'root' | 'hand' | ActionZone;
+
+const SORT_LABEL: Record<SortMode, string> = { none: 'None', cmc: 'CMC', type: 'Type' };
+
+const MenuHeading = ({ children }: { children: React.ReactNode }) => (
+  <p className="px-2 pt-1 pb-0.5 text-[10px] uppercase tracking-wide text-muted-foreground/70">{children}</p>
+);
+
+/** A root row that opens one zone's menu. The count is the reason you'd tap it. */
+const DrillRow = ({ icon: Icon, label, count, onClick }: {
+  icon: typeof Layers;
+  label: string;
+  count: number;
+  onClick: () => void;
+}) => (
+  <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-9" onClick={onClick}>
+    <Icon className="w-3.5 h-3.5 mr-2 shrink-0" />
+    {label}
+    <span className="ml-auto flex items-center gap-1 text-muted-foreground">
+      <span className="tabular-nums text-[11px]">{count}</span>
+      <ChevronRight className="w-3.5 h-3.5" />
+    </span>
+  </Button>
+);
+
+/**
+ * Every hand and zone action on a phone, behind one button.
+ *
+ * Desktop spreads these across five controls because each one can sit on the
+ * thing it acts on — Hand actions beside the hand label, the zone menus on
+ * their own piles. A phone has neither the pile row nor the width: five chips
+ * in the hand toolbar wrapped onto a second line and ate a row of the table.
+ *
+ * It drills rather than listing everything at once. The four menus behind it
+ * are long — the hand's alone is eleven rows — so one flat list would be
+ * taller than the screen and the thing you wanted would be a scroll away.
+ * One tap to the zone, one to the action, and Back returns to the list.
+ */
+function MobileActionsMenu({ sort, onSortChange }: { sort: SortMode; onSortChange: (mode: SortMode) => void }) {
+  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<MenuView>('root');
+  const openModal = usePlaytestStore(s => s.openModal);
+  const handCount = usePlaytestStore(s => s.zones.hand.length);
+  const libraryCount = usePlaytestStore(s => s.zones.library.length);
+  const graveyardCount = usePlaytestStore(s => s.zones.graveyard.length);
+  const exileCount = usePlaytestStore(s => s.zones.exile.length);
+
+  const close = () => setOpen(false);
+  const row = 'w-full justify-start text-xs h-9';
+
+  return (
+    <Popover
+      open={open}
+      // Reset on the way IN rather than on close: resetting on close swaps a
+      // drilled-in menu back to the root list mid close-animation, so you
+      // watch the panel change under you as it fades out.
+      onOpenChange={(o) => { setOpen(o); if (o) setView('root'); }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 text-[11px] rounded-none shrink-0 gap-1.5"
+          title="Hand, deck, graveyard and exile actions"
+          aria-label="Hand and zone actions"
+        >
+          <Menu className="w-3.5 h-3.5" />Actions
+        </Button>
+      </PopoverTrigger>
+      {/* w-64 clears a 320px screen with room either side. The cap and scroll
+          are so a drilled-in menu that outgrows a short phone scrolls itself
+          instead of running off the top of the viewport. */}
+      <PopoverContent side="top" align="end" sideOffset={6} className="w-64 p-1 max-h-[70vh] overflow-y-auto">
+        {view === 'root' ? (
+          <div className="space-y-0.5">
+            <MenuHeading>Zones</MenuHeading>
+            <DrillRow icon={HandIcon} label="Hand" count={handCount} onClick={() => setView('hand')} />
+            <DrillRow icon={Layers} label="Deck" count={libraryCount} onClick={() => setView('library')} />
+            <DrillRow icon={Trash2} label="Graveyard" count={graveyardCount} onClick={() => setView('graveyard')} />
+            <DrillRow icon={Sparkles} label="Exile" count={exileCount} onClick={() => setView('exile')} />
+
+            <div className="h-px bg-border/60 my-1" />
+            <MenuHeading>Put on the table</MenuHeading>
+            <Button variant="ghost" size="sm" className={row} onClick={() => { close(); openModal({ kind: 'tokens' }); }}>
+              <Sparkles className="w-3.5 h-3.5 mr-2" />Tokens…
+            </Button>
+            <Button variant="ghost" size="sm" className={row} onClick={() => { close(); openModal({ kind: 'create' }); }}>
+              <Plus className="w-3.5 h-3.5 mr-2" />Create…
+            </Button>
+
+            {/* The sort select is desktop-only — it sits beside the hand label
+                there and there is no room for it on a phone. This is where a
+                phone sorts its hand. */}
+            <div className="h-px bg-border/60 my-1" />
+            <MenuHeading>Sort hand</MenuHeading>
+            <div className="flex items-center gap-1 px-1 pb-1">
+              {(Object.keys(SORT_LABEL) as SortMode[]).map(mode => (
+                <Button
+                  key={mode}
+                  variant={sort === mode ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1 h-8 text-[11px]"
+                  onClick={() => onSortChange(mode)}
+                >
+                  {SORT_LABEL[mode]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <button
+              onClick={() => setView('root')}
+              className="flex items-center gap-1 w-full h-8 px-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {view === 'hand' ? 'Hand' : ZONE_LABEL[view]}
+            </button>
+            <div className="h-px bg-border/60 mb-1" />
+            {view === 'hand'
+              ? <HandActionsMenu onDone={close} />
+              : <ZoneActionsMenu zone={view} onDone={close} />}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function HandActionsButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          // Square, like the sort select it sits beside. The rounded treatment
+          // is reserved for the Untap chip out on the table.
+          className="h-6 px-1.5 text-[11px] rounded-none shrink-0"
+          title="Mulligan, wheel, discard (M mulligans)"
+        >
+          <HandIcon className="w-3 h-3 mr-1" />Actions
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" sideOffset={6} className="w-64 p-1">
+        <HandActionsMenu onDone={() => setOpen(false)} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/**
+ * Untap all, as a chip in the bottom-left corner of the table.
+ *
+ * It sits on the table rather than in the toolbar because it acts on the
+ * table — everything it touches is a permanent you can see from there — and
+ * because it is the one button pressed every single turn, so it earns a
+ * corner of its own instead of a slot in a row of eight.
+ */
+export function UntapChip() {
+  const untapAll = usePlaytestStore(s => s.untapAll);
+  return (
+    <button
+      onClick={untapAll}
+      title="Untap all (U)"
+      className="absolute bottom-3 left-3 z-30 inline-flex items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-full border border-border/60 bg-background/80 backdrop-blur-sm text-xs font-medium text-foreground/90 shadow-lg hover:bg-accent hover:text-foreground transition-colors"
+    >
+      <RotateCcw className="w-3.5 h-3.5" />
+      Untap
+    </button>
+  );
+}
+
+/**
+ * The shape the table's own buttons take: a rounded pill floating over the
+ * play space, rather than a square cell in a toolbar row. Untap wears it by
+ * hand above; Combat and Next Turn take it through their `chip` prop.
+ */
+const CHIP = 'h-8 px-3 rounded-full border gap-1.5 text-xs font-medium backdrop-blur-sm shadow-lg transition-colors';
+
+/**
+ * Combat and Next Turn, floating in the bottom-right corner of the table.
+ *
+ * They moved out of the hand toolbar for the same reason Untap never went in:
+ * they're the beats of the game rather than actions on your hand, they're
+ * pressed every single turn, and a corner of the table is a bigger, steadier
+ * target than a 24px cell in a row of eight. Bottom-right mirrors Untap's
+ * bottom-left, and nothing else claims that corner on desktop — the floating
+ * pile cluster that lives there is mobile-only.
+ *
+ * Desktop only: a phone keeps the pair in the top toolbar, where the table is
+ * too small to give up a corner.
+ */
+export function TurnChips() {
+  return (
+    <div className="absolute bottom-3 right-3 z-30 flex items-center gap-2">
+      <AttackButton chip />
+      <CombatButton chip />
+      <NextTurnButton chip />
+    </div>
+  );
+}
+
+/**
+ * Confirms the whole attack across every seat at once. Declaring is one step
+ * for all opponents because blocking is a decision about the whole attack — a
+ * bot answering one drop at a time would block badly.
+ *
+ * Sits immediately before End Combat rather than floating in the middle of the
+ * table, which is where it used to be. The two are one sentence — "swing, then
+ * finish" — and a button that decides the turn should not be somewhere you have
+ * to go looking for it while the rest of the beat lives in the corner.
+ *
+ * Renders nothing until something is declared, so it slots into the group and
+ * out again rather than sitting there disabled.
+ */
+export function AttackButton({ chip = false }: { chip?: boolean }) {
+  const declaration = useOpponentStore(s => s.declaration);
+  const confirmAttack = useOpponentStore(s => s.confirmAttack);
+  const count = declaration ? Object.values(declaration).flat().length : 0;
+  if (count === 0) return null;
+  return (
+    <Button
+      size="sm"
+      className={`${
+        chip ? CHIP : 'h-8 md:h-6 px-2 text-[11px] rounded-none border border-y-0 gap-1'
+      } bg-rose-600 hover:bg-rose-500 border-rose-300/50 text-white font-bold`}
+      onClick={confirmAttack}
+      title={`Confirm the attack — ${count} creature${count === 1 ? '' : 's'} across every seat`}
+    >
+      {/* Singular Sword, matching the mark on an attacker in the combat strip.
+          Swords (plural) is Start Combat, sitting right beside this one. */}
+      <Sword className="w-3.5 h-3.5" />
+      <span className={chip ? '' : 'hidden sm:inline'}>Attack</span>
+      <span className="opacity-70 tabular-nums text-[10px]">{count}</span>
+    </Button>
+  );
+}
+
+/**
+ * Everything you can do to your hand as a whole. Mulligan used to be a button
+ * of its own, but it was one of a family — wheels, mass discard and shuffling
+ * back are all the same shape of effect, and Commander leans on them heavily
+ * enough that a goldfish needs to reproduce them.
+ */
+function HandActionsMenu({ onDone }: { onDone: () => void }) {
+  const beginMulligan = usePlaytestStore(s => s.beginMulligan);
+  const freeMulligan = usePlaytestStore(s => s.freeMulligan);
+  const wheel = usePlaytestStore(s => s.wheel);
+  const discardHand = usePlaytestStore(s => s.discardHand);
+  const discardAtRandom = usePlaytestStore(s => s.discardAtRandom);
+  const shuffleHandIntoLibrary = usePlaytestStore(s => s.shuffleHandIntoLibrary);
+  const openModal = usePlaytestStore(s => s.openModal);
+  const handSize = usePlaytestStore(s => s.zones.hand.length);
+  const [randomN, setRandomN] = useState(1);
+
+  const row = 'w-full justify-start text-xs h-8';
+  const run = (fn: () => void) => { fn(); onDone(); };
+
+  /**
+   * Run a discard and fly whatever it took to the graveyard.
+   *
+   * The hand has to be measured first: once the action has run those cards are
+   * gone from the DOM and there is nothing left to fly from. So snapshot every
+   * card's position, let the action report which indices it took, and animate
+   * from the snapshot.
+   */
+  const runDiscard = (discard: () => number[]) => {
+    const boxes = captureHandBoxes();
+    const cards = usePlaytestStore.getState().zones.hand;
+    const taken = discard();
+    if (usePlaytestSettings.getState().animations) {
+      flyHandToZone(taken, 'graveyard', boxes, cards);
+    }
+    onDone();
+  };
+
+  return (
+    <div className="space-y-1">
+      <p className="px-2 pt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">Mulligan</p>
+      <Button variant="ghost" size="sm" className={row} onClick={() => run(beginMulligan)}>
+        <HandIcon className="w-3 h-3 mr-2" />Mulligan
+      </Button>
+      <Button variant="ghost" size="sm" className={`${row} text-muted-foreground`} onClick={() => run(freeMulligan)}
+        title="Reshuffle and draw 7 with no penalty">
+        <RefreshCw className="w-3 h-3 mr-2" />Free mulligan
+      </Button>
+
+      <p className="px-2 pt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">Effects</p>
+      <Button variant="ghost" size="sm" className={row} onClick={() => runDiscard(wheel)}
+        title="Wheel of Fortune, Windfall, Echo of Eons — discard your hand, then draw seven">
+        <Repeat className="w-3 h-3 mr-2" />Wheel · discard, draw 7
+      </Button>
+      <Button variant="ghost" size="sm" className={row} onClick={() => run(shuffleHandIntoLibrary)}
+        disabled={handSize === 0}
+        title="Timetwister, Diminishing Returns — hand back into the library, then redraw that many">
+        <Shuffle className="w-3 h-3 mr-2" />Shuffle back, redraw {handSize}
+      </Button>
+
+      <p className="px-2 pt-1 text-[10px] uppercase tracking-wide text-muted-foreground/70">Discard</p>
+      <div className="flex items-center gap-1 px-1">
+        <Button variant="ghost" size="sm" className="flex-1 justify-start text-xs h-8" disabled={handSize === 0}
+          onClick={() => runDiscard(() => discardAtRandom(randomN))}
+          title="Hymn to Tourach, Mind Twist — chosen at random">
+          <Dices className="w-3 h-3 mr-2" />Discard {randomN} at random
+        </Button>
+        <Input
+          type="number" min={1} max={Math.max(1, handSize)} value={randomN}
+          onChange={(e) => setRandomN(Math.max(1, Math.min(Math.max(1, handSize), Number(e.target.value) || 1)))}
+          className="h-8 w-12 text-xs text-center"
+          aria-label="How many cards to discard at random"
+        />
+      </div>
+      <Button variant="ghost" size="sm" className={row} disabled={handSize <= 7}
+        onClick={() => { onDone(); openModal({ kind: 'handDiscard', down_to: 7 }); }}
+        title="The cleanup step — choose which cards go">
+        <Scissors className="w-3 h-3 mr-2" />Discard down to 7
+      </Button>
+      <Button variant="ghost" size="sm" className={`${row} text-red-400 hover:text-red-300`} disabled={handSize === 0}
+        onClick={() => runDiscard(discardHand)}>
+        <Trash2 className="w-3 h-3 mr-2" />Discard hand ({handSize})
+      </Button>
+    </div>
+  );
+}
+
+type ActionZone = 'library' | 'graveyard' | 'exile';
+
+const ZONE_LABEL: Record<ActionZone, string> = {
+  library: 'Deck',
+  graveyard: 'Graveyard',
+  exile: 'Exile',
+};
+
+/**
+ * Look inside one zone, sized to sit directly above its pile.
+ *
+ * This slot used to be an Actions menu, and the pile under it opened the
+ * viewer on right-click. That was backwards on both counts. Right-click is
+ * where a menu of actions belongs — it is the gesture every other surface in
+ * the playtest already uses for exactly that, and the pile is the thing the
+ * actions act on — which left the button free for the one thing you do to a
+ * zone often enough to want a permanent target for: looking through it.
+ *
+ * Searching a deck is a click now rather than a menu row, and the menu it came
+ * from is one gesture away on the pile below. See `ZoneActionsContextMenu`.
+ */
+export function ZoneSearch({ zone, className = '', compact = false }: {
+  zone: ActionZone;
+  className?: string;
+  /**
+   * Drop the word and show only the icon. Exile's column on the desktop pile
+   * row is half the width of the others by design, so it asks for this.
+   */
+  compact?: boolean;
+}) {
+  const openModal = usePlaytestStore(s => s.openModal);
+  const closeModal = usePlaytestStore(s => s.closeModal);
+  const modal = usePlaytestStore(s => s.modal);
+  const count = usePlaytestStore(s => s.zones[zone].length);
+
+  // Desktop-only: a phone reaches the viewer through the hand toolbar's
+  // Actions menu, which mounts the same <ZoneActionsMenu /> a level down.
+  const btn = 'relative h-6 px-1.5 text-[11px] rounded-none border-y-0 focus-visible:z-10 hover:z-10';
+  const { Icon, label, title } = ZONE_SEARCH[zone];
+  const iconOnly = compact;
+  const open = modal?.kind === 'zoneViewer' && modal.zone === zone;
+
+  return (
+    <div className={`flex items-center [&>*+*]:-ml-px ${className}`}>
+      <Button
+        // Pressed state, because this opens a dialog that stays open: the
+        // button is the way back out of it, exactly as it is the way in.
+        variant={open ? 'default' : 'outline'}
+        size="sm"
+        className={`${btn} ${iconOnly ? 'w-full px-0 justify-center' : 'flex-1 min-w-0'}`}
+        // Still live while the viewer is open, even if the zone has since been
+        // emptied: this button is the way back out of the dialog it opened.
+        disabled={count === 0 && !open}
+        title={`${title} (${count})`}
+        aria-label={`${title} (${count})`}
+        aria-pressed={open}
+        onClick={() => open ? closeModal() : openModal({ kind: 'zoneViewer', zone })}
+      >
+        <Icon className={`w-3 h-3 shrink-0 ${iconOnly ? '' : 'mr-1'}`} />
+        {!iconOnly && <span className="truncate">{label}</span>}
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * The verb differs by zone and the button should say which it means. You
+ * *search* a deck — the cards are hidden and you are hunting a specific one,
+ * which is what a tutor does. You *look through* a graveyard: it is public
+ * information, already face up, and nothing is being found that wasn't already
+ * visible.
+ */
+const ZONE_SEARCH: Record<ActionZone, { Icon: typeof Layers; label: string; title: string }> = {
+  library:   { Icon: Search, label: 'Search', title: 'Search your deck' },
+  graveyard: { Icon: Eye,    label: 'View',   title: 'Look through your graveyard' },
+  exile:     { Icon: Eye,    label: 'View',   title: 'Look through exile' },
+};
+
+/**
+ * One zone's actions, opened by right-clicking its pile.
+ *
+ * It mounts the same `<ZoneActionsMenu />` the phone toolbar does rather than a
+ * hand-written list of `MenuItem`s, which is the whole point: a new graveyard
+ * action lands on the desktop right-click, the phone menu and nothing else has
+ * to be remembered. The shell is narrower than the popover was only in that it
+ * carries its own padding, so the N picker still fits on one row.
+ */
+export function ZoneActionsContextMenu({ zone, x, y, onClose }: {
+  zone: ActionZone;
+  x: number;
+  y: number;
+  onClose: () => void;
+}) {
+  return (
+    <ContextMenuShell x={x} y={y} width={224} onClose={onClose}>
+      <div className="px-2 pb-2 pt-1">
+        <p className="px-0.5 pb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+          {ZONE_LABEL[zone]}
+        </p>
+        <ZoneActionsMenu zone={zone} onDone={onClose} />
+      </div>
+    </ContextMenuShell>
+  );
+}
+
+/**
+ * The body of one zone's menu, with no opinion about what opened it.
+ *
+ * Two things mount it: the button on the pile (desktop) and the hand
+ * toolbar's Actions menu (phone). Keeping it one component is what stops the
+ * two from drifting — a new graveyard action should never be on a desktop
+ * pile but missing from the phone.
+ */
+export function ZoneActionsMenu({ zone, onDone }: { zone: ActionZone; onDone: () => void }) {
+  const draw = usePlaytestStore(s => s.draw);
+  const openModal = usePlaytestStore(s => s.openModal);
+  const emptyZoneInto = usePlaytestStore(s => s.emptyZoneInto);
+  const shufflePile = usePlaytestStore(s => s.shufflePile);
+  const libraryRevealed = usePlaytestStore(s => s.libraryRevealed);
+  const toggleLibraryRevealed = usePlaytestStore(s => s.toggleLibraryRevealed);
+  const count = usePlaytestStore(s => s.zones[zone].length);
+
+  // One amount drives every deck action — pick N once, then choose what to do
+  // with it. Draw keeps the menu open so you can tap it repeatedly; the
+  // scry/surveil/mill actions open a modal, so the menu gets out of the way.
+  const [deckN, setDeckN] = useState(1);
+
+  const row = 'w-full justify-start text-xs h-8';
+  const run = (fn: () => void) => { fn(); onDone(); };
+
+  if (zone === 'library') {
+    return (
+      <div className="space-y-2">
+        <ScryNPicker value={deckN} onChange={setDeckN} />
+        <div className="space-y-1">
+          <Button variant="ghost" size="sm" className={row} onClick={() => draw(deckN)}><Plus className="w-3 h-3 mr-2" />Draw {deckN}</Button>
+          <Button variant="ghost" size="sm" className={row} onClick={() => run(() => openModal({ kind: 'scry', n: deckN }))}><Eye className="w-3 h-3 mr-2" />Scry {deckN}</Button>
+          <Button variant="ghost" size="sm" className={row} onClick={() => run(() => openModal({ kind: 'surveil', n: deckN }))}><BookOpen className="w-3 h-3 mr-2" />Surveil {deckN}</Button>
+          <Button variant="ghost" size="sm" className={row} onClick={() => run(() => openModal({ kind: 'mill', n: deckN }))}><Trash2 className="w-3 h-3 mr-2" />Mill {deckN}</Button>
+          {/* Everything above answers to the N picker; everything below
+              ignores it. The rule says so rather than the reader having
+              to notice which rows carry a number. */}
+          <div className="h-px bg-border/60 my-1" />
+          <Button variant="ghost" size="sm" className={row} onClick={() => run(() => shufflePile('library'))}><Shuffle className="w-3 h-3 mr-2" />Shuffle</Button>
+          {/* A mode, not an action: it stays on until you turn it off, so it
+              keeps the menu open and reads its own state back to you. */}
+          <Button
+            variant="ghost" size="sm"
+            className={`${row} ${libraryRevealed ? 'text-blue-300 hover:text-blue-200' : ''}`}
+            aria-pressed={libraryRevealed}
+            onClick={toggleLibraryRevealed}
+            title="Future Sight, Oracle of Mul Daya, Vizier of the Menagerie">
+            <Eye className="w-3 h-3 mr-2" />Top card revealed
+            <span className={`ml-auto text-[10px] font-medium ${libraryRevealed ? 'text-blue-300' : 'text-muted-foreground'}`}>
+              {libraryRevealed ? 'On' : 'Off'}
+            </span>
+          </Button>
+          <Button variant="ghost" size="sm" className={row} disabled={count === 0}
+            onClick={() => run(() => openModal({ kind: 'zoneViewer', zone: 'library' }))}
+            title="Demonic Tutor, Rampant Growth, any fetch">
+            <Search className="w-3 h-3 mr-2" />Search deck ({count})
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <Button variant="ghost" size="sm" className={row} disabled={count === 0}
+        onClick={() => run(() => openModal({ kind: 'zoneViewer', zone }))}>
+        <Eye className="w-3 h-3 mr-2" />View {ZONE_LABEL[zone].toLowerCase()} ({count})
+      </Button>
+      <Button variant="ghost" size="sm" className={row} disabled={count === 0}
+        onClick={() => run(() => emptyZoneInto(zone, 'library', { shuffle: true }))}
+        title="Elixir of Immortality, Gaea's Blessing">
+        <Shuffle className="w-3 h-3 mr-2" />Shuffle into library
+      </Button>
+      <Button variant="ghost" size="sm" className={row} disabled={count === 0}
+        onClick={() => run(() => emptyZoneInto(zone, 'hand'))}>
+        <HandIcon className="w-3 h-3 mr-2" />Return all to hand
+      </Button>
+      {zone === 'graveyard' && (
+        <Button variant="ghost" size="sm" className={row} disabled={count === 0}
+          onClick={() => run(() => emptyZoneInto('graveyard', 'exile'))}
+          title="Tormod's Crypt, Bojuka Bog, Rest in Peace">
+          <Sparkles className="w-3 h-3 mr-2" />Exile graveyard
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Steps into the combat phase, which is what opens the attack zones in front
+ * of each opponent. Toggles: pressing it again backs out and untaps anything
+ * you'd already declared.
+ *
+ * Once your combat has resolved it stops being a toggle and becomes a phase
+ * readout: combat happens once a turn, so the button grays out and says you're
+ * in your second main phase rather than offering an attack you can't make.
+ *
+ * Sits beside Next Turn because that's the other button that moves the game
+ * forward a beat, and combat is the beat before the turn ends.
+ */
+export function CombatButton({ chip = false }: { chip?: boolean }) {
+  const opponentCount = useOpponentStore(s => s.opponents.length);
+  const combatPhase = useOpponentStore(s => s.combatPhase);
+  const enterCombat = useOpponentStore(s => s.enterCombat);
+  const exitCombat = useOpponentStore(s => s.exitCombat);
+  const combat = useOpponentStore(s => s.combat);
+  const playerCombat = useOpponentStore(s => s.playerCombat);
+  const botsRunning = useOpponentStore(s => s.running);
+  const combatDone = useOpponentStore(s => s.combatDone);
+
+  // Nothing to attack, so nothing to offer.
+  if (opponentCount === 0) return null;
+
+  // Their combat owns the strips while it's open, and a confirmed attack of
+  // yours is already past the point of backing out. Past your own combat, the
+  // turn has no second one to step into.
+  const blocked = botsRunning || !!combat || !!playerCombat || combatDone;
+
+  return (
+    <Button
+      size="sm"
+      disabled={blocked}
+      className={`${chip ? CHIP : 'h-8 md:h-6 px-2 text-[11px] rounded-none border border-y-0 gap-1'} ${
+        combatDone
+          ? 'bg-muted/40 border-border/60 text-muted-foreground'
+        : combatPhase
+          ? 'bg-violet-500/25 border-violet-400/60 text-violet-100'
+          : 'bg-primary/15 hover:bg-primary/25 border-primary/40 text-primary-foreground/90'
+      }`}
+      onClick={() => (combatPhase ? exitCombat() : enterCombat())}
+      title={
+        combatDone   ? "Combat is over — you're in your second main phase"
+      : blocked      ? 'Finish the combat already in progress'
+      : combatPhase  ? 'Leave combat — anything you declared is untapped and forgotten'
+      :                'Go to combat: open the attack zone in front of each opponent'
+      }
+    >
+      <Swords className="w-3.5 h-3.5" />
+      <span className={chip ? '' : 'hidden sm:inline'}>
+        {combatDone ? 'Main Phase 2' : combatPhase ? 'End Combat' : 'Start Combat'}
+      </span>
+    </Button>
+  );
+}
+
+export function NextTurnButton({ chip = false }: { chip?: boolean }) {
+  const turn = usePlaytestStore(s => s.turn);
+  const opponentCount = useOpponentStore(s => s.opponents.length);
+  const combat = useOpponentStore(s => s.combat);
+  const botsRunning = useOpponentStore(s => s.running);
+  const autoTurns = usePlaytestSettings(s => s.opponentAutoTurns);
+  // The same predicate advanceTurn checks before it does anything, subscribed to
+  // here so the button greys out the moment it would start refusing clicks.
+  const blocked = useOpponentStore(isTurnBlocked);
+
+  return (
+    <Button
+      size="sm"
+      disabled={blocked}
+      className={`${chip ? CHIP : 'h-8 md:h-6 px-2 text-[11px] rounded-none border border-y-0 gap-1'} ${
+        combat
+          ? 'bg-rose-500/15 border-rose-400/50 text-rose-200'
+          : 'bg-primary/15 hover:bg-primary/25 border-primary/40 text-primary-foreground/90'
+      }`}
+      onClick={() => void advanceTurn()}
+      title={
+        combat        ? 'Resolve combat before taking your next turn'
+      : botsRunning   ? 'Waiting for the opponents to finish their turn'
+      : opponentCount > 0 && autoTurns
+          ? `Let ${opponentCount} opponent${opponentCount === 1 ? '' : 's'} take their turn, then start your turn ${turn + 1}`
+          : 'Advance to the next turn and draw a card'
+      }
+    >
+      <SkipForward className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+      {combat ? (
+        <span>Blocking…</span>
+      ) : (
+        <>
+          {!chip && <span className="sm:hidden">Turn</span>}
+          <span className={chip ? '' : 'hidden sm:inline'}>Next Turn</span>
+          <span className="opacity-60 tabular-nums text-[10px]">{turn}</span>
+        </>
+      )}
+    </Button>
+  );
+}
+
+
+const SCRY_PRESETS = [1, 2, 3, 5];
+
+function ScryNPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const [custom, setCustom] = useState(!SCRY_PRESETS.includes(value));
+  return (
+    <div className="flex items-center gap-1">
+      {SCRY_PRESETS.map(n => (
+        <Button
+          key={n}
+          variant={!custom && value === n ? 'default' : 'outline'}
+          size="sm"
+          className="h-7 w-8 p-0 text-xs"
+          onClick={() => { setCustom(false); onChange(n); }}
+        >
+          {n}
+        </Button>
+      ))}
+      {custom ? (
+        <Input
+          type="number"
+          min={1}
+          max={99}
+          value={value}
+          autoFocus
+          onChange={(e) => {
+            const n = Math.max(1, Math.min(99, Number(e.target.value) || 1));
+            onChange(n);
+          }}
+          className="h-7 w-12 px-1 text-xs"
+        />
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 w-8 p-0 text-xs"
+          onClick={() => setCustom(true)}
+          title="Custom amount"
+        >
+          X
+        </Button>
+      )}
+    </div>
+  );
+}

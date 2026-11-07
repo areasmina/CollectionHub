@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta name='impact-site-verification' value='b9cd8ea5-aca4-4697-9f4e-283e394244ef'>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/logo.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ManaFoundry — EDH Deck Builder</title>
+    <meta
+      name="description"
+      content="Free Commander deck builder. Pick a commander and get a complete, optimized EDH deck in one click — powered by EDHREC data, with budget, bracket, and collection controls."
+    />
+    <link rel="canonical" href="https://manafoundry.gg/" />
+    <meta name="theme-color" content="#2b7bce" />
+
+    <!-- Open Graph (Discord, Facebook, Slack, ...) -->
+    <meta property="og:site_name" content="ManaFoundry" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ManaFoundry — EDH Deck Builder" />
+    <meta
+      property="og:description"
+      content="Pick a commander, get a complete optimized EDH deck in one click. Powered by EDHREC data — budget, bracket, and collection aware."
+    />
+    <meta property="og:url" content="https://manafoundry.gg/" />
+    <meta property="og:image" content="https://manafoundry.gg/og-banner.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="ManaFoundry — Casting smarter Commander decks" />
+
+    <!-- Twitter card (also controls large-image layout in Discord) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ManaFoundry — EDH Deck Builder" />
+    <meta
+      name="twitter:description"
+      content="Pick a commander, get a complete optimized EDH deck in one click. Powered by EDHREC data — budget, bracket, and collection aware."
+    />
+    <meta name="twitter:image" content="https://manafoundry.gg/og-banner.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "ManaFoundry",
+        "url": "https://manafoundry.gg/",
+        "description": "Free Commander (EDH) deck builder that generates a complete, optimized deck for any commander in one click, powered by EDHREC data.",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Saira+Condensed:wght@500;600;700&family=Saira:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- GitHub Pages SPA redirect handler -->
+    <script>
+      (function(l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function(s) {
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          window.history.replaceState(null, null,
+            l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location))
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

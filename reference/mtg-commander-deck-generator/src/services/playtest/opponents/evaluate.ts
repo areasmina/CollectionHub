@@ -1,0 +1,639 @@
+import type { ScryfallCard } from '@/types';
+import type { Combatant } from '@/services/playtest/combat';
+import { costOf, lookupEffect, type BotEffectSpec, type GrantedToken, type TargetRestriction } from '@/services/playtest/opponents/effects';
+
+/** One of the player's battlefield cards, flattened to what a bot cares about. */
+export interface PlayerCardRead {
+  instanceId: string;
+  name: string;
+  isCreature: boolean;
+  isArtifact: boolean;
+  /** Optional so older callers and the diagnostic's scripted board need not set it. */
+  isLand?: boolean;
+  /** For Casualties of War's one-of-each, and Bane of Progress. Optional like `isLand`. */
+  isEnchantment?: boolean;
+  isPlaneswalker?: boolean;
+  /** Mana value, for Despark's "4 or greater". Absent reads as zero. */
+  cmc?: number;
+  power: number;
+  toughness: number;
+  isCommander: boolean;
+  /** Set when this card is a piece of a combo that's live or one card away. */
+  comboId: string | null;
+  /**
+   * Untargetable — printed hexproof or shroud, or granted either. A bot that
+   * points a Murder at one has thrown the card away, so targeted effects skip
+   * these entirely rather than scoring them low.
+   *
+   * Optional because the diagnostic's scripted boards and the older tests
+   * build these by hand; absent means "no protection", which is the common case.
+   */
+  hexproof?: boolean;
+  /** Survives "destroy" and lethal damage. Exile, edicts and -X/-X still get it. */
+  indestructible?: boolean;
+  /**
+   * WUBRG letters, as Scryfall prints them. Empty or absent is colourless —
+   * which is a colour answer, not a missing one, so "nonblack" accepts it.
+   *
+   * Only the restricted removal reads this. It exists because a bot aiming
+   * Doom Blade at a black creature is not playing badly, it is playing a card
+   * that does not exist.
+   */
+  colors?: string[];
+}
+
+export interface PlayerBoardRead {
+  cards: PlayerCardRead[];
+  life: number;
+  handSize: number;
+  /**
+   * The player's untapped creatures, as combatants. Attack decisions need
+   * keywords and live P/T, which `PlayerCardRead` deliberately does not carry —
+   * it exists for targeting, where a name and a power are enough.
+   */
+  untappedCreatures: Combatant[];
+  /** Whose board this is: absent/null for the player, a seat id for a rival bot. */
+  seatId?: string | null;
+  /** For logs and the stack label — "you" for the player. */
+  seatName?: string;
+}
+
+/** What the bot decided to do to the player. Small on purpose — the store applies it. */
+export interface AppliedEffect {
+  /** Player battlefield instanceIds to remove. */
+  destroy: string[];
+  destination: 'graveyard' | 'exile';
+  lifeLoss: number;
+  /**
+   * Life the CASTER gains — credited by the store to the seat that cast this,
+   * never to the board it landed on.
+   *
+   * A drain is two events in one sentence: "each opponent loses X life AND YOU
+   * GAIN THAT MUCH". Only the loss was modelled, which quietly turned every
+   * Gray Merchant, Plague Belcher and Scarab God into a damage spell — a bot
+   * could drain you for eight from four life and still be at four.
+   *
+   * Separate from `lifeLoss` because the two are not the same number on every
+   * card, and because the loss is billed to the victim while this is paid to
+   * someone who may not be on the board the effect hit.
+   */
+  lifeGain?: number;
+  /** Cards to discard at random from the player's hand. */
+  discard: number;
+  /**
+   * A token the VICTIM creates for each permanent removed — Beast Within's
+   * Beast, Terastodon's Elephants. The drawback half of those cards, and the
+   * half that decides whether they are worth casting: a 3/3 handed back for
+   * a basic land is a bad trade, and a bot that skipped it was playing a
+   * better card than the one it holds. A description rather than a card: the
+   * token is looked up in the caster's own pool at the moment it lands.
+   */
+  grants?: GrantedToken;
+  /** Life the VICTIM gains — Swords to Plowshares. */
+  victimGain?: number;
+  /**
+   * The game is over. Set by a combo whose outcome is simply "you lose" rather
+   * than a number — an Oracle on an empty library does not deal damage, it
+   * wins. Kept separate from a huge `lifeLoss` so the log reads honestly.
+   */
+  lethal?: boolean;
+  /**
+   * Set when the effect lands on a rival bot's board rather than yours. The
+   * store applies these directly; only effects aimed at you go on the stack.
+   */
+  target?: { seatId: string; name: string };
+}
+
+/** "a Beast token", "an Elephant token", "3 Elephant tokens". */
+export function tokenPhrase(count: number, name: string): string {
+  if (count > 1) return `${count} ${name} tokens`;
+  return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name} token`;
+}
+
+/**
+ * A few words on what an effect does, for the stack panel.
+ *
+ * Built from the resolved effect rather than from the spec that made it, so the
+ * one function covers a cast spell, an activated ability, a recurring trigger
+ * and a combo payoff alike. `target` is the phrase `resolveEffect` already
+ * returns — a card name for spot removal, "3 creatures" for a wrath.
+ */
+export function describeEffect(effect: AppliedEffect, target: string): string {
+  if (effect.lethal) return 'You lose the game';
+  if (effect.destroy.length > 0) {
+    const verb = effect.destination === 'exile' ? 'Exiles' : 'Destroys';
+    // The price on the stack, because it changes the answer: a Beast Within on
+    // your Sol Ring is a trade, not a loss.
+    const n = effect.destroy.length;
+    const back = effect.grants
+      ? ` · you get ${tokenPhrase(n, effect.grants.name)}`
+      : effect.victimGain
+        ? ` · you gain ${effect.victimGain} life`
+        : '';
+    return `${verb} ${target}${back}`;
+  }
+  if (effect.discard > 0) {
+    return `You discard ${effect.discard} card${effect.discard > 1 ? 's' : ''}`;
+  }
+  if (effect.lifeLoss > 0) {
+    // Naming the gain matters on the stack: whether to counter a Gray Merchant
+    // is a different question at 12 life against a bot on 3 than it is if the
+    // swing is one-way.
+    return effect.lifeGain
+      ? `You lose ${effect.lifeLoss} life, they gain ${effect.lifeGain}`
+      : `You lose ${effect.lifeLoss} life`;
+  }
+  // Nothing was aimed at you and they got life out of it — Deathrite Shaman's
+  // green mode. Worth a line: it is the difference between a bot that is
+  // stabilising and one that did nothing this turn.
+  if (effect.lifeGain) return `They gain ${effect.lifeGain} life`;
+  return 'No effect';
+}
+
+export interface CastDecision {
+  handIndex: number;
+  card: ScryfallCard;
+  /** Null for a plain permanent with no scripted behaviour. */
+  effect: AppliedEffect | null;
+  /** Shown in the game log so the bot's thinking is visible. */
+  reason: string;
+  /** What it is pointed at, as `resolveEffect` phrases it. For the stack. */
+  target: string;
+  /** ETB permanents stay on the bot's board; instants and sorceries don't. */
+  staysOnBattlefield: boolean;
+  /** Rival copies of a sweeper, applied alongside `effect`. */
+  extra: AppliedEffect[];
+}
+
+/** An effect that does nothing to the player. Also the shape of a stack item
+ *  that exists only so you get a window — see `StackItem.arrived`. */
+export const EMPTY: AppliedEffect = { destroy: [], destination: 'graveyard', lifeLoss: 0, discard: 0 };
+
+function creatures(board: PlayerBoardRead) {
+  return board.cards.filter(c => c.isCreature);
+}
+
+/**
+ * The two protections a bot has to read before it spends a card, and the
+ * reason they are separate predicates: they fail differently.
+ *
+ * Hexproof stops the spell from being cast at all — there is no legal target,
+ * so the bot must look elsewhere or hold the card. Indestructible lets the
+ * spell resolve and do nothing, which only some effects care about: exile,
+ * an edict and a -X/-X sweeper all still get the creature.
+ */
+const targetable = (c: PlayerCardRead) => !c.hexproof;
+const destructible = (c: PlayerCardRead) => !c.indestructible;
+/** What a plain "destroy target creature" can actually answer. */
+const killable = (c: PlayerCardRead) => targetable(c) && destructible(c);
+
+/**
+ * The printed "target ..." clause, as a predicate.
+ *
+ * Narrower than the protection checks above and for a different reason: those
+ * are about what the spell would accomplish, this is about whether it may be
+ * cast at all. A bot with nothing else to point a Doom Blade at holds it, the
+ * same way it holds one against a board of hexproof.
+ */
+const allowedBy = (r: TargetRestriction | undefined) => (c: PlayerCardRead) => {
+  if (!r) return true;
+  // Colourless satisfies every "non<colour>" clause, so an absent list passes.
+  if (r.notColors?.some(col => (c.colors ?? []).includes(col))) return false;
+  if (r.notArtifact && c.isArtifact) return false;
+  if (r.maxTotalPT !== undefined && c.power + c.toughness > r.maxTotalPT) return false;
+  if (r.noncreature && c.isCreature) return false;
+  if (r.nonland && c.isLand) return false;
+  if (r.onlyArtifact && !c.isArtifact) return false;
+  if (r.minManaValue !== undefined && (c.cmc ?? 0) < r.minManaValue) return false;
+  return true;
+};
+
+/**
+ * Biggest by power, commander breaking ties — commanders are the scarier card.
+ *
+ * `usable` narrows it to the creatures the effect asking could actually do
+ * something to. Without it a bot reads an indestructible 8/8 as the obvious
+ * target every turn and never answers the 6/6 standing next to it.
+ */
+function biggestCreature(
+  board: PlayerBoardRead,
+  usable: (c: PlayerCardRead) => boolean = () => true,
+): PlayerCardRead | null {
+  const list = creatures(board).filter(usable);
+  if (list.length === 0) return null;
+  return [...list].sort((a, b) =>
+    b.power - a.power || Number(b.isCommander) - Number(a.isCommander),
+  )[0];
+}
+
+/**
+ * A piece of a combo that's live or one card away, and only when at least two
+ * pieces are already on the table — otherwise every removal spell in the deck
+ * would chase a combo that's nowhere near assembling.
+ */
+function comboPieceToBreak(
+  board: PlayerBoardRead,
+  usable: (c: PlayerCardRead) => boolean = () => true,
+): PlayerCardRead | null {
+  const byCombo = new Map<string, PlayerCardRead[]>();
+  for (const c of board.cards) {
+    if (!c.comboId) continue;
+    const list = byCombo.get(c.comboId) ?? [];
+    list.push(c);
+    byCombo.set(c.comboId, list);
+  }
+  let best: PlayerCardRead | null = null;
+  for (const pieces of byCombo.values()) {
+    // Counted BEFORE `usable` narrows it: whether a combo is close to firing is
+    // a fact about the board, not about what this spell can touch. Filtering
+    // first would mean a hexproof half of a two-card combo hid the other half,
+    // and the bot would ignore the line it could actually have broken.
+    if (pieces.length < 2) continue;
+    // Prefer a creature: it's the piece most removal can actually answer.
+    const answerable = pieces.filter(usable);
+    const pick = answerable.find(p => p.isCreature) ?? answerable[0];
+    if (!pick) continue;
+    if (!best || pick.power > best.power) best = pick;
+  }
+  return best;
+}
+
+/**
+ * Which of the player's permanents this spec would hit, and what it costs them.
+ *
+ * `scale` multiplies the amounts on the effects that count something the bot
+ * controls — The Scarab God drains per Zombie, and only the caller can see the
+ * bot's own board.
+ */
+export function resolveEffect(
+  spec: BotEffectSpec,
+  board: PlayerBoardRead,
+  scale = 1,
+): { effect: AppliedEffect; target: string } | null {
+  switch (spec.kind) {
+    case 'destroyCreature':
+    case 'exileCreature': {
+      // Exile answers an indestructible creature; destroy does not.
+      const answers = spec.kind === 'exileCreature' ? targetable : killable;
+      // ...and on top of that, whatever the card's own targeting clause allows.
+      const legal = allowedBy(spec.restrict);
+      const usable = (c: PlayerCardRead) => answers(c) && legal(c);
+      const target = comboPieceToBreak(board, usable) ?? biggestCreature(board, usable);
+      if (!target) return null;
+      return {
+        effect: {
+          ...EMPTY,
+          destroy: [target.instanceId],
+          destination: spec.kind === 'exileCreature' ? 'exile' : 'graveyard',
+          victimGain: spec.kind === 'exileCreature' && spec.victimGainsPower
+            ? Math.max(0, target.power)
+            : undefined,
+        },
+        target: target.name,
+      };
+    }
+    case 'destroyPermanent': {
+      // Exile answers an indestructible permanent; destroy does not — and on
+      // top of that, whatever the card's own targeting clause allows.
+      const answers = spec.exile ? targetable : killable;
+      const legal = allowedBy(spec.restrict);
+      const usable = (c: PlayerCardRead) => answers(c) && legal(c);
+      const pool = board.cards.filter(usable);
+
+      // In the order a player reaches for them: a combo piece, the biggest
+      // creature, an artifact, then any other nonland permanent. Lands are
+      // kept out of this list on purpose — a Beast Within on a basic is a
+      // wasted card, and `cards[0]` was very often a land.
+      const seen = new Set<string>();
+      const ranked: PlayerCardRead[] = [];
+      const consider = (c: PlayerCardRead | null | undefined) => {
+        if (c && !seen.has(c.instanceId)) { seen.add(c.instanceId); ranked.push(c); }
+      };
+      consider(comboPieceToBreak(board, usable));
+      [...creatures(board).filter(usable)]
+        .sort((a, b) => b.power - a.power || Number(b.isCommander) - Number(a.isCommander))
+        .forEach(consider);
+      pool.filter(c => c.isArtifact).forEach(consider);
+      pool.filter(c => !c.isLand && !c.isCreature).forEach(consider);
+      const lands = pool.filter(c => c.isLand);
+
+      let picks: PlayerCardRead[];
+      if (spec.eachType) {
+        // Casualties of War: one target per type, each the best of its kind.
+        // A card wearing two types is still one target, so it is taken once.
+        const taken = new Set<string>();
+        const one = (of: (c: PlayerCardRead) => boolean) => {
+          const hit = [...ranked, ...lands].find(c => of(c) && !taken.has(c.instanceId));
+          if (hit) taken.add(hit.instanceId);
+          return hit;
+        };
+        picks = [
+          one(c => c.isArtifact), one(c => c.isCreature), one(c => !!c.isEnchantment),
+          one(c => !!c.isLand), one(c => !!c.isPlaneswalker),
+        ].filter((c): c is PlayerCardRead => !!c);
+      } else {
+        picks = ranked.slice(0, spec.count ?? 1);
+        // A land only when there is nothing else at all, and only ever one —
+        // even for a Terastodon that could legally take three. Handing out
+        // three Elephants for three basics is not a play anyone makes.
+        if (picks.length === 0 && lands.length > 0) picks = [lands[0]];
+      }
+      if (picks.length === 0) return null;
+      return {
+        effect: {
+          ...EMPTY,
+          destroy: picks.map(c => c.instanceId),
+          destination: spec.exile ? 'exile' : 'graveyard',
+          grants: spec.grants,
+        },
+        target: picks.map(c => c.name).join(', '),
+      };
+    }
+    case 'boardWipe': {
+      // A -X/-X sweeper only kills what it is big enough to kill — but it gets
+      // an indestructible creature, because the creature dies to having zero
+      // toughness rather than to being destroyed. A plain wrath does not.
+      const cap = spec.maxToughness;
+      const list = creatures(board).filter(c =>
+        cap === undefined ? destructible(c) : c.toughness <= cap);
+      if (list.length === 0) return null;
+      return {
+        effect: { ...EMPTY, destroy: list.map(c => c.instanceId) },
+        target: `${list.length} creature${list.length > 1 ? 's' : ''}`,
+      };
+    }
+    case 'artifactSweep': {
+      const list = board.cards.filter(c => c.isArtifact && destructible(c));
+      if (list.length === 0) return null;
+      return {
+        effect: { ...EMPTY, destroy: list.map(c => c.instanceId) },
+        target: `${list.length} artifact${list.length > 1 ? 's' : ''}`,
+      };
+    }
+    case 'edict': {
+      const list = creatures(board);
+      if (list.length === 0) return null;
+      // The player chooses what to sacrifice, so they'd give up their worst.
+      // Nothing is skipped here on purpose: a sacrifice is the answer that
+      // goes through hexproof and indestructible alike, which is exactly why
+      // an edict is the right card against a board full of them.
+      const worst = [...list].sort((a, b) => a.power - b.power)[0];
+      return { effect: { ...EMPTY, destroy: [worst.instanceId] }, target: worst.name };
+    }
+    case 'damage': {
+      const amount = spec.amount * scale;
+      // Prefer a creature it can actually kill; otherwise it goes upstairs.
+      // Damage is targeted and damage is what indestructible shrugs off, so
+      // this is the one case where both protections rule a creature out.
+      const victim = creatures(board)
+        .filter(c => killable(c) && c.toughness > 0 && c.toughness <= amount)
+        .sort((a, b) => b.power - a.power)[0];
+      if (victim) {
+        return { effect: { ...EMPTY, destroy: [victim.instanceId] }, target: victim.name };
+      }
+      // "Target creature" burn has nowhere else to go: with nothing it can
+      // kill, the card stays in hand rather than being pointed at your face.
+      if (spec.creatureOnly) return null;
+      return { effect: { ...EMPTY, lifeLoss: amount }, target: 'you' };
+    }
+    case 'drain': {
+      const amount = spec.amount * scale;
+      // A scaled drain with nothing to count does nothing, and a bot should not
+      // pay for it — an upkeep Scarab God trigger on an empty board is silent.
+      if (amount <= 0) return null;
+      // Both halves, unless the card only prints one. What separates a drain
+      // from `damage` above is precisely that the caster gains it back, so the
+      // two cases would otherwise be the same code — and for a while they were
+      // the same behaviour.
+      return {
+        effect: { ...EMPTY, lifeLoss: amount, lifeGain: spec.noGain ? undefined : amount },
+        target: 'you',
+      };
+    }
+    case 'gainLife':
+      // Nobody is targeted, so every board resolves it identically and
+      // `pickTarget` lands on the player's — which leaves the effect with no
+      // `target`, and the store credits the life to whoever activated it.
+      return { effect: { ...EMPTY, lifeGain: spec.amount }, target: 'themselves' };
+    case 'discard':
+      if (board.handSize === 0) return null;
+      return { effect: { ...EMPTY, discard: spec.count }, target: 'your hand' };
+  }
+}
+
+/**
+ * Resolve a spec against every seat and return the hit worth taking.
+ *
+ * Bots aimed every Murder at the human even when a rival had a 6/6 and an
+ * armed combo on board — three resistance bots meant every removal spell in
+ * the pod pointed one way. A hit is scored by what it costs the victim: a
+ * combo piece is worth everything, a commander a lot, then raw power, then
+ * life and cards. The player keeps a thumb on the scale — this is their
+ * playtest — so an exact tie still goes to them.
+ */
+export function pickTarget(
+  spec: BotEffectSpec,
+  boards: PlayerBoardRead[],
+  scale = 1,
+): { effect: AppliedEffect; target: string } | null {
+  let best: { effect: AppliedEffect; target: string; board: PlayerBoardRead } | null = null;
+  let bestScore = -Infinity;
+  for (const board of boards) {
+    const hit = resolveEffect(spec, board, scale);
+    if (!hit) continue;
+    const victims = hit.effect.destroy
+      .map(id => board.cards.find(c => c.instanceId === id))
+      .filter((c): c is PlayerCardRead => !!c);
+    const score = victims.reduce((n, c) => n + Math.max(1, c.power) + (c.isCommander ? 4 : 0) + (c.comboId ? 100 : 0), 0)
+      + hit.effect.lifeLoss
+      + hit.effect.discard * 2
+      + (board.seatId ? 0 : 1);
+    if (score > bestScore) { bestScore = score; best = { ...hit, board }; }
+  }
+  if (!best) return null;
+  if (!best.board.seatId) return { effect: best.effect, target: best.target };
+  const name = best.board.seatName ?? 'a rival';
+  return {
+    effect: { ...best.effect, target: { seatId: best.board.seatId, name } },
+    target: `${name}'s ${best.target}`,
+  };
+}
+
+/**
+ * A sweeper hits every seat, and so does "each opponent loses 2 life". One
+ * effect per board it does anything to, the player's first, rival copies
+ * carrying their `target`.
+ */
+export function resolveEverywhere(
+  spec: BotEffectSpec,
+  boards: PlayerBoardRead[],
+  scale = 1,
+): { effect: AppliedEffect; target: string }[] {
+  const out: { effect: AppliedEffect; target: string }[] = [];
+  for (const board of boards) {
+    const hit = resolveEffect(spec, board, scale);
+    if (!hit) continue;
+    if (board.seatId) {
+      const name = board.seatName ?? 'a rival';
+      out.push({ effect: { ...hit.effect, target: { seatId: board.seatId, name } }, target: `${name}'s ${hit.target}` });
+    } else {
+      out.push(hit);
+    }
+  }
+  return out;
+}
+
+export const isSweep = (spec: BotEffectSpec) => spec.kind === 'boardWipe' || spec.kind === 'artifactSweep';
+
+/** How much of a problem the player's board is, relative to the bot's own. */
+function threatScore(board: PlayerBoardRead, botPower: number): number {
+  const list = creatures(board);
+  const power = list.reduce((sum, c) => sum + c.power, 0);
+  if (comboPieceToBreak(board)) return 100;                 // a live combo trumps everything
+  if (list.length >= 3 && power >= botPower * 2) return 80;  // they're running away with it
+  if (power >= 6) return 50;
+  if (list.length > 0) return 25;
+  return 0;
+}
+
+export interface ResistanceContext {
+  hand: ScryfallCard[];
+  mana: number;
+  /**
+   * What a card costs with the bot's board as it stands. Supplied by the engine
+   * so a cost reducer applies to interaction too — without it a Goblin Warchief
+   * discounted creatures and nothing else.
+   */
+  costFor?: (card: ScryfallCard) => number;
+  /**
+   * The multiplier on a scaled effect — Gray Merchant's devotion, The Scarab
+   * God's zombies. Supplied by the engine because only it can see the bot's own
+   * board, and it takes the card so a source can count itself.
+   */
+  scaleFor?: (spec: BotEffectSpec, card: ScryfallCard) => number;
+  board: PlayerBoardRead;
+  botPower: number;
+  turn: number;
+  /** 0..1 — higher fires interaction sooner and on smaller threats. */
+  aggression: number;
+  /**
+   * The bot's own creatures, as the two facts a wrath cares about. A wrath that
+   * kills more of its board than yours is a bad wrath, and without this it
+   * cannot tell — and a board of indestructible creatures makes a plain wrath
+   * one-sided in the bot's favour, which is a reason to cast it, not to hold it.
+   *
+   * Plain toughness values are still accepted so the older callers and the
+   * diagnostic's scripted boards need not be rewritten.
+   */
+  botCreatureToughness: (number | { toughness: number; indestructible?: boolean })[];
+  /** Rival boards, so removal can be pointed at whoever is scariest. */
+  rivals?: PlayerBoardRead[];
+}
+
+/**
+ * Pick the bot's interaction play, or null to fall through to developing the
+ * board. Priority: break a combo, sweep a board that's ahead, then spot removal —
+ * and hold early if nothing is worth answering yet.
+ */
+export function chooseResistancePlay(ctx: ResistanceContext): CastDecision | null {
+  const { hand, mana, board, botPower, turn, aggression } = ctx;
+  const priceOf = ctx.costFor ?? costOf;
+  const boards = [board, ...(ctx.rivals ?? [])];
+  const threat = Math.max(...boards.map(b => threatScore(b, botPower)));
+
+  interface Candidate {
+    handIndex: number;
+    card: ScryfallCard;
+    spec: BotEffectSpec;
+    etb: boolean;
+    resolved: { effect: AppliedEffect; target: string };
+    /** Rival copies of a sweeper — the same wrath, landing on the other seats. */
+    extra: AppliedEffect[];
+    rank: number;
+  }
+
+  const candidates: Candidate[] = [];
+  hand.forEach((card, handIndex) => {
+    const entry = lookupEffect(card.name);
+    if (!entry) return;
+    if (priceOf(card) > mana) return;
+    const scale = ctx.scaleFor?.(entry.spec, card) ?? 1;
+    const hits = isSweep(entry.spec) ? resolveEverywhere(entry.spec, boards) : [];
+    const resolved = isSweep(entry.spec) ? hits[0] : pickTarget(entry.spec, boards, scale);
+    if (!resolved) return;
+    const extra = hits.slice(1).map(h => h.effect);
+
+    // Rank by how much of the problem it solves.
+    let rank = 0;
+    switch (entry.spec.kind) {
+      case 'boardWipe': {
+        const cap = entry.spec.maxToughness;
+        const ownLosses = ctx.botCreatureToughness
+          .map(t => (typeof t === 'number' ? { toughness: t } : t))
+          .filter(own => (cap === undefined
+            // A destroy-wipe: indestructible survives it.
+            ? !own.indestructible
+            // A -X/-X wipe: indestructible does not save a small creature.
+            : own.toughness <= cap)).length;
+        const net = hits.reduce((n, h) => n + h.effect.destroy.length, 0) - ownLosses;
+        // Only a wrath that leaves the bot ahead is worth the card.
+        rank = net >= 3 ? 95 : net >= 1 ? 45 : 0;
+        break;
+      }
+      case 'destroyCreature':
+      case 'exileCreature':
+      case 'destroyPermanent': rank = boards.some(b => comboPieceToBreak(b)) ? 90 : 60; break;
+      case 'artifactSweep':   rank = resolved.effect.destroy.length >= 2 ? 55 : 20; break;
+      case 'edict':           rank = 40; break;
+      case 'damage':          rank = resolved.effect.destroy.length > 0 ? 50 : 15; break;
+      // Scaled, so the rank has to be too: a Gray Merchant landing for 8 is a
+      // bigger play than one landing for 2, and a flat 20 said they were equal.
+      case 'drain':           rank = 20 + resolved.effect.lifeLoss; break;
+      case 'discard':         rank = 18; break;
+    }
+    // Rank 0 means the play is actively bad — a wrath that costs the bot more
+    // than it costs you. Leave it in hand rather than offering it.
+    if (rank <= 0) return;
+    candidates.push({ handIndex, card, spec: entry.spec, etb: !!entry.etb, resolved, extra, rank });
+  });
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.rank - a.rank);
+  const best = candidates[0];
+
+  // Hold fire early against a board that isn't threatening yet — but never sit on
+  // a combo answer, and never hold a permanent, which is just a body otherwise.
+  const holdThreshold = 40 - aggression * 25;
+  if (threat < holdThreshold && turn < 6 && !best.etb && threat < 100) {
+    return null;
+  }
+
+  return {
+    handIndex: best.handIndex,
+    card: best.card,
+    effect: best.resolved.effect,
+    extra: best.extra,
+    staysOnBattlefield: best.etb,
+    reason: `${best.card.name} → ${best.resolved.target}`,
+    target: best.resolved.target,
+  };
+}
+
+/**
+ * Would this card's registry effect actually hit anything right now?
+ *
+ * The develop loop asks so it can tell two cases apart: a Ravenous Chupacabra
+ * being held for the creature you are about to play, and a Ravenous Chupacabra
+ * that is simply a 2/2 because your board is empty. Without this, a bot with an
+ * empty board opposite it holds the card forever.
+ */
+export function hasLiveTarget(cardName: string, boards: PlayerBoardRead[]): boolean {
+  const entry = lookupEffect(cardName);
+  if (!entry) return false;
+  return pickTarget(entry.spec, boards) !== null;
+}
+
+/** Exposed so the engine can log why a bot sat on its hand. */
+export function holdReason(board: PlayerBoardRead, botPower: number): string | null {
+  return threatScore(board, botPower) === 0 ? null : 'holding interaction for a bigger threat';
+}

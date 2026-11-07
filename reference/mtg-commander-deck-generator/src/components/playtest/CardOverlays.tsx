@@ -1,0 +1,322 @@
+import { useRef, useState } from 'react';
+import { usePlaytestStore } from '@/store/playtestStore';
+import { editedTypeLine, resolvePT } from '@/services/playtest/powerToughness';
+import { TextSticker } from '@/components/playtest/TextSticker';
+import { PTBadge, TypeBadge } from '@/components/playtest/CardBadges';
+import type { BattlefieldCard as BfCard } from '@/components/playtest/types';
+
+export const COUNTER_COLOR: Record<string, string> = {
+  '+1/+1': 'bg-emerald-500/90 text-white',
+  '-1/-1': 'bg-red-500/90 text-white',
+  loyalty: 'bg-blue-500/90 text-white',
+  charge: 'bg-yellow-500/90 text-black',
+  storage: 'bg-zinc-500/90 text-white',
+};
+
+const BADGE = 27;  // 25% down from the original 36
+const PAD_X = 8;
+const PAD_Y = 16;  // room for the arrows, which live inside the box
+const BOX_W = BADGE + PAD_X * 2;
+const BOX_H = BADGE + PAD_Y * 2;
+
+const ARROW =
+  'absolute left-1/2 -translate-x-1/2 w-0 h-0 border-x-[6px] border-x-transparent ' +
+  'drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)] cursor-pointer pointer-events-auto';
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+
+/** +1/+1 and -1/-1 read as signed totals; every other type is a bare count. */
+function badgeLabel(type: string, value: number): string {
+  if (type === '+1/+1') return `+${value}`;
+  if (type === '-1/-1') return `−${value}`;
+  return String(value);
+}
+
+function badgeClass(type: string): string {
+  return `rounded-full flex items-center justify-center font-bold tabular-nums leading-none shadow-lg ring-2 ring-white/40 ${COUNTER_COLOR[type] ?? 'bg-zinc-600/90 text-white'}`;
+}
+
+const badgeStyle = { width: BADGE, height: BADGE, fontSize: Math.round(BADGE * 0.42) };
+
+/**
+ * Where a badge's floating text starts: centred on it but a little above, so the
+ * text clears the badge as it rises instead of covering the value you changed.
+ */
+export function badgeFloatAnchor(el: Element | null | undefined) {
+  if (!el) return undefined;
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top - 14 };
+}
+
+/**
+ * How a card counter looks OFF the card — the Create dialog's tile and the drag
+ * preview. Loyalty is a shield, not a disc, so it reads as the thing it becomes
+ * once it lands (the same SVG BattlefieldCard draws in the corner).
+ */
+export function CardCounterChip({ type, height = BADGE }: { type: string; height?: number }) {
+  const label = badgeLabel(type, 1);
+  if (type === 'loyalty') {
+    return (
+      <span className="relative inline-block shrink-0" style={{ width: Math.round(height * 1.5), height }}>
+        <img
+          src={`${import.meta.env.BASE_URL}icons/Loyalty.svg`}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 w-full h-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.75)]"
+        />
+        <span
+          className="absolute inset-0 flex items-center justify-center text-white font-extrabold tabular-nums leading-none"
+          style={{ fontSize: Math.round(height * 0.42), textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}
+        >
+          {label}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span
+      className={badgeClass(type)}
+      style={{ width: height, height, fontSize: Math.round(height * 0.42) }}
+    >
+      {label}
+    </span>
+  );
+}
+
+/**
+ * Keep the badge fully on the card. `pos` is the padded box's top-left, and the
+ * badge is centred inside it, so the limits are offset by the padding.
+ */
+function clampToCard(x: number, y: number, cardWidth: number, cardHeight: number) {
+  return {
+    x: clamp(x, -PAD_X, cardWidth - PAD_X - BADGE),
+    y: clamp(y, -PAD_Y, cardHeight - PAD_Y - BADGE),
+  };
+}
+
+/** Default badge slot: a centred row, so two counter types don't land on each other. */
+export function counterDefaultPos(index: number, total: number, cardWidth: number, cardHeight: number) {
+  return clampToCard(
+    cardWidth / 2 - BOX_W / 2 + (index - (total - 1) / 2) * (BADGE + 8),
+    cardHeight / 2 - BOX_H / 2,
+    cardWidth,
+    cardHeight,
+  );
+}
+
+interface Props {
+  card: BfCard;
+  cardWidth: number;
+  cardHeight: number;
+  /** False for the drag ghost — same pixels, no handlers, no store writes. */
+  interactive?: boolean;
+  /** `anchor` is viewport coords for the floating text — the badge that was clicked. */
+  onAdjust?: (type: string, delta: number, anchor?: { x: number; y: number }) => void;
+}
+
+/**
+ * Everything drawn on top of a battlefield card image: counter badges, text
+ * stickers, and the modified power/toughness. Shared by the live card and the
+ * drag preview so a card being dragged doesn't shed its state mid-flight.
+ */
+export function CardOverlays({ card, cardWidth, cardHeight, interactive = true, onAdjust }: Props) {
+  const rotation = (card.tapped ? 90 : 0) + (card.rotation ?? 0);
+  const counterEntries = Object.entries(card.counters).filter(([t, v]) => v > 0 && t !== 'loyalty');
+  const pt = resolvePT(card);
+  // Only worth showing when it differs from what's printed on the art.
+  const showPT = pt !== null && (pt.modified !== pt.base || pt.overridden);
+  // The other half of a rewrite: being a 0/4 and being a Treefolk are one
+  // change to the creature, so they are drawn as one change to the card.
+  const typeLine = editedTypeLine(card.card, card.edit);
+
+  return (
+    <>
+      {counterEntries.map(([type, value], i) => {
+        const stored = card.counterPositions?.[type];
+        const pos = stored
+          ? clampToCard(stored.x, stored.y, cardWidth, cardHeight)
+          : counterDefaultPos(i, counterEntries.length, cardWidth, cardHeight);
+        return interactive ? (
+          <CounterBadge
+            key={type}
+            instanceId={card.instanceId}
+            type={type}
+            value={value}
+            pos={pos}
+            rotation={rotation}
+            cardWidth={cardWidth}
+            cardHeight={cardHeight}
+            onAdjust={(d, anchor) => onAdjust?.(type, d, anchor)}
+          />
+        ) : (
+          <div
+            key={type}
+            className="absolute z-20 pointer-events-none"
+            style={{
+              left: pos.x + PAD_X,
+              top: pos.y + PAD_Y,
+              transform: rotation ? `rotate(${-rotation}deg)` : undefined,
+              transformOrigin: 'center',
+            }}
+          >
+            <div className={badgeClass(type)} style={badgeStyle}>{badgeLabel(type, value)}</div>
+          </div>
+        );
+      })}
+
+      {(card.stickers ?? []).map(st =>
+        interactive ? (
+          <TextSticker key={st.id} instanceId={card.instanceId} sticker={st} rotation={rotation} />
+        ) : (
+          // No counter-rotation: a sticker is stuck to the card, so it turns with
+          // it when the card is tapped, the way a real one would.
+          <div
+            key={st.id}
+            className="absolute z-30 pointer-events-none"
+            style={{ left: st.x, top: st.y }}
+          >
+            <span className="inline-block max-w-[110px] truncate px-1.5 py-0.5 rounded bg-teal-500/90 text-white text-[10px] font-bold shadow-md ring-1 ring-teal-200/50">
+              {st.text}
+            </span>
+          </div>
+        ),
+      )}
+
+      {typeLine && <TypeBadge typeLine={typeLine} cardWidth={cardWidth} />}
+
+      {showPT && pt && (
+        <PTBadge
+          value={pt.modified}
+          cardWidth={cardWidth}
+          tone={pt.edited ? 'edited' : 'counters'}
+          abilitiesLost={!!card.edit?.loseAbilities}
+        />
+      )}
+    </>
+  );
+}
+
+function CounterBadge({
+  instanceId, type, value, pos, rotation, cardWidth, cardHeight, onAdjust,
+}: {
+  instanceId: string;
+  type: string;
+  value: number;
+  pos: { x: number; y: number };
+  rotation: number;
+  cardWidth: number;
+  cardHeight: number;
+  onAdjust: (delta: number, anchor?: { x: number; y: number }) => void;
+}) {
+  const moveCounterBadge = usePlaytestStore(s => s.moveCounterBadge);
+  const [hovered, setHovered] = useState(false);
+  const movedRef = useRef(false);
+  const badgeRef = useRef<HTMLDivElement>(null);
+
+  // Pop the floating "+1" off the badge rather than the middle of the card —
+  // with several counter types on one permanent, card-centred text can't tell
+  // you which one you just changed.
+  const adjust = (delta: number) => onAdjust(delta, badgeFloatAnchor(badgeRef.current));
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    // The card underneath carries dnd-kit's listeners — without this, dragging the
+    // badge would drag the whole card.
+    e.stopPropagation();
+    e.preventDefault();
+    const el = e.currentTarget;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const originX = pos.x;
+    const originY = pos.y;
+    movedRef.current = false;
+    el.setPointerCapture(e.pointerId);
+
+    // Screen-space delta -> card-space delta, undoing the card's rotation.
+    const rad = (-rotation * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (!movedRef.current && Math.hypot(dx, dy) > 3) movedRef.current = true;
+      if (!movedRef.current) return;
+      const next = clampToCard(
+        originX + dx * cos - dy * sin,
+        originY + dx * sin + dy * cos,
+        cardWidth,
+        cardHeight,
+      );
+      moveCounterBadge(instanceId, type, next.x, next.y);
+    };
+    const onUp = (ev: PointerEvent) => {
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+      try { el.releasePointerCapture(ev.pointerId); } catch { /* noop */ }
+    };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  };
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onWheel={(e) => { e.stopPropagation(); adjust(e.deltaY < 0 ? 1 : -1); }}
+      className="absolute z-20 select-none touch-none"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: BOX_W,
+        height: BOX_H,
+        transform: rotation ? `rotate(${-rotation}deg)` : undefined,
+        transformOrigin: 'center',
+        // Only the badge itself is hit-testable at rest, so the padding doesn't
+        // eat clicks meant for the card. Once hovered the whole padded box goes
+        // live, which is what keeps the arrows reachable: moving from the badge
+        // to an arrow never leaves this element, so hover never drops.
+        pointerEvents: hovered ? 'auto' : 'none',
+      }}
+    >
+      {hovered && (
+        <button
+          type="button"
+          aria-label={`Add ${type} counter`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); adjust(1); }}
+          className={`${ARROW} top-1 border-b-[8px] border-b-white/90`}
+        />
+      )}
+      <div
+        ref={badgeRef}
+        onPointerDown={onPointerDown}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (movedRef.current) return;
+          if (e.altKey) adjust(-value);
+          else if (e.shiftKey) adjust(-1);
+          else adjust(1);
+        }}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); adjust(-1); }}
+        title={`${value} ${type} · drag to move · click +1 · right-click −1 · scroll to adjust · alt-click clears`}
+        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab pointer-events-auto ${badgeClass(type)}`}
+        style={badgeStyle}
+      >
+        {badgeLabel(type, value)}
+      </div>
+      {hovered && (
+        <button
+          type="button"
+          aria-label={`Remove ${type} counter`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); adjust(-1); }}
+          className={`${ARROW} bottom-1 border-t-[8px] border-t-white/90`}
+        />
+      )}
+    </div>
+  );
+}

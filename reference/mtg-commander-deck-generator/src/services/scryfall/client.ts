@@ -1,0 +1,1692 @@
+import { useEffect, useState } from 'react';
+import type { ScryfallCard, ScryfallSearchResponse, CardRuling } from '@/types';
+import { getPartnerType, getPartnerWithName } from '@/lib/partnerUtils';
+import {
+  readPersisted, writePersisted, readPersistedMany, writePersistedMany,
+  readPersistedOracleTag, writePersistedOracleTag,
+} from './cache';
+import { isExtraPrinting } from './extras';
+
+export { isExtraPrinting };
+
+const BASE_URL = import.meta.env.DEV ? '/scryfall-api' : 'https://api.scryfall.com';
+const MIN_REQUEST_DELAY = 100; // 100ms between requests (Scryfall allows 10/sec)
+const COLLECTION_BATCH_SIZE = 75; // Scryfall /cards/collection max per request
+
+// In-memory cache for fetched cards
+const cardCache = new Map<string, ScryfallCard>();
+
+// In-memory cache for search results (used by fillWithScryfall fallbacks)
+const searchCache = new Map<string, { data: ScryfallSearchResponse; timestamp: number }>();
+const SEARCH_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+/**
+ * Extract a set code from a scryfallQuery string.
+ * Recognizes: set:xxx, s:xxx, e:xxx, edition:xxx (with or without quotes).
+ */
+/** All set codes referenced in a scryfall query, in order. A query can OR several
+ *  (e.g. `set:fin or set:spm`); each one is a set the user wants cards drawn from. */
+export function parseSetsFromQuery(scryfallQuery: string): string[] {
+  if (!scryfallQuery) return [];
+  const matches = scryfallQuery.matchAll(/\b(?:set|s|e|edition):["']?([a-zA-Z0-9_]+)["']?/gi);
+  return [...matches].map(m => m[1].toLowerCase());
+}
+
+/** The first set code in a scryfall query, used as a single-set printing hint for
+ *  getCardsByNames. For membership filtering across a multi-set query, use
+ *  parseSetsFromQuery — this only returns the first. */
+export function parseSetFromQuery(scryfallQuery: string): string | undefined {
+  return parseSetsFromQuery(scryfallQuery)[0];
+}
+
+/** Return a shallow copy with deck-generation flags stripped so cached objects stay clean. */
+function freshCopy(card: ScryfallCard): ScryfallCard {
+  const { isMustInclude, isGameChanger, isThemeSynergyCard, isReplacement, deckRole, isMdfcLand: _mdfc, ...clean } = card;
+  return clean;
+}
+
+/**
+ * Diacritic/punctuation-insensitive card-name key, matching how Scryfall's
+ * name lookup normalizes ("Jötun Grunt" ≡ "Jotun Grunt", curly ≡ straight
+ * apostrophe). Used to alias a requested name onto its canonical card so
+ * getCardsByNames can be looked up by the exact string the caller passed —
+ * important for EDHREC-sourced names, which aren't always canonical.
+ */
+export function normalizeCardNameKey(s: string): string {
+  return s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // strip diacritics
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Queue-based rate limiter that ensures requests are properly spaced.
+ * All Scryfall requests MUST go through this to prevent 429 errors.
+ *
+ * Supports a global cooldown: when any caller hits a 429, it can park every
+ * pending and future request until the cooldown expires, instead of letting
+ * dozens of in-flight requests keep firing at 100ms intervals.
+ */
+class RateLimiter {
+  private queue: Array<() => void> = [];
+  private processing = false;
+  private lastRequestTime = 0;
+  private cooldownUntil = 0;
+
+  /**
+   * Wait for permission to make a request.
+   * Returns a promise that resolves when it's safe to send.
+   */
+  async acquire(): Promise<void> {
+    return new Promise((resolve) => {
+      this.queue.push(resolve);
+      this.processQueue();
+    });
+  }
+
+  /**
+   * Pause all pending/future acquires until `now + ms`. Idempotent — only
+   * extends the cooldown, never shortens it, so concurrent 429s combine safely.
+   */
+  cooldown(ms: number): void {
+    const target = Date.now() + Math.max(0, ms);
+    if (target > this.cooldownUntil) this.cooldownUntil = target;
+  }
+
+  private async processQueue(): Promise<void> {
+    if (this.processing || this.queue.length === 0) return;
+
+    this.processing = true;
+
+    while (this.queue.length > 0) {
+      const now = Date.now();
+
+      // Honor global cooldown first — one 429 parks the whole burst.
+      if (now < this.cooldownUntil) {
+        await new Promise((resolve) => setTimeout(resolve, this.cooldownUntil - now));
+        continue;
+      }
+
+      const timeSinceLastRequest = now - this.lastRequestTime;
+      if (timeSinceLastRequest < MIN_REQUEST_DELAY) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, MIN_REQUEST_DELAY - timeSinceLastRequest)
+        );
+      }
+
+      this.lastRequestTime = Date.now();
+      const resolve = this.queue.shift();
+      if (resolve) resolve();
+    }
+
+    this.processing = false;
+  }
+
+  // Alias for backwards compatibility
+  async throttle(): Promise<void> {
+    return this.acquire();
+  }
+}
+
+const rateLimiter = new RateLimiter();
+
+const MAX_RATE_LIMIT_RETRIES = 6;
+const MAX_BACKOFF_MS = 30_000;
+
+function parseRetryAfter(header: string | null): number | null {
+  if (!header) return null;
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const date = Date.parse(header);
+  if (Number.isFinite(date)) return Math.max(0, date - Date.now());
+  return null;
+}
+
+/**
+ * Run a fetch through the rate limiter, retrying on 429 with the server's
+ * Retry-After header (preferred) or exponential backoff + jitter. Every retry
+ * sets a shared cooldown so concurrent callers also back off, which is the
+ * thing that actually keeps Scryfall happy.
+ */
+async function withRateLimit(
+  doFetch: () => Promise<Response>,
+  maxRetries: number = MAX_RATE_LIMIT_RETRIES,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    await rateLimiter.acquire();
+    const response = await doFetch();
+    if (response.status !== 429) return response;
+    if (attempt === maxRetries) return response;
+
+    const retryAfter = parseRetryAfter(response.headers.get('Retry-After'));
+    const expBackoff = Math.min(1000 * 2 ** attempt, MAX_BACKOFF_MS);
+    const jitter = Math.random() * 250;
+    const backoffMs = (retryAfter ?? expBackoff) + jitter;
+    console.warn(
+      `[Scryfall] 429 on attempt ${attempt + 1}, cooling down ${Math.round(backoffMs)}ms`,
+    );
+    rateLimiter.cooldown(backoffMs);
+  }
+  // Unreachable — the loop returns or sets a final response above.
+  throw new Error('Scryfall rate-limit retries exhausted');
+}
+
+/** Error carrying the HTTP status so callers can special-case (e.g. 404 = no results). */
+class ScryfallHttpError extends Error {
+  status: number;
+  constructor(status: number, statusText: string) {
+    super(`Scryfall API error: ${status} ${statusText}`);
+    this.name = 'ScryfallHttpError';
+    this.status = status;
+  }
+}
+
+async function scryfallFetch<T>(endpoint: string): Promise<T> {
+  const response = await withRateLimit(() =>
+    fetch(`${BASE_URL}${endpoint}`, {
+      headers: { 'Accept': 'application/json' },
+    }),
+  );
+
+  if (!response.ok) {
+    throw new ScryfallHttpError(response.status, response.statusText);
+  }
+
+  return response.json();
+}
+
+/**
+ * Whether a card may be offered as a selectable commander. It must be legal in
+ * the Commander format, OR an as-yet-unreleased *paper* card that will become
+ * legal on release (freshly-spoiled sets like The Hobbit / Star Trek). Since
+ * `is:commander` already excludes banlisted commanders, the only non-legal case
+ * we keep is upcoming paper. This drops digital/Arena-only cards (Alchemy
+ * rebalances like "Gitrog, Horror of Zhava") and already-released paper cards
+ * that simply aren't commander-legal (playtest cards like "Rusko, Clockmaker").
+ */
+function isCommanderLegalOrUpcoming(card: ScryfallCard): boolean {
+  const legality = card.legalities?.commander;
+  if (legality === 'legal') return true;
+  // Backstop: never offer an explicitly banned commander, even if it's dated today/future. Dropping
+  // `f:commander` means we no longer get format-legality for free, so a future-dated-but-banned card
+  // would otherwise slip through the upcoming-paper path below.
+  if (legality === 'banned') return false;
+  const isPaper = card.games?.includes('paper') ?? false;
+  const today = new Date().toISOString().slice(0, 10);
+  const releasesTodayOrLater = !!card.released_at && card.released_at >= today;
+  return isPaper && releasesTodayOrLater;
+}
+
+/**
+ * Score how well a card name matches the user's typed query, for ordering
+ * commander search results by relevance. Higher = better. Punctuation is
+ * ignored (so "Krenko, Mob Boss" still prefix-matches "krenko mob"), and each
+ * DFC face ("A // B") is scored independently, taking the best.
+ */
+function commanderNameRelevance(name: string, query: string): number {
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  const q = norm(query);
+  if (!q) return 0;
+  const faces = [norm(name), ...name.split(' // ').map(norm)];
+  let best = 0;
+  for (const face of faces) {
+    if (!face) continue;
+    if (face === q) best = Math.max(best, 100);              // name is exactly the query
+    else if (face.startsWith(q)) best = Math.max(best, 80);  // name starts with the query
+    else if (face.includes(` ${q}`)) best = Math.max(best, 60); // query starts a later word
+    else if (face.includes(q)) best = Math.max(best, 40);    // query appears mid-word
+  }
+  return best;
+}
+
+export interface CommanderSearchOptions {
+  /** Search MTG Arena's commander pool (Scryfall's `brawl` legality) instead of paper
+   *  Commander. Two things change: Arena lets ANY planeswalker head a deck, not just the
+   *  ones printed with "can be your commander", and the pool has legends that exist only
+   *  on Arena (Gitrog, Horror of Zhava; Davriel, Soul Broker) which paper Commander marks
+   *  `not_legal`. Both are invisible to the paper search. */
+  arena?: boolean;
+}
+
+/** Arena's commander pool: any legendary creature or planeswalker Arena has, minus Arena's
+ *  ban list — all of which `brawl: legal` already encodes. Paper Commander legality is
+ *  deliberately not consulted; Arena-only legends are `commander: not_legal` by design, and
+ *  gating on it is exactly what hid them. */
+function isArenaCommanderLegal(card: ScryfallCard): boolean {
+  return card.legalities?.brawl === 'legal';
+}
+
+export async function searchCommanders(
+  query: string,
+  options: CommanderSearchOptions = {}
+): Promise<ScryfallCard[]> {
+  if (!query.trim()) return [];
+
+  try {
+    // `is:commander` matches anything that can legally head a deck (legendary
+    // creatures + "can be your commander" cards) and already excludes banlisted
+    // commanders — but it does NOT gate on format legality. We deliberately drop
+    // the old `f:commander` filter: Scryfall marks newly-spoiled / unreleased
+    // sets as `not_legal` in commander until ~release day, so `f:commander` hid
+    // those commanders from search entirely (e.g. The Hobbit, or Marvel before
+    // its release flipped legal). `-is:funny` keeps silver-border / un-set joke
+    // legends out of results, matching the old behavior.
+    //
+    // We request order=edhrec only to bias page 1 toward popular cards for very
+    // broad queries; the real ordering is done client-side below, by how well
+    // each NAME matches what the user typed (exact > prefix > word-start >
+    // substring), with EDHREC rank as a tiebreaker within each tier. This keeps
+    // the card you literally typed at the top instead of whatever happens to be
+    // most popular.
+    //
+    // Arena mode swaps the pool: `f:brawl` narrows to cards Arena actually has (and Arena's
+    // ban list), and `t:planeswalker` joins `is:commander` because Arena allows any
+    // planeswalker as a commander while paper does not.
+    const base = options.arena
+      ? `f:brawl -is:funny (is:commander or t:planeswalker)`
+      : `is:commander -is:funny`;
+    const encodedQuery = encodeURIComponent(`${base} ${query}`);
+    const response = await scryfallFetch<ScryfallSearchResponse>(
+      `/cards/search?q=${encodedQuery}&order=edhrec`
+    );
+
+    return response.data
+      .filter(options.arena ? isArenaCommanderLegal : isCommanderLegalOrUpcoming)
+      .map((card) => ({ card, rel: commanderNameRelevance(card.name, query) }))
+      .sort((a, b) => {
+        if (b.rel !== a.rel) return b.rel - a.rel;
+        const ra = a.card.edhrec_rank ?? Number.POSITIVE_INFINITY;
+        const rb = b.card.edhrec_rank ?? Number.POSITIVE_INFINITY;
+        if (ra !== rb) return ra - rb;
+        return a.card.name.localeCompare(b.card.name);
+      })
+      .map((scored) => scored.card);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('404')) return [];
+    throw err;
+  }
+}
+
+export async function searchCards(
+  query: string,
+  colorIdentity: string[],
+  options: {
+    order?: 'edhrec' | 'cmc' | 'name' | 'released';
+    dir?: 'asc' | 'desc';
+    page?: number;
+    skipFormatFilter?: boolean;
+  } = {}
+): Promise<ScryfallSearchResponse> {
+  const { order = 'edhrec', dir, page = 1, skipFormatFilter = false } = options;
+  const colorFilter = colorIdentity.length > 0 ? `id<=${colorIdentity.join('')}` : '';
+  const formatFilter = skipFormatFilter ? '' : 'f:commander';
+  // Wrap query in parentheses so color filter applies to entire query (including OR clauses)
+  const fullQuery = `${colorFilter} (${query}) ${formatFilter}`;
+  const encodedQuery = encodeURIComponent(fullQuery.trim());
+
+  // Check search cache first
+  const cacheKey = `${encodedQuery}|${order}|${dir ?? ''}|${page}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < SEARCH_CACHE_TTL) {
+    return cached.data;
+  }
+
+  let result: ScryfallSearchResponse;
+  try {
+    result = await scryfallFetch<ScryfallSearchResponse>(
+      `/cards/search?q=${encodedQuery}&order=${order}${dir ? `&dir=${dir}` : ''}&page=${page}`
+    );
+  } catch (e) {
+    // Scryfall returns 404 when a search matches zero cards — that's an empty
+    // result, not a failure. Cache + return an empty list so callers render
+    // "no matches" instead of an error state.
+    if (e instanceof ScryfallHttpError && e.status === 404) {
+      result = { object: 'list', total_cards: 0, has_more: false, data: [] };
+    } else {
+      throw e;
+    }
+  }
+
+  searchCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  return result;
+}
+
+export async function getCardByName(name: string, exact = true): Promise<ScryfallCard> {
+  // 1. In-memory cache (hot path). An extra under this key is a poisoned entry from a
+  // build without the guard below — drop it and re-resolve rather than serving a token.
+  const cached = cardCache.get(name);
+  if (cached && !isExtraPrinting(cached)) return freshCopy(cached);
+  if (cached) cardCache.delete(name);
+
+  // 2. Persistent cache (warm path) — silent fallback if unavailable
+  const persisted = await readPersisted(name);
+  if (persisted) {
+    cardCache.set(persisted.name, persisted);
+    if (persisted.name !== name) cardCache.set(name, persisted); // hydrate under requested key too
+    return freshCopy(persisted);
+  }
+
+  // 3. Cold — fetch from Scryfall
+  const param = exact ? 'exact' : 'fuzzy';
+  const encodedName = encodeURIComponent(name);
+  const card = await scryfallFetch<ScryfallCard>(`/cards/named?${param}=${encodedName}`);
+
+  // Cache the result in both layers
+  cardCache.set(card.name, card);
+  void writePersisted(card.name, card);
+  return freshCopy(card);
+}
+
+/**
+ * Fetch a card by its Scryfall UUID. Used when a dropped Scryfall card image URL
+ * yields an id (the image filename) rather than a name. Cached under both the id
+ * and the resolved name.
+ */
+export async function getCardById(id: string): Promise<ScryfallCard> {
+  const cached = cardCache.get(id);
+  if (cached) return freshCopy(cached);
+
+  const card = await scryfallFetch<ScryfallCard>(`/cards/${id}`);
+  cardCache.set(id, card);
+  // Extras stay id-keyed only: a token shares its name with the card it copies, so a
+  // name-keyed write would evict the real card from every later lookup.
+  if (!isExtraPrinting(card)) {
+    cardCache.set(card.name, card);
+    void writePersisted(card.name, card);
+  }
+  return freshCopy(card);
+}
+
+// Rulings are shared across printings, so cache by oracle_id.
+const rulingsCache = new Map<string, CardRuling[]>();
+
+/**
+ * Fetch a card's Scryfall rulings (official WotC + Scryfall judgment notes).
+ * Cached in-memory by oracle_id. Returns [] on any error — rulings are
+ * non-critical and should never break the preview modal.
+ */
+export async function fetchCardRulings(card: ScryfallCard): Promise<CardRuling[]> {
+  const key = card.oracle_id || card.id;
+  const cached = rulingsCache.get(key);
+  if (cached) return cached;
+
+  try {
+    const response = await scryfallFetch<{ data: CardRuling[] }>(`/cards/${card.id}/rulings`);
+    const rulings = (response.data ?? []).map((r) => ({
+      source: r.source,
+      published_at: r.published_at,
+      comment: r.comment,
+    }));
+    rulingsCache.set(key, rulings);
+    return rulings;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Synchronous read of the rulings cache. Returns the cached rulings array, or
+ * `undefined` if this card's rulings haven't been fetched yet. Lets the preview
+ * modal resolve the side-panel layout during render (no async null frame), so
+ * the card image doesn't jump when rulings load in.
+ */
+export function getCachedRulings(card: ScryfallCard): CardRuling[] | undefined {
+  return rulingsCache.get(card.oracle_id || card.id);
+}
+
+const FALLBACK_SEARCH_BATCH_SIZE = 30;
+
+/**
+ * Batch-resolve the CHEAPEST priced printing of each name. One /cards/search
+ * request per batch using unique=cards&order=usd&dir=asc — Scryfall returns a
+ * single row per card = its cheapest printing that has a price, so there is no
+ * pagination to page through (a 30-name batch yields <= ~40 rows, well under the
+ * 175/page cap). Callers handle cache writes; this helper only resolves cards.
+ *
+ * Exact-name (!"…") matches can also hit a DFC whose FACE shares the name, so we
+ * map results back by full name and by front-face name.
+ */
+async function batchSearchByExactName(names: string[]): Promise<Map<string, ScryfallCard>> {
+  const out = new Map<string, ScryfallCard>();
+  if (names.length === 0) return out;
+
+  for (let i = 0; i < names.length; i += FALLBACK_SEARCH_BATCH_SIZE) {
+    const batch = names.slice(i, i + FALLBACK_SEARCH_BATCH_SIZE);
+    const nameQuery = batch.map(n => `!"${n}"`).join(' OR ');
+    const fullQuery = `(${nameQuery}) -is:digital`;
+    const url = `${BASE_URL}/cards/search?q=${encodeURIComponent(fullQuery)}&unique=cards&order=usd&dir=asc`;
+    try {
+      const response = await withRateLimit(() =>
+        fetch(url, { headers: { 'Accept': 'application/json' } }),
+      );
+      if (!response.ok) continue; // 404 = no matches for this batch
+      const data = await response.json() as ScryfallSearchResponse;
+      for (const card of data.data) {
+        if (batch.includes(card.name)) out.set(card.name, card);
+        if (card.name.includes(' // ')) {
+          const front = card.name.split(' // ')[0];
+          if (batch.includes(front)) out.set(front, card);
+        }
+      }
+    } catch (err) {
+      console.warn('[Scryfall] batchSearchByExactName batch failed:', err);
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Resolve the cheapest priced printing per name (one batched unique=cards search).
+ * Exported for callers that fetch cards OUTSIDE getCardsByNames — notably the commander,
+ * which is fetched via getCardByName and so bypasses the in-fetch cheapest-price pass.
+ */
+export async function getCheapestPrintings(names: string[]): Promise<Map<string, ScryfallCard>> {
+  return batchSearchByExactName(names);
+}
+
+/**
+ * Resolve names the /cards/collection endpoint couldn't find, by exact-name SEARCH.
+ * Unlike the collection endpoint (canonical name only), search's !"…" filter also
+ * matches reskin/flavor names — e.g. "Cordyceps Excision" resolves to Cabal Ritual.
+ * unique=prints ensures the reskin printing (the one carrying flavor_name) is present.
+ *
+ * Returns a map keyed by the REQUESTED spelling so callers can alias the flavor name
+ * onto its canonical card. Names that are genuine typos (no exact match) stay missing —
+ * this is a precise reskin resolver, not a fuzzy corrector.
+ */
+async function resolveNamesByFlavorSearch(names: string[]): Promise<Map<string, ScryfallCard>> {
+  const out = new Map<string, ScryfallCard>();
+  if (names.length === 0) return out;
+
+  // Normalized requested-name → original spelling, so we can map a returned card's
+  // name/flavor_name back to whatever the caller actually typed.
+  const reqByNorm = new Map<string, string>();
+  for (const n of names) reqByNorm.set(normalizeCardNameKey(n), n);
+
+  for (let i = 0; i < names.length; i += FALLBACK_SEARCH_BATCH_SIZE) {
+    const batch = names.slice(i, i + FALLBACK_SEARCH_BATCH_SIZE);
+    const nameQuery = batch.map(n => `!"${n}"`).join(' OR ');
+    const url = `${BASE_URL}/cards/search?q=${encodeURIComponent(`(${nameQuery})`)}&unique=prints`;
+    try {
+      const response = await withRateLimit(() =>
+        fetch(url, { headers: { 'Accept': 'application/json' } }),
+      );
+      if (!response.ok) continue; // 404 = none of this batch matched
+      const data = await response.json() as ScryfallSearchResponse;
+      for (const card of data.data) {
+        // Prefer the flavor_name match (the reskin the user typed); fall back to the
+        // canonical name. First writer wins so a flavor printing isn't overwritten.
+        for (const candidate of [card.flavor_name, card.name]) {
+          if (!candidate) continue;
+          const req = reqByNorm.get(normalizeCardNameKey(candidate));
+          if (req && !out.has(req)) out.set(req, card);
+        }
+      }
+    } catch (err) {
+      console.warn('[Scryfall] flavor-name resolution batch failed:', err);
+    }
+  }
+  return out;
+}
+
+/** Out-param for getCardsByNames — lets callers distinguish "Scryfall doesn't know
+ *  this name" from "the request failed". */
+export interface CardFetchStats {
+  /** Count of /cards/collection requests that threw or returned non-OK. Non-zero
+   *  means some names are missing because the NETWORK failed — callers must not
+   *  persist that as "these names don't exist". */
+  failedRequests: number;
+}
+
+/**
+ * Batch fetch multiple cards by name using Scryfall's /cards/collection endpoint.
+ * Fetches up to 75 cards per request, drastically reducing API calls vs individual lookups.
+ *
+ * @param names Array of card names to fetch
+ * @returns Map of card name -> ScryfallCard for found cards
+ */
+export async function getCardsByNames(
+  names: string[],
+  onProgress?: (fetched: number, total: number) => void,
+  preferredSet?: string,
+  opts?: { currency?: 'USD' | 'EUR'; stats?: CardFetchStats },
+): Promise<Map<string, ScryfallCard>> {
+  const currency = opts?.currency ?? 'USD';
+  const stats = opts?.stats;
+  const result = new Map<string, ScryfallCard>();
+
+  if (names.length === 0) return result;
+
+  // Check in-memory cache first
+  const uncachedNames: string[] = [];
+  for (const name of names) {
+    const cacheKey = preferredSet ? `${name}|${preferredSet}` : name;
+    const cached = cardCache.get(cacheKey);
+    if (cached && !isExtraPrinting(cached)) {
+      result.set(name, freshCopy(cached));
+    } else {
+      // A cached extra is a poisoned key from a build without the guards below; drop it
+      // so this name re-resolves to the real card instead of a token.
+      if (cached) cardCache.delete(cacheKey);
+      uncachedNames.push(name);
+    }
+  }
+
+  // Check persistent cache for in-memory misses. Persistent cache is keyed by
+  // canonical name only (no preferredSet); a preferred-set request still falls
+  // through to the network for the set-specific printing.
+  if (!preferredSet && uncachedNames.length > 0) {
+    const persisted = await readPersistedMany(uncachedNames);
+    if (persisted.size > 0) {
+      const stillMissing: string[] = [];
+      for (const name of uncachedNames) {
+        const card = persisted.get(name);
+        if (card) {
+          cardCache.set(card.name, card);
+          if (card.name !== name) cardCache.set(name, card);
+          result.set(name, freshCopy(card));
+        } else {
+          stillMissing.push(name);
+        }
+      }
+      uncachedNames.length = 0;
+      uncachedNames.push(...stillMissing);
+    }
+  }
+
+  // If all cards were cached, return early
+  if (uncachedNames.length === 0) return result;
+
+  console.log(`[Scryfall] Fetching ${uncachedNames.length} cards via /cards/collection${preferredSet ? ` (set: ${preferredSet})` : ''}...`);
+
+  // Track names not found in the preferred set for a fallback pass
+  const setNotFoundNames: string[] = [];
+
+  // Use Scryfall's /cards/collection endpoint (up to 75 per request)
+  for (let i = 0; i < uncachedNames.length; i += COLLECTION_BATCH_SIZE) {
+    const batch = uncachedNames.slice(i, i + COLLECTION_BATCH_SIZE);
+    const identifiers = preferredSet
+      ? batch.map(name => ({ name, set: preferredSet }))
+      : batch.map(name => ({ name }));
+
+    try {
+      const response = await withRateLimit(() =>
+        fetch(`${BASE_URL}/cards/collection`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ identifiers }),
+        }),
+      );
+
+      if (response.ok) {
+        const data = await response.json() as { data: ScryfallCard[]; not_found: Array<{ name?: string; set?: string }> };
+        // Normalized index so we can alias each requested batch name back onto
+        // its canonical card, even when the requested spelling differs.
+        const byNorm = new Map<string, ScryfallCard>();
+        for (const card of data.data) {
+          // Never hand a token/emblem back as a deck card. Reachable when a pinned set
+          // is a token set ({name, set:'tmh3'} resolves to the eternalize token, not the
+          // creature), so route it through the no-set fallback pass to get the real card.
+          if (isExtraPrinting(card)) {
+            if (preferredSet) setNotFoundNames.push(card.name);
+            continue;
+          }
+          const cacheKey = preferredSet ? `${card.name}|${preferredSet}` : card.name;
+          cardCache.set(cacheKey, card);
+          if (!preferredSet) cardCache.set(card.name, card); // also cache under plain name when no set preference
+          const copy = freshCopy(card);
+          result.set(card.name, copy);
+          byNorm.set(normalizeCardNameKey(card.name), card);
+          // For DFCs, also store under front-face name so EDHREC lookups match
+          if (card.name.includes(' // ')) {
+            const frontFace = card.name.split(' // ')[0];
+            result.set(frontFace, copy);
+            byNorm.set(normalizeCardNameKey(frontFace), card);
+            if (preferredSet) cardCache.set(`${frontFace}|${preferredSet}`, card);
+            else cardCache.set(frontFace, card);
+          }
+        }
+        // Honor getCardsByNames' contract: the result must be keyed by the exact
+        // string each caller passed. Scryfall returns cards under their canonical
+        // name (accents/punctuation may differ from the request — common with
+        // EDHREC-sourced names), so map any requested name that resolves via
+        // normalization onto its card. Without this, freshly-fetched non-canonical
+        // names silently fail to load (e.g. "1 card couldn't be loaded").
+        for (const reqName of batch) {
+          if (result.has(reqName)) continue;
+          const match = byNorm.get(normalizeCardNameKey(reqName));
+          if (match) {
+            result.set(reqName, freshCopy(match));
+            // Cache under the requested spelling too, so later getCachedCard(reqName)
+            // lookups hit (e.g. AnalyzePage's add flow reads the cache by exact name).
+            if (preferredSet) cardCache.set(`${reqName}|${preferredSet}`, match);
+            else cardCache.set(reqName, match);
+          }
+        }
+        // Persist non-preferred-set batches. Skip for preferredSet because those
+        // are printing-specific and the persistent cache is canonical-name-only.
+        if (!preferredSet && data.data.length > 0) {
+          void writePersistedMany(data.data.map(card => ({ name: card.name, card })));
+        }
+        if (data.not_found.length > 0) {
+          if (preferredSet) {
+            // Collect not-found names for fallback pass without set constraint
+            for (const nf of data.not_found) {
+              if (nf.name) setNotFoundNames.push(nf.name);
+            }
+          } else {
+            console.warn(`[Scryfall] ${data.not_found.length} cards not found in collection batch`);
+          }
+        }
+      } else {
+        if (stats) stats.failedRequests++;
+        console.warn(`[Scryfall] Collection batch returned ${response.status} for ${batch.length} names`);
+      }
+    } catch (err) {
+      if (stats) stats.failedRequests++;
+      console.warn('[Scryfall] Collection batch failed:', err);
+    }
+
+    onProgress?.(Math.min(i + COLLECTION_BATCH_SIZE, uncachedNames.length), uncachedNames.length);
+  }
+
+  // Fallback pass: re-fetch cards not found in the preferred set without set constraint
+  if (preferredSet && setNotFoundNames.length > 0) {
+    console.log(`[Scryfall] ${setNotFoundNames.length} cards not in set "${preferredSet}", re-fetching without set constraint...`);
+    for (let i = 0; i < setNotFoundNames.length; i += COLLECTION_BATCH_SIZE) {
+      const batch = setNotFoundNames.slice(i, i + COLLECTION_BATCH_SIZE);
+      const identifiers = batch.map(name => ({ name }));
+
+      try {
+        const response = await withRateLimit(() =>
+          fetch(`${BASE_URL}/cards/collection`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: JSON.stringify({ identifiers }),
+          }),
+        );
+
+        if (response.ok) {
+          const data = await response.json() as { data: ScryfallCard[]; not_found: Array<{ name?: string }> };
+          const byNorm = new Map<string, ScryfallCard>();
+          for (const card of data.data) {
+            if (isExtraPrinting(card)) continue; // never stands in for a deck card
+            cardCache.set(card.name, card);
+            const copy = freshCopy(card);
+            result.set(card.name, copy);
+            byNorm.set(normalizeCardNameKey(card.name), card);
+            if (card.name.includes(' // ')) {
+              const frontFace = card.name.split(' // ')[0];
+              result.set(frontFace, copy);
+              byNorm.set(normalizeCardNameKey(frontFace), card);
+              cardCache.set(frontFace, card);
+            }
+          }
+          // Alias requested names onto their canonical card (see main batch loop).
+          for (const reqName of batch) {
+            if (result.has(reqName)) continue;
+            const match = byNorm.get(normalizeCardNameKey(reqName));
+            if (match) {
+              result.set(reqName, freshCopy(match));
+              cardCache.set(reqName, match);
+            }
+          }
+          if (data.data.length > 0) {
+            void writePersistedMany(data.data.map(card => ({ name: card.name, card })));
+          }
+        } else if (stats) {
+          stats.failedRequests++;
+        }
+      } catch (err) {
+        if (stats) stats.failedRequests++;
+        console.warn('[Scryfall] Fallback collection batch failed:', err);
+      }
+    }
+  }
+
+  // Reskin/flavor-name pass: any name the collection endpoint still couldn't resolve
+  // may be a reskinned printing (e.g. "Cordyceps Excision" → Cabal Ritual), which the
+  // collection endpoint matches only by canonical name. Exact-name SEARCH matches the
+  // flavor name, so re-resolve the stragglers and alias them onto their canonical card.
+  const flavorMissing = names.filter(name => !result.has(name));
+  if (flavorMissing.length > 0) {
+    const resolved = await resolveNamesByFlavorSearch(flavorMissing);
+    for (const [reqName, card] of resolved) {
+      if (isExtraPrinting(card)) continue; // `unique=prints` can surface token printings
+      const copy = freshCopy(card);
+      result.set(reqName, copy);
+      result.set(card.name, freshCopy(card));
+      // Cache and persist under BOTH the requested (flavor) spelling and the canonical
+      // name so future imports of either hit the cache.
+      cardCache.set(reqName, card);
+      cardCache.set(card.name, card);
+      void writePersistedMany([{ name: reqName, card }, { name: card.name, card }]);
+    }
+  }
+
+  // Reconcile every freshly-fetched card to its CHEAPEST printing's price, keeping the collection
+  // printing's art/object — we override prices ONLY. Also re-checks any card still lacking a price,
+  // preserving the "retry unpriced cards each generation" behavior. One batched unique=cards search
+  // (Scryfall returns the cheapest priced printing per card). Cards served from cache already carry
+  // their reconciled price, so warm decks do ~0 extra requests. Skipped under preferredSet (the user
+  // pinned a set). Safe in Arena mode: legality is name-based and we never swap printings here.
+  if (!preferredSet) {
+    const networkFetched = uncachedNames.filter(name => result.has(name));
+    const stillNoPrice = names.filter(name => {
+      const c = result.get(name);
+      return c && !getCardPrice(c, currency);
+    });
+    const reconcileNames = [...new Set([...networkFetched, ...stillNoPrice])];
+    if (reconcileNames.length > 0) {
+      const cheapest = await batchSearchByExactName(reconcileNames);
+      let lowered = 0;
+      for (const [name, cheap] of cheapest) {
+        const card = result.get(name);
+        if (!card) continue;
+        const oldP = parseFloat(getCardPrice(card, currency) ?? 'Infinity');
+        const newP = parseFloat(getCardPrice(cheap, currency) ?? 'Infinity');
+        if (!(newP < oldP)) continue; // only ever lower a price, never raise
+        // Override price ONLY — keep the collection printing's image/set/oracle text.
+        card.prices = cheap.prices;
+        const canonical = cardCache.get(card.name) ?? cardCache.get(name);
+        if (canonical) {
+          canonical.prices = cheap.prices;
+          void writePersisted(canonical.name, canonical);
+        }
+        lowered++;
+      }
+      if (lowered > 0) {
+        console.log(`[Scryfall] Re-priced ${lowered}/${reconcileNames.length} cards to their cheapest printing`);
+      }
+    }
+  }
+
+  // For any names not found via collection, try a batched search fallback.
+  const notFound = uncachedNames.filter(name => !result.has(name));
+  if (notFound.length > 0) {
+    console.log(`[Scryfall] Retrying ${notFound.length} not-found cards (batched)...`);
+    const found = await batchSearchByExactName(notFound);
+    for (const [name, card] of found) {
+      if (isExtraPrinting(card)) continue; // never stands in for a deck card
+      cardCache.set(name, card);
+      if (card.name !== name) cardCache.set(card.name, card);
+      void writePersisted(card.name, card);
+      result.set(name, freshCopy(card));
+    }
+  }
+
+  console.log(`[Scryfall] Batch fetch complete: ${result.size} cards found`);
+  return result;
+}
+
+/**
+ * Batch fetch cards by Scryfall id using /cards/collection (max 75 per request).
+ * Mirrors getCardsByNames but uses { id } identifiers. Goes through the rate
+ * limiter and writes results into both in-memory and persistent caches keyed
+ * by name (consistent with all other paths) — EXCEPT extras.
+ *
+ * This is the one entry point that can pull token/emblem objects (it's how the
+ * playtest token spawner resolves `all_parts`), and an embalm/eternalize token is a
+ * name-identical copy of its parent card with a DIFFERENT color identity — the
+ * "Fanatic of Rhonas" token is a black Zombie, {B,G} vs the creature's {G}. Keying
+ * those by name replaced the real card in both cache layers for the full 7-day TTL,
+ * so decks holding one were flagged as breaking their commander's color identity.
+ *
+ * Returned Map is keyed by id so callers can re-establish input ordering.
+ */
+export async function getCardsByIds(
+  ids: string[],
+  onProgress?: (fetched: number, total: number) => void,
+): Promise<Map<string, ScryfallCard>> {
+  const result = new Map<string, ScryfallCard>();
+  if (ids.length === 0) return result;
+
+  for (let i = 0; i < ids.length; i += COLLECTION_BATCH_SIZE) {
+    const batch = ids.slice(i, i + COLLECTION_BATCH_SIZE);
+    const identifiers = batch.map(id => ({ id }));
+
+    try {
+      const response = await withRateLimit(() =>
+        fetch(`${BASE_URL}/cards/collection`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ identifiers }),
+        }),
+      );
+
+      if (response.ok) {
+        const data = await response.json() as { data: ScryfallCard[]; not_found: Array<{ id?: string }> };
+        for (const card of data.data) {
+          if (!isExtraPrinting(card)) {
+            cardCache.set(card.name, card);
+            if (card.name.includes(' // ')) {
+              const frontFace = card.name.split(' // ')[0];
+              cardCache.set(frontFace, card);
+            }
+          }
+          result.set(card.id, card); // callers resolve extras by id, never by name
+        }
+        const nameCacheable = data.data.filter(card => !isExtraPrinting(card));
+        if (nameCacheable.length > 0) {
+          void writePersistedMany(nameCacheable.map(card => ({ name: card.name, card })));
+        }
+      }
+    } catch (err) {
+      console.warn('[Scryfall] getCardsByIds batch failed:', err);
+    }
+
+    onProgress?.(Math.min(i + COLLECTION_BATCH_SIZE, ids.length), ids.length);
+  }
+
+  return result;
+}
+
+const UPGRADE_BATCH_SIZE = 15; // Card names per search query for printing upgrades
+
+/**
+ * Upgrade card printings in a map to match non-set Scryfall filters (e.g. is:full-art, frame:extendedart).
+ * Searches for matching printings in batches and replaces entries in-place.
+ * Set-based filters (set:xxx) are stripped since those are handled by getCardsByNames.
+ * When strict=true, cards without a matching printing are REMOVED from the map.
+ */
+export async function upgradeCardPrintings(
+  cards: Map<string, ScryfallCard>,
+  scryfallQuery: string,
+  strict: boolean = false
+): Promise<void> {
+  if (!scryfallQuery) return;
+
+  // Strip set filters — already handled by getCardsByNames' preferredSet
+  const filters = scryfallQuery.replace(/\b(?:set|s|e|edition):["']?[a-zA-Z0-9_]+["']?/gi, '').trim();
+  if (!filters) return;
+
+  // Collect card names, using front-face name for DFCs in search queries
+  const entries: { searchName: string; mapKey: string }[] = [];
+  for (const [key, card] of cards) {
+    const searchName = card.name.includes(' // ') ? card.name.split(' // ')[0] : card.name;
+    entries.push({ searchName, mapKey: key });
+  }
+
+  if (entries.length === 0) return;
+
+  console.log(`[Scryfall] Upgrading printings for ${entries.length} cards with filters: ${filters}${strict ? ' (strict)' : ''}`);
+  const cacheKeyPrefix = `upgrade|${filters}|`;
+  let upgraded = 0;
+  const matchedKeys = new Set<string>();
+
+  for (let i = 0; i < entries.length; i += UPGRADE_BATCH_SIZE) {
+    const batch = entries.slice(i, i + UPGRADE_BATCH_SIZE);
+
+    // Check cache first and separate cached vs uncached
+    const uncached: typeof batch = [];
+    for (const entry of batch) {
+      const cached = cardCache.get(`${cacheKeyPrefix}${entry.searchName}`);
+      if (cached) {
+        cards.set(entry.mapKey, freshCopy(cached));
+        matchedKeys.add(entry.mapKey);
+        upgraded++;
+      } else {
+        uncached.push(entry);
+      }
+    }
+
+    if (uncached.length === 0) continue;
+
+    // Build OR query: (!"Card1" OR !"Card2" OR ...) <filters>
+    const nameQuery = uncached.map(e => `!"${e.searchName}"`).join(' OR ');
+    const fullQuery = `(${nameQuery}) ${filters}`;
+    const encodedQuery = encodeURIComponent(fullQuery);
+
+    try {
+      const response = await withRateLimit(() =>
+        fetch(`${BASE_URL}/cards/search?q=${encodedQuery}&unique=prints&order=released&dir=desc`, {
+          headers: { 'Accept': 'application/json' },
+        }),
+      );
+
+      if (response.ok) {
+        const data = await response.json() as ScryfallSearchResponse;
+        // Build a name -> first matching card map (most recent printing first due to order=released desc)
+        const matchMap = new Map<string, ScryfallCard>();
+        for (const card of data.data) {
+          // `unique=prints` + user-supplied filters can match a token printing, which
+          // shares its name with the real card — never swap one into the deck.
+          if (isExtraPrinting(card)) continue;
+          const frontName = card.name.includes(' // ') ? card.name.split(' // ')[0] : card.name;
+          if (!matchMap.has(card.name) && !matchMap.has(frontName)) {
+            matchMap.set(card.name, card);
+            if (frontName !== card.name) matchMap.set(frontName, card);
+          }
+        }
+
+        // Replace matching cards in the result map and cache them
+        for (const entry of uncached) {
+          const match = matchMap.get(entry.searchName) ?? matchMap.get(cards.get(entry.mapKey)?.name ?? '');
+          if (match) {
+            cardCache.set(`${cacheKeyPrefix}${entry.searchName}`, match);
+            cards.set(entry.mapKey, freshCopy(match));
+            matchedKeys.add(entry.mapKey);
+            // Also update front-face key if it exists
+            if (match.name.includes(' // ')) {
+              const frontFace = match.name.split(' // ')[0];
+              if (cards.has(frontFace)) {
+                cards.set(frontFace, freshCopy(match));
+                matchedKeys.add(frontFace);
+              }
+            }
+            upgraded++;
+          }
+        }
+      }
+      // 404 = no results for this batch, not an error — just means no matching printings
+    } catch {
+      // Search failed, skip this batch — cards keep their default printings
+    }
+  }
+
+  // In strict mode, remove cards that had no matching printing
+  if (strict) {
+    const removed: string[] = [];
+    for (const entry of entries) {
+      if (!matchedKeys.has(entry.mapKey)) {
+        cards.delete(entry.mapKey);
+        removed.push(entry.searchName);
+      }
+    }
+    if (removed.length > 0) {
+      console.log(`[Scryfall] Strict filter removed ${removed.length} cards with no "${filters}" printing`);
+    }
+  }
+
+  if (upgraded > 0) {
+    console.log(`[Scryfall] Upgraded ${upgraded}/${entries.length} cards to match "${filters}"`);
+  }
+}
+
+/**
+ * Pre-cache basic lands for faster deck generation.
+ * Call this once at the start of deck generation.
+ */
+export async function prefetchBasicLands(): Promise<void> {
+  const basicLands = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes'];
+
+  // Check if already cached
+  const uncached = basicLands.filter(name => !cardCache.has(name));
+  if (uncached.length === 0) return;
+
+  await getCardsByNames(uncached);
+}
+
+/**
+ * Get a cached card if available (for basic lands).
+ */
+export function getCachedCard(name: string): ScryfallCard | undefined {
+  const cached = cardCache.get(name);
+  return cached ? freshCopy(cached) : undefined;
+}
+
+// Cached set of game changer card names from Scryfall
+let gameChangerNamesCache: Set<string> | null = null;
+let gameChangerCacheTimestamp = 0;
+const GC_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Fetch all game changer card names from Scryfall.
+ * Uses `is:gamechanger` search and paginates through all results.
+ */
+export async function getGameChangerNames(): Promise<Set<string>> {
+  if (gameChangerNamesCache && Date.now() - gameChangerCacheTimestamp < GC_CACHE_TTL) {
+    return gameChangerNamesCache;
+  }
+
+  const names = new Set<string>();
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const response = await scryfallFetch<ScryfallSearchResponse>(
+        `/cards/search?q=${encodeURIComponent('is:gamechanger')}&page=${page}`
+      );
+      for (const card of response.data) {
+        names.add(card.name);
+        // For DFCs, also index by front face so EDHREC name lookups match
+        if (card.name.includes(' // ')) {
+          names.add(card.name.split(' // ')[0]);
+        }
+      }
+      hasMore = response.has_more;
+      page++;
+    } catch {
+      break;
+    }
+  }
+
+  gameChangerNamesCache = names;
+  gameChangerCacheTimestamp = Date.now();
+  console.log(`[Scryfall] Cached ${names.size} game changer card names`);
+  return names;
+}
+
+/** Session cache for oracle-tag membership. Keyed by the raw query, e.g. `otag:overrun`. */
+const oracleTagCache = new Map<string, Set<string>>();
+/**
+ * In-flight sweeps, so concurrent callers share one pagination run rather than racing.
+ *
+ * This is not hypothetical: React StrictMode double-invokes the lab's mount effect, and without
+ * this both invocations miss the cache and each paginate `otag:burn` for ~18 requests.
+ */
+const oracleTagInflight = new Map<string, Promise<Set<string>>>();
+
+/**
+ * Every card name carrying a Scryfall oracle tag, e.g. `otag:overrun`.
+ *
+ * Used by the dev Finisher Lab so the tag vocabulary can be edited live instead of being baked
+ * into the tagger cron. Paginates fully and caches for the session — `otag:burn` is ~3000 cards
+ * (~18 requests at 175/page), which is fine once and painful on every keystroke.
+ *
+ * Returns an empty set on any failure; the lab surfaces that as a dead tag rather than throwing.
+ */
+export async function fetchOracleTagNames(query: string): Promise<Set<string>> {
+  const cached = oracleTagCache.get(query);
+  if (cached) return cached;
+  const inflight = oracleTagInflight.get(query);
+  if (inflight) return inflight;
+
+  const run = (async () => {
+    // IndexedDB first. Tags change only when Scryfall re-tags a card, so re-paginating them on
+    // every page load was pure waste — a cold lab sweep is ~20 requests and several seconds.
+    const persisted = await readPersistedOracleTag(query);
+    if (persisted) {
+      oracleTagCache.set(query, persisted);
+      console.log(`[Scryfall] ${query} → ${persisted.size} cards (persisted)`);
+      return persisted;
+    }
+
+    const names = new Set<string>();
+    let page = 1;
+    let hasMore = true;
+    let failed = false;
+
+    while (hasMore) {
+      try {
+        const response = await scryfallFetch<ScryfallSearchResponse>(
+          `/cards/search?q=${encodeURIComponent(query)}&unique=cards&page=${page}`,
+        );
+        for (const card of response.data) {
+          names.add(card.name);
+          // Match the DFC handling elsewhere in this file — index the front face too.
+          if (card.name.includes(' // ')) names.add(card.name.split(' // ')[0]);
+        }
+        hasMore = response.has_more;
+        page++;
+      } catch {
+        // 404 is Scryfall's "no cards matched", which is also what an unknown tag looks like.
+        // It's also what a rate-limited page looks like, so a partial sweep must not be persisted.
+        failed = true;
+        break;
+      }
+    }
+
+    oracleTagCache.set(query, names);
+    if (!failed) void writePersistedOracleTag(query, names);
+    console.log(`[Scryfall] ${query} → ${names.size} cards`);
+    return names;
+  })();
+
+  oracleTagInflight.set(query, run);
+  try {
+    return await run;
+  } finally {
+    oracleTagInflight.delete(query);
+  }
+}
+
+export interface MtgCatalogs {
+  mechanics: Set<string>;
+  creatureTypes: Set<string>;
+  /** Non-creature permanent subtypes (Equipment, Aura, Vehicle, Saga, Shrine, …) from the
+   *  artifact/enchantment type catalogs — used to gate "Equipment"/"Aura"-style theme packs on the
+   *  literal type line, exactly as creature types gate tribal packs. */
+  permanentSubtypes: Set<string>;
+}
+
+let mtgCatalogsCache: MtgCatalogs | null = null;
+let mtgCatalogsPromise: Promise<MtgCatalogs> | null = null;
+
+/**
+ * Scryfall's own vocabularies: every keyword ability / action / ability word (the game's real
+ * mechanics) and every creature type (tribes), lowercased. Fetched once, module-cached. On any
+ * failure returns empty sets — callers then treat all themes as archetypes (today's behavior).
+ */
+export async function getMtgCatalogs(): Promise<MtgCatalogs> {
+  if (mtgCatalogsCache) return mtgCatalogsCache;
+  if (mtgCatalogsPromise) return mtgCatalogsPromise;
+  mtgCatalogsPromise = (async () => {
+    const fetchCat = async (path: string): Promise<string[]> => {
+      try {
+        const json = await scryfallFetch<{ data?: string[] }>(`/catalog/${path}`);
+        return Array.isArray(json.data) ? json.data : [];
+      } catch { return []; }
+    };
+    const [abilities, actions, words, creatureTypes, artifactTypes, enchantmentTypes] = await Promise.all([
+      fetchCat('keyword-abilities'), fetchCat('keyword-actions'), fetchCat('ability-words'), fetchCat('creature-types'),
+      fetchCat('artifact-types'), fetchCat('enchantment-types'),
+    ]);
+    const mechanics = new Set<string>([...abilities, ...actions, ...words].map(s => s.toLowerCase()));
+    const result: MtgCatalogs = {
+      mechanics,
+      creatureTypes: new Set(creatureTypes.map(s => s.toLowerCase())),
+      permanentSubtypes: new Set([...artifactTypes, ...enchantmentTypes].map(s => s.toLowerCase())),
+    };
+    mtgCatalogsCache = result;
+    console.log(`[Scryfall] catalogs: ${mechanics.size} mechanics, ${result.creatureTypes.size} creature types, ${result.permanentSubtypes.size} permanent subtypes`);
+    return result;
+  })();
+  return mtgCatalogsPromise;
+}
+
+// Session cache of card name -> "is available on MTG Arena". Resolved across ALL
+// printings via Scryfall's `game:arena` operator, which is the correct signal —
+// the per-printing `card.games` field is unreliable because a card's default
+// printing (what name lookups return) often omits 'arena' even when another
+// printing IS on Arena (e.g. Counterspell's default `dsc` printing).
+const arenaLegalCache = new Map<string, boolean>();
+// `!"A" OR !"B" ...` names per `game:arena (...)` query. Larger than the
+// print-collecting batches (which cap at 15 to bound prints-per-name) because this
+// is a membership query (unique=cards → at most one row per name), so the only
+// limit is query length — 35 exact-name clauses tested well within Scryfall's cap.
+const ARENA_SEARCH_BATCH_SIZE = 35;
+
+/** Front-face name for a DFC ("Front // Back" → "Front"); identity otherwise. */
+export function frontFaceName(name: string): string {
+  return name.includes(' // ') ? name.split(' // ')[0] : name;
+}
+
+/**
+ * Given a list of card names, return the subset that is available on MTG Arena
+ * (via ANY printing). Uses Scryfall's `game:arena` search operator rather than the
+ * per-printing `card.games` field, so it correctly reports cards whose default
+ * printing isn't on Arena. Results are cached by name for the session.
+ *
+ * The returned Set contains both the queried name and (for DFCs) the front-face
+ * name, so membership checks work regardless of which form a caller holds.
+ */
+export async function getArenaLegalNames(names: string[]): Promise<Set<string>> {
+  const result = new Set<string>();
+  // Add both the full name and the DFC front face so callers can match either form.
+  const add = (name: string) => { result.add(name); result.add(frontFaceName(name)); };
+
+  const uncached: string[] = [];
+  for (const name of new Set(names)) { // dedupe input
+    if (!name) continue;
+    const cached = arenaLegalCache.get(name);
+    if (cached === undefined) uncached.push(name);
+    else if (cached) add(name);
+  }
+
+  for (let i = 0; i < uncached.length; i += ARENA_SEARCH_BATCH_SIZE) {
+    const batch = uncached.slice(i, i + ARENA_SEARCH_BATCH_SIZE);
+    const nameQuery = batch.map(n => `!"${frontFaceName(n)}"`).join(' OR ');
+    const found = new Set<string>();
+    // Whether we got an authoritative answer for this batch. A 404 means the
+    // `game:arena (...)` query matched nothing — authoritative "none on Arena".
+    // Any other failure is transient; we must NOT cache it (else a network blip
+    // would wrongly mark cards off-Arena for the rest of the session).
+    let authoritative = true;
+    try {
+      const response = await scryfallFetch<ScryfallSearchResponse>(
+        `/cards/search?q=${encodeURIComponent(`game:arena (${nameQuery})`)}&unique=cards`,
+      );
+      for (const card of response.data) {
+        found.add(card.name);
+        found.add(frontFaceName(card.name));
+      }
+    } catch (err) {
+      authoritative = err instanceof Error && err.message.includes('404');
+      if (!authoritative) {
+        console.warn('[Scryfall] getArenaLegalNames batch failed (transient):', err);
+      }
+    }
+
+    for (const name of batch) {
+      const onArena = found.has(name) || found.has(frontFaceName(name));
+      if (authoritative) arenaLegalCache.set(name, onArena);
+      if (onArena) add(name);
+    }
+  }
+
+  return result;
+}
+
+// Cached ban list results by format
+const banListCache = new Map<string, { names: string[]; timestamp: number }>();
+const BAN_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Fetch all cards banned in a given format from Scryfall.
+ * Uses `banned:<format>` search and paginates through all results.
+ */
+export async function getBanList(format: string): Promise<string[]> {
+  const cached = banListCache.get(format);
+  if (cached && Date.now() - cached.timestamp < BAN_CACHE_TTL) {
+    return cached.names;
+  }
+
+  const names: string[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const response = await scryfallFetch<ScryfallSearchResponse>(
+        `/cards/search?q=${encodeURIComponent(`banned:${format}`)}&unique=cards&order=name&page=${page}`
+      );
+      for (const card of response.data) {
+        names.push(card.name);
+      }
+      hasMore = response.has_more;
+      page++;
+    } catch {
+      break;
+    }
+  }
+
+  banListCache.set(format, { names, timestamp: Date.now() });
+  return names;
+}
+
+/** Convenience alias for commander ban list */
+export async function getCommanderBanList(): Promise<string[]> {
+  return getBanList('commander');
+}
+
+export async function autocompleteCardName(query: string): Promise<string[]> {
+  if (!query.trim() || query.length < 2) return [];
+
+  const encodedQuery = encodeURIComponent(query);
+  const response = await scryfallFetch<{ data: string[] }>(
+    `/cards/autocomplete?q=${encodedQuery}`
+  );
+
+  return response.data;
+}
+
+// Helper to get image URL with fallback for double-faced cards
+export function getCardImageUrl(
+  card: ScryfallCard,
+  size: 'small' | 'normal' | 'large' = 'normal'
+): string {
+  if (card.image_uris) {
+    return card.image_uris[size];
+  }
+
+  // Double-faced card - use front face
+  if (card.card_faces && card.card_faces[0]?.image_uris) {
+    return card.card_faces[0].image_uris[size];
+  }
+
+  // Fallback placeholder
+  return 'https://cards.scryfall.io/normal/front/0/0/00000000-0000-0000-0000-000000000000.jpg';
+}
+
+/**
+ * Get the best available USD price for a card.
+ * Falls back through: usd → usd_foil → usd_etched → eur → eur_foil
+ * Returns the price string or null if no price is available.
+ */
+/** Names of the six basic lands, including Wastes. Snow-covered variants check separately. */
+export const BASIC_LAND_NAMES: ReadonlySet<string> = new Set([
+  'Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes',
+]);
+
+export function getCardPrice(card: ScryfallCard, currency: 'USD' | 'EUR' = 'USD'): string | null {
+  if (BASIC_LAND_NAMES.has(card.name)) return '0.05';
+  const p = card.prices;
+  if (currency === 'EUR') return p?.eur || p?.eur_foil || p?.usd || p?.usd_foil || p?.usd_etched || null;
+  return p?.usd || p?.usd_foil || p?.usd_etched || p?.eur || p?.eur_foil || null;
+}
+
+// Get the front face type_line for a card.
+// MDFCs have type_line like "Instant // Land" — this returns only "Instant" (the front face).
+export function getFrontFaceTypeLine(card: ScryfallCard): string {
+  if (card.card_faces && card.card_faces.length >= 2 && card.card_faces[0]?.type_line) {
+    return card.card_faces[0].type_line;
+  }
+  return card.type_line || '';
+}
+
+// Check if a card is double-faced (has separate face images)
+export function isDoubleFacedCard(card: ScryfallCard): boolean {
+  return !card.image_uris && !!card.card_faces && card.card_faces.length >= 2
+    && !!card.card_faces[0]?.image_uris && !!card.card_faces[1]?.image_uris;
+}
+
+// Check if a card is a Modal Double-Faced Card with a land on the back face.
+// Spell/land MDFCs like "Jwari Disruption // Jwari Ruins" (Instant // Land) can be
+// played as either face from hand — they're effectively spells that double as lands.
+// Excludes: pathway lands (Land // Land), transform DFCs, split cards.
+export function isMdfcLand(card: ScryfallCard): boolean {
+  if (!card.card_faces || card.card_faces.length < 2) return false;
+  // Primary check: use layout field from Scryfall API
+  if (card.layout && card.layout !== 'modal_dfc') return false;
+  // Fallback for missing layout: require combined type_line pattern
+  if (!card.layout && !card.type_line?.includes(' // ')) return false;
+  const frontType = card.card_faces[0].type_line?.toLowerCase() ?? '';
+  const backType = card.card_faces[1].type_line?.toLowerCase() ?? '';
+  return !frontType.includes('land') && backType.includes('land');
+}
+
+/** The five colors of mana, in WUBRG order. */
+export const WUBRG = ['W', 'U', 'B', 'R', 'G'] as const;
+
+/** True if the card's front face type line includes "Land". */
+export function isLand(card: ScryfallCard): boolean {
+  return getFrontFaceTypeLine(card).toLowerCase().includes('land');
+}
+
+/** True if the card is a land OR a spell/land MDFC (its back face is a land). */
+export function isAnyLand(card: ScryfallCard): boolean {
+  return isLand(card) || isMdfcLand(card);
+}
+
+/** True if the card's type line is a basic land (snow-covered counts). */
+export function isBasicLand(card: ScryfallCard): boolean {
+  const tl = getFrontFaceTypeLine(card).toLowerCase();
+  return tl.includes('land') && /\bbasic\b/.test(tl);
+}
+
+/**
+ * Infer which of WUBRG (and 'C' as a fallback) a card produces.
+ * Uses Scryfall's `produced_mana` first, falls back to oracle-text scanning
+ * for cards that lack the field.
+ */
+export function getProducedColors(card: ScryfallCard): string[] {
+  const produced = card.produced_mana || [];
+  const colors = [...new Set(produced.filter(c => (WUBRG as readonly string[]).includes(c)))];
+  if (colors.length > 0) return colors.sort((a, b) => WUBRG.indexOf(a as typeof WUBRG[number]) - WUBRG.indexOf(b as typeof WUBRG[number]));
+  const oracle = (card.oracle_text || '').toLowerCase();
+  if (oracle.includes('any color') || oracle.includes('any type')) return [...WUBRG];
+  const found: string[] = [];
+  if (oracle.includes('add {w}')) found.push('W');
+  if (oracle.includes('add {u}')) found.push('U');
+  if (oracle.includes('add {b}')) found.push('B');
+  if (oracle.includes('add {r}')) found.push('R');
+  if (oracle.includes('add {g}')) found.push('G');
+  if (found.length === 0 && produced.includes('C')) return ['C'];
+  return found;
+}
+
+// The 5 Kamigawa: Neon Dynasty channel lands — legendary lands with Channel abilities.
+// These are format staples: lands that double as spells via discard, with no downside.
+export const CHANNEL_LANDS: Record<string, string> = {
+  'Boseiju, Who Endures': 'G',
+  'Otawara, Soaring City': 'U',
+  'Eiganjo, Seat of the Empire': 'W',
+  'Takenuma, Abandoned Mire': 'B',
+  'Sokenzan, Crucible of Defiance': 'R',
+};
+
+/** Check if a card is one of the 5 Kamigawa channel lands. */
+export function isChannelLand(card: ScryfallCard): boolean {
+  return card.name in CHANNEL_LANDS;
+}
+
+/** Get channel lands that match a given color identity. */
+export function getChannelLandsForColors(colorIdentity: string[]): { name: string; color: string }[] {
+  return Object.entries(CHANNEL_LANDS)
+    .filter(([, color]) => colorIdentity.includes(color))
+    .map(([name, color]) => ({ name, color }));
+}
+
+// Search Scryfall for MDFC spell/lands matching a commander's color identity.
+// Returns ALL cards where front face is a spell and back face is a land.
+// Paginates through all results so nothing is missed.
+export async function searchMdfcLands(colorIdentity: string[]): Promise<ScryfallCard[]> {
+  const query = 'is:mdfc t:land';
+  const allCards: ScryfallCard[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const result = await searchCards(query, colorIdentity, { order: 'edhrec', page });
+    allCards.push(...result.data);
+    hasMore = result.has_more;
+    page++;
+  }
+
+  const mdfcs = allCards.filter(card => isMdfcLand(card));
+  // Populate the card cache so add-card flows can resolve these by name.
+  // MDFC names are double-faced ("Front // Back"); also cache by the front-face name
+  // since callers sometimes split the name.
+  for (const card of mdfcs) {
+    cardCache.set(card.name, card);
+    const frontName = card.card_faces?.[0]?.name;
+    if (frontName && frontName !== card.name) cardCache.set(frontName, card);
+  }
+  return mdfcs;
+}
+
+// Get back face image URL for a double-faced card
+export function getCardBackFaceUrl(
+  card: ScryfallCard,
+  size: 'small' | 'normal' | 'large' = 'normal'
+): string | null {
+  if (!isDoubleFacedCard(card)) return null;
+  return card.card_faces![1].image_uris![size] ?? null;
+}
+
+// Helper to get oracle text including both faces for DFCs
+export function getOracleText(card: ScryfallCard): string {
+  if (card.oracle_text) {
+    return card.oracle_text;
+  }
+
+  if (card.card_faces) {
+    return card.card_faces
+      .map((face) => face.oracle_text || '')
+      .filter(Boolean)
+      .join('\n\n');
+  }
+
+  return '';
+}
+
+/**
+ * Search for valid partner commanders based on the primary commander's partner type
+ */
+export async function searchValidPartners(
+  commander: ScryfallCard,
+  searchQuery = ''
+): Promise<ScryfallCard[]> {
+  const partnerType = getPartnerType(commander);
+
+  if (partnerType === 'none') {
+    return [];
+  }
+
+  let query: string;
+
+  switch (partnerType) {
+    case 'partner':
+      // Generic Partner - find other commanders with Partner keyword
+      // Exclude "Partner with X" and "Friends forever" (Scryfall lumps them all under keyword:partner)
+      query = `is:commander -is:funny keyword:partner -o:"Partner with" -o:"Friends forever"`;
+      break;
+
+    case 'partner-with': {
+      // Partner with X - fetch the specific card
+      const partnerName = getPartnerWithName(commander);
+      if (!partnerName) return [];
+      try {
+        const partner = await getCardByName(partnerName, true);
+        return partner ? [partner] : [];
+      } catch {
+        return [];
+      }
+    }
+
+    case 'friends-forever':
+      // Friends forever - find other commanders with Friends forever in oracle text
+      // Scryfall returns keyword:Partner for these, so we must use oracle text search
+      query = `is:commander -is:funny o:"Friends forever"`;
+      break;
+
+    case 'choose-background':
+      // Choose a Background - find Background enchantments
+      query = `t:background`;
+      break;
+
+    case 'background':
+      // Background - find commanders with "Choose a Background"
+      query = `is:commander -is:funny o:"Choose a Background"`;
+      break;
+
+    case 'doctors-companion':
+      // Doctor's Companion - find Doctor creatures that are commanders
+      query = `is:commander -is:funny t:doctor`;
+      break;
+
+    case 'doctor':
+      // Doctor - find creatures with Doctor's companion keyword
+      query = `is:commander -is:funny keyword:"Doctor's companion"`;
+      break;
+
+    default:
+      return [];
+  }
+
+  // Add user search query if provided
+  if (searchQuery.trim()) {
+    query = `${query} ${searchQuery}`;
+  }
+
+  try {
+    const encodedQuery = encodeURIComponent(query);
+    const response = await scryfallFetch<ScryfallSearchResponse>(
+      `/cards/search?q=${encodedQuery}&order=edhrec`
+    );
+
+    // Filter out the commander itself, plus anything not legal-or-upcoming in
+    // Commander (digital/Alchemy rebalances, playtest cards, etc.)
+    return response.data.filter(
+      (card) => card.name !== commander.name && isCommanderLegalOrUpcoming(card)
+    );
+  } catch {
+    return [];
+  }
+}
+
+// Word-to-number mapping for parsing "up to seven" style caps
+const WORD_TO_NUMBER: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
+  fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18,
+  nineteen: 19, twenty: 20,
+};
+
+// Cached result so we only query Scryfall once per session
+let multiCopyCardsCache: Map<string, number | null> | null = null;
+
+/**
+ * Fetches all cards with "a deck can have any number/up to N" oracle text from Scryfall.
+ * Returns a map of card name → maxCopies (null = unlimited).
+ * Results are cached for the session — only one API call ever made.
+ */
+export async function fetchMultiCopyCardNames(): Promise<Map<string, number | null>> {
+  if (multiCopyCardsCache) return multiCopyCardsCache;
+
+  const result = new Map<string, number | null>();
+
+  try {
+    const encodedQuery = encodeURIComponent('o:"a deck can have" f:commander');
+    const response = await scryfallFetch<ScryfallSearchResponse>(
+      `/cards/search?q=${encodedQuery}&unique=cards`
+    );
+
+    for (const card of response.data) {
+      const oracle = (card.oracle_text || card.card_faces?.[0]?.oracle_text || '').toLowerCase();
+
+      // "a deck can have any number of cards named X" → unlimited
+      if (oracle.includes('any number of cards named')) {
+        result.set(card.name, null);
+        continue;
+      }
+
+      // "a deck can have up to seven cards named X" → parse the number
+      const capMatch = oracle.match(/a deck can have up to (\w+) cards named/);
+      if (capMatch) {
+        const num = WORD_TO_NUMBER[capMatch[1]] ?? parseInt(capMatch[1], 10);
+        result.set(card.name, isNaN(num) ? null : num);
+      }
+    }
+  } catch (error) {
+    console.warn('[Scryfall] Failed to fetch multi-copy card list:', error);
+  }
+
+  multiCopyCardsCache = result;
+  return result;
+}
+
+/**
+ * Path to the bundled MTG card-back fallback image. Must be base-aware:
+ * the app is served under Vite's `base` (e.g. /mtg-commander-deck-generator/),
+ * so a root-absolute '/card-back.png' would 404. BASE_URL always ends in '/'.
+ */
+export const CARD_BACK_URL = `${import.meta.env.BASE_URL}card-back.png`;
+
+/**
+ * React hook returning a usable image URL for the given card name. Routes
+ * the cache miss through getCardByName (rate-limited + persistent-cached).
+ * Returns the card-back fallback URL until the real image resolves, on
+ * errors, or when name is null/undefined.
+ */
+export function useScryfallImage(
+  name: string | null | undefined,
+  version: 'small' | 'normal' | 'large' = 'normal',
+): { url: string; loading: boolean } {
+  const initial = name ? cardCache.get(name) ?? null : null;
+  const [resolved, setResolved] = useState<ScryfallCard | null>(initial);
+  const [loading, setLoading] = useState<boolean>(!!name && !initial);
+
+  useEffect(() => {
+    if (!name) {
+      setResolved(null);
+      setLoading(false);
+      return;
+    }
+    const cached = cardCache.get(name);
+    if (cached) {
+      setResolved(cached);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setResolved(null);
+    setLoading(true);
+    getCardByName(name)
+      .then(card => {
+        if (cancelled) return;
+        setResolved(card);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
+        // Leave `resolved` null so the card-back stays visible
+      });
+    return () => { cancelled = true; };
+  }, [name]);
+
+  const url = resolved ? getCardImageUrl(resolved, version) : CARD_BACK_URL;
+  return { url, loading };
+}

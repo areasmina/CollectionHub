@@ -1,0 +1,47 @@
+{
+  "goblin-aggro": {
+    "understood": 100,
+    "gaps": 0,
+    "cards": 26
+  },
+  "dimir-control": {
+    "understood": 93,
+    "gaps": 3,
+    "cards": 42
+  },
+  "selesnya-tokens": {
+    "understood": 100,
+    "gaps": 0,
+    "cards": 44
+  },
+  "golgari-graveyard": {
+    "understood": 98,
+    "gaps": 1,
+    "cards": 44
+  },
+  "eternal-might": {
+    "understood": 100,
+    "gaps": 0,
+    "cards": 52
+  },
+  "sultai-arisen": {
+    "understood": 100,
+    "gaps": 0,
+    "cards": 51
+  },
+  "prismari-performance": {
+    "understood": 100,
+    "gaps": 0,
+    "cards": 43
+  },
+  "old-growth-stampede": {
+    "understood": 97,
+    "gaps": 1,
+    "cards": 39
+  },
+  "mirror-break": {
+    "understood": 100,
+    "gaps": 0,
+    "cards": 42
+  }
+}

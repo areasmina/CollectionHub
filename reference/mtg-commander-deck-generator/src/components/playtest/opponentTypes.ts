@@ -1,0 +1,311 @@
+import type { ScryfallCard } from '@/types';
+import type { CardEdit } from '@/components/playtest/types';
+import type { CombatKeyword } from '@/services/playtest/combat';
+import type { AppliedEffect } from '@/services/playtest/opponents/evaluate';
+
+/**
+ * A pump that lasts until end of turn — Goreclaw's attack trigger, Temmet's
+ * draw trigger.
+ *
+ * Deliberately NOT a `CardEdit`, which is the other way a permanent's stats can
+ * be rewritten. Three reasons they have to stay apart: an edit REPLACES the
+ * printed P/T where this ADDS to whatever it currently is, an edit suppresses
+ * the characteristic-defining `*` where a pump must leave a Lord of Extinction
+ * growing, and an edit is permanent where this is cleared the moment combat
+ * resolves. A Frogified creature and a creature swinging big this turn are not
+ * the same thing and must not render as the same thing.
+ */
+export interface TempBoost {
+  power: number;
+  toughness: number;
+  /** Keywords granted for the turn — Goreclaw hands out trample. */
+  keywords?: CombatKeyword[];
+  /**
+   * Haste, granted for the turn — a kicked Goblin Bushwhacker.
+   *
+   * Separate from `keywords` because CombatKeyword is the set the damage maths
+   * reads and haste is not one of them; it is read by the attack step instead.
+   */
+  haste?: boolean;
+}
+
+export interface OpponentPermanent {
+  instanceId: string;
+  card: ScryfallCard;
+  tapped: boolean;
+  /** Creatures can't attack the turn they arrive. */
+  summoningSick: boolean;
+  /** Same shape as a player card's, so counter handling reads the same. */
+  counters: Record<string, number>;
+  /** Set when this creature has been rewritten — see CardEdit. */
+  edit?: CardEdit;
+  /** Set while an until-end-of-turn pump is live — see TempBoost. */
+  tempBoost?: TempBoost;
+  /**
+   * Echo has not been settled yet: this came under the bot's control since its
+   * last upkeep, and the next one either pays the cost or sacrifices it.
+   * Cleared the moment that upkeep resolves, paid or not — echo bills once.
+   */
+  echoDue?: boolean;
+}
+
+/** Zones a permanent can be sent to from the board. */
+export type OpponentZone = 'graveyard' | 'exile' | 'hand' | 'library';
+
+export interface Opponent {
+  id: string;
+  /** Deck name, used as the lane heading. */
+  name: string;
+  /** Which bundled stub this came from, if any. */
+  stubId: string | null;
+  blurb: string;
+  colors: string[];
+  life: number;
+  library: ScryfallCard[];
+  /** Real cards. Only the count is ever shown to the player. */
+  hand: ScryfallCard[];
+  graveyard: ScryfallCard[];
+  exile: ScryfallCard[];
+  command: ScryfallCard[];
+  /** The commander's card name, so a copy on the battlefield is recognisable. */
+  commanderName: string | null;
+  /** How many times it has been cast. Each one adds {2} to the next. */
+  commanderCasts: number;
+  /**
+   * Every token this deck can make, fetched once when the bot sits down.
+   * Token specs in the registry are matched against this list by name.
+   */
+  tokens: ScryfallCard[];
+  battlefield: OpponentPermanent[];
+  /** True once this bot has stopped drawing because its library ran dry. */
+  decked: boolean;
+  /** Off = a passive threat dummy that only develops and attacks. */
+  resistance: boolean;
+  /** 0..1 — higher fires interaction sooner and at smaller threats. */
+  aggression: number;
+  /** Drives the "hold early" rule in evaluation. */
+  turnsTaken: number;
+  /**
+   * Experience counters. A player counter, not a permanent's, which is the
+   * whole point of the mechanic: Meren keeps hers when she dies, so the bot
+   * that has been trading creatures all game reanimates where a fresh one
+   * only gets the card back.
+   *
+   * Optional so every existing seat reads as zero without a migration.
+   */
+  experience?: number;
+  /**
+   * Combo ids this bot has announced and will execute next turn. A combo is
+   * telegraphed on the turn it assembles and fired on the following one, so
+   * there is always exactly one window to break it up.
+   */
+  armedCombos?: string[];
+}
+
+/**
+ * Which Commander bracket a seat plays at, 1 (Exhibition) to 5 (cEDH).
+ *
+ * Since the October 2025 revision a bracket is anchored on how quickly a deck
+ * expects to win — roughly turn 9+, 8+, 6+, 4+, and any — rather than on a
+ * power-level vibe. That matters here because it is measurable: unlike the
+ * Inspector, which has to estimate a stranger's bracket from a card list, we
+ * own these decks and can measure their kill turn in the diagnostic. A label
+ * on a seat is a claim we can check.
+ *
+ * Note that stock precons all sit at 2 by definition — bracket 2 IS
+ * "precon-level power" — so 1 and 3 are a de-tune and an upgrade of one, and
+ * 4 and 5 are built rather than bought.
+ */
+export type Bracket = 1 | 2 | 3 | 4 | 5;
+
+export const BRACKET_LABELS: Record<Bracket, { name: string; hint: string }> = {
+  1: { name: 'Exhibition', hint: 'Built around a theme rather than around winning. Expect to be around past turn nine.' },
+  2: { name: 'Core',       hint: 'Precon-level power. Strong cards, no fast combos — what most tables expect.' },
+  3: { name: 'Upgraded',   hint: 'Tuned mana and a real win condition. Wins from about turn six.' },
+  4: { name: 'Optimized',  hint: 'Efficient interaction and a compact win condition. Can win from turn four.' },
+  5: { name: 'cEDH',       hint: 'Playing to win. Will kill you as fast as it can assemble.' },
+};
+
+export interface OpponentStub {
+  id: string;
+  name: string;
+  blurb: string;
+  commander: string;
+  colors: string[];
+  /** 1-5. See `Bracket` — this is a claim the diagnostic can check. */
+  bracket: Bracket;
+  /**
+   * The real product this list came from, when it came from one. Shown on the
+   * seat picker, because "this is the actual precon" is the whole reason to
+   * sit down across from it.
+   */
+  source?: string;
+  /**
+   * Kept in the data but off the seat picker. A deck is shelved rather than
+   * deleted because its cards carry dozens of hand-authored registry entries
+   * that other decks draw on, and because a seat already at the table still has
+   * to be able to resolve its own stub by id.
+   */
+  hidden?: boolean;
+  /** Entries are "<qty> <card name>". */
+  cards: string[];
+}
+
+/**
+ * What kind of thing is sitting on the stack. The distinction is cosmetic — the
+ * panel labels a cast spell differently from an ability that was activated —
+ * but it is the difference between "they cast Murder" and "the Chupacabra
+ * arrived", which is the whole story of the beat.
+ */
+export type StackKind = 'spell' | 'trigger' | 'ability' | 'combo';
+
+/** Who put something on the stack, and what it says it will do. */
+export interface StackSource {
+  /**
+   * The card doing it, when a single card is doing it. The art IS the panel —
+   * a combo line has no one card to show, which is why this is optional.
+   */
+  card?: ScryfallCard;
+  name: string;
+  kind: StackKind;
+  /** A few words on what happens if it resolves: "Destroys Llanowar Elves". */
+  label: string;
+}
+
+/**
+ * One thing waiting to resolve, aimed at the player.
+ *
+ * The bot turn loop parks on these the same way it parks on combat: the frame
+ * that carried the effect stops, the item goes up, and nothing is applied until
+ * you either let it resolve or counter it. Everything you might do in response
+ * — tapping lands, pitching a counterspell to your graveyard — is a normal
+ * playtest move, so the window needs no machinery of its own.
+ */
+export interface StackItem extends StackSource {
+  id: string;
+  opponentId: string;
+  opponentName: string;
+  effect: AppliedEffect;
+  /**
+   * Permanents this spell put onto the BOT's own board, when the item exists
+   * because of the `everything` stack mode rather than because something was
+   * aimed at you.
+   *
+   * Countering such a spell has to take the body back off — that is the whole
+   * difference between the two modes. Empty for anything aimed at you, where
+   * the bot's side of the cast is already settled and only your board is at
+   * stake.
+   */
+  arrived?: string[];
+}
+
+/** Where a cast card came from, for the flight that animates it. */
+export type CastZone = 'hand' | 'command' | 'graveyard';
+
+/** Who a bot's attack is pointed at. */
+export type AttackTarget =
+  | { kind: 'player' }
+  | { kind: 'opponent'; id: string; name: string };
+
+/**
+ * One visible beat of a bot's turn — untap, land, cast, attack. The store plays
+ * these in sequence with a short pause between so the turn reads as a series of
+ * moves rather than the board changing all at once.
+ */
+export interface TurnFrame {
+  opponent: Opponent;
+  logs: string[];
+  /** Short label popped off the lane for this beat, e.g. a card name. */
+  blurb?: string;
+  /** What to do to the player's board. Described here, applied by the store. */
+  effects: AppliedEffect[];
+  /**
+   * Life the player loses from the bot's own triggers this beat — an Impact
+   * Tremors or a Purphoros firing off its creatures. Separate from `effects`,
+   * which describe things done to the player's permanents.
+   */
+  selfDamage?: number;
+  /**
+   * Life the BOT gains from its own triggers this beat — the other half of a
+   * Wayward Servant. Applied by the store for the same reason `selfDamage` is:
+   * the engine's copy of a seat's life is thrown away on the way out.
+   */
+  selfLifeGain?: number;
+  /**
+   * Life the BOT pays this beat — a tutor's cost, an upkeep's bill. Applied by
+   * the store next to `selfLifeGain`, and for the same reason.
+   */
+  selfLifeLoss?: number;
+  /**
+   * Instance ids on the bot's board that are attacking. Non-empty only on the
+   * attack beat. An attack on YOU stops the turn while you block; an attack on
+   * another seat is resolved by the store without pausing, since both sides of
+   * it are decided by the bots.
+   */
+  attackers: string[];
+  /** Who those attackers are pointed at. Absent on non-attack beats. */
+  attackTarget?: AttackTarget;
+  /**
+   * The card behind `effects`, for the stack. Present on every beat that does
+   * something to the player and absent on the rest.
+   */
+  source?: StackSource;
+  /**
+   * The card this beat took out of a zone: cast from hand, a commander out of
+   * the command zone, a Gravecrawler recast from the graveyard, or a land
+   * played.
+   *
+   * Stated here rather than worked out downstream because nothing downstream
+   * can reconstruct it. Both the `everything` stack mode and the seat's cast
+   * animation used to read "their hand got smaller", which cannot see a
+   * commander (it never was in hand), a reanimation (nor that), or a cast that
+   * draws in the same beat (net zero) — and which counts the cleanup discard as
+   * a card being played.
+   *
+   * `from` is where the flight starts: a commander leaving an empty hand fan
+   * read as a card appearing out of nowhere.
+   *
+   * `onStack` splits the two jobs this fact does. The animation only needs to
+   * know a card moved; the `everything` stack mode only needs to know whether
+   * it used the stack. A land drop is the case that separates them — it slides
+   * out of their hand like anything else, and there is no window to respond to
+   * one.
+   */
+  moved?: { card: ScryfallCard; from: CastZone; onStack: boolean };
+  /**
+   * Cards that went from this seat's LIBRARY into its hand this beat — its
+   * draw step, a Divination, a tutor.
+   *
+   * Counted by the engine as it happens, because the hand's size cannot tell a
+   * draw from anything else in the same beat: a Divination is one card out and
+   * two in, which nets to a single draw, and a cantrip nets to nothing at all.
+   * Cards taken back out of the GRAVEYARD are not counted — nothing came off
+   * the top of the deck, so there is nothing to fly from it.
+   */
+  drew?: number;
+}
+
+/** One creature swinging at you, flattened for the combat UI. */
+export interface Attacker {
+  instanceId: string;
+  card: ScryfallCard;
+  power: number;
+  toughness: number;
+  /** Carried on the snapshot so its keywords agree with its already-resolved P/T. */
+  edit?: CardEdit;
+}
+
+/** An open combat step, waiting on blocks. */
+export interface CombatState {
+  opponentId: string;
+  opponentName: string;
+  attackers: Attacker[];
+  /** Attacker instance id → the player battlefield instance ids blocking it. */
+  blocks: Record<string, string[]>;
+}
+
+/** One bot's turn, as a value — the store applies it. */
+export interface TurnResult {
+  final: Opponent;
+  frames: TurnFrame[];
+}

@@ -1,0 +1,254 @@
+import { ReactNode, useMemo } from 'react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
+import type { OptimizeCard } from '@/services/deckBuilder/deckAnalyzer';
+import { ROLE_LABELS } from '@/services/deckBuilder/roleTargets';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { OptimizeTile, type TileSide } from './OptimizeTile';
+
+type TriState = boolean | 'indeterminate';
+
+function triStateFor(names: string[], uncheckedNames: Set<string>): TriState {
+  if (names.length === 0) return false;
+  const uncheckedHere = names.filter(n => uncheckedNames.has(n)).length;
+  if (uncheckedHere === 0) return true;
+  if (uncheckedHere === names.length) return false;
+  return 'indeterminate';
+}
+
+const REMOVAL_CATEGORY_LABELS: Record<string, string> = {
+  'over-bracket': 'Above Your Bracket',
+  'misfit': "Doesn't Fit Plan",
+  'low-synergy': 'Low Synergy',
+  'curve-fix': 'Curve Fix',
+  'low-inclusion': 'Low Inclusion',
+  'tapland': 'Taplands',
+  'excess-land': 'Excess Lands',
+  'balance': 'Balance to Deck Size',
+  'outplayed': 'Outplayed by Staples',
+  'off-plan': 'Off Plan',
+};
+
+const ADDITION_CATEGORY_LABELS: Record<string, string> = {
+  'combo-enabler': 'Combo Enablers',
+  'synergy': 'High Synergy',
+  'theme': 'Theme Synergy',
+  'mana-fix': 'Land Recommendations',
+  'color-fix': 'Color Fixing',
+  'from-combos': 'From Combos',
+  'staple': 'Missing Staples',
+  'theme-staple': 'Builds Your Plan',
+};
+
+function getRemovalCategoryLabel(cat: string): string {
+  if (cat.startsWith('excess:')) {
+    const role = cat.split(':')[1];
+    const label = ROLE_LABELS[role as keyof typeof ROLE_LABELS];
+    return label ? `Excess ${label}` : `Excess ${role}`;
+  }
+  return REMOVAL_CATEGORY_LABELS[cat] || cat;
+}
+
+function getAdditionCategoryLabel(cat: string): string {
+  if (cat.startsWith('fills:')) {
+    const role = cat.split(':')[1];
+    const label = ROLE_LABELS[role as keyof typeof ROLE_LABELS];
+    return label ? `Fills ${label} Gap` : `Fills ${role} gap`;
+  }
+  if (cat.startsWith('curve:')) {
+    const phase = cat.split(':')[1];
+    const labels: Record<string, string> = { early: 'Early Game Plays', mid: 'Mid Game Plays', late: 'Late Game Plays' };
+    return labels[phase] || 'Curve Fill';
+  }
+  // The theme's DISPLAY NAME is the payload, not a slug — it can contain ':' ("Aristocrats: …"),
+  // so take everything after the first separator rather than split()[1].
+  if (cat.startsWith('on-theme:')) {
+    return `On Theme — ${cat.slice('on-theme:'.length)}`;
+  }
+  return ADDITION_CATEGORY_LABELS[cat] || cat;
+}
+
+interface CardGroup {
+  category: string;
+  label: string;
+  cards: OptimizeCard[];
+}
+
+function groupByCategory(cards: OptimizeCard[], labelFn: (cat: string) => string): CardGroup[] {
+  const map = new Map<string, OptimizeCard[]>();
+  for (const card of cards) {
+    const existing = map.get(card.reasonCategory) || [];
+    existing.push(card);
+    map.set(card.reasonCategory, existing);
+  }
+  return Array.from(map.entries()).map(([cat, cards]) => ({
+    category: cat,
+    label: labelFn(cat),
+    cards,
+  }));
+}
+
+export interface OptimizeColumnProps {
+  side: TileSide;
+  cards: OptimizeCard[];
+  uncheckedNames: Set<string>;
+  activeName: string | null;
+  totalCount: number;
+  /** Set the open drill-down explicitly — a card name to open, `null` to close.
+      Must NOT be a toggle: one tile click fires both the tile's handler and
+      Radix's trigger handler, and two toggles would cancel out. */
+  onSetActive: (name: string | null) => void;
+  onToggleChecked: (name: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+  onSelectGroup: (names: string[]) => void;
+  onDeselectGroup: (names: string[]) => void;
+  /** Optional control rendered in the column header, right-aligned before the select-all checkbox. */
+  headerExtra?: ReactNode;
+  /** Optional renderer for the inline drill-down panel inserted below the active tile's group. */
+  renderDrilldown: (card: OptimizeCard) => ReactNode;
+}
+
+const SIDE_HEADER: Record<TileSide, {
+  label: string;
+  Icon: typeof TrendingDown;
+  tintText: string;
+  cardBg: string;
+  labelBg: string;
+}> = {
+  remove: {
+    label: 'Recommended remove',
+    Icon: TrendingDown,
+    tintText: 'text-red-400/90',
+    cardBg: 'bg-red-500/[0.08]',
+    labelBg: 'bg-red-950/55',
+  },
+  add: {
+    label: 'Recommended add',
+    Icon: TrendingUp,
+    tintText: 'text-emerald-400/90',
+    cardBg: 'bg-emerald-500/[0.08]',
+    labelBg: 'bg-emerald-950/55',
+  },
+};
+
+export function OptimizeColumn({
+  side, cards, uncheckedNames, activeName, totalCount,
+  onSetActive, onToggleChecked, onSelectAll, onDeselectAll,
+  onSelectGroup, onDeselectGroup, headerExtra, renderDrilldown,
+}: OptimizeColumnProps) {
+  const labelFn = side === 'remove' ? getRemovalCategoryLabel : getAdditionCategoryLabel;
+  const groups = useMemo(() => groupByCategory(cards, labelFn), [cards, labelFn]);
+  const headerMeta = SIDE_HEADER[side];
+  const columnState = triStateFor(cards.map(c => c.name), uncheckedNames);
+  const columnAriaLabel = side === 'remove'
+    ? (columnState === true ? 'Deselect all removals' : 'Select all removals')
+    : (columnState === true ? 'Deselect all additions' : 'Select all additions');
+
+  return (
+    // No outer column backdrop or border — each section card stands on its own.
+    <div className="space-y-3">
+      {/* Column header — fixed height so
+          the REMOVE and ADD headers line up even when only one carries the h-6 collection toggle. */}
+      <div
+        className={`h-10 px-3 rounded-xl ${headerMeta.labelBg} flex items-center gap-2 shadow-md shadow-black/30`}
+      >
+        <headerMeta.Icon className={`w-3.5 h-3.5 ${headerMeta.tintText}`} />
+        <span className={`text-xs font-semibold uppercase tracking-wider ${headerMeta.tintText}`}>
+          {headerMeta.label} ({totalCount})
+        </span>
+        <div className="ml-auto flex items-center gap-2">
+          {headerExtra}
+          <Checkbox
+            checked={columnState}
+            onCheckedChange={() => (columnState === true ? onDeselectAll() : onSelectAll())}
+            aria-label={columnAriaLabel}
+            title={columnAriaLabel}
+          />
+        </div>
+      </div>
+
+      {/* Each group is its own glassy card — no border. */}
+      {groups.map(group => {
+        const groupNames = group.cards.map(c => c.name);
+        const groupState = triStateFor(groupNames, uncheckedNames);
+        const groupAriaLabel = groupState === true
+          ? `Deselect all in ${group.label}`
+          : `Select all in ${group.label}`;
+        return (
+        <section
+          key={group.category}
+          className={`${headerMeta.cardBg} rounded-xl px-3 pt-0 pb-3`}
+        >
+          {/* Group label — scrolls with its group. */}
+          <div className={`-mx-3 px-3 py-1.5 mb-2 rounded-t-md ${headerMeta.labelBg} flex items-center gap-2`}>
+            <span className={`text-[11px] font-semibold uppercase tracking-wider ${headerMeta.tintText}`}>
+              {group.label}
+            </span>
+            <span className="text-[10px] text-foreground/60">{group.cards.length}</span>
+            <Checkbox
+              checked={groupState}
+              onCheckedChange={() => (groupState === true ? onDeselectGroup(groupNames) : onSelectGroup(groupNames))}
+              aria-label={groupAriaLabel}
+              title={groupAriaLabel}
+              className="ml-auto"
+            />
+          </div>
+
+          {/* Each tile is the trigger for its own Popover — the drill-down
+              floats anchored to the tile instead of breaking the grid layout. */}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(70px,1fr))] gap-2">
+            {group.cards.map(card => {
+              const isActive = card.name === activeName;
+              return (
+                <Popover
+                  key={card.name}
+                  open={isActive}
+                  onOpenChange={(open) => onSetActive(open ? card.name : null)}
+                >
+                  <PopoverTrigger asChild>
+                    <OptimizeTile
+                      card={card}
+                      side={side}
+                      checked={!uncheckedNames.has(card.name)}
+                      active={isActive}
+                      // Clicking the open tile closes it. Both this handler and
+                      // Radix's trigger handler run on the same click, so each
+                      // states the target rather than flipping it.
+                      onClick={() => onSetActive(isActive ? null : card.name)}
+                      onToggleChecked={() => onToggleChecked(card.name)}
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="right"
+                    align="center"
+                    sideOffset={12}
+                    collisionPadding={16}
+                    className="w-[440px] max-w-[calc(100vw-2rem)] p-0 border-none bg-transparent shadow-none animate-card-slide-from-left"
+                    onInteractOutside={(e) => {
+                      const target = e.target as Element | null;
+                      if (target?.closest('[data-card-preview-modal]')) e.preventDefault();
+                    }}
+                    onFocusOutside={(e) => {
+                      const target = e.target as Element | null;
+                      if (target?.closest('[data-card-preview-modal]')) e.preventDefault();
+                    }}
+                  >
+                    {renderDrilldown(card)}
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
+          </div>
+        </section>
+        );
+      })}
+
+      {groups.length === 0 && (
+        <p className="text-xs text-foreground/60 italic py-6 text-center">
+          {side === 'remove' ? 'No cuts recommended.' : 'No additions recommended.'}
+        </p>
+      )}
+    </div>
+  );
+}

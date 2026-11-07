@@ -1,0 +1,3357 @@
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, List, Pencil, CopyPlus, X, Plus, MoreHorizontal, ChevronDown, ChevronRight, ClipboardPaste, Bold, Italic, Heading2, ListOrdered, Minus, Image as ImageIcon, Swords, Scissors, Sparkles, RotateCw, Redo2, Library, Trash2, Check, Share} from 'lucide-react';
+import { FloatingListPanel } from '@/components/lists/FloatingListPanel';
+import { SpellChromaIcon } from '@/components/spellchroma/SpellChromaIcon';
+import { InspectorIcon } from '@/components/analyze/InspectorIcon';
+import { useStore } from '@/store';
+import { getCardsByNames, getCardByName, getFrontFaceTypeLine, searchCards, getCardImageUrl, getCardPrice, getCardBackFaceUrl, isDoubleFacedCard, normalizeCardNameKey } from '@/services/scryfall/client';
+import { ManaCost, manaSymbolClass } from '@/components/ui/mtg-icons';
+import { fetchCommanderCombos, fetchColorIdentityCombos, formatCommanderNameForUrl } from '@/services/edhrec/client';
+import { detectCombosInDeck, recomputeComboCompleteness, mergeComboPools } from '@/services/combos/detect';
+import { applyCommanderTheme, resetTheme } from '@/lib/commanderTheme';
+import { DeckDisplay, CardContextMenu, type CardAction } from '@/components/deck/DeckDisplay';
+import { ComboDisplay } from '@/components/deck/ComboDisplay';
+import { DeckUpgrades } from '@/components/deck/DeckUpgrades';
+import { useDeckUpgrades } from '@/hooks/useDeckUpgrades';
+import {
+  enrichDeckCards,
+  stampTaggerAndGameChangers,
+  buildEdhrecMaps,
+  buildSwapCandidates,
+  type TaggerStampResult,
+  type EdhrecMapsResult,
+  type SwapCandidatesResult,
+} from '@/services/deckBuilder/deckEnricher';
+import { getBaseRoleTargets } from '@/services/deckBuilder/roleTargets';
+import { buildShareUrl, deckToSharePayload, DeckLinkError } from '@/services/share/deckLink';
+import {
+  readEnrichmentCache,
+  writeEnrichmentCache,
+  deleteEnrichmentCache,
+  touchEnrichmentCache,
+  computeContentHash,
+  isCacheFresh,
+  cacheMatchesCommander,
+  cacheMatchesContent,
+  cacheMatchesSchema,
+  ENRICHMENT_SCHEMA_VERSION,
+} from '@/services/deckBuilder/deckEnrichmentCache';
+import { type CollectionImporterHandle } from '@/components/collection/CollectionImporter';
+import { getCollectionNameSet } from '@/services/collection/db';
+import { buildThemeFit, literalThemeMembers } from '@/services/deckBuilder/themeFit';
+import { rebuildRelevancyMap } from '@/services/deckBuilder/relevancyMap';
+import { AddCardsPanel, type AddCardsPanelProps } from '@/components/deck/AddCardsPanel';
+import { findSwapCandidates } from '@/services/deckBuilder/swapFinder';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import { useActionToast, ActionToast } from '@/components/ui/action-toast';
+import { trackEvent } from '@/services/analytics';
+import type { UserCardList, ScryfallCard, GeneratedDeck, DeckStats, DetectedCombo, EDHRECCombo, LoadPhase, SerializedEnrichment } from '@/types';
+import { useUserLists } from '@/hooks/useUserLists';
+import { ThemePickerPopover } from './ThemePickerPopover';
+import { persistListThemes } from '@/services/lists/listThemes';
+import { TrimDeckDialog } from './TrimDeckDialog';
+import { FillDeckDialog } from './FillDeckDialog';
+import { Drawer } from '@/components/ui/drawer';
+import { MustIncludeCards } from '@/components/customization/MustIncludeCards';
+import { getMaxCopies } from '@/lib/utils';
+import { combineColorIdentity } from '@/lib/partnerUtils';
+import { edhrecColorSegment } from '@/services/edhrec/client';
+import { useCardLinkDrop } from '@/hooks/useCardLinkDrop';
+
+interface ListDeckViewProps {
+  list: UserCardList;
+  onBack: () => void;
+  /** Deck isn't in storage (shared-link preview). Hides the tools that navigate by a
+   *  saved list id — Inspect, SpellChroma and Playtest all route on `list.id`, which
+   *  resolves to nothing for a synthetic one. Edit affordances need no flag: they're
+   *  already gated on their callbacks, which a preview simply doesn't pass. */
+  unsaved?: boolean;
+  onViewAsList?: () => void;
+  onEdit?: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
+  onRemoveCards?: (cardNames: string[]) => void;
+  onAddCards?: (cardNames: string[], destination: 'deck' | 'sideboard' | 'maybeboard') => void;
+  onMoveToSideboard?: (cardNames: string[]) => void;
+  onMoveToMaybeboard?: (cardNames: string[]) => void;
+  onMoveToDeck?: (cardNames: string[], source: 'sideboard' | 'maybeboard') => void;
+  onRemoveFromBoard?: (cardName: string, source: 'sideboard' | 'maybeboard') => void;
+  onMoveBetweenBoards?: (cardName: string, from: 'sideboard' | 'maybeboard') => void;
+  onUpdatePrimer?: (primer: string) => void;
+  onChangeQuantity?: (cardName: string, newQuantity: number) => void;
+  onRename?: (newName: string) => void;
+  onUpdateDeckSize?: (newSize: number) => void;
+  onSetSideboard?: (names: string[]) => void;
+  onSetMaybeboard?: (names: string[]) => void;
+}
+
+/** Enrichment cache hash input: mainboard + assigned theme slugs, so toggling
+ *  themes invalidates the cached enrichment. */
+function listHashInput(list: UserCardList): string[] {
+  return [...list.cards, ...(list.themes ?? []).map(t => `theme:${t.slug}`)];
+}
+
+/** Normalized name keys for every card a build resolved — deck cards plus commanders,
+ *  each also indexed by its DFC faces. Normalizing means a card that loaded under its
+ *  canonical Scryfall name still matches a differently-accented request in list.cards. */
+function resolvedNameKeys(
+  cards: ScryfallCard[],
+  ...commanders: Array<ScryfallCard | null | undefined>
+): Set<string> {
+  const keys = new Set<string>();
+  const add = (n: string) => {
+    keys.add(normalizeCardNameKey(n));
+    if (n.includes(' // ')) {
+      for (const face of n.split(' // ')) keys.add(normalizeCardNameKey(face));
+    }
+  };
+  for (const c of cards) add(c.name);
+  for (const c of commanders) if (c) add(c.name);
+  return keys;
+}
+
+/** Mainboard names with no resolved card, deduped, in list order. */
+function unresolvedNames(names: string[], resolved: Set<string>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const name of names) {
+    if (resolved.has(normalizeCardNameKey(name))) continue;
+    if (seen.has(name)) continue;
+    seen.add(name);
+    out.push(name);
+  }
+  return out;
+}
+
+function computeStatsFromCards(allCards: ScryfallCard[]): DeckStats {
+  const nonLandCards = allCards.filter(
+    card => !getFrontFaceTypeLine(card).toLowerCase().includes('land')
+  );
+
+  const manaCurve: Record<number, number> = {};
+  nonLandCards.forEach(card => {
+    const cmc = Math.min(Math.floor(card.cmc), 7);
+    manaCurve[cmc] = (manaCurve[cmc] || 0) + 1;
+  });
+
+  const totalCmc = nonLandCards.reduce((sum, card) => sum + card.cmc, 0);
+  const averageCmc = nonLandCards.length > 0 ? totalCmc / nonLandCards.length : 0;
+
+  const colorDistribution: Record<string, number> = {};
+  allCards.forEach(card => {
+    const colors = card.colors || [];
+    if (colors.length === 0) {
+      colorDistribution['C'] = (colorDistribution['C'] || 0) + 1;
+    } else {
+      colors.forEach(color => {
+        colorDistribution[color] = (colorDistribution[color] || 0) + 1;
+      });
+    }
+  });
+
+  const typeDistribution: Record<string, number> = { Planeswalker: 0 };
+  allCards.forEach(card => {
+    const typeLine = getFrontFaceTypeLine(card).toLowerCase();
+    if (typeLine.includes('land')) typeDistribution['Land'] = (typeDistribution['Land'] || 0) + 1;
+    else if (typeLine.includes('creature')) typeDistribution['Creature'] = (typeDistribution['Creature'] || 0) + 1;
+    else if (typeLine.includes('instant')) typeDistribution['Instant'] = (typeDistribution['Instant'] || 0) + 1;
+    else if (typeLine.includes('sorcery')) typeDistribution['Sorcery'] = (typeDistribution['Sorcery'] || 0) + 1;
+    else if (typeLine.includes('artifact')) typeDistribution['Artifact'] = (typeDistribution['Artifact'] || 0) + 1;
+    else if (typeLine.includes('enchantment')) typeDistribution['Enchantment'] = (typeDistribution['Enchantment'] || 0) + 1;
+    else if (typeLine.includes('planeswalker')) typeDistribution['Planeswalker'] = (typeDistribution['Planeswalker'] || 0) + 1;
+    else if (typeLine.includes('battle')) typeDistribution['Battle'] = (typeDistribution['Battle'] || 0) + 1;
+  });
+
+  return {
+    totalCards: allCards.length,
+    averageCmc: Math.round(averageCmc * 100) / 100,
+    manaCurve,
+    colorDistribution,
+    typeDistribution,
+  };
+}
+
+/** Lightweight markdown → HTML for primer display (bold, italic, headings, lists, hr) */
+function renderSimpleMarkdown(md: string): string {
+  const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const lines = md.split('\n');
+  const out: string[] = [];
+  let inUl = false;
+  let inOl = false;
+
+  const closeList = () => {
+    if (inUl) { out.push('</ul>'); inUl = false; }
+    if (inOl) { out.push('</ol>'); inOl = false; }
+  };
+
+  const inlineFormat = (text: string) =>
+    escape(text)
+      // ![alt](url) — only http(s) URLs render; anything else falls back to the alt text
+      .replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_m, alt: string, url: string) => {
+        const clean = url.trim();
+        if (!/^https?:\/\//i.test(clean)) return alt;
+        const safeUrl = clean.replace(/"/g, '%22');
+        const safeAlt = alt.replace(/"/g, '');
+        return `<img src="${safeUrl}" alt="${safeAlt}" class="max-w-full h-auto rounded-md my-2" loading="lazy" />`;
+      })
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // {2}{B}{G/U/P}{T} → mana-font glyphs. The body is restricted to [0-9A-Za-z/]
+      // because it lands inside a class attribute of raw HTML.
+      .replace(/\{([0-9A-Za-z/]{1,7})\}/g, (_m, sym: string) =>
+        `<i class="ms ms-${manaSymbolClass(sym)} ms-cost" title="{${sym}}"></i>`);
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+
+    if (line === '---' || line === '***' || line === '___') {
+      closeList();
+      out.push('<hr class="my-2 border-border/50" />');
+      continue;
+    }
+
+    const h2 = line.match(/^##\s+(.+)/);
+    if (h2) { closeList(); out.push(`<h4 class="font-semibold text-foreground mt-2 mb-0.5">${inlineFormat(h2[1])}</h4>`); continue; }
+
+    const h1 = line.match(/^#\s+(.+)/);
+    if (h1) { closeList(); out.push(`<h3 class="font-bold text-foreground mt-2 mb-0.5">${inlineFormat(h1[1])}</h3>`); continue; }
+
+    const ul = line.match(/^[-*]\s+(.+)/);
+    if (ul) {
+      if (inOl) { out.push('</ol>'); inOl = false; }
+      if (!inUl) { out.push('<ul class="list-disc list-inside space-y-0.5">'); inUl = true; }
+      out.push(`<li>${inlineFormat(ul[1])}</li>`);
+      continue;
+    }
+
+    const ol = line.match(/^\d+\.\s+(.+)/);
+    if (ol) {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      if (!inOl) { out.push('<ol class="list-decimal list-inside space-y-0.5">'); inOl = true; }
+      out.push(`<li>${inlineFormat(ol[1])}</li>`);
+      continue;
+    }
+
+    closeList();
+    if (line === '') { out.push('<br />'); }
+    else { out.push(`<p>${inlineFormat(line)}</p>`); }
+  }
+
+  closeList();
+  return out.join('\n');
+}
+
+function getArtCropUrl(card: ScryfallCard | null): string | null {
+  if (!card) return null;
+  if (card.image_uris?.art_crop) return card.image_uris.art_crop;
+  if (card.card_faces?.[0]?.image_uris?.art_crop) return card.card_faces[0].image_uris.art_crop;
+  if (card.image_uris?.normal) return card.image_uris.normal;
+  return null;
+}
+
+
+// Defensive card-set dedupe for combos coming straight out of the enrichment
+// cache. Fresh detection flows through detectCombosInDeck (which dedupes), but
+// hydrateFromCache trusts payload.detectedCombos verbatim — and a payload written
+// by an older build can list the same card set twice (EDHREC gives one card set
+// several comboIds that differ only by a result-variant suffix). Surfacing both
+// renders the combo twice and warns about duplicate React keys, so dedupe on the
+// way out of the cache. Card set, not comboId, is the key — that's what makes
+// the duplicates duplicates.
+function dedupeCombosByCardSet(combos: DetectedCombo[] | undefined): DetectedCombo[] | undefined {
+  if (!combos || combos.length === 0) return combos;
+  const seen = new Set<string>();
+  const unique = combos.filter(c => {
+    const key = [...c.cards].sort().join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return unique.length === combos.length ? combos : unique;
+}
+
+// --- Board Card Row (with context menu) ---
+
+function BoardCardRow({
+  card, boardType, onCardAction, menuProps, handleHover,
+}: {
+  card: ScryfallCard;
+  boardType: 'sideboard' | 'maybeboard';
+  onCardAction?: (card: ScryfallCard, action: CardAction) => void;
+  menuProps?: { userLists: UserCardList[]; mustIncludeNames: Set<string>; bannedNames: Set<string> };
+  handleHover: (card: ScryfallCard | null, e?: React.MouseEvent, showBack?: boolean) => void;
+}) {
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
+  const rawPrice = getCardPrice(card);
+  const price = rawPrice ? `$${parseFloat(rawPrice).toFixed(2)}` : '';
+  const isDfc = isDoubleFacedCard(card);
+
+  return (
+    <div
+      className="w-full text-left px-2 py-1 rounded text-sm flex items-center gap-2 transition-all duration-200 cursor-pointer hover:bg-accent/50 group"
+      onMouseEnter={(e) => handleHover(card, e)}
+      onMouseLeave={() => handleHover(null)}
+      onContextMenu={(e) => {
+        if (onCardAction && menuProps) {
+          e.preventDefault();
+          setContextMenuOpen(true);
+        }
+      }}
+    >
+      <span className="flex-1 min-w-0 flex items-center hover:text-primary transition-colors">
+        <span className="truncate">
+          {card.name.includes(' // ') ? card.name.split(' // ')[0] : card.name}
+        </span>
+        <span className="shrink-0 flex items-center">
+          {isDfc && (
+            <span
+              className="ml-1 inline-flex align-text-bottom text-muted-foreground hover:text-primary transition-colors cursor-help"
+              title="Hover to see back face"
+              onMouseEnter={(e) => { e.stopPropagation(); handleHover(card, e, true); }}
+              onMouseLeave={(e) => { e.stopPropagation(); handleHover(card, e, false); }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </span>
+          )}
+        </span>
+      </span>
+      <ManaCost cost={card.mana_cost || card.card_faces?.[0]?.mana_cost} />
+      {onCardAction && menuProps && (
+        <span
+          className={`shrink-0 w-3 transition-opacity ${contextMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <CardContextMenu
+            card={card}
+            onAction={onCardAction}
+            hasRemove
+            hasAddToDeck
+            hasSideboard={boardType === 'maybeboard'}
+            hasMaybeboard={boardType === 'sideboard'}
+            userLists={menuProps.userLists}
+            isMustInclude={menuProps.mustIncludeNames.has(card.name)}
+            isBanned={menuProps.bannedNames.has(card.name)}
+            forceOpen={contextMenuOpen}
+            onForceClose={() => setContextMenuOpen(false)}
+          />
+        </span>
+      )}
+      <span className="text-xs w-10 text-right shrink-0 text-muted-foreground">{price}</span>
+    </div>
+  );
+}
+
+// --- Board Add Popover (search + add a card directly to a board) ---
+
+function BoardAddPopover({ boardType, colorIdentity, existingNames, onAdd }: {
+  boardType: 'sideboard' | 'maybeboard';
+  colorIdentity: string[];
+  existingNames: Set<string>;
+  onAdd: (cardName: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<ScryfallCard[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      setResults([]);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const r = await searchCards(query, colorIdentity, { order: 'edhrec' });
+        setResults(r.data.filter(c => !existingNames.has(c.name)).slice(0, 8));
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, colorIdentity, existingNames]);
+
+  const headerColor = boardType === 'sideboard' ? 'text-amber-400' : 'text-purple-400';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={`p-0.5 rounded ${headerColor} hover:bg-accent/50 transition-colors`}
+          title={`Add card to ${boardType}`}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-2">
+        <div className="relative">
+          <input
+            autoFocus
+            type="text"
+            placeholder={`Add to ${boardType}...`}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="bg-card/50 border border-border/50 rounded-md px-2 py-1.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/50"
+          />
+          {searching && (
+            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-primary" />
+          )}
+        </div>
+        {results.length > 0 && (
+          <div className="mt-2 max-h-[280px] overflow-auto">
+            {results.map(card => (
+              <button
+                key={card.id}
+                onClick={() => { onAdd(card.name); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-accent/50 text-left transition-colors rounded"
+              >
+                <img src={getCardImageUrl(card, 'small')} alt={card.name} className="w-7 h-auto rounded shrink-0" loading="lazy" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">{card.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{card.type_line}</p>
+                </div>
+                <Plus className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// --- Board Section (Sideboard / Maybeboard) ---
+
+function BoardSection({ title, cards, boardType, onCardAction, menuProps, onAdd, colorIdentity, existingNames }: {
+  title: string;
+  cards: ScryfallCard[];
+  boardType: 'sideboard' | 'maybeboard';
+  onCardAction?: (card: ScryfallCard, action: CardAction) => void;
+  menuProps?: { userLists: UserCardList[]; mustIncludeNames: Set<string>; bannedNames: Set<string> };
+  onAdd?: (cardName: string) => void;
+  colorIdentity?: string[];
+  existingNames?: Set<string>;
+}) {
+  const [hoverCard, setHoverCard] = useState<{ card: ScryfallCard; rowRect: { right: number; top: number; height: number }; showBack?: boolean } | null>(null);
+
+  // Clear hover when cards change (card moved/removed)
+  useEffect(() => {
+    if (hoverCard && !cards.some(c => c.name === hoverCard.card.name)) {
+      setHoverCard(null);
+    }
+  }, [cards, hoverCard]);
+
+  const headerColor = boardType === 'sideboard' ? 'text-amber-400' : 'text-purple-400';
+
+  const totalPrice = cards.reduce((sum, card) => {
+    const p = parseFloat(getCardPrice(card) || '0');
+    return sum + (isNaN(p) ? 0 : p);
+  }, 0);
+
+  const handleHover = (card: ScryfallCard | null, e?: React.MouseEvent, showBack?: boolean) => {
+    if (card && e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setHoverCard({ card, rowRect: { right: rect.right, top: rect.top, height: rect.height }, showBack });
+    } else {
+      setHoverCard(null);
+    }
+  };
+
+  return (
+    <div className="break-inside-avoid mb-4">
+      <div className={`flex items-center justify-between px-2 py-1.5 ${headerColor}`}>
+        <span className="text-xs font-bold uppercase tracking-wider">
+          {title} ({cards.length})
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">${totalPrice.toFixed(2)}</span>
+          {onAdd && colorIdentity && existingNames && (
+            <BoardAddPopover
+              boardType={boardType}
+              colorIdentity={colorIdentity}
+              existingNames={existingNames}
+              onAdd={onAdd}
+            />
+          )}
+        </div>
+      </div>
+      <div>
+        {cards.length === 0 && (
+          <div className="px-2 py-3 text-xs text-muted-foreground/50 italic">Empty</div>
+        )}
+        {cards.map(card => (
+          <BoardCardRow
+            key={card.name}
+            card={card}
+            boardType={boardType}
+            onCardAction={onCardAction}
+            menuProps={menuProps}
+            handleHover={handleHover}
+          />
+        ))}
+      </div>
+      {/* Floating Preview */}
+      {hoverCard && (
+        <div
+          className="fixed z-[100] pointer-events-none hidden lg:block"
+          style={{
+            left: hoverCard.rowRect.right + 12,
+            top: Math.min(Math.max(8, hoverCard.rowRect.top + hoverCard.rowRect.height / 2 - 180), window.innerHeight - 400),
+          }}
+        >
+          <div className="card-preview-enter">
+            <img
+              src={hoverCard.showBack ? (getCardBackFaceUrl(hoverCard.card, 'normal') || getCardImageUrl(hoverCard.card, 'normal')) : getCardImageUrl(hoverCard.card, 'normal')}
+              alt={hoverCard.card.name}
+              className="w-64 rounded-lg shadow-2xl border border-border/50"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Collapsible Boards Wrapper ---
+
+function BoardsCollapsible({ sideboardCards, maybeboardCards, onBoardCardAction, menuProps, onAddToBoard, colorIdentity, existingNames, viewShiftControls }: {
+  sideboardCards: ScryfallCard[];
+  maybeboardCards: ScryfallCard[];
+  onBoardCardAction?: (card: ScryfallCard, action: CardAction, boardType: 'sideboard' | 'maybeboard') => void;
+  menuProps?: { userLists: UserCardList[]; mustIncludeNames: Set<string>; bannedNames: Set<string> };
+  onAddToBoard?: (cardName: string, boardType: 'sideboard' | 'maybeboard') => void;
+  colorIdentity?: string[];
+  existingNames?: Set<string>;
+  viewShiftControls?: React.ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('mtg-deck-builder-boards-collapsed') === 'true');
+
+  const toggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem('mtg-deck-builder-boards-collapsed', String(next));
+  };
+
+  const totalCount = sideboardCards.length + maybeboardCards.length;
+
+  const handleSBAction = useCallback((card: ScryfallCard, action: CardAction) => {
+    onBoardCardAction?.(card, action, 'sideboard');
+  }, [onBoardCardAction]);
+
+  const handleMBAction = useCallback((card: ScryfallCard, action: CardAction) => {
+    onBoardCardAction?.(card, action, 'maybeboard');
+  }, [onBoardCardAction]);
+
+  return (
+    <div className="border-t border-border/30">
+      <div className="flex items-center px-4 py-2.5 gap-2">
+        <button
+          onClick={toggle}
+          className="flex items-center gap-2 text-left rounded hover:bg-accent/30 -mx-1 px-1 py-0.5 transition-colors"
+        >
+          {collapsed ? <ChevronRight className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+          <span className="text-xs font-semibold text-foreground">
+            Sideboard & Maybeboard
+          </span>
+          <span className="text-[10px] text-muted-foreground">({totalCount})</span>
+        </button>
+        {viewShiftControls && (
+          <div className="ml-auto">{viewShiftControls}</div>
+        )}
+      </div>
+      {!collapsed && (
+        <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <BoardSection
+            title="Sideboard"
+            cards={sideboardCards}
+            boardType="sideboard"
+            onCardAction={handleSBAction}
+            menuProps={menuProps}
+            onAdd={onAddToBoard ? (name) => onAddToBoard(name, 'sideboard') : undefined}
+            colorIdentity={colorIdentity}
+            existingNames={existingNames}
+          />
+          <BoardSection
+            title="Maybeboard"
+            cards={maybeboardCards}
+            boardType="maybeboard"
+            onCardAction={handleMBAction}
+            menuProps={menuProps}
+            onAdd={onAddToBoard ? (name) => onAddToBoard(name, 'maybeboard') : undefined}
+            colorIdentity={colorIdentity}
+            existingNames={existingNames}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Main Component ---
+
+// Derive the primary card type (for CardTypeIcon) from a Scryfall type_line.
+// "Legendary Artifact Creature — Golem" → "creature". Creature wins so the
+// claw shows for artifact/enchantment creatures.
+/**
+ * The always-available "add cards" trigger + its panel. Rendered twice: once in
+ * the deck toolbar, and once in DeckDisplay's floating side rail (which is what
+ * you're left with after the toolbar scrolls off). Each instance owns its own
+ * open state and importer handle — a shared one would collide, since both are
+ * mounted at the same time even though only one is visible.
+ */
+function HeaderBulkAdd({
+  variant,
+  existingNames,
+  onAddCards,
+  onAddCard,
+  swapEnabled,
+  getSwapPlan,
+  onConfirmSwap,
+}: Pick<AddCardsPanelProps, 'existingNames' | 'onAddCards' | 'onAddCard' | 'swapEnabled' | 'getSwapPlan' | 'onConfirmSwap'> & {
+  variant: 'toolbar' | 'rail';
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const importerRef = useRef<CollectionImporterHandle>(null);
+
+  // Closing flushes pasted-but-un-imported text rather than dropping it; an
+  // import that turned up unknown names keeps the panel open to report them.
+  const closeImporting = useCallback(async () => {
+    const imp = importerRef.current;
+    if (imp?.hasPending()) {
+      const result = await imp.triggerImport();
+      if (result && result.notFound.length > 0) return;
+    }
+    setOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      // The swap flyout is portalled to body, so it is "outside" by DOM but
+      // very much inside by intent — clicking an option must not dismiss this.
+      if ((e.target as Element | null)?.closest?.('[data-swap-flyout]')) return;
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        closeImporting();
+      }
+    };
+    window.addEventListener('mousedown', handleClick);
+    return () => window.removeEventListener('mousedown', handleClick);
+  }, [open, closeImporting]);
+
+  const isRail = variant === 'rail';
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => { if (open) closeImporting(); else setOpen(true); }}
+              aria-label="Add cards"
+              // Open reads as the accent, not a neutral grey: this button
+              // owns a panel that covers the deck, so it should be obvious
+              // which control put it there.
+              className={isRail
+                ? `p-2 rounded-lg transition-colors ${open ? 'bg-violet-500/20 text-violet-100' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`
+                : `flex items-center rounded-md p-1.5 border transition-colors ${
+                    open
+                      ? 'border-violet-400/50 bg-violet-500/20 text-violet-100'
+                      : 'border-border/50 bg-card/50 text-muted-foreground hover:text-foreground'
+                  }`}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side={isRail ? 'right' : 'bottom'}>Add Cards</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {open && (
+        // The rail sits against the left edge, so its panel opens outward to the
+        // right; the toolbar button is at the right edge and opens downward.
+        <div
+          className={`absolute z-50 w-[min(90vw,24rem)] rounded-lg border border-border bg-card shadow-2xl overflow-hidden ${
+            isRail ? 'left-full ml-2 top-0' : 'top-full mt-2 right-0'
+          }`}
+        >
+          <AddCardsPanel
+            ref={importerRef}
+            autoFocus
+            existingNames={existingNames}
+            onAddCards={onAddCards}
+            onAddCard={onAddCard}
+            label="Add Cards"
+            showDragDropHint
+            swapEnabled={swapEnabled}
+            getSwapPlan={getSwapPlan}
+            onConfirmSwap={onConfirmSwap}
+            onCancel={() => setOpen(false)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function primaryTypeFromLine(typeLine: string | undefined): string {
+  const tl = (typeLine || '').split('//')[0].split('—')[0].toLowerCase();
+  const order = ['creature', 'planeswalker', 'land', 'battle', 'artifact', 'enchantment', 'instant', 'sorcery', 'tribal'];
+  return order.find(t => tl.includes(t)) || 'creature';
+}
+
+export function ListDeckView({ list, onBack, unsaved, onViewAsList, onEdit, onDuplicate, onDelete, onRemoveCards, onAddCards, onMoveToSideboard, onMoveToMaybeboard, onMoveToDeck, onRemoveFromBoard, onMoveBetweenBoards, onUpdatePrimer, onChangeQuantity, onRename, onUpdateDeckSize, onSetSideboard, onSetMaybeboard }: ListDeckViewProps) {
+  const navigate = useNavigate();
+  const generatedDeck = useStore(s => s.generatedDeck);
+  const trimReady = !!(
+    generatedDeck?.cardRelevancyMap &&
+    generatedDeck?.cardInclusionMap &&
+    generatedDeck?.roleTargets &&
+    generatedDeck?.edhrecCurve &&
+    generatedDeck?.edhrecTypes
+  );
+  const fillReady = !!(generatedDeck?.gapAnalysis && generatedDeck.gapAnalysis.length > 0);
+  const allDeckCards = useMemo<ScryfallCard[]>(
+    () => generatedDeck ? Object.values(generatedDeck.categories).flat() : [],
+    [generatedDeck],
+  );
+
+  // Bottom-right confirmation toast. `showActionToast` keeps the original positional signature so
+  // the 17 existing call sites read unchanged; the state and the portal render now come from the
+  // shared hook, which was extracted from this very component and then never adopted here.
+  const { toast: actionToast, success: toastSuccess, error: showErrorToast, dismiss: dismissActionToast } = useActionToast();
+  const showActionToast = useCallback(
+    (message: string, onUndo?: () => void, cardType?: string) => toastSuccess(message, { onUndo, cardType }),
+    [toastSuccess],
+  );
+
+  // A share link carries the whole decklist in its fragment, so this needs no backend.
+  // It points back at the deck view rather than the Inspector: a link reopens the
+  // surface it was made on. `categories` excludes the commanders, which is exactly what
+  // deckToSharePayload expects — it prepends them itself.
+  const [shareState, setShareState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [shareErrorMsg, setShareErrorMsg] = useState<string | null>(null);
+  const handleCopyShareLink = useCallback(async () => {
+    try {
+      const url = await buildShareUrl(
+        'decks/shared',
+        deckToSharePayload({
+          cards: allDeckCards,
+          commander: generatedDeck?.commander,
+          partnerCommander: generatedDeck?.partnerCommander,
+        }),
+      );
+      await navigator.clipboard.writeText(url);
+      setShareState('copied');
+      setShareErrorMsg(null);
+      showActionToast('Link copied to clipboard');
+      trackEvent('share_link_copied', { tab: 'deck-view', cardCount: allDeckCards.length });
+      setTimeout(() => setShareState('idle'), 2000);
+    } catch (e) {
+      console.error('[ListDeckView] share link failed', e);
+      setShareState('error');
+      showErrorToast(
+        e instanceof DeckLinkError && e.reason === 'too-large'
+          ? 'This deck is too large to share as a link.'
+          : 'Could not copy the share link.',
+      );
+      setShareErrorMsg(
+        e instanceof DeckLinkError && e.reason === 'too-large'
+          ? 'This deck is too large to share as a link.'
+          : 'Could not copy the share link.',
+      );
+      setTimeout(() => setShareState('idle'), 3000);
+    }
+  }, [allDeckCards, generatedDeck, showActionToast, showErrorToast]);
+
+  // Sits beside Export in the deck toolbar. Owned decks only: a shared preview is already
+  // at a shareable URL, and its own banner carries the actions.
+  const shareLabel = shareState === 'copied' ? 'Link copied'
+    : shareState === 'error' ? (shareErrorMsg ?? 'Could not copy the share link')
+    : 'Copy a link to this deck';
+  // Icon-only to keep the toolbar short. The outcome of a click therefore has to live in the glyph
+  // itself — an emerald check on success, a red share glyph on failure — since there is no longer a
+  // label to swap. The tooltip and aria-label still carry the wording for hover and screen readers.
+  // Background matches the Inspect/SpellChroma/Playtest row rather than the shadcn `outline`
+  // variant, whose solid `bg-background` reads as a black chip.
+  const shareButton = unsaved ? undefined : (
+    // No `title` attribute: it would fire the native tooltip alongside this one.
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={handleCopyShareLink}
+            disabled={allDeckCards.length === 0}
+            aria-label={shareLabel}
+            className="flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          >
+            {shareState === 'copied'
+              ? <Check className="w-4 h-4 shrink-0 text-emerald-400" />
+              : <Share className={`w-4 h-4 shrink-0 ${shareState === 'error' ? 'text-red-400' : ''}`} />}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{shareLabel}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
+  const colorIdentity = useStore(s => s.colorIdentity) || [];
+  // EDHREC page segment for "choose a color" commanders (Clara Oswald &c). Derived from the
+  // list rather than the store so it's stable inside the async load effects below; '' for
+  // every normal deck, which leaves the existing endpoints untouched.
+  // cachedColorIdentity is filled in asynchronously right after a deck is first saved — until
+  // it lands the union would be the chosen color alone and would resolve to the wrong mono
+  // page, so hold off and use the aggregate page for that one render.
+  const listColorSegment = useMemo(
+    () => (list.chosenColor && list.cachedColorIdentity?.length
+      ? edhrecColorSegment([...list.cachedColorIdentity, list.chosenColor], list.chosenColor)
+      : ''),
+    [list.cachedColorIdentity, list.chosenColor],
+  );
+  // The colors this deck may legally play — derived from the loaded ScryfallCards
+  // so we don't show false positives during store rehydration. null means "not
+  // yet knowable", which every consumer must read as "don't judge legality".
+  const allowedColors = useMemo<Set<string> | null>(() => {
+    if (!list.commanderName) return null;
+    const commanderCard = generatedDeck?.commander;
+    const partnerCard = generatedDeck?.partnerCommander;
+    if (!commanderCard) return null;
+    // The partner contributes colors, so judging before it lands flags every off-color card.
+    if (list.partnerCommanderName && !partnerCard) return null;
+    return new Set<string>([
+      ...combineColorIdentity(commanderCard, list.partnerCommanderName ? partnerCard : null),
+      // A persisted chosenColor is itself proof a "choose a color" commander is in the zone
+      // (the store only keeps one while that's true), so trust it without re-deriving.
+      ...(list.chosenColor ? [list.chosenColor] : []),
+    ]);
+  }, [generatedDeck, list.commanderName, list.partnerCommanderName, list.chosenColor]);
+
+  const colorIdentityViolations = useMemo(() => {
+    if (!allowedColors) return [];
+    const cards: ScryfallCard[] = generatedDeck ? Object.values(generatedDeck.categories).flat() : [];
+    return cards.filter(c => (c.color_identity || []).some(color => !allowedColors.has(color)));
+  }, [generatedDeck, allowedColors]);
+
+  // Singleton violations — duplicate non-basic cards. Uses getMaxCopies() so
+  // basics and "any number" / capped multi-copy cards are recognized from card
+  // data (oracle text + type line), not a hardcoded allowlist.
+  const duplicateNonBasics = useMemo(() => {
+    if (allDeckCards.length === 0) return [];
+    const cardByName = new Map<string, ScryfallCard>();
+    for (const c of allDeckCards) cardByName.set(c.name, c);
+    const counts: Record<string, number> = {};
+    for (const name of list.cards) {
+      const card = cardByName.get(name);
+      if (!card) continue;
+      if (getMaxCopies(card) > 1) continue;
+      counts[name] = (counts[name] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .filter(([, n]) => n > 1)
+      .map(([name, n]) => ({ name, count: n }));
+  }, [list.cards, allDeckCards]);
+
+  const customization = useStore(s => s.customization);
+  const updateCustomization = useStore(s => s.updateCustomization);
+  const { lists: userLists, updateList, createList } = useUserLists();
+  const { newCards: newUpgradeCards, fillCards: upgradeFillCards, markSeen: markUpgradesSeen } = useDeckUpgrades(list);
+  // A card's "Create combo" menu entry sets this; ComboDisplay opens its form seeded with the card, then clears it.
+  const [comboSeedCard, setComboSeedCard] = useState<string | null>(null);
+
+  const [phasesDone, setPhasesDone] = useState<Set<LoadPhase>>(new Set());
+  const markPhaseDone = useCallback((p: LoadPhase) => {
+    setPhasesDone(prev => {
+      if (prev.has(p)) return prev;
+      const next = new Set(prev);
+      next.add(p);
+      return next;
+    });
+  }, []);
+
+  // Must-include cards that are missing from the deck. customization is the
+  // global preference set, so this only applies to decks (not generic lists).
+  const customizationForMustInclude = useStore(s => s.customization);
+  const missingMustIncludes = useMemo(() => {
+    if (list.type !== 'deck') return [];
+    // Only flag for freshly-generated decks. generationSummary is cleared on
+    // the first edit, so user-saved decks (or generated-then-edited decks)
+    // are exempt — the user has clearly taken authorship of the contents.
+    if (!list.generationSummary) return [];
+    const mustInclude = customizationForMustInclude.mustIncludeCards || [];
+    if (mustInclude.length === 0) return [];
+    const present = new Set<string>(list.cards);
+    if (list.commanderName) present.add(list.commanderName);
+    if (list.partnerCommanderName) present.add(list.partnerCommanderName);
+    // Allow front-face matches for DFC names ("Fire" matching "Fire // Ice")
+    const presentFrontFaces = new Set<string>();
+    for (const n of present) {
+      if (n.includes(' // ')) presentFrontFaces.add(n.split(' // ')[0]);
+    }
+    return mustInclude.filter(name => !present.has(name) && !presentFrontFaces.has(name));
+  }, [list.type, list.generationSummary, list.cards, list.commanderName, list.partnerCommanderName, customizationForMustInclude.mustIncludeCards]);
+
+  // Unloaded cards — names in list.cards that don't appear in the loaded
+  // categories (typically Scryfall lookup failures from typos or renamed cards).
+  // Gated on phasesDone.has('cards') so we don't flag everything during loading.
+  // Commander and partner live outside categories, so resolvedNameKeys counts them
+  // as loaded and their names don't get flagged when present in list.cards.
+  const unloadedCards = useMemo(() => {
+    if (!phasesDone.has('cards')) return [];
+    if (!generatedDeck) return [];
+    return unresolvedNames(
+      list.cards,
+      resolvedNameKeys(
+        Object.values(generatedDeck.categories).flat(),
+        generatedDeck.commander,
+        generatedDeck.partnerCommander,
+      ),
+    );
+  }, [list.cards, generatedDeck, phasesDone]);
+
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  // True when Scryfall requests failed during the load, so cards are missing because
+  // the network fell over — not because their names are wrong. Changes the banner from
+  // "check spelling" (a lie) to a retry, and blocks caching the incomplete result.
+  const [loadDegraded, setLoadDegraded] = useState(false);
+  const [artUrl, setArtUrl] = useState<string | null>(null);
+  const [artLoaded, setArtLoaded] = useState(false);
+  const [deckEditMode, setDeckEditMode] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(list.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Board card data
+  const [sideboardCards, setSideboardCards] = useState<ScryfallCard[]>([]);
+  const [maybeboardCards, setMaybeboardCards] = useState<ScryfallCard[]>([]);
+
+  // Overflow menu
+  const [showOverflow, setShowOverflow] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // Controlled popover for color-identity violations (so "Remove all" can close it)
+  const [offendersOpen, setOffendersOpen] = useState(false);
+
+  const [listsPanelOpen, setListsPanelOpen] = useState(false);
+
+  // Total deck price
+  const totalDeckPrice = useMemo(() => {
+    if (!generatedDeck) return null;
+    const allCards = Object.values(generatedDeck.categories).flat();
+    const commanders = [generatedDeck.commander, generatedDeck.partnerCommander].filter(Boolean) as ScryfallCard[];
+    return [...commanders, ...allCards].reduce((sum, c) => {
+      const price = parseFloat(getCardPrice(c, customization.currency) || '0');
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
+  }, [generatedDeck, customization.currency]);
+  const priceSym = customization.currency === 'EUR' ? '€' : '$';
+
+  const [deckSizeNoticeDismissedAt, setDeckSizeNoticeDismissedAt] = useState<number | null>(null);
+  // Split open / mounted so the drawer can play its CSS slide-out before unmounting.
+  const [trimDialogOpen, setTrimDialogOpen] = useState(false);
+  const [trimDialogMounted, setTrimDialogMounted] = useState(false);
+  const openTrimDialog = useCallback(() => {
+    setTrimDialogMounted(true);
+    // Defer flipping the open flag so the drawer starts at translate-x-full
+    // for one frame, then transitions to translate-x-0 — that's the slide-in.
+    requestAnimationFrame(() => setTrimDialogOpen(true));
+  }, []);
+  const closeTrimDialog = useCallback(() => {
+    setTrimDialogOpen(false);
+    // Match the Drawer's duration-300 transition before unmounting.
+    setTimeout(() => setTrimDialogMounted(false), 320);
+  }, []);
+  const [fillDialogOpen, setFillDialogOpen] = useState(false);
+  const [fillDialogMounted, setFillDialogMounted] = useState(false);
+  const openFillDialog = useCallback(() => {
+    setFillDialogMounted(true);
+    requestAnimationFrame(() => setFillDialogOpen(true));
+  }, []);
+  const closeFillDialog = useCallback(() => {
+    setFillDialogOpen(false);
+    setTimeout(() => setFillDialogMounted(false), 320);
+  }, []);
+
+  // Owned-card names for the Fill drawer's collection chip + owned-only filter.
+  // Loaded when the drawer mounts, scoped to the user's chosen collection
+  // binders — the same scope the Inspector's "In collection" toggle uses.
+  const [fillCollectionNames, setFillCollectionNames] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (!fillDialogMounted) return;
+    let cancelled = false;
+    getCollectionNameSet(customization.collectionBinderIds).then(names => {
+      if (!cancelled) setFillCollectionNames(names);
+    });
+    return () => { cancelled = true; };
+  }, [fillDialogMounted, customization.collectionBinderIds]);
+
+  // Theme-aware relevancy for the Trim drawer: run the classifier fit over the
+  // deck's own cards, then rebuild the relevancy map with the literal members so
+  // on-theme cards score through the theme-priority branch instead of falling to
+  // 0 (first cut) when EDHREC has never listed them for this commander. Same
+  // classifier evidence the Inspector's cut surfaces consume. Null until the fit
+  // resolves (or when the list has no themes) — the drawer ranks on the stored
+  // map in the meantime, mirroring how the connectivity signal arrives late.
+  const [trimThemeRelevancy, setTrimThemeRelevancy] = useState<Record<string, number> | null>(null);
+  const listThemesKey = (list.themes ?? []).map(t => t.slug).join(',');
+  useEffect(() => {
+    if (!trimDialogMounted || !generatedDeck || !list.themes?.length || allDeckCards.length === 0) {
+      setTrimThemeRelevancy(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const fit = await buildThemeFit(allDeckCards, list.themes!);
+      if (cancelled) return;
+      const members = literalThemeMembers(fit);
+      setTrimThemeRelevancy(members.size > 0 ? rebuildRelevancyMap(generatedDeck, members) : null);
+    })();
+    return () => { cancelled = true; };
+    // listThemesKey stands in for list.themes so a re-created array with the same slugs doesn't refit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trimDialogMounted, generatedDeck, listThemesKey, allDeckCards]);
+
+  // Makes the "Cards" stat in the deck-stats sidebar a one-click entry to the
+  // fill/trim drawer. delta < 0 → short (Fill); delta >= 0 → over or at target
+  // (Trim; at exactly target the Trim drawer opens in fine-tune/swap mode).
+  const cardCountAction = useMemo(() => {
+    if (!list.deckSize) return undefined;
+    const delta = list.cards.length - list.deckSize;
+    const ready = delta < 0
+      ? fillReady && !!onAddCards
+      : trimReady && !!list.commanderName && !!onMoveToMaybeboard;
+    return {
+      delta,
+      ready,
+      onClick: () => { if (delta < 0) openFillDialog(); else openTrimDialog(); },
+    };
+  }, [list.deckSize, list.cards.length, list.commanderName, fillReady, trimReady, onAddCards, onMoveToMaybeboard, openFillDialog, openTrimDialog]);
+  const [mustIncludeDrawerOpen, setMustIncludeDrawerOpen] = useState(false);
+  const [mustIncludeDrawerMounted, setMustIncludeDrawerMounted] = useState(false);
+  const openMustIncludeDrawer = useCallback(() => {
+    setMustIncludeDrawerMounted(true);
+    requestAnimationFrame(() => setMustIncludeDrawerOpen(true));
+  }, []);
+  const closeMustIncludeDrawer = useCallback(() => {
+    setMustIncludeDrawerOpen(false);
+    setTimeout(() => setMustIncludeDrawerMounted(false), 320);
+  }, []);
+  const onRemoveCardsRef = useRef(onRemoveCards);
+  onRemoveCardsRef.current = onRemoveCards;
+  const onAddCardsRef = useRef(onAddCards);
+  onAddCardsRef.current = onAddCards;
+  const onRemoveFromBoardRef = useRef(onRemoveFromBoard);
+  onRemoveFromBoardRef.current = onRemoveFromBoard;
+
+  // Wrapped remove handler that shows toast with undo. Callers (DeckDisplay,
+  // ComboDisplay wrappers) are responsible for pushing the matching 'remove'
+  // history entry — wrapping it here would double-push for DeckDisplay, which
+  // already records history before calling onRemoveCards.
+  const handleRemoveCardsWithToast = useMemo(() => {
+    if (!onRemoveCards) return undefined;
+    return (names: string[]) => {
+      onRemoveCards(names);
+      const label = names.length === 1 ? `Removed ${names[0]}` : `Removed ${names.length} cards`;
+      showActionToast(label, () => {
+        onAddCardsRef.current?.(names, 'deck');
+        useStore.getState().popLatestHistoryEntries('remove', names);
+      });
+    };
+  }, [onRemoveCards, showActionToast]);
+
+  // Card search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ScryfallCard[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Destination picker state
+  const [pendingCard, setPendingCard] = useState<ScryfallCard | null>(null);
+  const [pickerAnchor, setPickerAnchor] = useState<{ top: number; left: number } | null>(null);
+
+  // Bulk add state
+  const [showBulkAdd, setShowBulkAdd] = useState(false);
+  const bulkAddRef = useRef<HTMLDivElement>(null);
+  // Desktop floating panel and mobile inline panel both mount when
+  // showBulkAdd is true (CSS hides one); each needs its own ref.
+  const bulkImporterDesktopRef = useRef<CollectionImporterHandle>(null);
+  const bulkImporterMobileRef = useRef<CollectionImporterHandle>(null);
+  // Closing the bulk-add panel must not silently drop pasted-but-unimported
+  // text. If text is pending, trigger the import first; only keep the panel
+  // open if the import surfaced errors the user should see.
+  const closeBulkAddImporting = useCallback(async () => {
+    const desktop = bulkImporterDesktopRef.current;
+    const mobile = bulkImporterMobileRef.current;
+    const pending = desktop?.hasPending() ? desktop : mobile?.hasPending() ? mobile : null;
+    if (pending) {
+      const result = await pending.triggerImport();
+      if (result && result.notFound.length > 0) return;
+    }
+    setShowBulkAdd(false);
+  }, []);
+
+  // Primer inline editing state
+  const [editingPrimer, setEditingPrimer] = useState(false);
+  const [primerDraft, setPrimerDraft] = useState('');
+  const primerRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertFormat = useCallback((prefix: string, suffix: string = '') => {
+    const ta = primerRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = primerDraft.substring(start, end);
+    const before = primerDraft.substring(0, start);
+    const after = primerDraft.substring(end);
+    const replacement = selected ? `${prefix}${selected}${suffix}` : `${prefix}${suffix}`;
+    const newValue = `${before}${replacement}${after}`;
+    setPrimerDraft(newValue);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const cursorPos = selected ? start + prefix.length + selected.length + suffix.length : start + prefix.length;
+      ta.setSelectionRange(cursorPos, cursorPos);
+    });
+  }, [primerDraft]);
+
+  const insertLinePrefix = useCallback((prefix: string) => {
+    const ta = primerRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const lineStart = primerDraft.lastIndexOf('\n', start - 1) + 1;
+    const before = primerDraft.substring(0, lineStart);
+    const after = primerDraft.substring(lineStart);
+    const newValue = `${before}${prefix}${after}`;
+    setPrimerDraft(newValue);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, start + prefix.length);
+    });
+  }, [primerDraft]);
+
+  // Assigned theme slugs — re-runs the full build when the user changes themes
+  // (the theme-salted content hash makes it an enrichment-cache miss).
+  const themesKey = (list.themes ?? []).map(t => t.slug).join(',');
+
+  // Track previous cards for incremental updates
+  const prevCardsRef = useRef<string[]>(list.cards);
+  const isInitialLoadDone = useRef(false);
+  // Cache raw combos so incremental updates can re-evaluate completeness
+  const rawCombosRef = useRef<EDHRECCombo[]>([]);
+  // Names the current build proved Scryfall can't resolve. Only a full load may add to
+  // this; in-place re-enrichment merely carries it forward, so a card that goes missing
+  // for any other reason (a failed add fetch) leaves the cache incomplete-by-coverage and
+  // gets rebuilt on next open instead of being recorded as a bad name.
+  const knownUnresolvedRef = useRef<string[]>([]);
+
+  // Full build — only on initial mount / list.id change / manual refresh
+  useEffect(() => {
+    let cancelled = false;
+    isInitialLoadDone.current = false;
+
+    // Persist enrichment result + boards to the cache.
+    async function persistCache(args: {
+      commanderCard: ScryfallCard | null;
+      partnerCard: ScryfallCard | null;
+      deckCards: ScryfallCard[];
+      sbCards: ScryfallCard[];
+      mbCards: ScryfallCard[];
+      stats: DeckStats;
+      taggerResult: TaggerStampResult;
+      edhrecResult: EdhrecMapsResult;
+      swapsResult: SwapCandidatesResult;
+      detectedCombos: DetectedCombo[] | undefined;
+      unresolved: string[];
+    }) {
+      const mergedRelevancy = args.edhrecResult.cardRelevancyMap
+        ? { ...args.edhrecResult.cardRelevancyMap, ...(args.swapsResult.candidateRelevancyMap ?? {}) }
+        : args.swapsResult.candidateRelevancyMap;
+      const payload: SerializedEnrichment = {
+        commanderCard: args.commanderCard,
+        partnerCard: args.partnerCard,
+        deckCards: args.deckCards,
+        sideboardCards: args.sbCards,
+        maybeboardCards: args.mbCards,
+        stats: args.stats,
+        categories: args.taggerResult.categories,
+        roleCounts: args.taggerResult.roleCounts,
+        roleTargets: args.edhrecResult.roleTargets,
+        rampSubtypeCounts: args.taggerResult.rampSubtypeCounts,
+        removalSubtypeCounts: args.taggerResult.removalSubtypeCounts,
+        boardwipeSubtypeCounts: args.taggerResult.boardwipeSubtypeCounts,
+        cardDrawSubtypeCounts: args.taggerResult.cardDrawSubtypeCounts,
+        protectionSubtypeCounts: args.taggerResult.protectionSubtypeCounts,
+        bracketEstimation: args.taggerResult.bracketEstimation,
+        gameChangerNames: args.taggerResult.gameChangerNames,
+        cardInclusionMap: args.edhrecResult.cardInclusionMap,
+        cardSynergyMap: args.edhrecResult.cardSynergyMap,
+        cardRelevancyMap: mergedRelevancy,
+        cardEdhrecMetaMap: args.edhrecResult.cardEdhrecMetaMap,
+        deckScore: args.edhrecResult.deckScore,
+        gapAnalysis: args.edhrecResult.gapAnalysis,
+        swapCandidates: args.swapsResult.swapCandidates,
+        edhrecCurve: args.edhrecResult.edhrecCurve,
+        edhrecTypes: args.edhrecResult.edhrecTypes,
+        detectedCombos: args.detectedCombos,
+        rawCombos: rawCombosRef.current,
+        unresolvedNames: args.unresolved,
+      };
+      await writeEnrichmentCache({
+        listId: list.id,
+        schemaVersion: ENRICHMENT_SCHEMA_VERSION,
+        commanderName: list.commanderName ?? null,
+        partnerName: list.partnerCommanderName ?? null,
+        contentHash: computeContentHash(listHashInput(list)),
+        cachedAt: Date.now(),
+        lastAccessed: Date.now(),
+        payload,
+      });
+    }
+
+    /** True when a payload holds a card for every mainboard name it doesn't already
+     *  record as unresolvable. A payload that fails this was built from an incomplete
+     *  Scryfall fetch: hydrating it would paint a fraction of the deck and label the
+     *  rest "couldn't be loaded", so it gets rebuilt instead. */
+    function cacheCoversDeck(payload: SerializedEnrichment): boolean {
+      const missing = unresolvedNames(
+        list.cards,
+        resolvedNameKeys(
+          Object.values(payload.categories).flat(),
+          payload.commanderCard,
+          payload.partnerCard,
+        ),
+      );
+      if (missing.length === 0) return true;
+      const known = new Set(payload.unresolvedNames ?? []);
+      return missing.every(name => known.has(name));
+    }
+
+    function hydrateFromCache(payload: SerializedEnrichment) {
+      setSideboardCards(payload.sideboardCards);
+      setMaybeboardCards(payload.maybeboardCards);
+      setArtUrl(getArtCropUrl(payload.commanderCard));
+      // Restore the raw combo pool so incremental updates (add/remove a missing
+      // combo card) can re-evaluate completeness instead of falling back to the
+      // stale detectedCombos array.
+      rawCombosRef.current = payload.rawCombos ?? [];
+      knownUnresolvedRef.current = payload.unresolvedNames ?? [];
+      const syntheticDeck: GeneratedDeck = {
+        commander: payload.commanderCard,
+        partnerCommander: payload.partnerCard,
+        categories: payload.categories,
+        stats: payload.stats,
+        collectionBinderIds: list.collectionBinderIds,
+        // Re-detect from the restored raw pool rather than trusting the cached
+        // detectedCombos: completeness now depends on whether the deck fills each
+        // combo's unnamed slots, and a payload written before that shipped records
+        // slot-short combos as complete.
+        detectedCombos: rawCombosRef.current.length > 0
+          ? detectCombosInDeck(rawCombosRef.current, payload.deckCards, payload.commanderCard, payload.partnerCard)
+          : dedupeCombosByCardSet(
+              payload.detectedCombos
+                ? recomputeComboCompleteness(payload.detectedCombos, payload.deckCards, payload.commanderCard, payload.partnerCard)
+                : undefined,
+            ),
+        roleCounts: payload.roleCounts,
+        roleTargets: payload.roleTargets,
+        rampSubtypeCounts: payload.rampSubtypeCounts,
+        removalSubtypeCounts: payload.removalSubtypeCounts,
+        boardwipeSubtypeCounts: payload.boardwipeSubtypeCounts,
+        cardDrawSubtypeCounts: payload.cardDrawSubtypeCounts,
+        protectionSubtypeCounts: payload.protectionSubtypeCounts,
+        bracketEstimation: payload.bracketEstimation,
+        gameChangerNames: payload.gameChangerNames,
+        cardInclusionMap: payload.cardInclusionMap,
+        cardSynergyMap: payload.cardSynergyMap,
+        cardRelevancyMap: payload.cardRelevancyMap,
+        cardEdhrecMetaMap: payload.cardEdhrecMetaMap,
+        deckScore: payload.deckScore,
+        gapAnalysis: payload.gapAnalysis,
+        swapCandidates: payload.swapCandidates,
+        edhrecCurve: payload.edhrecCurve,
+        edhrecTypes: payload.edhrecTypes,
+      };
+      const allColors = new Set<string>();
+      const allCardsForColor: ScryfallCard[] = [...payload.deckCards];
+      if (payload.commanderCard) allCardsForColor.push(payload.commanderCard);
+      if (payload.partnerCard) allCardsForColor.push(payload.partnerCard);
+      for (const card of allCardsForColor) {
+        for (const c of card.color_identity || []) allColors.add(c);
+      }
+      // A "choose a color" commander (Clara Oswald &c) prints colorless, so its color is
+      // only in the deck's identity if the saved pick says so.
+      if (list.chosenColor) allColors.add(list.chosenColor);
+      const colorArray = [...allColors];
+      useStore.setState({
+        commander: payload.commanderCard,
+        colorIdentity: colorArray,
+        chosenColor: list.chosenColor ?? null,
+        generatedDeck: syntheticDeck,
+      });
+      useStore.getState().setHistoryScope(list.id);
+      if (colorArray.length > 0) applyCommanderTheme(colorArray);
+      prevCardsRef.current = list.cards;
+      isInitialLoadDone.current = true;
+    }
+
+    async function coldLoad() {
+      // --- Phase A: Scryfall card fetch ---
+      const allNames = [
+        ...list.cards,
+        ...(list.sideboard || []),
+        ...(list.maybeboard || []),
+      ];
+      const fetchStats = { failedRequests: 0 };
+      const cardMap = await getCardsByNames(allNames, undefined, undefined, { stats: fetchStats });
+      if (cancelled) return;
+
+      const cards: ScryfallCard[] = [];
+      for (const name of list.cards) {
+        const card = cardMap.get(name);
+        if (card) cards.push(card);
+      }
+      const sbCards: ScryfallCard[] = [];
+      for (const name of (list.sideboard || [])) {
+        const card = cardMap.get(name);
+        if (card) sbCards.push(card);
+      }
+      setSideboardCards(sbCards);
+      const mbCards: ScryfallCard[] = [];
+      for (const name of (list.maybeboard || [])) {
+        const card = cardMap.get(name);
+        if (card) mbCards.push(card);
+      }
+      setMaybeboardCards(mbCards);
+
+      if (cards.length === 0) {
+        setError('Could not fetch card data for this list.');
+        return;
+      }
+
+      let commanderCard: ScryfallCard | null = null;
+      let partnerCard: ScryfallCard | null = null;
+      if (list.commanderName) commanderCard = cardMap.get(list.commanderName) ?? null;
+      if (list.partnerCommanderName) partnerCard = cardMap.get(list.partnerCommanderName) ?? null;
+      setArtUrl(getArtCropUrl(commanderCard));
+
+      const commanderNames = new Set<string>();
+      if (commanderCard) commanderNames.add(commanderCard.name);
+      if (partnerCard) commanderNames.add(partnerCard.name);
+
+      const deckCards = commanderNames.size > 0
+        ? cards.filter(c => !commanderNames.has(c.name))
+        : cards;
+
+      // Names this fetch couldn't resolve. If any Scryfall request failed, the misses
+      // are the network's fault rather than bad names — flag the load as degraded so we
+      // neither blame the user's spelling nor cache the incomplete deck for 14 days.
+      const unresolved = unresolvedNames(
+        list.cards,
+        resolvedNameKeys(deckCards, commanderCard, partnerCard),
+      );
+      const degraded = unresolved.length > 0 && fetchStats.failedRequests > 0;
+      setLoadDegraded(degraded);
+      knownUnresolvedRef.current = degraded ? [] : unresolved;
+
+      const stats = computeStatsFromCards(deckCards);
+
+      const allColors = new Set<string>();
+      for (const card of cards) {
+        for (const c of card.color_identity || []) allColors.add(c);
+      }
+      // See above: a chosen-color commander contributes nothing on its own.
+      if (list.chosenColor) allColors.add(list.chosenColor);
+      const colorArray = [...allColors];
+
+      // Phase A paint: deck list + stats + curve, all non-commander cards
+      // temporarily piled in `creatures` so list rendering can start.
+      // Phase B (tagger) re-bins them properly.
+      useStore.setState({
+        commander: commanderCard,
+        colorIdentity: colorArray,
+        chosenColor: list.chosenColor ?? null,
+        generatedDeck: {
+          commander: commanderCard,
+          partnerCommander: partnerCard,
+          categories: {
+            lands: [], ramp: [], cardDraw: [], singleRemoval: [],
+            boardWipes: [], protection: [], creatures: deckCards, synergy: [], utility: [],
+          },
+          stats,
+          collectionBinderIds: list.collectionBinderIds,
+        } as GeneratedDeck,
+      });
+      useStore.getState().setHistoryScope(list.id);
+      if (colorArray.length > 0) applyCommanderTheme(colorArray);
+      markPhaseDone('cards');
+
+      // --- Phase B: tagger + game changers ---
+      const taggerResult = await stampTaggerAndGameChangers(deckCards);
+      if (cancelled) return;
+      useStore.setState(state => ({
+        generatedDeck: state.generatedDeck ? {
+          ...state.generatedDeck,
+          categories: taggerResult.categories,
+          roleCounts: taggerResult.roleCounts,
+          rampSubtypeCounts: taggerResult.rampSubtypeCounts,
+          removalSubtypeCounts: taggerResult.removalSubtypeCounts,
+          boardwipeSubtypeCounts: taggerResult.boardwipeSubtypeCounts,
+          cardDrawSubtypeCounts: taggerResult.cardDrawSubtypeCounts,
+          protectionSubtypeCounts: taggerResult.protectionSubtypeCounts,
+          bracketEstimation: taggerResult.bracketEstimation,
+          gameChangerNames: taggerResult.gameChangerNames,
+        } : null,
+      }));
+      markPhaseDone('tagger');
+
+      const listColors = new Set<string>();
+      for (const c of cards) for (const ci of c.color_identity || []) listColors.add(ci.toUpperCase());
+      const listColorArray = ['W', 'U', 'B', 'R', 'G'].filter(c => listColors.has(c));
+
+      // --- Phase D₁: combos (starts in parallel with C below) ---
+      const combosPromise: Promise<DetectedCombo[] | undefined> = (async () => {
+        try {
+          const [a, b] = await Promise.all([
+            commanderCard ? fetchCommanderCombos(commanderCard.name).catch(() => [] as EDHRECCombo[]) : Promise.resolve([] as EDHRECCombo[]),
+            fetchColorIdentityCombos(listColorArray).catch(() => [] as EDHRECCombo[]),
+          ]);
+          const merged = mergeComboPools(
+            a.map(c => ({ ...c, source: 'commander' as const })),
+            b.map(c => ({ ...c, source: 'color-identity' as const })),
+          );
+          rawCombosRef.current = merged;
+          const detected = detectCombosInDeck(merged, deckCards, commanderCard, partnerCard);
+          if (!cancelled) {
+            useStore.setState(state => ({
+              generatedDeck: state.generatedDeck ? { ...state.generatedDeck, detectedCombos: detected } : null,
+            }));
+          }
+          return detected;
+        } catch {
+          return undefined;
+        } finally {
+          if (!cancelled) markPhaseDone('combos');
+        }
+      })();
+
+      // --- No-commander branch: skip phases C and D₂ ---
+      if (!commanderCard) {
+        markPhaseDone('edhrec');
+        markPhaseDone('swaps');
+        const detectedNoCmdr = await combosPromise;
+        if (cancelled) return;
+        const fallbackEdhrec: EdhrecMapsResult = {
+          roleTargets: getBaseRoleTargets(list.deckSize || list.cards.length),
+        };
+        // Roles render off roleTargets — push it to the store so no-commander
+        // decks show the role breakdown (roleCounts came from the tagger phase).
+        useStore.setState(state => ({
+          generatedDeck: state.generatedDeck
+            ? { ...state.generatedDeck, roleTargets: fallbackEdhrec.roleTargets }
+            : null,
+        }));
+        if (!degraded) {
+          await persistCache({
+            commanderCard, partnerCard, deckCards, sbCards, mbCards, stats,
+            taggerResult, edhrecResult: fallbackEdhrec, swapsResult: {},
+            detectedCombos: detectedNoCmdr, unresolved,
+          });
+        }
+        prevCardsRef.current = list.cards;
+        isInitialLoadDone.current = true;
+        return;
+      }
+
+      // Wait for combos so EDHREC scoring sees combo context.
+      const detectedFromCombos = await combosPromise;
+      if (cancelled) return;
+
+      // --- Phase C: EDHREC maps ---
+      const edhrecResult = await buildEdhrecMaps(
+        taggerResult,
+        list.deckSize || list.cards.length,
+        detectedFromCombos,
+        commanderCard.name,
+        partnerCard?.name,
+        list.themes,
+        listColorSegment,
+      );
+      if (cancelled) return;
+      useStore.setState(state => ({
+        generatedDeck: state.generatedDeck ? {
+          ...state.generatedDeck,
+          roleTargets: edhrecResult.roleTargets,
+          cardInclusionMap: edhrecResult.cardInclusionMap,
+          cardSynergyMap: edhrecResult.cardSynergyMap,
+          cardRelevancyMap: edhrecResult.cardRelevancyMap,
+          cardEdhrecMetaMap: edhrecResult.cardEdhrecMetaMap,
+          deckScore: edhrecResult.deckScore,
+          gapAnalysis: edhrecResult.gapAnalysis,
+          edhrecCurve: edhrecResult.edhrecCurve,
+          edhrecTypes: edhrecResult.edhrecTypes,
+        } : null,
+      }));
+      markPhaseDone('edhrec');
+
+      // --- Phase D₂: swap candidates ---
+      const swapsResult = await buildSwapCandidates(
+        deckCards,
+        taggerResult,
+        edhrecResult,
+        commanderCard.name,
+        partnerCard?.name,
+      );
+      if (cancelled) return;
+      useStore.setState(state => {
+        if (!state.generatedDeck) return state;
+        const mergedRelevancy = state.generatedDeck.cardRelevancyMap
+          ? { ...state.generatedDeck.cardRelevancyMap, ...(swapsResult.candidateRelevancyMap ?? {}) }
+          : swapsResult.candidateRelevancyMap;
+        return {
+          generatedDeck: {
+            ...state.generatedDeck,
+            swapCandidates: swapsResult.swapCandidates,
+            cardRelevancyMap: mergedRelevancy,
+          },
+        };
+      });
+      markPhaseDone('swaps');
+
+      if (!degraded) {
+        await persistCache({
+          commanderCard, partnerCard, deckCards, sbCards, mbCards, stats,
+          taggerResult, edhrecResult, swapsResult,
+          detectedCombos: detectedFromCombos, unresolved,
+        });
+      }
+      prevCardsRef.current = list.cards;
+      isInitialLoadDone.current = true;
+    }
+
+    async function backgroundRefresh() {
+      try {
+        const allNames = [...list.cards, ...(list.sideboard || []), ...(list.maybeboard || [])];
+        const fetchStats = { failedRequests: 0 };
+        const cardMap = await getCardsByNames(allNames, undefined, undefined, { stats: fetchStats });
+        if (cancelled) return;
+
+        const cards: ScryfallCard[] = [];
+        for (const name of list.cards) {
+          const card = cardMap.get(name);
+          if (card) cards.push(card);
+        }
+        const sbCards: ScryfallCard[] = [];
+        for (const name of (list.sideboard || [])) {
+          const card = cardMap.get(name);
+          if (card) sbCards.push(card);
+        }
+        const mbCards: ScryfallCard[] = [];
+        for (const name of (list.maybeboard || [])) {
+          const card = cardMap.get(name);
+          if (card) mbCards.push(card);
+        }
+        if (cards.length === 0) return;
+
+        let commanderCard: ScryfallCard | null = null;
+        let partnerCard: ScryfallCard | null = null;
+        if (list.commanderName) commanderCard = cardMap.get(list.commanderName) ?? null;
+        if (list.partnerCommanderName) partnerCard = cardMap.get(list.partnerCommanderName) ?? null;
+
+        const commanderNames = new Set<string>();
+        if (commanderCard) commanderNames.add(commanderCard.name);
+        if (partnerCard) commanderNames.add(partnerCard.name);
+        const deckCards = commanderNames.size > 0 ? cards.filter(c => !commanderNames.has(c.name)) : cards;
+        const stats = computeStatsFromCards(deckCards);
+        const unresolved = unresolvedNames(
+          list.cards,
+          resolvedNameKeys(deckCards, commanderCard, partnerCard),
+        );
+        const degraded = unresolved.length > 0 && fetchStats.failedRequests > 0;
+        if (!degraded) knownUnresolvedRef.current = unresolved;
+
+        const taggerResult = await stampTaggerAndGameChangers(deckCards);
+        if (cancelled) return;
+
+        let edhrecResult: EdhrecMapsResult = {
+          roleTargets: getBaseRoleTargets(list.deckSize || list.cards.length),
+        };
+        let swapsResult: SwapCandidatesResult = {};
+        let detectedCombos: DetectedCombo[] | undefined;
+
+        // Combos run regardless of commander — no-commander decks still pull
+        // color-identity combos for their colors. (Gating this on commander used
+        // to wipe the cached combos coldLoad had written.)
+        {
+          const listColors = new Set<string>();
+          for (const c of cards) for (const ci of c.color_identity || []) listColors.add(ci.toUpperCase());
+          const listColorArray = ['W', 'U', 'B', 'R', 'G'].filter(c => listColors.has(c));
+          try {
+            const [a, b] = await Promise.all([
+              commanderCard
+                ? fetchCommanderCombos(commanderCard.name).catch(() => [] as EDHRECCombo[])
+                : Promise.resolve([] as EDHRECCombo[]),
+              fetchColorIdentityCombos(listColorArray).catch(() => [] as EDHRECCombo[]),
+            ]);
+            const merged: EDHRECCombo[] = mergeComboPools(
+              a.map(c => ({ ...c, source: 'commander' as const })),
+              b.map(c => ({ ...c, source: 'color-identity' as const })),
+            );
+            rawCombosRef.current = merged;
+            detectedCombos = detectCombosInDeck(merged, deckCards, commanderCard, partnerCard);
+          } catch { /* non-critical */ }
+          if (cancelled) return;
+        }
+
+        if (commanderCard) {
+          edhrecResult = await buildEdhrecMaps(
+            taggerResult,
+            list.deckSize || list.cards.length,
+            detectedCombos,
+            commanderCard.name,
+            partnerCard?.name,
+            list.themes,
+            listColorSegment,
+          );
+          if (cancelled) return;
+          swapsResult = await buildSwapCandidates(
+            deckCards,
+            taggerResult,
+            edhrecResult,
+            commanderCard.name,
+            partnerCard?.name,
+          );
+          if (cancelled) return;
+        }
+
+        // Adopt the refreshed analysis whenever the list hasn't changed under us.
+        // Skipped once the user has edited the list (the incremental effect owns
+        // the deck from then on), and a degraded refresh is only adopted when it's
+        // strictly more complete than what's on screen.
+        //
+        // This used to fire ONLY when the refresh resolved cards the cached payload
+        // was missing. On the common path — cache complete but out of date — every
+        // refreshed field was computed and then thrown away, while persistCache
+        // still wrote it to disk. So fresh data needed two loads to appear: one to
+        // persist it, another to read it back. That's what made combo slots stay
+        // invisible after the combo index regenerated.
+        if (prevCardsRef.current === list.cards) {
+          const displayed = useStore.getState().generatedDeck;
+          const displayedCount = displayed ? Object.values(displayed.categories).flat().length : 0;
+          if (displayed && (!degraded || displayedCount < deckCards.length)) {
+            setSideboardCards(sbCards);
+            setMaybeboardCards(mbCards);
+            useStore.setState({
+              generatedDeck: {
+                ...displayed,
+                categories: taggerResult.categories,
+                stats,
+                detectedCombos,
+                roleCounts: taggerResult.roleCounts,
+                roleTargets: edhrecResult.roleTargets,
+                rampSubtypeCounts: taggerResult.rampSubtypeCounts,
+                removalSubtypeCounts: taggerResult.removalSubtypeCounts,
+                boardwipeSubtypeCounts: taggerResult.boardwipeSubtypeCounts,
+                cardDrawSubtypeCounts: taggerResult.cardDrawSubtypeCounts,
+                protectionSubtypeCounts: taggerResult.protectionSubtypeCounts,
+                bracketEstimation: taggerResult.bracketEstimation,
+                gameChangerNames: taggerResult.gameChangerNames,
+                cardInclusionMap: edhrecResult.cardInclusionMap,
+                cardSynergyMap: edhrecResult.cardSynergyMap,
+                cardRelevancyMap: edhrecResult.cardRelevancyMap
+                  ? { ...edhrecResult.cardRelevancyMap, ...(swapsResult.candidateRelevancyMap ?? {}) }
+                  : swapsResult.candidateRelevancyMap,
+                cardEdhrecMetaMap: edhrecResult.cardEdhrecMetaMap,
+                deckScore: edhrecResult.deckScore,
+                gapAnalysis: edhrecResult.gapAnalysis,
+                swapCandidates: swapsResult.swapCandidates,
+                edhrecCurve: edhrecResult.edhrecCurve,
+                edhrecTypes: edhrecResult.edhrecTypes,
+              },
+            });
+          }
+          setLoadDegraded(degraded);
+        }
+
+        if (degraded) return; // don't overwrite a good cache with an incomplete fetch
+        await persistCache({
+          commanderCard, partnerCard, deckCards, sbCards, mbCards, stats,
+          taggerResult, edhrecResult, swapsResult, detectedCombos, unresolved,
+        });
+      } catch (e) {
+        console.warn('[ListDeckView] background refresh failed:', e);
+      }
+    }
+
+    async function buildAndSetDeck() {
+      setPhasesDone(new Set());
+      setError(null);
+      setLoadDegraded(false);
+      setArtUrl(null);
+      setArtLoaded(false);
+
+      try {
+        const cached = await readEnrichmentCache(list.id);
+        if (cancelled) return;
+
+        if (
+          cached
+          && cacheMatchesSchema(cached)
+          && cacheMatchesCommander(cached, list.commanderName, list.partnerCommanderName)
+          && cacheMatchesContent(cached, listHashInput(list))
+          && isCacheFresh(cached)
+          && cacheCoversDeck(cached.payload)
+        ) {
+          hydrateFromCache(cached.payload);
+          setPhasesDone(new Set(['cards', 'tagger', 'edhrec', 'combos', 'swaps']));
+          void touchEnrichmentCache(list.id);
+          void backgroundRefresh();
+          return;
+        }
+
+        await coldLoad();
+      } catch {
+        if (!cancelled) setError('Failed to load card data. Please try again.');
+      }
+    }
+
+    buildAndSetDeck();
+
+    return () => {
+      cancelled = true;
+      useStore.setState({ generatedDeck: null });
+      // Detach rather than wipe — the entries stay on disk for when we return.
+      useStore.getState().setHistoryScope(null);
+      resetTheme();
+    };
+    // themesKey is deliberately NOT a dep: a themes-only change re-enriches in
+    // place (see the themes effect above) instead of triggering a full rebuild.
+  }, [list.id, refreshCounter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-enrich the already-loaded deck cards in place (no skeleton, no Scryfall
+  // refetch, no tagger/combo rebuild) and patch the store + cache. Shared by the
+  // incremental card-change path and the themes-only path.
+  const reEnrichInPlace = useCallback(async (allDeckCards: ScryfallCard[]) => {
+    const currentDeck = useStore.getState().generatedDeck;
+    if (!currentDeck) return;
+
+    const stats = computeStatsFromCards(allDeckCards);
+
+    // Re-evaluate combo completeness
+    const detectedCombos = rawCombosRef.current.length > 0
+      ? detectCombosInDeck(rawCombosRef.current, allDeckCards, currentDeck.commander, currentDeck.partnerCommander)
+      : currentDeck.detectedCombos;
+
+    const enrichResult = await enrichDeckCards(
+      allDeckCards,
+      list.deckSize || list.cards.length,
+      detectedCombos,
+      currentDeck.commander?.name,
+      currentDeck.partnerCommander?.name,
+      list.themes,
+      listColorSegment,
+    );
+
+    useStore.setState({
+      generatedDeck: {
+        ...currentDeck,
+        categories: enrichResult.categories,
+        stats,
+        detectedCombos,
+        roleCounts: enrichResult.roleCounts,
+        roleTargets: enrichResult.roleTargets,
+        rampSubtypeCounts: enrichResult.rampSubtypeCounts,
+        removalSubtypeCounts: enrichResult.removalSubtypeCounts,
+        boardwipeSubtypeCounts: enrichResult.boardwipeSubtypeCounts,
+        cardDrawSubtypeCounts: enrichResult.cardDrawSubtypeCounts,
+        protectionSubtypeCounts: enrichResult.protectionSubtypeCounts,
+        bracketEstimation: enrichResult.bracketEstimation,
+        gameChangerNames: enrichResult.gameChangerNames,
+        cardInclusionMap: enrichResult.cardInclusionMap,
+        cardSynergyMap: enrichResult.cardSynergyMap,
+        cardRelevancyMap: enrichResult.cardRelevancyMap,
+        cardEdhrecMetaMap: enrichResult.cardEdhrecMetaMap,
+        deckScore: enrichResult.deckScore,
+        swapCandidates: enrichResult.swapCandidates,
+        gapAnalysis: enrichResult.gapAnalysis,
+        edhrecCurve: enrichResult.edhrecCurve,
+        edhrecTypes: enrichResult.edhrecTypes,
+      },
+    });
+
+    // Persist the freshly-enriched payload so next open is instant.
+    const payload: SerializedEnrichment = {
+      commanderCard: currentDeck.commander,
+      partnerCard: currentDeck.partnerCommander,
+      deckCards: allDeckCards,
+      sideboardCards,
+      maybeboardCards,
+      stats,
+      categories: enrichResult.categories,
+      roleCounts: enrichResult.roleCounts,
+      roleTargets: enrichResult.roleTargets,
+      rampSubtypeCounts: enrichResult.rampSubtypeCounts,
+      removalSubtypeCounts: enrichResult.removalSubtypeCounts,
+      boardwipeSubtypeCounts: enrichResult.boardwipeSubtypeCounts,
+      cardDrawSubtypeCounts: enrichResult.cardDrawSubtypeCounts,
+      protectionSubtypeCounts: enrichResult.protectionSubtypeCounts,
+      bracketEstimation: enrichResult.bracketEstimation,
+      gameChangerNames: enrichResult.gameChangerNames,
+      cardInclusionMap: enrichResult.cardInclusionMap,
+      cardSynergyMap: enrichResult.cardSynergyMap,
+      cardRelevancyMap: enrichResult.cardRelevancyMap,
+      cardEdhrecMetaMap: enrichResult.cardEdhrecMetaMap,
+      deckScore: enrichResult.deckScore,
+      gapAnalysis: enrichResult.gapAnalysis,
+      swapCandidates: enrichResult.swapCandidates,
+      edhrecCurve: enrichResult.edhrecCurve,
+      edhrecTypes: enrichResult.edhrecTypes,
+      detectedCombos,
+      rawCombos: rawCombosRef.current,
+      unresolvedNames: knownUnresolvedRef.current.filter(n => list.cards.includes(n)),
+    };
+    await writeEnrichmentCache({
+      listId: list.id,
+      schemaVersion: ENRICHMENT_SCHEMA_VERSION,
+      commanderName: list.commanderName ?? null,
+      partnerName: list.partnerCommanderName ?? null,
+      contentHash: computeContentHash(listHashInput(list)),
+      cachedAt: Date.now(),
+      lastAccessed: Date.now(),
+      payload,
+    });
+  }, [list, sideboardCards, maybeboardCards]);
+
+  // Themes-only change — re-run enrichment (EDHREC maps + swaps + archetype
+  // blend) against the cards already in the store. No skeleton, no refetch.
+  const prevThemesKeyRef = useRef(themesKey);
+  useEffect(() => {
+    if (!isInitialLoadDone.current) return;
+    if (themesKey === prevThemesKeyRef.current) return;
+    prevThemesKeyRef.current = themesKey;
+    const deck = useStore.getState().generatedDeck;
+    if (!deck) return;
+    void reEnrichInPlace(Object.values(deck.categories).flat());
+  }, [themesKey, reEnrichInPlace]);
+
+  // Incremental update — patch deck in-place when cards change (no full reload)
+  useEffect(() => {
+    if (!isInitialLoadDone.current) return;
+    const prev = prevCardsRef.current;
+    const current = list.cards;
+    // Quick equality check
+    if (prev.length === current.length && prev.every((c, i) => c === current[i])) return;
+    prevCardsRef.current = current;
+
+    // Build count maps to detect additions, removals, AND quantity changes
+    const prevCounts = new Map<string, number>();
+    for (const c of prev) prevCounts.set(c, (prevCounts.get(c) || 0) + 1);
+    const currentCounts = new Map<string, number>();
+    for (const c of current) currentCounts.set(c, (currentCounts.get(c) || 0) + 1);
+
+    // Cards fully removed (count went to 0)
+    const removed = new Set<string>();
+    for (const name of prevCounts.keys()) {
+      if (!currentCounts.has(name)) removed.add(name);
+    }
+    // Cards newly added (didn't exist before) — need to fetch from Scryfall
+    const newlyAdded: string[] = [];
+    for (const [name, count] of currentCounts) {
+      if (!prevCounts.has(name)) {
+        for (let i = 0; i < count; i++) newlyAdded.push(name);
+      }
+    }
+
+    const deck = useStore.getState().generatedDeck;
+    if (!deck) return;
+
+    const commanderNames = new Set<string>();
+    if (deck.commander) commanderNames.add(deck.commander.name);
+    if (deck.partnerCommander) commanderNames.add(deck.partnerCommander.name);
+
+    // Rebuild the full card list respecting current quantities
+    // For existing cards (in deck already), adjust counts; for new cards, fetch them
+    const existingCardMap = new Map<string, ScryfallCard>();
+    for (const c of Object.values(deck.categories).flat()) {
+      if (!removed.has(c.name)) existingCardMap.set(c.name, c);
+    }
+
+    const buildDeckCards = (fetchedCards?: Map<string, ScryfallCard>): ScryfallCard[] => {
+      const result: ScryfallCard[] = [];
+      for (const [name, count] of currentCounts) {
+        if (commanderNames.has(name)) continue;
+        const card = existingCardMap.get(name) || fetchedCards?.get(name);
+        if (card) {
+          for (let i = 0; i < count; i++) result.push(card);
+        }
+      }
+      return result;
+    };
+
+    if (newlyAdded.length > 0) {
+      const uniqueNew = [...new Set(newlyAdded)];
+      getCardsByNames(uniqueNew).then(cardMap => {
+        reEnrichInPlace(buildDeckCards(cardMap));
+      });
+      return;
+    }
+
+    // Removals or quantity changes only — no fetch needed
+    reEnrichInPlace(buildDeckCards());
+  }, [list.cards]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Separate effect for board-only changes (lighter than full rebuild)
+  useEffect(() => {
+    const sbNames = list.sideboard || [];
+    const mbNames = list.maybeboard || [];
+    if (sbNames.length === 0 && mbNames.length === 0) {
+      setSideboardCards([]);
+      setMaybeboardCards([]);
+      return;
+    }
+    const boardNames = [...sbNames, ...mbNames];
+    getCardsByNames(boardNames).then(cardMap => {
+      setSideboardCards(sbNames.map(n => cardMap.get(n)).filter(Boolean) as ScryfallCard[]);
+      setMaybeboardCards(mbNames.map(n => cardMap.get(n)).filter(Boolean) as ScryfallCard[]);
+    });
+  }, [list.sideboard, list.maybeboard]);
+
+  // Close overflow menu on outside click
+  useEffect(() => {
+    if (!showOverflow) return;
+    const handleClick = (e: MouseEvent) => {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setShowOverflow(false);
+        setConfirmingDelete(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClick);
+    return () => window.removeEventListener('mousedown', handleClick);
+  }, [showOverflow]);
+
+  // Close bulk add on outside click
+  useEffect(() => {
+    if (!showBulkAdd) return;
+    const handleClick = (e: MouseEvent) => {
+      // The swap flyout is portalled to body, so it is "outside" by DOM but
+      // very much inside by intent — clicking an option must not dismiss this.
+      if ((e.target as Element | null)?.closest?.('[data-swap-flyout]')) return;
+      if (bulkAddRef.current && !bulkAddRef.current.contains(e.target as Node)) {
+        closeBulkAddImporting();
+      }
+    };
+    window.addEventListener('mousedown', handleClick);
+    return () => window.removeEventListener('mousedown', handleClick);
+  }, [showBulkAdd, closeBulkAddImporting]);
+
+  // Debounced card search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchCards(searchQuery, colorIdentity, { order: 'edhrec' });
+        const allExisting = new Set([
+          ...list.cards,
+          ...(list.sideboard || []),
+          ...(list.maybeboard || []),
+        ]);
+        const filtered = results.data.filter(card => !allExisting.has(card.name));
+        setSearchResults(filtered.slice(0, 8));
+        setShowSearchResults(true);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, list.cards, list.sideboard, list.maybeboard, colorIdentity]);
+
+  const pushDeckHistory = useStore(s => s.pushDeckHistory);
+
+  const handleAddToDeck = useCallback((card: ScryfallCard) => {
+    if (!onAddCards) return;
+    onAddCards([card.name], 'deck');
+    pushDeckHistory({ action: 'add', cardName: card.name });
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    showActionToast(`Added ${card.name}`, () => onRemoveCardsRef.current?.([card.name]), primaryTypeFromLine(card.type_line));
+  }, [onAddCards, pushDeckHistory, showActionToast]);
+
+  // ── Swap in — "I picked up this card, what comes out?" ──────────────────
+  // Only engages once the deck is at its target size. Under target there is
+  // nothing to trade, so the plain add stands and this never appears.
+
+  const deckNameSet = useMemo(() => {
+    const names = new Set<string>();
+    for (const n of list.cards) {
+      names.add(n);
+      if (n.includes(' // ')) names.add(n.split(' // ')[0]);
+    }
+    return names;
+  }, [list.cards]);
+
+  // Shown only once the deck is actually full: under target there is nothing to
+  // trade, you just add. Also waits on the same enrichment the Trim drawer does
+  // plus the card objects the finder ranks over — without that the panel opens
+  // empty and reads as a verdict rather than as "not ready".
+  const swapReady = trimReady
+    && allDeckCards.length > 0
+    && !!onMoveToMaybeboard
+    && !!list.deckSize
+    && list.cards.length >= list.deckSize;
+
+  const getSwapPlan = useCallback((incoming: ScryfallCard) => findSwapCandidates({
+    incoming,
+    deckCards: allDeckCards,
+    deckNames: deckNameSet,
+    commanderNames: [list.commanderName, list.partnerCommanderName].filter((n): n is string => !!n),
+    allowedColors: allowedColors ?? undefined,
+    targetSize: list.deckSize ?? list.cards.length,
+    currentSize: list.cards.length,
+    roleCounts: generatedDeck?.roleCounts,
+    roleTargets: generatedDeck?.roleTargets,
+    cardSynergyMap: generatedDeck?.cardSynergyMap,
+    // Theme-aware relevancy when the list declares themes, matching what the
+    // Trim drawer ranks on — otherwise the two disagree about the same deck.
+    cardRelevancyMap: trimThemeRelevancy ?? generatedDeck?.cardRelevancyMap,
+    mustIncludeNames: new Set(customization.mustIncludeCards),
+    detectedCombos: generatedDeck?.detectedCombos,
+  }), [allDeckCards, deckNameSet, list.commanderName, list.partnerCommanderName,
+       list.deckSize, list.cards.length, allowedColors, generatedDeck, trimThemeRelevancy,
+       customization.mustIncludeCards]);
+
+  const handleConfirmSwap = useCallback((incoming: ScryfallCard, cutName: string) => {
+    if (!onAddCards || !onMoveToMaybeboard) return;
+    // Cut to the maybeboard rather than deleting: the swap stays reversible and
+    // the card the player set aside is still findable.
+    onMoveToMaybeboard([cutName]);
+    onAddCards([incoming.name], 'deck');
+    pushDeckHistory({ action: 'swap', cardName: cutName, targetCardName: incoming.name });
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    showActionToast(`${cutName} out, ${incoming.name} in`, () => {
+      onRemoveCardsRef.current?.([incoming.name]);
+      onMoveToDeck?.([cutName], 'maybeboard');
+    }, primaryTypeFromLine(incoming.type_line));
+  }, [onAddCards, onMoveToMaybeboard, onMoveToDeck, pushDeckHistory, showActionToast]);
+
+  // --- Drag a card link (EDHREC / Scryfall / Moxfield) onto the deck to add it ---
+  const { isDraggingCard, dropHandlers } = useCardLinkDrop({
+    enabled: !!onAddCards && phasesDone.has('cards'),
+    onCard: (card) => {
+      const present = new Set<string>();
+      for (const n of list.cards) {
+        present.add(n);
+        if (n.includes(' // ')) present.add(n.split(' // ')[0]);
+      }
+      const frontFace = card.name.includes(' // ') ? card.name.split(' // ')[0] : card.name;
+      if (present.has(card.name) || present.has(frontFace)) {
+        showErrorToast(`${frontFace} is already in the deck`);
+        return;
+      }
+      handleAddToDeck(card);
+    },
+    onError: showErrorToast,
+  });
+
+  // Enter-to-add: skip the dropdown and try to resolve+add the typed name directly.
+  // Uses fuzzy lookup so minor capitalization/spelling slips still work.
+  const handleSearchKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const name = searchQuery.trim();
+    if (!name || !onAddCards) return;
+    // Capture the first dropdown result (if any) before we clear state.
+    const firstResult = searchResults[0];
+    // Close the dropdown / cancel the in-flight debounced search immediately
+    // so the popover doesn't reappear while our lookup is running.
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    setIsSearching(false);
+    if (firstResult) {
+      handleAddToDeck(firstResult);
+      return;
+    }
+    try {
+      const card = await getCardByName(name, false);
+      handleAddToDeck(card);
+    } catch {
+      showErrorToast(`Couldn't find "${name}"`);
+    }
+  }, [searchQuery, searchResults, onAddCards, handleAddToDeck, showErrorToast]);
+
+  // Single-name adds from the AddCardsPanel autocomplete (header + bulk-add
+  // panels). Names arrive canonical from Scryfall autocomplete; resolve the
+  // full card so the standard add path can toast with a type icon and undo.
+  const handleAddCardByName = useCallback(async (name: string) => {
+    try {
+      const card = await getCardByName(name, false);
+      handleAddToDeck(card);
+    } catch {
+      showErrorToast(`Couldn't add "${name}"`);
+    }
+  }, [handleAddToDeck, showErrorToast]);
+
+  const handleShowBoardPicker = useCallback((card: ScryfallCard, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    setPickerAnchor({ top: rect.bottom, left: rect.left });
+    setPendingCard(card);
+  }, []);
+
+  const handleDestinationPick = useCallback((destination: 'deck' | 'sideboard' | 'maybeboard') => {
+    if (!pendingCard || !onAddCards) return;
+    const cardName = pendingCard.name;
+    onAddCards([cardName], destination);
+    const historyAction = destination === 'sideboard' ? 'sideboard' as const : destination === 'maybeboard' ? 'maybeboard' as const : 'add' as const;
+    pushDeckHistory({ action: historyAction, cardName });
+    setPendingCard(null);
+    setPickerAnchor(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    const label = destination === 'deck' ? '' : ` to ${destination}`;
+    showActionToast(`Added ${cardName}${label}`, () => {
+      if (destination === 'deck') onRemoveCardsRef.current?.([cardName]);
+      else onRemoveFromBoardRef.current?.(cardName, destination);
+    }, primaryTypeFromLine(pendingCard.type_line));
+  }, [pendingCard, onAddCards, pushDeckHistory, showActionToast]);
+
+  const handleCancelPicker = useCallback(() => {
+    setPendingCard(null);
+    setPickerAnchor(null);
+  }, []);
+
+  const handleBulkImport = useCallback((validatedNames: string[]) => {
+    if (!onAddCards) return { added: 0, updated: 0 };
+    const current = list.cards;
+    const currentCounts = new Map<string, number>();
+    for (const name of current) {
+      currentCounts.set(name, (currentCounts.get(name) ?? 0) + 1);
+    }
+    const importCounts = new Map<string, number>();
+    for (const name of validatedNames) {
+      importCounts.set(name, (importCounts.get(name) ?? 0) + 1);
+    }
+    const newCards: string[] = [];
+    let dupeCount = 0;
+    for (const [cardName, importQty] of importCounts) {
+      const existingQty = currentCounts.get(cardName) ?? 0;
+      const toAdd = Math.max(0, importQty - existingQty);
+      for (let i = 0; i < toAdd; i++) newCards.push(cardName);
+      dupeCount += importQty - toAdd;
+    }
+    if (newCards.length > 0) {
+      onAddCards(newCards, 'deck');
+      for (const name of newCards) pushDeckHistory({ action: 'add', cardName: name });
+    }
+    return { added: newCards.length, updated: dupeCount };
+  }, [onAddCards, list.cards, pushDeckHistory]);
+
+  // Everything already in the list — dropped from the add-panel's suggestions.
+  const allListNames = useMemo(
+    () => new Set([...list.cards, ...(list.sideboard || []), ...(list.maybeboard || [])]),
+    [list.cards, list.sideboard, list.maybeboard]
+  );
+
+  // Board context menu handler
+  const handleBoardCardAction = useCallback((card: ScryfallCard, action: CardAction, boardType: 'sideboard' | 'maybeboard') => {
+    const name = card.name;
+    switch (action.type) {
+      case 'remove':
+        onRemoveFromBoard?.(name, boardType);
+        pushDeckHistory({ action: 'remove', cardName: name });
+        break;
+      case 'addToDeck':
+        onMoveToDeck?.([name], boardType);
+        pushDeckHistory({ action: 'add', cardName: name });
+        break;
+      case 'sideboard':
+        // Card is in maybeboard → move to sideboard
+        onMoveBetweenBoards?.(name, boardType);
+        pushDeckHistory({ action: 'sideboard', cardName: name });
+        break;
+      case 'maybeboard':
+        // Card is in sideboard → move to maybeboard
+        onMoveBetweenBoards?.(name, boardType);
+        pushDeckHistory({ action: 'maybeboard', cardName: name });
+        break;
+      case 'mustInclude': {
+        const current = customization.mustIncludeCards;
+        const has = current.includes(name);
+        updateCustomization({ mustIncludeCards: has ? current.filter(n => n !== name) : [...current, name] });
+        break;
+      }
+      case 'exclude': {
+        const currentBanned = customization.bannedCards;
+        const hasBan = currentBanned.includes(name);
+        updateCustomization({ bannedCards: hasBan ? currentBanned.filter(n => n !== name) : [...currentBanned, name] });
+        break;
+      }
+      case 'addToList': {
+        const targetList = userLists.find(l => l.id === action.listId);
+        if (targetList && !targetList.cards.includes(name)) {
+          updateList(action.listId, { cards: [...targetList.cards, name] });
+        }
+        break;
+      }
+    }
+  }, [onRemoveFromBoard, onMoveToDeck, onMoveBetweenBoards, customization, updateCustomization, userLists, updateList, pushDeckHistory]);
+
+  const boardMenuProps = useMemo(() => ({
+    userLists,
+    mustIncludeNames: new Set(customization.mustIncludeCards),
+    bannedNames: new Set(customization.bannedCards),
+  }), [userLists, customization.mustIncludeCards, customization.bannedCards]);
+
+  // Context-menu handler for the "New cards for this deck" grid. These cards aren't
+  // in the deck yet, so the board actions ADD (not move) and Create combo seeds the
+  // custom-combo form. Mirrors handleBoardCardAction's must-include/exclude/list logic.
+  const handleNewCardAction = useCallback((card: ScryfallCard, action: CardAction) => {
+    const name = card.name;
+    switch (action.type) {
+      case 'addToDeck':
+        onAddCards?.([name], 'deck');
+        pushDeckHistory({ action: 'add', cardName: name });
+        break;
+      case 'sideboard':
+        onAddCards?.([name], 'sideboard');
+        pushDeckHistory({ action: 'sideboard', cardName: name });
+        break;
+      case 'maybeboard':
+        onAddCards?.([name], 'maybeboard');
+        pushDeckHistory({ action: 'maybeboard', cardName: name });
+        break;
+      case 'mustInclude': {
+        const current = customization.mustIncludeCards;
+        const has = current.includes(name);
+        updateCustomization({ mustIncludeCards: has ? current.filter(n => n !== name) : [...current, name] });
+        break;
+      }
+      case 'exclude': {
+        const currentBanned = customization.bannedCards;
+        const hasBan = currentBanned.includes(name);
+        updateCustomization({ bannedCards: hasBan ? currentBanned.filter(n => n !== name) : [...currentBanned, name] });
+        break;
+      }
+      case 'createCombo':
+        setComboSeedCard(name);
+        break;
+      case 'addToList': {
+        const targetList = userLists.find(l => l.id === action.listId);
+        if (targetList && !targetList.cards.includes(name)) {
+          updateList(action.listId, { cards: [...targetList.cards, name] });
+        }
+        break;
+      }
+      case 'createListAndAdd':
+        createList(action.listName, [name]);
+        break;
+    }
+  }, [onAddCards, pushDeckHistory, customization, updateCustomization, userLists, updateList, createList]);
+
+  const newCardMenuProps = useMemo(() => ({
+    userLists,
+    mustIncludeNames: new Set(customization.mustIncludeCards),
+    bannedNames: new Set(customization.bannedCards),
+    sideboardNames: new Set(list.sideboard || []),
+    maybeboardNames: new Set(list.maybeboard || []),
+  }), [userLists, customization.mustIncludeCards, customization.bannedCards, list.sideboard, list.maybeboard]);
+
+  // Context-menu handler for the Trim / Fill drawers. Scoped to the non-mutating
+  // actions (must-include, exclude, add-to-list) so the open dialog's plan, which
+  // is computed from a fixed card array, doesn't desync mid-review.
+  const handleDialogCardAction = useCallback((card: ScryfallCard, action: CardAction) => {
+    const name = card.name;
+    switch (action.type) {
+      case 'remove': {
+        pushDeckHistory({ action: 'remove', cardName: name });
+        handleRemoveCardsWithToast?.([name]);
+        break;
+      }
+      case 'mustInclude': {
+        const current = customization.mustIncludeCards;
+        const has = current.includes(name);
+        updateCustomization({ mustIncludeCards: has ? current.filter(n => n !== name) : [...current, name] });
+        break;
+      }
+      case 'exclude': {
+        const currentBanned = customization.bannedCards;
+        const hasBan = currentBanned.includes(name);
+        updateCustomization({ bannedCards: hasBan ? currentBanned.filter(n => n !== name) : [...currentBanned, name] });
+        break;
+      }
+      case 'addToList': {
+        const targetList = userLists.find(l => l.id === action.listId);
+        if (targetList && !targetList.cards.includes(name)) {
+          updateList(action.listId, { cards: [...targetList.cards, name] });
+        }
+        break;
+      }
+      case 'createListAndAdd':
+        createList(action.listName, [name]);
+        break;
+    }
+  }, [customization, updateCustomization, userLists, updateList, createList, handleRemoveCardsWithToast, pushDeckHistory]);
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+        <div className="text-center py-16 text-sm text-muted-foreground">{error}</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Commander art background */}
+      {artUrl && (
+        <div className={`fixed inset-0 z-0 overflow-hidden pointer-events-none transition-opacity duration-500 ${deckEditMode ? 'opacity-20' : ''}`}>
+          <div className={`absolute inset-0 transition-all duration-1000 ${artLoaded ? 'opacity-100' : 'opacity-0'}`}>
+            <img
+              src={artUrl}
+              alt=""
+              className="w-full h-[70vh] object-cover object-top blur-md scale-110 transition-all duration-700"
+              onLoad={() => setArtLoaded(true)}
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/70 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
+          <div className="absolute inset-0 bg-background/15" />
+          <div
+            className="absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse at center top, transparent 0%, hsl(var(--background)) 70%)' }}
+          />
+        </div>
+      )}
+
+      <div className="relative z-10 space-y-4" {...dropHandlers}>
+        {isDraggingCard && (
+          <div className="fixed inset-0 z-[90] pointer-events-none flex items-center justify-center p-4">
+            <div className="absolute inset-3 rounded-2xl border-2 border-dashed border-violet-400/70 bg-violet-500/5 backdrop-blur-[1px]" />
+            <div className="relative rounded-xl bg-background/90 border border-violet-400/50 px-5 py-3 shadow-2xl text-center">
+              <p className="text-sm font-medium text-violet-200">Drop to add card</p>
+              <p className="text-xs text-violet-300/70 mt-0.5">Drag a card link from Scryfall, EDHREC, or Moxfield</p>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          {/* Rebrew — only for decks that came out of the brew flow; restarts a fresh brew with
+              the same commander(s) from the setup screen. Mirrors the Back button styling. */}
+          {!!list.commanderName && (list.name.includes('(Brewed)') || (list.generationSummary ?? '').toLowerCase().includes('brew')) && (
+            <button
+              onClick={() => {
+                trackEvent('rebrew_clicked', { commanderName: list.commanderName ?? null });
+                const partner = list.partnerCommanderName ? `/${formatCommanderNameForUrl(list.partnerCommanderName)}` : '';
+                navigate(`/brew/${formatCommanderNameForUrl(list.commanderName!)}${partner}`);
+              }}
+              title="Brew a fresh deck with this commander"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Redo2 className="w-4 h-4" />
+              Rebrew
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              onBlur={() => {
+                const trimmed = nameInput.trim();
+                if (trimmed && trimmed !== list.name) onRename?.(trimmed);
+                else setNameInput(list.name);
+                setEditingName(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') { setNameInput(list.name); setEditingName(false); }
+              }}
+              className="text-lg font-bold bg-accent border border-border rounded px-2 py-0.5 min-w-0 w-full outline-none text-foreground"
+              autoFocus
+            />
+          ) : (
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <h2
+                  className="text-lg font-bold truncate min-w-0 cursor-pointer hover:text-muted-foreground transition-colors"
+                  onClick={() => { setNameInput(list.name); setEditingName(true); }}
+                  title="Click to rename"
+                >
+                  {list.name}
+                </h2>
+                {list.builtFromCollection && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[11px] font-medium text-primary/90 shrink-0"
+                    title="Built from your collection"
+                  >
+                    <Library className="w-3 h-3" />
+                    Collection
+                  </span>
+                )}
+                {list.type === 'deck' && list.commanderName && !unsaved && (
+                  <ThemePickerPopover
+                    themes={list.themes ?? []}
+                    onChange={(themes) => persistListThemes(updateList, list.id, themes[0] ?? null, themes[1] ?? null)}
+                    commanderName={list.commanderName}
+                    partnerCommanderName={list.partnerCommanderName}
+                    deckCards={allDeckCards}
+                    colorSegment={listColorSegment}
+                  />
+                )}
+              </div>
+              {list.generationSummary && (
+                <p className="text-xs text-muted-foreground truncate">{list.generationSummary}</p>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+            {totalDeckPrice !== null && totalDeckPrice > 0 && (
+              <span className="hidden xl:inline text-sm text-muted-foreground">{priceSym}{totalDeckPrice.toFixed(2)}</span>
+            )}
+            {!unsaved && (
+              <button
+                onClick={() => {
+                  trackEvent('analyze_cta_clicked', { from: 'list-deck' });
+                  navigate(`/analyze/${list.id}`);
+                }}
+                title="Inspect this deck"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground text-sm transition-colors"
+              >
+                <InspectorIcon className="w-4 h-4" />
+                <span>Inspect (Beta)</span>
+              </button>
+            )}
+            {!unsaved && (
+              <button
+                onClick={() => {
+                  trackEvent('spellchroma_open_clicked', { from: 'list-deck' });
+                  navigate(`/spellchroma?deck=${list.id}`);
+                }}
+                title="Explore new cards for this deck in SpellChroma"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground text-sm transition-colors"
+              >
+                <SpellChromaIcon className="w-4 h-4" />
+                <span>SpellChroma</span>
+              </button>
+            )}
+            <button
+              onClick={() => setListsPanelOpen(v => !v)}
+              title="Open a list alongside the deck"
+              className={`flex items-center gap-1.5 h-8 px-3 rounded-lg border text-sm transition-colors ${
+                listsPanelOpen
+                  ? 'border-primary/50 bg-primary/10 text-foreground'
+                  : 'border-border bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Library className="w-4 h-4" />
+              <span>Lists</span>
+            </button>
+            {!unsaved && (
+              <button
+                onClick={() => navigate(`/playtest/list/${list.id}`)}
+                title="Playtest this deck"
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground text-sm transition-colors"
+              >
+                <Swords className="w-4 h-4" />
+                <span>Playtest</span>
+              </button>
+            )}
+            <div className="relative" ref={overflowRef}>
+              <button
+                onClick={() => setShowOverflow(prev => !prev)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-border bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {showOverflow && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-2xl py-1 z-50">
+                  {onViewAsList && (
+                    <button
+                      onClick={() => { setShowOverflow(false); onViewAsList(); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      View as List
+                    </button>
+                  )}
+                  {onEdit && (
+                    <button
+                      onClick={() => { setShowOverflow(false); onEdit(); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit Details
+                    </button>
+                  )}
+                  {onDuplicate && (
+                    <button
+                      onClick={() => { setShowOverflow(false); onDuplicate(); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                    >
+                      <CopyPlus className="w-3.5 h-3.5" />
+                      Duplicate
+                    </button>
+                  )}
+                  <button
+                    disabled={phasesDone.size < 5}
+                    onClick={async () => {
+                      setShowOverflow(false);
+                      await deleteEnrichmentCache(list.id);
+                      setRefreshCounter(c => c + 1);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                    Refresh stats
+                  </button>
+                  {(() => {
+                    const overSize = !!(list.deckSize && list.cards.length > list.deckSize);
+                    const underSize = !!(list.deckSize && list.cards.length < list.deckSize);
+                    if (overSize) {
+                      const canTrim = trimReady;
+                      const trimTitle = trimReady
+                        ? `Trim deck to ${list.deckSize} cards`
+                        : 'Trim needs commander data — try again once cards load.';
+                      return (
+                        <button
+                          disabled={!canTrim}
+                          onClick={() => { setShowOverflow(false); openTrimDialog(); }}
+                          title={trimTitle}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                        >
+                          <Scissors className="w-3.5 h-3.5" />
+                          Trim deck to {list.deckSize}
+                        </button>
+                      );
+                    }
+                    if (underSize) {
+                      const canFill = fillReady;
+                      const fillTitle = fillReady
+                        ? `Fill deck to ${list.deckSize} cards`
+                        : 'Fill needs commander data — try again once cards load.';
+                      return (
+                        <button
+                          disabled={!canFill}
+                          onClick={() => { setShowOverflow(false); openFillDialog(); }}
+                          title={fillTitle}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Fill deck to {list.deckSize}
+                        </button>
+                      );
+                    }
+                    const atTargetTitle = list.deckSize
+                      ? `Deck is exactly at ${list.deckSize} — nothing to fill or trim.`
+                      : 'Set an expected deck size to enable fill / trim.';
+                    return (
+                      <button
+                        disabled
+                        title={atTargetTitle}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                      >
+                        <Scissors className="w-3.5 h-3.5" />
+                        Fill / Trim deck
+                      </button>
+                    );
+                  })()}
+                  {onDelete && (
+                    <>
+                      <div className="border-t border-border/50 my-1" />
+                      <button
+                        onClick={() => {
+                          if (confirmingDelete) {
+                            setShowOverflow(false);
+                            setConfirmingDelete(false);
+                            onDelete();
+                          } else {
+                            setConfirmingDelete(true);
+                            setTimeout(() => setConfirmingDelete(false), 3000);
+                          }
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${
+                          confirmingDelete
+                            ? 'bg-destructive/20 text-destructive font-medium'
+                            : 'hover:bg-destructive/10 text-destructive'
+                        }`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {confirmingDelete ? 'Confirm Delete?' : 'Delete deck'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {list.type === 'deck' && !list.commanderName ? (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>This deck still needs a commander.</span>
+            {onEdit && (
+              <button
+                onClick={onEdit}
+                className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/40 transition-colors whitespace-nowrap"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Set commander
+              </button>
+            )}
+          </div>
+        ) : list.type === 'deck' && colorIdentityViolations.length > 0 ? (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>
+              {colorIdentityViolations.length} card{colorIdentityViolations.length === 1 ? '' : 's'} break{colorIdentityViolations.length === 1 ? 's' : ''} color identity
+            </span>
+            <Popover open={offendersOpen} onOpenChange={setOffendersOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-500/40 transition-colors whitespace-nowrap"
+                >
+                  Show offenders
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0 max-h-96 overflow-y-auto">
+                <div className="px-3 py-2 border-b border-border flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Outside commander identity
+                  </span>
+                  {handleRemoveCardsWithToast && (
+                    <button
+                      onClick={() => {
+                        handleRemoveCardsWithToast(colorIdentityViolations.map(c => c.name));
+                        setOffendersOpen(false);
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-500/40 transition-colors whitespace-nowrap"
+                      title="Remove all offending cards from the deck"
+                    >
+                      Remove all
+                    </button>
+                  )}
+                </div>
+                <ul className="py-1">
+                  {colorIdentityViolations.map(c => (
+                    <li key={c.name} className="px-3 py-1.5 text-sm flex items-center justify-between gap-2 hover:bg-accent/40">
+                      <span className="truncate flex-1 min-w-0">{c.name.includes(' // ') ? c.name.split(' // ')[0] : c.name}</span>
+                      <span className="text-xs text-rose-300/80 font-mono shrink-0">
+                        {(c.color_identity || []).join('') || '∅'}
+                      </span>
+                      {handleRemoveCardsWithToast && (
+                        <button
+                          onClick={() => handleRemoveCardsWithToast([c.name])}
+                          title={`Remove ${c.name} from deck`}
+                          className="shrink-0 p-1 rounded text-muted-foreground hover:text-rose-300 hover:bg-rose-500/15 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </PopoverContent>
+            </Popover>
+          </div>
+        ) : list.type === 'deck' && duplicateNonBasics.length > 0 ? (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>
+              {duplicateNonBasics.length} duplicate non-basic card{duplicateNonBasics.length === 1 ? '' : 's'}
+            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-200 border border-rose-500/40 transition-colors whitespace-nowrap"
+                >
+                  Show duplicates
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0 max-h-96 overflow-y-auto">
+                <div className="px-3 py-2 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Duplicated cards
+                </div>
+                <ul className="py-1">
+                  {duplicateNonBasics.map(d => (
+                    <li key={d.name} className="px-3 py-1.5 text-sm flex items-center justify-between gap-3 hover:bg-accent/40">
+                      <span className="truncate">{d.name.includes(' // ') ? d.name.split(' // ')[0] : d.name}</span>
+                      <span className="text-xs text-rose-300/80 font-mono shrink-0">×{d.count}</span>
+                    </li>
+                  ))}
+                </ul>
+              </PopoverContent>
+            </Popover>
+          </div>
+        ) : unloadedCards.length > 0 && loadDegraded ? (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>
+              Scryfall didn't respond for {unloadedCards.length} card{unloadedCards.length === 1 ? '' : 's'}.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRefreshCounter(c => c + 1)}
+              className="ml-auto h-7 px-2.5 text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border-amber-500/40"
+            >
+              <RotateCw className="w-3 h-3 mr-1" />
+              Retry
+            </Button>
+          </div>
+        ) : unloadedCards.length > 0 ? (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>
+              {unloadedCards.length} card{unloadedCards.length === 1 ? '' : 's'} couldn't be loaded — check spelling.
+            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/40 transition-colors whitespace-nowrap"
+                >
+                  Show unloaded
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0 max-h-96 overflow-y-auto">
+                <div className="px-3 py-2 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Names not found
+                </div>
+                <ul className="py-1">
+                  {unloadedCards.map(name => (
+                    <li key={name} className="px-3 py-1.5 text-sm hover:bg-accent/40">
+                      <span className="truncate">{name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </PopoverContent>
+            </Popover>
+          </div>
+        ) : missingMustIncludes.length > 0 ? (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>
+              {missingMustIncludes.length} must-include card{missingMustIncludes.length === 1 ? '' : 's'} missing from this deck
+            </span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/40 transition-colors whitespace-nowrap"
+                >
+                  Show missing
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0 max-h-96 overflow-y-auto">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Missing must-includes
+                  </span>
+                  {onAddCards && (
+                    <button
+                      onClick={() => onAddCards(missingMustIncludes, 'deck')}
+                      className="text-xs font-semibold text-amber-300 hover:text-amber-200 transition-colors"
+                    >
+                      Add all
+                    </button>
+                  )}
+                </div>
+                <ul className="py-1">
+                  {missingMustIncludes.map(name => (
+                    <li key={name} className="px-3 py-1.5 text-sm hover:bg-accent/40">
+                      <span className="truncate">{name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </PopoverContent>
+            </Popover>
+            <button
+              onClick={openMustIncludeDrawer}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold text-amber-200/80 hover:text-amber-200 border border-amber-500/25 hover:bg-amber-500/10 transition-colors whitespace-nowrap"
+            >
+              Show list
+            </button>
+          </div>
+        ) : list.deckSize && list.cards.length !== list.deckSize && deckSizeNoticeDismissedAt !== list.cards.length && (
+          <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm flex-wrap">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>
+              Deck has {list.cards.length} card{list.cards.length !== 1 ? 's' : ''} (expected {list.deckSize})
+              {list.cards.length < list.deckSize
+                ? ` — ${list.deckSize - list.cards.length} short`
+                : ` — ${list.cards.length - list.deckSize} over`}
+            </span>
+            {list.deckSize && list.cards.length > list.deckSize && (
+              <button
+                onClick={openTrimDialog}
+                disabled={!trimReady}
+                title={trimReady ? `Trim deck to ${list.deckSize} cards` : 'Trim needs commander data — try again once cards load.'}
+                className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-violet-500/20 hover:bg-violet-500/30 text-violet-200 border border-violet-500/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-violet-500/20 whitespace-nowrap"
+              >
+                <Scissors className="w-3.5 h-3.5" />
+                Trim to {list.deckSize}
+              </button>
+            )}
+            {list.deckSize && list.cards.length < list.deckSize && (
+              <button
+                onClick={openFillDialog}
+                disabled={!fillReady}
+                title={fillReady ? `Fill deck to ${list.deckSize} cards` : 'Fill needs commander data — try again once cards load.'}
+                className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-violet-500/20 hover:bg-violet-500/30 text-violet-200 border border-violet-500/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-violet-500/20 whitespace-nowrap"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Fill to {list.deckSize}
+              </button>
+            )}
+            {onUpdateDeckSize && (
+              <button
+                onClick={() => onUpdateDeckSize(list.cards.length)}
+                className={`${list.deckSize && list.cards.length !== list.deckSize ? '' : 'ml-auto'} inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/40 transition-colors whitespace-nowrap`}
+              >
+                Set expected to {list.cards.length}
+              </button>
+            )}
+            <button
+              onClick={() => setDeckSizeNoticeDismissedAt(list.cards.length)}
+              className={`${onUpdateDeckSize ? '' : 'ml-auto'} p-1 -mr-1 rounded text-amber-400/70 hover:text-amber-200 hover:bg-amber-500/10 transition-colors`}
+              title="Dismiss"
+              aria-label="Dismiss deck size notice"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
+        {!phasesDone.has('cards') ? (
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-4">
+            <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 space-y-2">
+              <div className="text-sm text-muted-foreground mb-3">Loading deck list…</div>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-4 w-4 rounded bg-accent/30 animate-pulse" />
+                  <div className="h-4 flex-1 rounded bg-accent/20 animate-pulse" />
+                  <div className="h-4 w-16 rounded bg-accent/20 animate-pulse" />
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-16 rounded-lg bg-accent/20 animate-pulse" />
+                <div className="h-16 rounded-lg bg-accent/20 animate-pulse" />
+              </div>
+              <div className="h-20 rounded bg-accent/20 animate-pulse" />
+              <div className="h-24 rounded bg-accent/20 animate-pulse" />
+            </div>
+          </div>
+        ) : (
+        <>
+        <DeckDisplay
+          phasesDone={phasesDone}
+          spellChromaDeckRef={list.id}
+          customCombos={list.customCombos}
+          onCreateCombo={setComboSeedCard}
+          onRemoveCards={handleRemoveCardsWithToast}
+          onAddCards={onAddCards ? (names, _dest) => onAddCards(names, 'deck') : undefined}
+          onMoveToSideboard={onMoveToSideboard}
+          onMoveToMaybeboard={onMoveToMaybeboard}
+          onChangeQuantity={onChangeQuantity}
+          boardCounts={{ sideboard: sideboardCards.length, maybeboard: maybeboardCards.length }}
+          cardCountAction={cardCountAction}
+          sideboardNames={list.sideboard}
+          maybeboardNames={list.maybeboard}
+          onSetSideboard={onSetSideboard}
+          onSetMaybeboard={onSetMaybeboard}
+          savedList
+          shareAction={shareButton}
+          onCopyShareLink={unsaved ? undefined : handleCopyShareLink}
+          headerBulkAdd={onAddCards ? (
+            <HeaderBulkAdd
+              variant="toolbar"
+              existingNames={allListNames}
+              onAddCards={handleBulkImport}
+              onAddCard={handleAddCardByName}
+              swapEnabled={swapReady}
+              getSwapPlan={getSwapPlan}
+              onConfirmSwap={handleConfirmSwap}
+            />
+          ) : undefined}
+          railBulkAdd={onAddCards ? (
+            <HeaderBulkAdd
+              variant="rail"
+              existingNames={allListNames}
+              onAddCards={handleBulkImport}
+              onAddCard={handleAddCardByName}
+              swapEnabled={swapReady}
+              getSwapPlan={getSwapPlan}
+              onConfirmSwap={handleConfirmSwap}
+            />
+          ) : undefined}
+          toolbarExtra={onAddCards ? (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 sm:flex-none" ref={searchWrapperRef}>
+                  <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Add a card..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    onFocus={() => {
+                      if (searchResults.length > 0) setShowSearchResults(true);
+                    }}
+                    className="bg-card/50 border border-border/50 rounded-lg pl-8 pr-8 py-1.5 text-xs w-full sm:w-64 focus:outline-none focus:ring-1 focus:ring-primary/50 placeholder:text-muted-foreground/50"
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-primary" />
+                  )}
+                  {!isSearching && searchQuery && (
+                    <button
+                      onClick={() => { setSearchQuery(''); setSearchResults([]); setShowSearchResults(false); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {/* Search Results Dropdown */}
+                  {showSearchResults && searchResults.length > 0 && (
+                    <>
+                      <div className="fixed inset-0 z-[998]" onClick={() => setShowSearchResults(false)} />
+                      <div className="absolute bottom-full left-0 mb-1 z-[999] max-h-[280px] min-w-[280px] sm:min-w-[320px] w-full overflow-auto bg-card border border-border rounded-lg shadow-2xl py-1">
+                        {searchResults.map((card) => (
+                          <div
+                            key={card.id}
+                            onClick={() => handleAddToDeck(card)}
+                            className="flex items-center gap-3 px-3 py-2 hover:bg-accent/50 text-left transition-colors cursor-pointer group"
+                          >
+                            <img src={getCardImageUrl(card, 'small')} alt={card.name} className="w-8 h-auto rounded shadow shrink-0" loading="lazy" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{card.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{card.type_line}</p>
+                            </div>
+                            <span className="shrink-0" title="Add to deck">
+                              <Plus className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </span>
+                            {(onMoveToSideboard || onMoveToMaybeboard) && (
+                              <button
+                                onClick={(e) => handleShowBoardPicker(card, e)}
+                                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
+                                title="Add to sideboard or maybeboard"
+                              >
+                                <MoreHorizontal className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {/* Board Picker — rendered via portal & anchored to clicked button */}
+                  {pendingCard && pickerAnchor && createPortal(
+                    <>
+                      <div className="fixed inset-0 z-[1000]" onClick={handleCancelPicker} />
+                      <div
+                        className="fixed z-[1001] bg-card border border-border rounded-lg shadow-2xl py-1 w-44"
+                        style={{
+                          top: Math.max(8, pickerAnchor.top - 124),
+                          left: Math.min(pickerAnchor.left, window.innerWidth - 184),
+                        }}
+                      >
+                        <p className="px-3 py-1.5 text-xs text-muted-foreground truncate border-b border-border/50">{pendingCard.name}</p>
+                        <button
+                          onClick={() => handleDestinationPick('sideboard')}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors text-amber-400"
+                        >
+                          Add to Sideboard
+                        </button>
+                        <button
+                          onClick={() => handleDestinationPick('maybeboard')}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors text-purple-400"
+                        >
+                          Add to Maybeboard
+                        </button>
+                      </div>
+                    </>,
+                    document.body
+                  )}
+                </div>
+                {/* Bulk Add — manual positioning (Radix Popover breaks inside createPortal) */}
+                <div className="relative" ref={bulkAddRef}>
+                  <button
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border bg-card/50 hover:bg-accent transition-colors ${showBulkAdd ? 'text-foreground bg-accent' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => { if (showBulkAdd) closeBulkAddImporting(); else setShowBulkAdd(true); }}
+                    title="Bulk add cards from a list"
+                  >
+                    <ClipboardPaste className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Bulk Add</span>
+                  </button>
+                  {/* Desktop: floating panel above button */}
+                  {showBulkAdd && (
+                    <div className="hidden sm:block absolute bottom-full mb-2 right-0 z-50 w-96 rounded-lg border border-border bg-card shadow-2xl overflow-hidden">
+                      <AddCardsPanel
+                        ref={bulkImporterDesktopRef}
+                        autoFocus
+                        existingNames={allListNames}
+                        onAddCards={handleBulkImport}
+                        onAddCard={handleAddCardByName}
+                        label="Bulk Add Cards"
+                        showDragDropHint
+                        swapEnabled={swapReady}
+                        getSwapPlan={getSwapPlan}
+                        onConfirmSwap={handleConfirmSwap}
+                        onCancel={() => setShowBulkAdd(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Mobile: inline bulk add content */}
+              {showBulkAdd && (
+                <div className="sm:hidden">
+                  <AddCardsPanel
+                    contentPadding="none"
+                    ref={bulkImporterMobileRef}
+                    existingNames={allListNames}
+                    onAddCards={handleBulkImport}
+                    onAddCard={handleAddCardByName}
+                    label="Bulk Add Cards"
+                    showDragDropHint
+                    swapEnabled={swapReady}
+                    getSwapPlan={getSwapPlan}
+                    onConfirmSwap={handleConfirmSwap}
+                    onCancel={() => setShowBulkAdd(false)}
+                  />
+                </div>
+              )}
+            </div>
+          ) : undefined}
+          onEditModeChange={setDeckEditMode}
+          deckFooter={() => (
+            <BoardsCollapsible
+              sideboardCards={sideboardCards}
+              maybeboardCards={maybeboardCards}
+              onBoardCardAction={handleBoardCardAction}
+              menuProps={boardMenuProps}
+              colorIdentity={colorIdentity}
+              existingNames={new Set([...list.cards, ...(list.sideboard || []), ...(list.maybeboard || [])])}
+              onAddToBoard={onAddCards ? (name, boardType) => {
+                onAddCards([name], boardType);
+                pushDeckHistory({ action: boardType, cardName: name });
+                showActionToast(`Added ${name} to ${boardType}`, () => {
+                  if (boardType === 'sideboard') onRemoveFromBoard?.(name, 'sideboard');
+                  else onRemoveFromBoard?.(name, 'maybeboard');
+                });
+              } : undefined}
+            />
+          )}
+        >
+          {/* Primer */}
+          {(list.primer || onUpdatePrimer) && (
+            <div className="relative mt-3 rounded-lg border border-border/50 bg-card/30 px-4 py-3">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">Primer</h3>
+              {onUpdatePrimer && !editingPrimer && (
+                <button
+                  onClick={() => { setPrimerDraft(list.primer || ''); setEditingPrimer(true); }}
+                  className="absolute top-2.5 right-2.5 p-1.5 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-colors"
+                  title={list.primer ? 'Edit primer' : 'Add primer'}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {editingPrimer ? (
+                <div className="space-y-2">
+                  <div className="border border-border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-primary">
+                    <div className="flex items-center gap-0.5 px-2 py-1 bg-accent/30 border-b border-border/50">
+                      {[
+                        { icon: Bold, action: () => insertFormat('**', '**'), title: 'Bold' },
+                        { icon: Italic, action: () => insertFormat('*', '*'), title: 'Italic' },
+                        { icon: Heading2, action: () => insertLinePrefix('## '), title: 'Heading' },
+                        { icon: List, action: () => insertLinePrefix('- '), title: 'Bullet list' },
+                        { icon: ListOrdered, action: () => insertLinePrefix('1. '), title: 'Numbered list' },
+                        { icon: ImageIcon, action: () => insertFormat('![', '](image url)'), title: 'Image — ![alt](https://…)' },
+                        { icon: Minus, action: () => insertFormat('\n---\n'), title: 'Divider' },
+                      ].map(({ icon: Icon, action, title }) => (
+                        <button
+                          key={title}
+                          type="button"
+                          onClick={action}
+                          title={title}
+                          className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      ref={primerRef}
+                      value={primerDraft}
+                      onChange={(e) => setPrimerDraft(e.target.value)}
+                      placeholder="Describe your deck's strategy, key combos, win conditions..."
+                      className="w-full h-32 px-3 py-2 text-sm bg-background resize-y focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setEditingPrimer(false)}
+                      className="px-2 py-1.5 text-xs text-red-400/70 hover:text-red-400 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdatePrimer?.(primerDraft.trim());
+                        setEditingPrimer(false);
+                      }}
+                      className="px-3 py-1.5 text-xs rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : list.primer ? (
+                <div className="text-sm text-foreground [&_strong]:text-foreground [&_em]:italic [&_h3]:text-base [&_h4]:text-sm" dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(list.primer) }} />
+              ) : (
+                <p className="text-sm text-muted-foreground/50 italic">No primer written yet.</p>
+              )}
+            </div>
+          )}
+          {list.type === 'deck' && list.commanderName && (
+            <DeckUpgrades
+              newCards={newUpgradeCards}
+              fillCards={upgradeFillCards}
+              onApply={(name) => {
+                onAddCards?.([name], 'deck');
+                pushDeckHistory({ action: 'add', cardName: name });
+              }}
+              onMarkSeen={markUpgradesSeen}
+              onExplore={() => navigate(`/analyze/${list.id}/new-cards`)}
+              onCardAction={onAddCards ? handleNewCardAction : undefined}
+              menuProps={newCardMenuProps}
+            />
+          )}
+          {/* Always render — ComboDisplay owns its own skeleton/empty states, and the
+              "Add combo" button must stay reachable even on a combo-less deck.
+              Combo authoring writes through updateList, which no-ops for a synthetic id,
+              so a preview withholds those verbs rather than silently dropping the edit. */}
+          {(
+            <ComboDisplay
+              combos={generatedDeck?.detectedCombos ?? []}
+              hideMustInclude
+              customCombos={list.customCombos ?? []}
+              deckCardNames={[...new Set([list.commanderName, list.partnerCommanderName, ...list.cards].filter(Boolean) as string[])]}
+              seedCard={comboSeedCard}
+              onSeedConsumed={() => setComboSeedCard(null)}
+              onAddCombo={unsaved ? undefined : ({ cards, result, details }) => {
+                const combo = { id: `uc-${Date.now()}-${Math.round(Math.random() * 1e6)}`, cards, result, details: details || undefined, createdAt: Date.now() };
+                updateList(list.id, { customCombos: [...(list.customCombos ?? []), combo] });
+              }}
+              onEditCombo={unsaved ? undefined : (id, { cards, result, details }) => {
+                updateList(list.id, {
+                  customCombos: (list.customCombos ?? []).map(c => c.id === id ? { ...c, cards, result, details: details || undefined } : c),
+                });
+              }}
+              onDeleteCombo={unsaved ? undefined : (id) => {
+                updateList(list.id, { customCombos: (list.customCombos ?? []).filter(c => c.id !== id) });
+              }}
+              onAddToDeck={onAddCards ? (names) => {
+                onAddCards(names, 'deck');
+                for (const n of names) pushDeckHistory({ action: 'add', cardName: n });
+              } : undefined}
+              onRemoveFromDeck={handleRemoveCardsWithToast ? (names) => {
+                for (const n of names) pushDeckHistory({ action: 'remove', cardName: n });
+                handleRemoveCardsWithToast(names);
+              } : undefined}
+              onMoveToSideboard={onMoveToSideboard ? (names) => {
+                onMoveToSideboard(names);
+                for (const n of names) pushDeckHistory({ action: 'sideboard', cardName: n });
+              } : undefined}
+              onMoveToMaybeboard={onMoveToMaybeboard ? (names) => {
+                onMoveToMaybeboard(names);
+                for (const n of names) pushDeckHistory({ action: 'maybeboard', cardName: n });
+              } : undefined}
+              phasesDone={phasesDone}
+            />
+          )}
+        </DeckDisplay>
+        </>
+        )}
+
+      </div>
+
+      {/* Action toast with undo */}
+      <ActionToast toast={actionToast} onDismiss={dismissActionToast} />
+
+      {/* Trim deck dialog */}
+      {trimDialogMounted && generatedDeck && list.deckSize && list.commanderName && onMoveToMaybeboard && (
+        <TrimDeckDialog
+          open={trimDialogOpen}
+          onClose={closeTrimDialog}
+          onConfirm={(names) => {
+            closeTrimDialog();
+            if (names.length === 0) return;
+            onMoveToMaybeboard(names);
+            const label = names.length === 1
+              ? `Moved ${names[0]} to maybeboard`
+              : `Moved ${names.length} cards to maybeboard`;
+            showActionToast(label, () => {
+              onMoveToDeck?.(names, 'maybeboard');
+            });
+          }}
+          cards={allDeckCards}
+          commanderName={list.commanderName}
+          partnerCommanderName={list.partnerCommanderName}
+          // Pass the user-facing deck size (including commander). The dialog
+          // subtracts the commander count internally for the overage math.
+          targetSize={list.deckSize}
+          relevancyMap={trimThemeRelevancy ?? generatedDeck.cardRelevancyMap ?? {}}
+          themeAware={!!trimThemeRelevancy}
+          inclusionMap={generatedDeck.cardInclusionMap || {}}
+          synergyMap={generatedDeck.cardSynergyMap || {}}
+          roleCounts={generatedDeck.roleCounts || {}}
+          roleTargets={generatedDeck.roleTargets || {}}
+          edhrecCurve={generatedDeck.edhrecCurve || {}}
+          edhrecTypes={generatedDeck.edhrecTypes || {}}
+          detectedCombos={generatedDeck.detectedCombos}
+          mustIncludeNames={new Set(customization.mustIncludeCards)}
+          onCardAction={handleDialogCardAction}
+          menuProps={boardMenuProps}
+        />
+      )}
+
+      {/* Fill deck dialog */}
+      {fillDialogMounted && generatedDeck && list.deckSize && onAddCards && (
+        <FillDeckDialog
+          open={fillDialogOpen}
+          onClose={closeFillDialog}
+          onConfirm={(names) => {
+            closeFillDialog();
+            if (names.length === 0) return;
+            onAddCards(names, 'deck');
+            for (const name of names) {
+              pushDeckHistory({ action: 'add', cardName: name });
+            }
+            const label = names.length === 1
+              ? `Added ${names[0]}`
+              : `Added ${names.length} cards`;
+            showActionToast(label, () => {
+              onRemoveCardsRef.current?.(names);
+              useStore.getState().popLatestHistoryEntries('add', names);
+            });
+          }}
+          gapAnalysis={generatedDeck.gapAnalysis || []}
+          deckNames={new Set(list.cards)}
+          sideboardNames={new Set(list.sideboard || [])}
+          maybeboardNames={new Set(list.maybeboard || [])}
+          bannedNames={new Set(customization.bannedCards || [])}
+          currentCount={list.cards.length}
+          targetSize={list.deckSize}
+          roleCounts={generatedDeck.roleCounts || {}}
+          roleTargets={generatedDeck.roleTargets || {}}
+          relevancyMap={generatedDeck.cardRelevancyMap || {}}
+          collectionNames={fillCollectionNames ?? undefined}
+          onCardAction={handleDialogCardAction}
+          menuProps={boardMenuProps}
+        />
+      )}
+
+      {/* Must-include manager drawer */}
+      {mustIncludeDrawerMounted && (
+        <Drawer
+          open={mustIncludeDrawerOpen}
+          onClose={closeMustIncludeDrawer}
+          position="right"
+          onPositionChange={() => {}}
+          defaultSizePercent={32}
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-border">
+              <div>
+                <h2 className="text-lg font-bold">Must-include list</h2>
+                <p className="text-sm text-foreground/75 mt-0.5">
+                  Cards you want in every deck.
+                </p>
+              </div>
+              <button
+                onClick={closeMustIncludeDrawer}
+                className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                aria-label="Close must-include drawer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <MustIncludeCards />
+            </div>
+          </div>
+        </Drawer>
+      )}
+      <FloatingListPanel
+        open={listsPanelOpen}
+        onClose={() => setListsPanelOpen(false)}
+      />
+    </>
+  );
+}

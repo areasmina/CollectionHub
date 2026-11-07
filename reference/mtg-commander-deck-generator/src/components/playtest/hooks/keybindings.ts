@@ -1,0 +1,36 @@
+// Central registry for playtest keybindings — single source of truth so the
+// hotkey handler and the Settings → Keybindings tab stay in sync.
+export interface Keybinding {
+  keys: string[];               // human-readable key labels (e.g. ['D'], ['Ctrl', 'Z'])
+  description: string;
+  category: 'Library' | 'Card' | 'Selection' | 'Other';
+  context?: string;             // e.g. "hovering a card", "hovering a pile"
+}
+
+export const KEYBINDINGS: Keybinding[] = [
+  // Library
+  { keys: ['D'], description: 'Draw a card',                          category: 'Library' },
+  { keys: ['S'], description: 'Shuffle the library',                  category: 'Library' },
+  { keys: ['M'], description: 'Mulligan (shuffle hand back, redraw)', category: 'Library' },
+  { keys: ['R'], description: 'Shuffle hovered pile',                 category: 'Library', context: 'hovering a pile' },
+  { keys: ['1–99'], description: 'Type a number to draw that many off the hovered pile — library, graveyard, exile or command zone. Two digits, so 20 works; Esc cancels', category: 'Library', context: 'hovering a pile' },
+
+  // Card
+  { keys: ['T'], description: 'Tap / untap the hovered card',         category: 'Card', context: 'hovering a card' },
+  { keys: ['Q'], description: 'Rotate hovered card 90° counter-clockwise', category: 'Card', context: 'hovering a card' },
+  { keys: ['E'], description: 'Rotate hovered card 90° clockwise',    category: 'Card', context: 'hovering a card' },
+  { keys: ['F'], description: 'Turn the hovered card over — on the battlefield or in your hand. A double-faced card shows its other face', category: 'Card', context: 'hovering a card' },
+  { keys: ['1'], description: 'Return the hovered card (or selection) from the battlefield to your hand', category: 'Card', context: 'hovering a card' },
+  { keys: ['U'], description: 'Untap all cards on the battlefield',   category: 'Card' },
+  { keys: ['Del'], description: 'Send the hovered object to the graveyard — from the battlefield or your hand. Tokens, counters and dice just go away', category: 'Card', context: 'hovering an object' },
+
+  // Selection / Clipboard
+  { keys: ['Ctrl', 'C'], description: 'Copy the selection (or hovered card)', category: 'Selection' },
+  { keys: ['Ctrl', 'V'], description: 'Paste the clipboard (cascades on repeat)', category: 'Selection' },
+
+  // Other
+  { keys: ['Enter'], description: 'Next turn (advance the turn and draw a card)', category: 'Other' },
+  { keys: ['Backspace'], description: 'Reset the playtest (reshuffle and redraw)', category: 'Other' },
+  { keys: ['Ctrl', 'Z'], description: 'Undo last action',             category: 'Other' },
+  { keys: ['Esc'], description: 'Close the open dialog',              category: 'Other' },
+];

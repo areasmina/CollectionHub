@@ -1,0 +1,2032 @@
+import type {
+  EDHRECTheme,
+  EDHRECCard,
+  EDHRECCombo,
+  EDHRECCommanderData,
+  EDHRECCommanderStats,
+  EDHRECSimilarCommander,
+  EDHRECTopCommander,
+  EDHRECTag,
+  BudgetOption,
+  BracketLevel,
+} from '@/types';
+import { readPersistedResponse, writePersistedResponse } from '@/services/scryfall/cache';
+import { fetchSpellbookCombosBySlug, spellbookBracketToVote } from '@/services/spellbook/comboIndex';
+
+const BASE_URL = import.meta.env.DEV ? '/edhrec-api' : 'https://json.edhrec.com';
+const MIN_REQUEST_DELAY = 100; // 100ms between requests
+
+class RateLimiter {
+  private lastRequestTime = 0;
+
+  async throttle(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    if (timeSinceLastRequest < MIN_REQUEST_DELAY) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, MIN_REQUEST_DELAY - timeSinceLastRequest)
+      );
+    }
+
+    this.lastRequestTime = Date.now();
+  }
+}
+
+const rateLimiter = new RateLimiter();
+
+// Cache for commander data
+const commanderCache = new Map<string, { data: EDHRECCommanderData; timestamp: number }>();
+const partnerPopularityCache = new Map<string, { data: Map<string, number>; timestamp: number }>();
+// EDHREC commander pages update on the order of days, not minutes. Hold cached
+// entries for 14 days — note this is an in-memory cache so it's still capped at
+// the lifetime of the browser session, but within a session we never re-fetch.
+const CACHE_TTL = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+// Raw EDHREC response types
+// Note: EDHREC cardlist cards have limited fields - they're pre-categorized by tag
+interface RawEDHRECCard {
+  name: string;
+  sanitized: string;
+  // inclusion is deck COUNT, not percentage - we calculate percentage from potential_decks
+  inclusion?: number;
+  num_decks?: number;
+  potential_decks?: number;
+  synergy?: number;
+  prices?: Record<string, { price: number }>;
+  image_uris?: Array<{ normal: string; art_crop?: string }>;
+  color_identity?: string[];
+  // Note: cmc and primary_type are NOT available in cardlist cards
+  // They must be fetched from Scryfall when converting cards
+  cmc?: number;
+  salt?: number;
+  type_line?: string; // Sometimes present in EDHREC data
+}
+
+interface RawCardList {
+  tag: string;
+  cardviews: RawEDHRECCard[];
+}
+
+interface RawEDHRECResponse {
+  // EDHREC may return a redirect instead of actual data (e.g. partner name ordering)
+  redirect?: string;
+
+  // Top-level stats
+  avg_price?: number;
+  creature?: number;
+  instant?: number;
+  sorcery?: number;
+  artifact?: number;
+  enchantment?: number;
+  land?: number;
+  planeswalker?: number;
+  battle?: number;
+  basic?: number;
+  nonbasic?: number;
+  num_decks_avg?: number;
+  bracket_counts?: Record<string, number>; // decks per declared bracket, "1".."5"
+  deck_size?: number; // Non-commander deck size
+  // Similar commanders
+  similar?: Array<{
+    name: string;
+    sanitized: string;
+    color_identity?: string[];
+    cmc?: number;
+    image_uris?: Array<{ normal: string }>;
+    url?: string;
+  }>;
+
+  // Panels with themes, mana curve, etc.
+  panels?: {
+    taglinks?: Array<{
+      value: string;
+      slug: string;
+      count: number;
+    }>;
+    mana_curve?: Record<string, number>; // CMC -> count (keys are strings in JSON)
+  };
+
+  // Card lists
+  container?: {
+    json_dict?: {
+      cardlists?: RawCardList[];
+      /** `num_decks` is the deck count BEHIND THIS PAGE — 2 for a rarely-built commander+theme
+       *  pairing, 476 for the commander's base page. The only place EDHREC reports it. */
+      card?: { name: string; num_decks?: number };
+    };
+  };
+}
+
+/**
+ * EDHREC lists partner/background pairs as a single combined entry
+ * ("Kraum, Ludevic's Opus // Tymna the Weaver"). Those aren't real cards, so
+ * commander lists filter them out.
+ *
+ * The separator must be spaced: exactly one real card name contains a bare "//"
+ * ("SP//dr, Piloted by Peni"), and EDHREC always writes pairs with " // ".
+ */
+export function isPartnerPair(name: string): boolean {
+  return name.includes(' // ');
+}
+
+/**
+ * Format commander name for EDHREC URL
+ * "Atraxa, Praetors' Voice" -> "atraxa-praetors-voice"
+ * "Venat, Heart of Hydaelyn // Hydaelyn, the Mothercrystal" -> "venat-heart-of-hydaelyn"
+ * "Clavileño, First of the Blessed" -> "clavileno-first-of-the-blessed"
+ *
+ * For double-faced cards (containing "//"), EDHREC uses only the front face name.
+ */
+export function formatCommanderNameForUrl(name: string): string {
+  // Handle double-faced cards - use only the front face name
+  const frontFace = name.split(' // ')[0];
+
+  return frontFace
+    .normalize('NFD')              // Decompose accented chars (ñ -> n + combining tilde)
+    .replace(/[\u0300-\u036f]/g, '') // Strip combining diacritical marks
+    .toLowerCase()
+    .replace(/[',]/g, '') // Remove apostrophes and commas
+    .replace(/[^a-z0-9\s-]/g, '') // Remove other special characters (& etc.) before spacing
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-'); // Collapse multiple hyphens
+}
+
+/**
+ * Get the URL suffix for budget/expensive card pools.
+ * 'any' -> '', 'budget' -> '/budget', 'expensive' -> '/expensive'
+ */
+function getBudgetSuffix(budgetOption?: BudgetOption): string {
+  if (budgetOption === 'budget') return '/budget';
+  if (budgetOption === 'expensive') return '/expensive';
+  return '';
+}
+
+const BRACKET_SLUGS: Record<number, string> = {
+  1: 'exhibition',
+  2: 'core',
+  3: 'upgraded',
+  4: 'optimized',
+  5: 'cedh',
+};
+
+function getBracketSuffix(bracketLevel?: BracketLevel): string {
+  if (!bracketLevel || bracketLevel === 'all') return '';
+  return `/${BRACKET_SLUGS[bracketLevel]}`;
+}
+
+/**
+ * An EDHREC response that wasn't 2xx. Carries the status so callers can tell "this page
+ * was never published" apart from "the network is down" — the two look identical once
+ * the error is flattened to a string.
+ */
+export class EdhrecHttpError extends Error {
+  constructor(readonly status: number, statusText: string) {
+    super(`EDHREC API error: ${status} ${statusText}`);
+    this.name = 'EdhrecHttpError';
+  }
+
+  /**
+   * EDHREC serves its JSON from a bucket that doesn't grant ListBucket, so a missing
+   * object comes back 403 AccessDenied instead of 404. Both mean "no such page".
+   */
+  get pageMissing(): boolean {
+    return this.status === 403 || this.status === 404;
+  }
+}
+
+async function edhrecFetch<T>(endpoint: string): Promise<T> {
+  // Persistent layer (IndexedDB): a previously-fetched endpoint needs no network across reloads.
+  // Skips the rate limiter entirely on a hit. Never throws — falls through to network on any issue.
+  const persisted = await readPersistedResponse<T>(endpoint);
+  if (persisted !== null) return persisted;
+
+  await rateLimiter.throttle();
+
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      // Rate limited - wait and retry once
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      return edhrecFetch<T>(endpoint);
+    }
+    throw new EdhrecHttpError(response.status, response.statusText);
+  }
+
+  const data = await response.json();
+
+  // EDHREC returns { redirect: "..." } instead of real data for wrong partner orderings
+  if (data.redirect) {
+    throw new Error(`EDHREC redirect to ${data.redirect}`);
+  }
+
+  void writePersistedResponse(endpoint, data);  // fire-and-forget; never blocks
+  return data;
+}
+
+// Tags that represent high-priority theme synergy cards. EDHREC replaced `highsynergycards` with
+// `highliftcards` on commander, theme and tag pages; both are kept so cached old-shape responses
+// still parse.
+const THEME_SYNERGY_TAGS = new Set(['highsynergycards', 'highliftcards', 'topcards', 'gamechangers']);
+// Card lists that hold no deck cards (tag pages list commanders); skipped without a warning.
+const COMMANDER_LIST_TAGS = new Set(['topcommanders', 'newcommanders']);
+
+/**
+ * Parse raw EDHREC card into our format
+ * @param raw - Raw card data from EDHREC
+ * @param tagHint - Optional tag from the cardlist to help determine primary_type
+ */
+function parseCard(raw: RawEDHRECCard, tagHint?: string): EDHRECCard {
+  // Calculate inclusion as percentage. EDHREC returns the deck count in
+  // `num_decks` (older/other shapes used `inclusion`); percentage = count / potential.
+  const inclusionCount = raw.num_decks ?? raw.inclusion ?? 0;
+  const potentialDecks = raw.potential_decks || 1;
+  const inclusionPercent = potentialDecks > 0
+    ? (inclusionCount / potentialDecks) * 100
+    : 0;
+
+  // Derive primary_type from the cardlist tag if available
+  let primaryType = 'Unknown';
+  const tagLower = tagHint?.toLowerCase() || '';
+
+  if (tagLower === 'creatures') primaryType = 'Creature';
+  else if (tagLower === 'instants') primaryType = 'Instant';
+  else if (tagLower === 'sorceries') primaryType = 'Sorcery';
+  else if (tagLower === 'utilityartifacts' || tagLower === 'manaartifacts') primaryType = 'Artifact';
+  else if (tagLower === 'enchantments') primaryType = 'Enchantment';
+  else if (tagLower === 'planeswalkers') primaryType = 'Planeswalker';
+  else if (tagLower === 'utilitylands' || tagLower === 'lands') primaryType = 'Land';
+
+  // Fallback: derive from type_line if EDHREC provided it
+  if (primaryType === 'Unknown' && raw.type_line) {
+    const tl = raw.type_line.split('—')[0].split('//')[0].toLowerCase();
+    if (tl.includes('creature')) primaryType = 'Creature';
+    else if (tl.includes('instant')) primaryType = 'Instant';
+    else if (tl.includes('sorcery')) primaryType = 'Sorcery';
+    else if (tl.includes('artifact')) primaryType = 'Artifact';
+    else if (tl.includes('enchantment')) primaryType = 'Enchantment';
+    else if (tl.includes('planeswalker')) primaryType = 'Planeswalker';
+    else if (tl.includes('land')) primaryType = 'Land';
+    else if (tl.includes('battle')) primaryType = 'Battle';
+  }
+
+  // Check if this card is from a high-priority synergy list
+  const isThemeSynergyCard = THEME_SYNERGY_TAGS.has(tagLower);
+  const isNewCard = tagLower === 'newcards';
+  const isGameChanger = tagLower === 'gamechangers';
+
+  return {
+    name: raw.name,
+    sanitized: raw.sanitized,
+    primary_type: primaryType,
+    inclusion: inclusionPercent, // Now a percentage (0-100)
+    num_decks: raw.num_decks || 0,
+    synergy: raw.synergy,
+    isThemeSynergyCard,
+    isNewCard,
+    isGameChanger,
+    prices: raw.prices ? {
+      tcgplayer: raw.prices.tcgplayer,
+      cardkingdom: raw.prices.cardkingdom,
+    } : undefined,
+    image_uris: raw.image_uris,
+    color_identity: raw.color_identity,
+    cmc: raw.cmc, // Note: will be undefined from EDHREC, fetched from Scryfall later
+    salt: raw.salt,
+  };
+}
+
+/**
+ * Parse mana_curve from EDHREC response (keys are strings in JSON)
+ * Converts { "1": 10, "2": 12, ... } to { 1: 10, 2: 12, ... }
+ */
+function parseManaCurve(rawCurve?: Record<string, number>): Record<number, number> {
+  const result: Record<number, number> = {};
+  if (!rawCurve) return result;
+
+  for (const [key, value] of Object.entries(rawCurve)) {
+    const cmc = parseInt(key, 10);
+    if (!isNaN(cmc) && value > 0) {
+      result[cmc] = value;
+    }
+  }
+  return result;
+}
+
+/**
+ * EDHREC splits commanders whose color identity is chosen before the game (Clara Oswald,
+ * The Prismatic Piper, Faceless One) into one page per resulting identity — e.g.
+ * /commanders/the-tenth-doctor-clara-oswald/temur. The un-suffixed page aggregates every
+ * variant, so for a Temur build it also ranks the white and black cards from the Jeskai and
+ * Grixis decks, which are illegal in the deck the user actually asked for.
+ *
+ * Returns the URL segment ("/temur") for a deck's identity, or '' when no color was chosen.
+ * Normal commanders have no such pages — requesting one 403s — so the segment is only ever
+ * produced when a chosen color is present, and callers always fall back to the base page.
+ */
+export function edhrecColorSegment(colorIdentity: string[], chosenColor?: string | null): string {
+  if (!chosenColor) return '';
+  const key = WUBRG.split('').filter(c => colorIdentity.includes(c)).join('') || 'C';
+  const slug = COLOR_SLUG_MAP[key];
+  return slug ? `/${slug}` : '';
+}
+
+/**
+ * Page candidates to try in order: the color-variant page first, then the aggregate page.
+ * The variant can legitimately be missing (EDHREC has no page for a color nobody has built),
+ * so the fallback keeps a chosen-color deck on the same data it used before.
+ */
+function colorSegmentCandidates(colorSegment: string): string[] {
+  return colorSegment ? [colorSegment, ''] : [''];
+}
+
+/**
+ * Build both possible EDHREC slugs for partner commanders.
+ * EDHREC doesn't always use alphabetical order (e.g. commander before background),
+ * so we return both orderings to try.
+ */
+function getPartnerSlugs(commander1: string, commander2: string): [string, string] {
+  const slug1 = formatCommanderNameForUrl(commander1);
+  const slug2 = formatCommanderNameForUrl(commander2);
+  // Primary: commander1 first, secondary: commander2 first
+  return [`${slug1}-${slug2}`, `${slug2}-${slug1}`];
+}
+
+/**
+ * Parse a raw EDHREC response into structured commander data.
+ * Shared by both single-commander and partner-commander fetches.
+ */
+/**
+ * How many decks a page is built from.
+ *
+ * `num_decks_avg` is absent from every commander and commander+theme page EDHREC serves, so reading
+ * only that field pinned this to 0 everywhere — which silently held archetypeWeight() at its
+ * "unknown, treat as thin" maximum for healthy pages as well as genuinely thin ones. The real count
+ * is on json_dict.card: 2 for a rarely-built commander+theme pairing, 476 for its base page.
+ */
+function pageDeckCount(response: RawEDHRECResponse): number {
+  return response.container?.json_dict?.card?.num_decks ?? response.num_decks_avg ?? 0;
+}
+
+function parseEdhrecResponse(
+  response: RawEDHRECResponse,
+  cacheKey: string
+): EDHRECCommanderData {
+  // Parse themes from taglinks
+  const rawTaglinks = response.panels?.taglinks || [];
+  const themes: EDHRECTheme[] = rawTaglinks.map(t => ({
+    name: t.value,
+    slug: t.slug,
+    count: t.count,
+    url: `/themes/${t.slug}/${cacheKey}`,
+    popularityPercent: 0, // Will calculate below
+  }));
+
+  // Calculate popularity percentages
+  const totalThemeDecks = themes.reduce((sum, t) => sum + t.count, 0);
+  for (const theme of themes) {
+    theme.popularityPercent = totalThemeDecks > 0
+      ? (theme.count / totalThemeDecks) * 100
+      : 0;
+  }
+
+  // Sort by count (highest first)
+  themes.sort((a, b) => b.count - a.count);
+
+  // Parse stats — mana_curve lives inside panels, not at the top level
+  const stats: EDHRECCommanderStats = {
+    avgPrice: response.avg_price || 0,
+    numDecks: pageDeckCount(response),
+    bracketCounts: response.bracket_counts,
+    deckSize: response.deck_size || 81, // Default to 81 if missing
+    manaCurve: parseManaCurve(response.panels?.mana_curve),
+    typeDistribution: {
+      creature: response.creature || 0,
+      instant: response.instant || 0,
+      sorcery: response.sorcery || 0,
+      artifact: response.artifact || 0,
+      enchantment: response.enchantment || 0,
+      land: response.land || 0,
+      planeswalker: response.planeswalker || 0,
+      battle: response.battle || 0,
+    },
+    landDistribution: {
+      basic: response.basic || 0,
+      nonbasic: response.nonbasic || 0,
+      total: response.land || 0,
+    },
+  };
+
+  // Parse card lists directly from EDHREC tags
+  const cardlists = parseCardlists(response);
+
+  // Parse similar commanders
+  const similarCommanders: EDHRECSimilarCommander[] = (response.similar || []).map(s => ({
+    name: s.name,
+    sanitized: s.sanitized,
+    colorIdentity: s.color_identity || [],
+    cmc: s.cmc || 0,
+    imageUrl: s.image_uris?.[0]?.normal,
+    url: s.url || `/commanders/${s.sanitized}`,
+  }));
+
+  const data: EDHRECCommanderData = {
+    themes,
+    stats,
+    cardlists,
+    similarCommanders,
+  };
+
+  // Cache the result
+  commanderCache.set(cacheKey, { data, timestamp: Date.now() });
+
+  return data;
+}
+
+/**
+ * Parse cardlists from a raw EDHREC response into categorized lists.
+ * Shared by both commander data and theme data parsing.
+ */
+function parseCardlists(response: RawEDHRECResponse): EDHRECCommanderData['cardlists'] {
+  const rawCardLists = response.container?.json_dict?.cardlists || [];
+  console.log('[EDHREC] Raw cardlists count:', rawCardLists.length);
+  console.log('[EDHREC] Available tags:', rawCardLists.map((l: RawCardList) => l.tag));
+
+  const cardlists: EDHRECCommanderData['cardlists'] = {
+    creatures: [],
+    instants: [],
+    sorceries: [],
+    artifacts: [],
+    enchantments: [],
+    planeswalkers: [],
+    lands: [],
+    allNonLand: [],
+  };
+
+  // Track cards for deduplication across lists
+  const seenCards = new Map<string, EDHRECCard>();
+  // Track known types from typed lists (creatures, instants, etc.) even for deduped cards
+  const knownTypes = new Map<string, string>();
+  // Where each card already sits in each list it was added to. EDHREC repeats cards
+  // across lists (a creature also shows up under "topcards"/"highsynergycards") and the
+  // repeats don't always carry the same potential_decks, so the inclusion comparison
+  // below can favour the later copy. Without positions, that pushed a SECOND entry for
+  // the same card and downstream consumers could put two copies in one deck.
+  const positions = new Map<string, Map<EDHRECCard[], number>>();
+
+  /** Add a card to a list, replacing its earlier entry instead of duplicating it. */
+  const place = (list: EDHRECCard[], card: EDHRECCard) => {
+    let inLists = positions.get(card.name);
+    if (!inLists) positions.set(card.name, (inLists = new Map()));
+    const at = inLists.get(list);
+    if (at !== undefined) {
+      list[at] = card;
+      return;
+    }
+    inLists.set(list, list.push(card) - 1);
+  };
+
+  for (const list of rawCardLists) {
+    if (!list.cardviews || list.cardviews.length === 0) continue;
+
+    const tag = list.tag.toLowerCase();
+    console.log(`[EDHREC] Processing list "${list.tag}" with ${list.cardviews.length} cards`);
+
+    // Determine the type this tag implies (if any)
+    const TAG_TYPE_MAP: Record<string, string> = {
+      creatures: 'Creature', instants: 'Instant', sorceries: 'Sorcery',
+      utilityartifacts: 'Artifact', manaartifacts: 'Artifact',
+      enchantments: 'Enchantment', planeswalkers: 'Planeswalker',
+      utilitylands: 'Land', lands: 'Land',
+    };
+    const impliedType = TAG_TYPE_MAP[tag];
+
+    for (const rawCard of list.cardviews) {
+      // Record known type from typed lists — even if the card gets deduped
+      if (impliedType) {
+        knownTypes.set(rawCard.name, impliedType);
+      }
+
+      // Skip if we've seen this card with higher inclusion
+      const existing = seenCards.get(rawCard.name);
+      const potentialDecks = rawCard.potential_decks || 1;
+      const inclusionPercent = potentialDecks > 0
+        ? ((rawCard.num_decks ?? rawCard.inclusion ?? 0) / potentialDecks) * 100
+        : 0;
+
+      if (existing && existing.inclusion >= inclusionPercent) {
+        continue;
+      }
+
+      const card = parseCard(rawCard, list.tag);
+
+      // Preserve known primary_type when a generic list (Unknown) replaces a typed entry
+      if (card.primary_type === 'Unknown') {
+        const known = existing?.primary_type !== 'Unknown' ? existing?.primary_type : knownTypes.get(card.name);
+        if (known) card.primary_type = known;
+      }
+
+      seenCards.set(card.name, card);
+
+      // Add to the appropriate category based on EDHREC's tag
+      if (tag === 'creatures') {
+        place(cardlists.creatures, card);
+        place(cardlists.allNonLand, card);
+      } else if (tag === 'instants') {
+        place(cardlists.instants, card);
+        place(cardlists.allNonLand, card);
+      } else if (tag === 'sorceries') {
+        place(cardlists.sorceries, card);
+        place(cardlists.allNonLand, card);
+      } else if (tag === 'utilityartifacts' || tag === 'manaartifacts') {
+        place(cardlists.artifacts, card);
+        place(cardlists.allNonLand, card);
+      } else if (tag === 'enchantments') {
+        place(cardlists.enchantments, card);
+        place(cardlists.allNonLand, card);
+      } else if (tag === 'planeswalkers') {
+        place(cardlists.planeswalkers, card);
+        place(cardlists.allNonLand, card);
+      } else if (tag === 'utilitylands' || tag === 'lands') {
+        place(cardlists.lands, card);
+      } else if (
+        tag === 'newcards' ||
+        tag === 'battles' ||
+        THEME_SYNERGY_TAGS.has(tag)
+      ) {
+        // EDHREC lists each card in one section only: a card here is in no type list, so
+        // dropping the section drops the card from every inclusion map.
+        place(cardlists.allNonLand, card);
+      }
+    }
+    if (!impliedType && tag !== 'newcards' && tag !== 'battles' && !THEME_SYNERGY_TAGS.has(tag) && !COMMANDER_LIST_TAGS.has(tag)) {
+      console.warn(`[EDHREC] Unrecognized card list "${list.tag}" dropped (${list.cardviews.length} cards)`);
+    }
+  }
+
+  // Final pass: backfill any remaining Unknown types from knownTypes map
+  for (const card of cardlists.allNonLand) {
+    if (card.primary_type === 'Unknown') {
+      const known = knownTypes.get(card.name);
+      if (known) card.primary_type = known;
+    }
+  }
+
+  // Sort each category by inclusion rate (highest first)
+  for (const key of Object.keys(cardlists) as (keyof typeof cardlists)[]) {
+    cardlists[key].sort((a, b) => b.inclusion - a.inclusion);
+  }
+
+  console.log('[EDHREC] Categorized cards by tag:', {
+    creatures: cardlists.creatures.length,
+    instants: cardlists.instants.length,
+    sorceries: cardlists.sorceries.length,
+    artifacts: cardlists.artifacts.length,
+    enchantments: cardlists.enchantments.length,
+    planeswalkers: cardlists.planeswalkers.length,
+    lands: cardlists.lands.length,
+    allNonLand: cardlists.allNonLand.length,
+  });
+
+  if (cardlists.creatures.length > 0) {
+    console.log('[EDHREC] Sample creature:', cardlists.creatures[0]);
+  }
+
+  return cardlists;
+}
+
+/**
+ * Merge cardlists from two EDHREC datasets (for partner fallback)
+ */
+function mergeCardlists(
+  data1: EDHRECCommanderData,
+  data2: EDHRECCommanderData
+): EDHRECCommanderData['cardlists'] {
+  const mergeCategory = (list1: EDHRECCard[], list2: EDHRECCard[]): EDHRECCard[] => {
+    const cardMap = new Map<string, EDHRECCard>();
+    for (const card of [...list1, ...list2]) {
+      const existing = cardMap.get(card.name);
+      if (!existing || card.inclusion > existing.inclusion) {
+        cardMap.set(card.name, card);
+      }
+    }
+    return Array.from(cardMap.values()).sort((a, b) => b.inclusion - a.inclusion);
+  };
+
+  return {
+    creatures: mergeCategory(data1.cardlists.creatures, data2.cardlists.creatures),
+    instants: mergeCategory(data1.cardlists.instants, data2.cardlists.instants),
+    sorceries: mergeCategory(data1.cardlists.sorceries, data2.cardlists.sorceries),
+    artifacts: mergeCategory(data1.cardlists.artifacts, data2.cardlists.artifacts),
+    enchantments: mergeCategory(data1.cardlists.enchantments, data2.cardlists.enchantments),
+    planeswalkers: mergeCategory(data1.cardlists.planeswalkers, data2.cardlists.planeswalkers),
+    lands: mergeCategory(data1.cardlists.lands, data2.cardlists.lands),
+    allNonLand: mergeCategory(data1.cardlists.allNonLand, data2.cardlists.allNonLand),
+  };
+}
+
+/**
+ * Fetch full commander data from EDHREC
+ */
+export async function fetchCommanderData(
+  commanderName: string,
+  budgetOption?: BudgetOption,
+  bracketLevel?: BracketLevel,
+  colorSegment = '',
+): Promise<EDHRECCommanderData> {
+  const formattedName = formatCommanderNameForUrl(commanderName);
+  const bracketSuffix = getBracketSuffix(bracketLevel);
+  const budgetSuffix = getBudgetSuffix(budgetOption);
+  const candidates = colorSegmentCandidates(colorSegment);
+  const keyFor = (seg: string) => `${formattedName}${seg}${bracketSuffix}${budgetSuffix}`;
+
+  // Check cache first
+  for (const seg of candidates) {
+    const cached = commanderCache.get(keyFor(seg));
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+  }
+
+  let lastError: unknown;
+  for (const seg of candidates) {
+    const cacheKey = keyFor(seg);
+    try {
+      const response = await edhrecFetch<RawEDHRECResponse>(`/pages/commanders/${cacheKey}.json`);
+      return parseEdhrecResponse(response, cacheKey);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  console.error('Failed to fetch EDHREC commander data:', lastError);
+  throw lastError;
+}
+
+/**
+ * Fetch EDHREC data for partner commanders.
+ * Tries the combined partner page first, falls back to merging individual data.
+ */
+export async function fetchPartnerCommanderData(
+  commander1: string,
+  commander2: string,
+  budgetOption?: BudgetOption,
+  bracketLevel?: BracketLevel,
+  colorSegment = '',
+): Promise<EDHRECCommanderData> {
+  const [slugA, slugB] = getPartnerSlugs(commander1, commander2);
+  const bracketSuffix = getBracketSuffix(bracketLevel);
+  const budgetSuffix = getBudgetSuffix(budgetOption);
+  // Color variant before either name ordering: prefer the right colors over the lucky slug.
+  const candidates = colorSegmentCandidates(colorSegment)
+    .flatMap(seg => [slugA, slugB].map(slug => `${slug}${seg}${bracketSuffix}${budgetSuffix}`));
+
+  // Check cache for either ordering
+  for (const cacheKey of candidates) {
+    const cached = commanderCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+  }
+
+  // Try both orderings - EDHREC doesn't always use alphabetical order
+  // (redirects are detected and thrown by edhrecFetch)
+  for (const cacheKey of candidates) {
+    try {
+      const response = await edhrecFetch<RawEDHRECResponse>(`/pages/commanders/${cacheKey}.json`);
+      console.log(`[EDHREC] Found partner page: /pages/commanders/${cacheKey}.json`);
+      return parseEdhrecResponse(response, cacheKey);
+    } catch {
+      console.log(`[EDHREC] No partner page at ${cacheKey}`);
+    }
+  }
+
+  console.log(`[EDHREC] No partner page found, merging individual data`);
+
+  // Fallback: fetch both individually and merge. The color segment belongs to the pair's
+  // combined identity, so it can't be reused for either commander on its own.
+  const [data1, data2] = await Promise.all([
+    fetchCommanderData(commander1, budgetOption, bracketLevel).catch(() => null),
+    fetchCommanderData(commander2, budgetOption, bracketLevel).catch(() => null),
+  ]);
+
+  if (data1 && data2) {
+    const mergedData: EDHRECCommanderData = {
+      themes: data1.themes,
+      stats: data1.stats,
+      cardlists: mergeCardlists(data1, data2),
+      similarCommanders: data1.similarCommanders,
+    };
+    commanderCache.set(slugA, { data: mergedData, timestamp: Date.now() });
+    return mergedData;
+  }
+
+  if (data1) return data1;
+  if (data2) return data2;
+
+  throw new Error(`Failed to fetch EDHREC data for both ${commander1} and ${commander2}`);
+}
+
+/**
+ * Fetch commander themes from EDHREC (backwards compatible)
+ */
+export async function fetchCommanderThemes(commanderName: string): Promise<EDHRECTheme[]> {
+  const data = await fetchCommanderData(commanderName);
+  return data.themes;
+}
+
+/**
+ * Fetch themes for partner commanders (combines both)
+ */
+export async function fetchPartnerThemes(
+  commander1: string,
+  commander2: string
+): Promise<EDHRECTheme[]> {
+  // Try both orderings - EDHREC doesn't always use alphabetical order
+  const [slugA, slugB] = getPartnerSlugs(commander1, commander2);
+
+  for (const slug of [slugA, slugB]) {
+    try {
+      const data = await fetchCommanderData(slug);
+      if (data.themes.length > 0) {
+        return data.themes;
+      }
+    } catch {
+      // This ordering didn't work, try the other
+    }
+  }
+
+  // Fallback: fetch both individually and merge themes
+  const [data1, data2] = await Promise.all([
+    fetchCommanderData(commander1).catch(() => null),
+    fetchCommanderData(commander2).catch(() => null),
+  ]);
+
+  const themes1 = data1?.themes || [];
+  const themes2 = data2?.themes || [];
+
+  // Merge and deduplicate themes
+  const themeMap = new Map<string, EDHRECTheme>();
+
+  for (const theme of [...themes1, ...themes2]) {
+    const existing = themeMap.get(theme.name);
+    if (existing) {
+      // Combine counts
+      existing.count += theme.count;
+    } else {
+      themeMap.set(theme.name, { ...theme });
+    }
+  }
+
+  const merged = Array.from(themeMap.values());
+  const totalDecks = merged.reduce((sum, t) => sum + t.count, 0);
+
+  // Recalculate percentages
+  for (const theme of merged) {
+    theme.popularityPercent = totalDecks > 0 ? (theme.count / totalDecks) * 100 : 0;
+  }
+
+  return merged.sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Did the commander's base page already tell us this theme has no page of its own?
+ *
+ * EDHREC only publishes /commanders/<name>/<theme>.json for tags that appear in the base
+ * page's taglinks, so an off-meta pairing (Chief of the Wilds + Spore Counters) is a
+ * guaranteed miss. Every caller fetches the base page before asking for theme data, so
+ * this is a free cache read that skips a request we know will fail.
+ *
+ * Only the all-variants page is consulted — it blends every color variant, so its taglinks
+ * are a superset of any one variant's. A colorlink commander caches only its variant page,
+ * which means this quietly declines to fire rather than skipping a theme that does exist.
+ */
+/**
+ * Report an absent commander+theme page. Callers already fall back to the generic tag
+ * page, so this is an expected branch — logged at info so it reads as the explanation it
+ * is rather than a red console error.
+ */
+function noThemePage(commanderName: string, themeSlug: string): Error {
+  console.info(
+    `[EDHREC] No "${themeSlug}" page for ${commanderName} — falling back to generic theme data`
+  );
+  return new Error(`EDHREC has no "${themeSlug}" page for ${commanderName}`);
+}
+
+function basePageOmitsTheme(baseCacheKey: string, themeSlug: string): boolean {
+  const cached = commanderCache.get(baseCacheKey);
+  if (!cached || Date.now() - cached.timestamp >= CACHE_TTL) return false;
+  if (cached.data.themes.length === 0) return false; // no taglinks parsed — rules nothing out
+  return !cached.data.themes.some(t => t.slug === themeSlug);
+}
+
+/**
+ * Fetch theme-specific commander data from EDHREC
+ * Uses endpoint like /pages/commanders/skullbriar-the-walking-grave/plus-1-plus-1-counters.json
+ */
+export async function fetchCommanderThemeData(
+  commanderName: string,
+  themeSlug: string,
+  budgetOption?: BudgetOption,
+  bracketLevel?: BracketLevel,
+  colorSegment = '',
+): Promise<EDHRECCommanderData> {
+  const formattedName = formatCommanderNameForUrl(commanderName);
+  const bracketSuffix = getBracketSuffix(bracketLevel);
+  const budgetSuffix = getBudgetSuffix(budgetOption);
+  const candidates = colorSegmentCandidates(colorSegment)
+    .map(seg => `${formattedName}${seg}${bracketSuffix}/${themeSlug}${budgetSuffix}`);
+
+  // Check cache first
+  for (const key of candidates) {
+    const cached = commanderCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+  }
+
+  // The base page's tag list already answers this for off-meta pairings — don't spend a
+  // request (and a rate-limiter slot) learning what we've been told.
+  if (basePageOmitsTheme(`${formattedName}${bracketSuffix}${budgetSuffix}`, themeSlug)) {
+    throw noThemePage(commanderName, themeSlug);
+  }
+
+  let response: RawEDHRECResponse | null = null;
+  let cacheKey = candidates[candidates.length - 1];
+  let lastError: unknown;
+  for (const key of candidates) {
+    try {
+      response = await edhrecFetch<RawEDHRECResponse>(`/pages/commanders/${key}.json`);
+      cacheKey = key;
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!response) {
+    // A missing page is EDHREC saying "nobody builds this pairing", not a fault. Callers
+    // fall back to the generic tag page, so log it as the routine outcome it is — but keep
+    // anything that isn't a clean miss (network down, 5xx) loud.
+    if (lastError instanceof EdhrecHttpError && lastError.pageMissing) {
+      throw noThemePage(commanderName, themeSlug);
+    }
+    console.error(`Failed to fetch EDHREC theme data for ${themeSlug}:`, lastError);
+    throw lastError;
+  }
+
+  try {
+    // Parse stats
+    const stats: EDHRECCommanderStats = {
+      avgPrice: response.avg_price || 0,
+      numDecks: pageDeckCount(response),
+      deckSize: response.deck_size || 81,
+      manaCurve: parseManaCurve(response.panels?.mana_curve),
+      typeDistribution: {
+        creature: response.creature || 0,
+        instant: response.instant || 0,
+        sorcery: response.sorcery || 0,
+        artifact: response.artifact || 0,
+        enchantment: response.enchantment || 0,
+        land: response.land || 0,
+        planeswalker: response.planeswalker || 0,
+        battle: response.battle || 0,
+      },
+      landDistribution: {
+        basic: response.basic || 0,
+        nonbasic: response.nonbasic || 0,
+        total: response.land || 0,
+      },
+    };
+
+    // Parse card lists using shared parser
+    const cardlists = parseCardlists(response);
+
+    const data: EDHRECCommanderData = {
+      themes: [], // Theme-specific pages don't have sub-themes
+      stats,
+      cardlists,
+      similarCommanders: [], // Not relevant for theme pages
+    };
+
+    // Cache the result
+    commanderCache.set(cacheKey, { data, timestamp: Date.now() });
+
+    return data;
+  } catch (error) {
+    // The page came back — anything failing past here is a genuine parse fault.
+    console.error(`Failed to parse EDHREC theme data for ${themeSlug}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch theme-specific data for partner commanders.
+ * Tries the combined partner theme page first, falls back to primary commander's theme.
+ */
+export async function fetchPartnerThemeData(
+  commander1: string,
+  commander2: string,
+  themeSlug: string,
+  budgetOption?: BudgetOption,
+  bracketLevel?: BracketLevel,
+  colorSegment = '',
+): Promise<EDHRECCommanderData> {
+  const [slugA, slugB] = getPartnerSlugs(commander1, commander2);
+  const bracketSuffix = getBracketSuffix(bracketLevel);
+  const budgetSuffix = getBudgetSuffix(budgetOption);
+  // Color variant before either name ordering: prefer the right colors over the lucky slug.
+  const candidates = colorSegmentCandidates(colorSegment)
+    .flatMap(seg => [slugA, slugB].map(slug => `${slug}${seg}${bracketSuffix}/${themeSlug}${budgetSuffix}`));
+
+  // Check cache for either ordering
+  for (const cacheKey of candidates) {
+    const cached = commanderCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+  }
+
+  // Try both orderings
+  for (const cacheKey of candidates) {
+    try {
+      const response = await edhrecFetch<RawEDHRECResponse>(`/pages/commanders/${cacheKey}.json`);
+      console.log(`[EDHREC] Found partner theme page: ${cacheKey}`);
+
+      const stats: EDHRECCommanderStats = {
+        avgPrice: response.avg_price || 0,
+        numDecks: pageDeckCount(response),
+        deckSize: response.deck_size || 81,
+        manaCurve: parseManaCurve(response.panels?.mana_curve),
+        typeDistribution: {
+          creature: response.creature || 0,
+          instant: response.instant || 0,
+          sorcery: response.sorcery || 0,
+          artifact: response.artifact || 0,
+          enchantment: response.enchantment || 0,
+          land: response.land || 0,
+          planeswalker: response.planeswalker || 0,
+          battle: response.battle || 0,
+        },
+        landDistribution: {
+          basic: response.basic || 0,
+          nonbasic: response.nonbasic || 0,
+          total: response.land || 0,
+        },
+      };
+
+      const cardlists = parseCardlists(response);
+
+      const data: EDHRECCommanderData = {
+        themes: [],
+        stats,
+        cardlists,
+        similarCommanders: [],
+      };
+
+      commanderCache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch {
+      // This ordering didn't work, try the other
+    }
+  }
+
+  console.log(`[EDHREC] No partner theme page found, falling back to primary commander`);
+  // Fallback: use primary commander's theme data
+  return fetchCommanderThemeData(commander1, themeSlug, budgetOption, bracketLevel);
+}
+
+/**
+ * Partner popularity data from EDHREC's /partners/ endpoint
+ */
+export interface PartnerPopularity {
+  name: string;       // Partner commander name
+  numDecks: number;   // Number of decks with this pairing
+}
+
+/**
+ * Fetch partner popularity data from EDHREC.
+ * Returns a map of partner name -> deck count for the given commander.
+ */
+export async function fetchPartnerPopularity(
+  commanderName: string
+): Promise<Map<string, number>> {
+  const formattedName = formatCommanderNameForUrl(commanderName);
+  const cacheKey = `partners-${formattedName}`;
+
+  // Check cache
+  const cached = partnerPopularityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await edhrecFetch<{ partnercounts?: Array<{ value: string; count: number }> }>(
+      `/pages/partners/${formattedName}.json`
+    );
+
+    const result = new Map<string, number>();
+    for (const entry of response.partnercounts || []) {
+      result.set(entry.value, entry.count);
+    }
+
+    partnerPopularityCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
+  } catch (error) {
+    console.error(`[EDHREC] Failed to fetch partner popularity for ${commanderName}:`, error);
+    return new Map();
+  }
+}
+
+/**
+ * Clear the commander cache
+ */
+export function clearCommanderCache(): void {
+  commanderCache.clear();
+}
+
+// --- Top commanders (fetched live from EDHREC) ---
+
+const WUBRG = 'WUBRG';
+
+/** Map sorted color key → EDHREC URL slug */
+const COLOR_SLUG_MAP: Record<string, string> = {
+  '': 'year',
+  C: 'colorless',
+  W: 'mono-white', U: 'mono-blue', B: 'mono-black', R: 'mono-red', G: 'mono-green',
+  WU: 'azorius', WB: 'orzhov', WR: 'boros', WG: 'selesnya',
+  UB: 'dimir', UR: 'izzet', UG: 'simic',
+  BR: 'rakdos', BG: 'golgari', RG: 'gruul',
+  WUB: 'esper', WUR: 'jeskai', WUG: 'bant',
+  WBR: 'mardu', WBG: 'abzan', WRG: 'naya',
+  UBR: 'grixis', UBG: 'sultai', URG: 'temur', BRG: 'jund',
+  WUBR: 'yore-tiller', WUBG: 'witch-maw', WURG: 'ink-treader',
+  WBRG: 'dune-brood', UBRG: 'glint-eye', WUBRG: 'five-color',
+};
+
+interface RawTopCommanderEntry {
+  name: string;
+  sanitized: string;
+  num_decks?: number;
+  inclusion?: number;
+  color_identity?: string[];
+}
+
+interface RawTopCommandersResponse {
+  container?: {
+    json_dict?: {
+      cardlists?: Array<{
+        cardviews?: RawTopCommanderEntry[];
+      }>;
+    };
+  };
+}
+
+const topCommanderCache = new Map<string, { data: EDHRECTopCommander[]; timestamp: number }>();
+const TOP_COMMANDER_CACHE_TTL = 14 * 24 * 60 * 60 * 1000; // 14 days (in-memory; capped by session)
+
+/**
+ * Fetch the full EDHREC commander typeahead list (all commander names).
+ * Cached for the session lifetime.
+ */
+let allCommanderNamesCache: string[] | null = null;
+export async function fetchAllCommanderNames(): Promise<string[]> {
+  if (allCommanderNamesCache) return allCommanderNamesCache;
+  await rateLimiter.throttle();
+  const res = await fetch(`${BASE_URL}/static/typeahead/commanders`);
+  if (!res.ok) throw new Error(`EDHREC typeahead failed: ${res.status}`);
+  const names: string[] = await res.json();
+  allCommanderNamesCache = names;
+  return names;
+}
+
+/**
+ * Fetch top commanders from EDHREC for a given color identity.
+ * Pass an empty array for overall top commanders (past year).
+ * Results are cached for 30 minutes.
+ */
+export async function fetchTopCommanders(colors: string[]): Promise<EDHRECTopCommander[]> {
+  // Sort colors in WUBRG order and build cache key
+  const sorted = [...colors].filter(c => c !== 'C').sort((a, b) => WUBRG.indexOf(a) - WUBRG.indexOf(b));
+  const key = colors.includes('C') ? 'C' : sorted.join('');
+  const slug = COLOR_SLUG_MAP[key];
+  if (!slug) return [];
+
+  const cached = topCommanderCache.get(key);
+  if (cached && Date.now() - cached.timestamp < TOP_COMMANDER_CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await edhrecFetch<RawTopCommandersResponse>(
+      `/pages/commanders/${slug}.json`
+    );
+
+    const cardviews = response.container?.json_dict?.cardlists?.[0]?.cardviews ?? [];
+    const isOverall = key === '';
+    // Filter out partner pairs (e.g. "Kraum // Tymna") before taking top 12
+    const top = cardviews.filter(e => !isPartnerPair(e.name)).slice(0, 12);
+
+    let commanders: EDHRECTopCommander[] = top.map((entry, i) => ({
+      rank: i + 1,
+      name: entry.name,
+      sanitized: entry.sanitized,
+      colorIdentity: isOverall
+        ? (entry.color_identity?.map(c => c.toUpperCase()) ?? [])
+        : (key === 'C' ? [] : sorted),
+      numDecks: entry.num_decks ?? entry.inclusion ?? 0,
+    }));
+
+    // The overall "year" endpoint doesn't include color_identity on page 1.
+    // Batch-fetch from Scryfall to fill them in.
+    if (isOverall && commanders.some(c => c.colorIdentity.length === 0)) {
+      try {
+        const { getCardsByNames } = await import('@/services/scryfall/client');
+        const names = commanders.filter(c => c.colorIdentity.length === 0).map(c => c.name);
+        const cardMap = await getCardsByNames(names);
+        commanders = commanders.map(c => {
+          if (c.colorIdentity.length > 0) return c;
+          const card = cardMap.get(c.name);
+          return { ...c, colorIdentity: card?.color_identity ?? [] };
+        });
+      } catch {
+        // Scryfall lookup failed — show without color pips
+      }
+    }
+
+    topCommanderCache.set(key, { data: commanders, timestamp: Date.now() });
+    return commanders;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch top commanders for "${slug}":`, error);
+    return cached?.data ?? [];
+  }
+}
+
+/** All color combo keys (excluding '' for overall and 'C' for colorless) */
+const ALL_COLOR_KEYS = Object.keys(COLOR_SLUG_MAP).filter(k => k !== '' && k !== 'C');
+
+/**
+ * Fetch commanders from EDHREC for all color combos that *include* the given colors.
+ * E.g. colors=['G'] returns commanders from mono-green, golgari, simic, ..., WUBRG.
+ * Returns all entries (not capped to 12) sorted by deck count, with duplicates removed.
+ */
+export async function fetchCommandersIncludingColors(colors: string[]): Promise<EDHRECTopCommander[]> {
+  // Colorless is its own identity — doesn't combine with other colors
+  if (colors.includes('C')) {
+    return fetchAllCommandersForColor(['C']);
+  }
+
+  const required = new Set(colors.map(c => c.toUpperCase()));
+  // Find all color keys that contain every required color
+  const matchingKeys = ALL_COLOR_KEYS.filter(key =>
+    [...required].every(c => key.includes(c))
+  );
+  if (matchingKeys.length === 0) return [];
+
+  // Fetch all matching combos in parallel (uses cache internally)
+  const results = await Promise.all(
+    matchingKeys.map(key => fetchAllCommandersForColor(key.split('')))
+  );
+
+  // Union + dedupe by name, keeping the entry with the highest deck count
+  const map = new Map<string, EDHRECTopCommander>();
+  for (const list of results) {
+    for (const cmd of list) {
+      const existing = map.get(cmd.name);
+      if (!existing || cmd.numDecks > existing.numDecks) {
+        map.set(cmd.name, cmd);
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.numDecks - a.numDecks);
+}
+
+/**
+ * Fetch commanders whose color identity is a SUBSET of the given colors — i.e.
+ * every commander a collection of those colors could actually support. This is
+ * the inverse of fetchCommandersIncludingColors (which requires the colors).
+ * Unions all subset combos, dedupes by name, sorts by deck count descending.
+ *
+ * Note: colorless (identity []) commanders are not included; they live under
+ * their own 'C' slug, not in the WUBRG combo keys.
+ */
+export async function fetchCommandersWithinColors(colors: string[]): Promise<EDHRECTopCommander[]> {
+  const available = new Set(colors.map(c => c.toUpperCase()).filter(c => c !== 'C'));
+  if (available.size === 0) return [];
+
+  // Every color combo whose colors are all available in the collection.
+  const matchingKeys = ALL_COLOR_KEYS.filter(key =>
+    key.split('').every(c => available.has(c))
+  );
+  if (matchingKeys.length === 0) return [];
+
+  const results = await Promise.all(
+    matchingKeys.map(key => fetchAllCommandersForColor(key.split('')))
+  );
+
+  const map = new Map<string, EDHRECTopCommander>();
+  for (const list of results) {
+    for (const cmd of list) {
+      const existing = map.get(cmd.name);
+      if (!existing || cmd.numDecks > existing.numDecks) {
+        map.set(cmd.name, cmd);
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => b.numDecks - a.numDecks);
+}
+
+/**
+ * Fetch ALL commanders (up to 100) for an exact color combo from EDHREC.
+ * Unlike fetchTopCommanders which returns top 12, this returns the full page.
+ * Results are cached for 30 minutes.
+ */
+const fullCommanderCache = new Map<string, { data: EDHRECTopCommander[]; timestamp: number }>();
+
+async function fetchAllCommandersForColor(colors: string[]): Promise<EDHRECTopCommander[]> {
+  const sorted = [...colors].filter(c => c !== 'C').sort((a, b) => WUBRG.indexOf(a) - WUBRG.indexOf(b));
+  const key = colors.includes('C') ? 'C' : sorted.join('');
+  const slug = COLOR_SLUG_MAP[key];
+  if (!slug) return [];
+
+  const cached = fullCommanderCache.get(key);
+  if (cached && Date.now() - cached.timestamp < TOP_COMMANDER_CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await edhrecFetch<RawTopCommandersResponse>(
+      `/pages/commanders/${slug}.json`
+    );
+    const cardviews = response.container?.json_dict?.cardlists?.[0]?.cardviews ?? [];
+    const commanders: EDHRECTopCommander[] = cardviews
+      .filter(e => !isPartnerPair(e.name))
+      .map((entry, i) => ({
+        rank: i + 1,
+        name: entry.name,
+        sanitized: entry.sanitized,
+        colorIdentity: key === 'C' ? [] : sorted,
+        numDecks: entry.num_decks ?? entry.inclusion ?? 0,
+      }));
+
+    fullCommanderCache.set(key, { data: commanders, timestamp: Date.now() });
+    return commanders;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch all commanders for "${slug}":`, error);
+    return cached?.data ?? [];
+  }
+}
+
+/**
+ * Fetch all multi-copy card quantities from an EDHREC average deck.
+ * Returns a Map of cardName → quantity for cards with >1 copy, or null if the fetch failed entirely.
+ * Returning null (fetch failed) vs empty Map (fetch succeeded, no multi-copy cards) is important
+ * for distinguishing fallback behavior.
+ */
+export async function fetchAverageDeckMultiCopies(
+  commanderName: string,
+  cardNamesToCheck: string[],
+  themeSlug?: string
+): Promise<Map<string, number> | null> {
+  try {
+    await rateLimiter.throttle();
+
+    const formatted = formatCommanderNameForUrl(commanderName);
+    const themePart = themeSlug ? `/${themeSlug}` : '';
+    const url = `${BASE_URL}/pages/average-decks/${formatted}${themePart}.json`;
+
+    console.log(`[EDHREC] Fetching average deck from: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`[EDHREC] Average deck fetch failed (${response.status}) for ${formatted}${themePart}`);
+      return null;
+    }
+
+    const data = await response.json();
+    const deckList: string[] = data?.deck || data?.decklist || [];
+
+    if (!Array.isArray(deckList) || deckList.length === 0) {
+      console.warn('[EDHREC] Average deck has no deck array');
+      return null;
+    }
+
+    // Build a lookup set for the cards we care about
+    const lookupSet = new Set(cardNamesToCheck.map(n => n.toLowerCase()));
+    const result = new Map<string, number>();
+
+    // Each entry is "N CardName" (e.g., "20 Slime Against Humanity", "1 Sol Ring")
+    for (const entry of deckList) {
+      const match = entry.match(/^(\d+)\s+(.+)$/);
+      if (match) {
+        const quantity = parseInt(match[1], 10);
+        const name = match[2].trim();
+        if (quantity > 1 && lookupSet.has(name.toLowerCase())) {
+          // Use the original casing from cardNamesToCheck
+          const originalName = cardNamesToCheck.find(n => n.toLowerCase() === name.toLowerCase());
+          result.set(originalName ?? name, quantity);
+          console.log(`[EDHREC] Found ${quantity} copies of "${originalName ?? name}" in average deck`);
+        }
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.warn('[EDHREC] Failed to fetch average deck multi-copies:', error);
+    return null;
+  }
+}
+
+// --- Similar cards (per-card EDHREC page) ---
+
+const similarCardsCache = new Map<string, { data: string[]; timestamp: number }>();
+
+interface RawCardPageView { name?: string; sanitized?: string; inclusion?: number; potential_decks?: number; num_decks?: number; lift?: number; }
+interface RawCardPageList { tag?: string; cardviews?: RawCardPageView[]; }
+interface RawCardPageResponse {
+  similar?: string[];
+  container?: { json_dict?: { cardlists?: RawCardPageList[] } };
+}
+
+export interface CardRelation { name: string; source: 'lift' | 'coplay' | 'similar'; coPct: number; }
+
+const LIFT_TAKE = 6;
+const COPLAY_TAKE = 4;
+const SIMILAR_TAKE = 4;
+
+function coPct(v: RawCardPageView): number {
+  return v.potential_decks && v.potential_decks > 0 ? Math.round(((v.num_decks ?? v.inclusion ?? 0) / v.potential_decks) * 100) : 0;
+}
+
+/** Pure: turn a card-page payload into card-to-card relations (lift > coplay > similar). */
+export function parseCardRelations(raw: RawCardPageResponse): CardRelation[] {
+  const lists = raw.container?.json_dict?.cardlists ?? [];
+  const byTag = (tag: string) => lists.find(l => l.tag === tag)?.cardviews ?? [];
+  const out: CardRelation[] = [];
+  for (const v of byTag('highliftcards').slice(0, LIFT_TAKE)) {
+    if (v.name) out.push({ name: v.name, source: 'lift', coPct: coPct(v) });
+  }
+  for (const v of byTag('topcards').slice(0, COPLAY_TAKE)) {
+    if (v.name) out.push({ name: v.name, source: 'coplay', coPct: coPct(v) });
+  }
+  for (const name of (Array.isArray(raw.similar) ? raw.similar : []).slice(0, SIMILAR_TAKE)) {
+    out.push({ name, source: 'similar', coPct: 0 });
+  }
+  return out;
+}
+
+const cardRelationsCache = new Map<string, { data: CardRelation[]; timestamp: number }>();
+
+/** Fetch card-to-card relations (high-lift, co-played, similar) for a single card. [] on failure. */
+export async function fetchCardRelations(cardName: string): Promise<CardRelation[]> {
+  const slug = formatCommanderNameForUrl(cardName);
+  const cached = cardRelationsCache.get(slug);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+  try {
+    const response = await edhrecFetch<RawCardPageResponse>(`/pages/cards/${slug}.json`);
+    const data = parseCardRelations(response);
+    cardRelationsCache.set(slug, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch card relations for "${cardName}":`, error);
+    cardRelationsCache.set(slug, { data: [], timestamp: Date.now() });
+    return [];
+  }
+}
+
+/**
+ * Fetch EDHREC's "similar cards" list for a single card.
+ * Returns an array of card names in EDHREC's native similarity order.
+ * Lazy, per-card, cached for CACHE_TTL. Returns [] on any failure.
+ */
+export async function fetchSimilarCards(cardName: string): Promise<string[]> {
+  const slug = formatCommanderNameForUrl(cardName);
+
+  const cached = similarCardsCache.get(slug);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await edhrecFetch<RawCardPageResponse>(`/pages/cards/${slug}.json`);
+    const data = Array.isArray(response.similar) ? response.similar : [];
+    similarCardsCache.set(slug, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch similar cards for "${cardName}":`, error);
+    similarCardsCache.set(slug, { data: [], timestamp: Date.now() });
+    return [];
+  }
+}
+
+// --- Full card-page lift pool ---
+// Every card EDHREC lists as played alongside this one carries a numeric `lift` (how many times more
+// often it co-occurs than its baseline play rate predicts) plus inclusion/potential_decks. The
+// `highliftcards` list parsed above is just the curated extreme tail; this reads the whole page so a
+// caller can score the full on-color pool by lift + co-occurrence. Same page fetch, cached 14 days.
+
+export interface CardLiftEntry { name: string; lift: number; coPct: number; numDecks: number; }
+
+// Meta lists that aren't "cards played alongside this one."
+const LIFT_POOL_SKIP_TAGS = new Set(['topcommanders', 'newcards']);
+// Lift from a handful of shared decks is statistical noise: a near-unplayed card posts a lift of
+// hundreds/thousands off a few coincidental co-occurrences (mirrors EDHREC hiding these from "high
+// lift"). The floor is ADAPTIVE: require co-occurrence in ~LIFT_MIN_FRACTION of the seed's decks, but
+// clamp it — mainstream seeds get the strict floor; niche seeds relax so a thin archetype still shows
+// SOMETHING (those hits are flagged low-confidence downstream). All tunable.
+const LIFT_MIN_FRACTION = 0.02;
+const LIFT_MIN_FLOOR = 12;     // never trust fewer than this many shared decks, even for ultra-niche seeds
+export const LIFT_STRICT_FLOOR = 50;  // at/above this = high confidence; below = shown but flagged
+
+/** Minimum shared-deck count for a seed of the given popularity (clamped fraction). */
+function liftDeckFloor(potentialDecks: number): number {
+  return Math.min(LIFT_STRICT_FLOOR, Math.max(LIFT_MIN_FLOOR, Math.round(potentialDecks * LIFT_MIN_FRACTION)));
+}
+
+/** Pure: every cardview on a card page with a numeric lift backed by enough decks, deduped (max lift). */
+export function parseCardLiftPool(raw: RawCardPageResponse): CardLiftEntry[] {
+  const lists = raw.container?.json_dict?.cardlists ?? [];
+  const best = new Map<string, CardLiftEntry>();
+  for (const list of lists) {
+    if (list.tag && LIFT_POOL_SKIP_TAGS.has(list.tag)) continue;
+    for (const v of list.cardviews ?? []) {
+      if (!v.name || typeof v.lift !== 'number') continue;
+      if (!v.potential_decks || v.potential_decks <= 0) continue;
+      const numDecks = v.num_decks ?? v.inclusion ?? 0;
+      if (numDecks < liftDeckFloor(v.potential_decks)) continue;   // adaptive low-sample filter
+      const entry: CardLiftEntry = { name: v.name, lift: v.lift, coPct: coPct(v), numDecks };
+      const prev = best.get(v.name);
+      if (!prev || entry.lift > prev.lift) best.set(v.name, entry);
+    }
+  }
+  return [...best.values()];
+}
+
+const cardLiftPoolCache = new Map<string, { data: CardLiftEntry[]; timestamp: number }>();
+
+/** Fetch the full lift pool for a card (every played-alongside card with its lift + co-occurrence %). [] on failure. */
+export async function fetchCardLiftPool(cardName: string, force = false): Promise<CardLiftEntry[]> {
+  const slug = formatCommanderNameForUrl(cardName);
+  // `force` (e.g. the "Re-scan" button) skips the in-memory parsed pool so it re-derives with current
+  // parse logic from the cached raw page. Without it, a re-scan just returns the stale parsed result.
+  if (!force) {
+    const cached = cardLiftPoolCache.get(slug);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+  }
+  try {
+    // edhrecFetch handles the persistent (cross-reload) layer for the raw page.
+    const response = await edhrecFetch<RawCardPageResponse>(`/pages/cards/${slug}.json`);
+    const data = parseCardLiftPool(response);
+    cardLiftPoolCache.set(slug, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch card lift pool for "${cardName}":`, error);
+    cardLiftPoolCache.set(slug, { data: [], timestamp: Date.now() });
+    return [];
+  }
+}
+
+// --- Top commanders for a card ---
+// The same card page carries a `topcommanders` list: EDHREC's top 24 commanders that run this
+// card, each with num_decks (decks with that commander running the card) and potential_decks
+// (decks with that commander at all). The ratio is the co-play rate that powers "find me a
+// commander for these cards". Same page fetch as the lift pool, so usually already cached.
+
+export interface CardCommanderStat {
+  name: string;
+  sanitized: string;
+  numDecks: number;
+  potentialDecks: number;
+  /** numDecks / potentialDecks — how often this commander's decks run the card, 0..1. */
+  coRate: number;
+}
+
+/**
+ * Pure: the `topcommanders` cardlist → per-commander co-play stats.
+ * No low-sample floor is applied: unlike the lift pool this list is already EDHREC's own
+ * curated top-24 by volume, so filtering would only remove real signal.
+ */
+export function parseCardTopCommanders(raw: RawCardPageResponse): CardCommanderStat[] {
+  const lists = raw.container?.json_dict?.cardlists ?? [];
+  const views = lists.find(l => l.tag === 'topcommanders')?.cardviews ?? [];
+  const out: CardCommanderStat[] = [];
+  for (const v of views) {
+    if (!v.name) continue;
+    const potentialDecks = v.potential_decks ?? 0;
+    if (potentialDecks <= 0) continue;   // division guard
+    const numDecks = v.num_decks ?? v.inclusion ?? 0;
+    out.push({
+      name: v.name,
+      sanitized: v.sanitized ?? formatCommanderNameForUrl(v.name),
+      numDecks,
+      potentialDecks,
+      coRate: numDecks / potentialDecks,
+    });
+  }
+  return out;
+}
+
+const cardTopCommandersCache = new Map<string, { data: CardCommanderStat[]; timestamp: number }>();
+
+/** Fetch the commanders that most often run this card. [] on failure — never throws. */
+export async function fetchCardTopCommanders(cardName: string): Promise<CardCommanderStat[]> {
+  const slug = formatCommanderNameForUrl(cardName);
+  const cached = cardTopCommandersCache.get(slug);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+  try {
+    const response = await edhrecFetch<RawCardPageResponse>(`/pages/cards/${slug}.json`);
+    const data = parseCardTopCommanders(response);
+    cardTopCommandersCache.set(slug, { data, timestamp: Date.now() });
+    return data;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch top commanders for "${cardName}":`, error);
+    cardTopCommandersCache.set(slug, { data: [], timestamp: Date.now() });
+    return [];
+  }
+}
+
+// --- Combo data ---
+
+const comboCache = new Map<string, { data: EDHRECCombo[]; timestamp: number }>();
+
+interface RawComboEntry {
+  cardviews: { name: string; id: string; sanitized: string }[];
+  href?: string;
+  combo: {
+    comboId: string;
+    count: number;
+    results: string[];
+    nonCardPrerequisiteCount: number;
+    rank: number;
+    comboVote?: { bracket: string };
+  };
+}
+
+// Maps comboId → EDHREC href path (e.g. "/combos/golgari/250-779")
+// Populated when combo list is fetched, used by fetchComboDetails
+const comboHrefMap = new Map<string, string>();
+
+interface RawComboResponse {
+  container?: {
+    json_dict?: {
+      cardlists?: RawComboEntry[];
+    };
+  };
+}
+
+// EDHREC sometimes lists the same set of cards as multiple combo entries that
+// differ only by a result-variant suffix in the comboId — e.g. "3470-5702--143"
+// and "3470-5702--131" are both Springheart Nantuko + Lotus Cobra with the same
+// deck count. To a deckbuilder these are the same combo, and since every consumer
+// keys React lists / dedupe on comboId, both survive and render as visible
+// duplicates. Collapse by card set, keeping the first entry (callers sort by
+// deck count before calling, so the most popular variant wins).
+function dedupeCombosByCardSet(combos: EDHRECCombo[]): EDHRECCombo[] {
+  const seen = new Set<string>();
+  const out: EDHRECCombo[] = [];
+  for (const c of combos) {
+    const key = c.cards.map(card => card.name).sort().join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out;
+}
+
+/**
+ * Fetch known combos for a commander from EDHREC.
+ * Returns combos sorted by popularity (deckCount descending).
+ */
+export async function fetchCommanderCombos(commanderName: string): Promise<EDHRECCombo[]> {
+  const slug = formatCommanderNameForUrl(commanderName);
+
+  const cached = comboCache.get(slug);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  try {
+    const response = await edhrecFetch<RawComboResponse>(
+      `/pages/combos/${slug}.json`
+    );
+
+    const rawCombos = response.container?.json_dict?.cardlists || [];
+
+    const combos: EDHRECCombo[] = rawCombos.map(entry => {
+      // Store href for later detail fetches
+      if (entry.href) comboHrefMap.set(entry.combo.comboId, entry.href);
+      return {
+        comboId: entry.combo.comboId,
+        cards: entry.cardviews.map(cv => ({ name: cv.name, id: cv.id })),
+        results: entry.combo.results || [],
+        deckCount: entry.combo.count || 0,
+        rank: entry.combo.rank || 0,
+        bracket: entry.combo.comboVote?.bracket || 'unknown',
+        prereqCount: entry.combo.nonCardPrerequisiteCount || 0,
+        href: entry.href,
+      };
+    });
+
+    combos.sort((a, b) => b.deckCount - a.deckCount);
+    const deduped = dedupeCombosByCardSet(combos);
+
+    comboCache.set(slug, { data: deduped, timestamp: Date.now() });
+    return deduped;
+  } catch (error) {
+    console.error(`[EDHREC] Failed to fetch combos for ${commanderName}:`, error);
+    return [];
+  }
+}
+
+// Fetch known combos for a color identity. Primary source is the precomputed
+// Commander Spellbook index (full catalog, subset identities included — see
+// src/services/spellbook/comboIndex.ts); the EDHREC color-identity combo page
+// is the fallback, but it only carries the top 100 combos of *exactly* that
+// identity, so low-popularity and off-guild combos are invisible through it.
+// Returns combos sorted by popularity (deckCount descending). Cache keys are
+// prefixed with "color:" to avoid colliding with commander slugs.
+export async function fetchColorIdentityCombos(colorIdentity: string[]): Promise<EDHRECCombo[]> {
+  const slug = colorIdentityToSlug(colorIdentity);
+  const cacheKey = `color:${slug}`;
+
+  const cached = comboCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const spellbook = await fetchSpellbookCombosBySlug(slug);
+  if (spellbook) {
+    const combos: EDHRECCombo[] = spellbook.map(e => {
+      // EDHREC's combo detail page lives at /combos/{identity-slug}/{id} —
+      // reconstructable because the artifact carries each combo's identity.
+      const href = `/combos/${colorIdentityToSlug(e.d === 'C' ? [] : e.d.split(''))}/${e.i}`;
+      comboHrefMap.set(e.i, href);
+      return {
+        href,
+        comboId: e.i,
+        cards: e.c.map(name => ({ name, id: '' })),
+        templates: e.t?.map(t => ({ name: t.n, scryfallQuery: t.q, ...(t.x ? { quantity: t.x } : {}) })),
+        results: e.r,
+        deckCount: e.p,
+        rank: 0, // assigned after the sort below
+        bracket: spellbookBracketToVote(e.b),
+        prereqCount: 0,
+      };
+    });
+    combos.sort((a, b) => b.deckCount - a.deckCount);
+    // Combo seeding scores rank like EDHREC's page rank (100 - rank bonus) —
+    // leaving it 0 would hand every jank combo the maximum bonus.
+    combos.forEach((c, idx) => { c.rank = idx + 1; });
+    const deduped = dedupeCombosByCardSet(combos);
+    comboCache.set(cacheKey, { data: deduped, timestamp: Date.now() });
+    return deduped;
+  }
+
+  try {
+    const response = await edhrecFetch<RawComboResponse>(
+      `/pages/combos/${slug}.json`
+    );
+
+    const rawCombos = response.container?.json_dict?.cardlists || [];
+
+    const combos: EDHRECCombo[] = rawCombos.map(entry => {
+      if (entry.href) comboHrefMap.set(entry.combo.comboId, entry.href);
+      return {
+        comboId: entry.combo.comboId,
+        cards: entry.cardviews.map(cv => ({ name: cv.name, id: cv.id })),
+        results: entry.combo.results || [],
+        deckCount: entry.combo.count || 0,
+        rank: entry.combo.rank || 0,
+        bracket: entry.combo.comboVote?.bracket || 'unknown',
+        prereqCount: entry.combo.nonCardPrerequisiteCount || 0,
+      };
+    });
+
+    combos.sort((a, b) => b.deckCount - a.deckCount);
+    const deduped = dedupeCombosByCardSet(combos);
+
+    comboCache.set(cacheKey, { data: deduped, timestamp: Date.now() });
+    return deduped;
+  } catch (error) {
+    console.error(`[EDHREC] Failed to fetch color-identity combos for ${slug}:`, error);
+    return [];
+  }
+}
+
+// --- EDHREC combo details ---
+
+export interface ComboDetails {
+  prerequisites: string[];
+  steps: string[];
+  results: string[];
+}
+
+const comboDetailsCache = new Map<string, ComboDetails>();
+
+interface RawComboDetailResponse {
+  combo?: {
+    prerequisites?: { description: string; zones: string[] }[];
+    steps?: string[];
+    results?: string[];
+  };
+}
+
+/**
+ * Fetch detailed combo info (prerequisites, steps, results) from EDHREC's
+ * combo detail page JSON. Uses the href captured during combo list fetch.
+ */
+export async function fetchComboDetails(comboId: string, knownHref?: string): Promise<ComboDetails> {
+  const cached = comboDetailsCache.get(comboId);
+  if (cached) return cached;
+
+  // The map is only populated by a combo fetch; a deck hydrated from the
+  // enrichment cache has none. The combo carries its own href for that case.
+  const href = comboHrefMap.get(comboId) ?? knownHref;
+  if (!href) throw new Error(`No EDHREC href for combo ${comboId}`);
+  comboHrefMap.set(comboId, href);
+
+  const data = await edhrecFetch<RawComboDetailResponse>(`/pages${href}.json`);
+  const combo = data.combo;
+  if (!combo) throw new Error('No combo data in response');
+
+  const details: ComboDetails = {
+    prerequisites: combo.prerequisites?.map(p => p.description).filter(Boolean) ?? [],
+    steps: combo.steps ?? [],
+    results: combo.results ?? [],
+  };
+
+  comboDetailsCache.set(comboId, details);
+  return details;
+}
+
+// --- Color-identity combo data ---
+
+// Map a Scryfall color identity (array of single-letter codes) to the EDHREC URL slug
+// used for color-identity combo pages: /pages/combos/{slug}.json. Sorted internally
+// so call order doesn't matter (e.g. ["G","B"] and ["B","G"] both yield "golgari").
+export function colorIdentityToSlug(colorIdentity: string[]): string {
+  const set = new Set(colorIdentity.map(c => c.toUpperCase()));
+  const sortedKey = ['W', 'U', 'B', 'R', 'G'].filter(c => set.has(c)).join('');
+
+  switch (sortedKey) {
+    case '': return 'colorless';
+    case 'W': return 'mono-white';
+    case 'U': return 'mono-blue';
+    case 'B': return 'mono-black';
+    case 'R': return 'mono-red';
+    case 'G': return 'mono-green';
+    case 'WU': return 'azorius';
+    case 'UB': return 'dimir';
+    case 'BR': return 'rakdos';
+    case 'RG': return 'gruul';
+    case 'WG': return 'selesnya';
+    case 'WB': return 'orzhov';
+    case 'UR': return 'izzet';
+    case 'BG': return 'golgari';
+    case 'WR': return 'boros';
+    case 'UG': return 'simic';
+    case 'WUG': return 'bant';
+    case 'WUB': return 'esper';
+    case 'UBR': return 'grixis';
+    case 'BRG': return 'jund';
+    case 'WRG': return 'naya';
+    case 'WBR': return 'mardu';
+    case 'URG': return 'temur';
+    case 'WBG': return 'abzan';
+    case 'WUR': return 'jeskai';
+    case 'UBG': return 'sultai';
+    case 'WUBR': return 'yore-tiller';
+    case 'UBRG': return 'glint-eye';
+    case 'WBRG': return 'dune-brood';
+    case 'WURG': return 'ink-treader';
+    case 'WUBG': return 'witch-maw';
+    case 'WUBRG': return 'five-color';
+    default: return 'colorless';
+  }
+}
+
+// --- Color-identity land pages ---
+// /pages/lands/{identity-slug}.json lists every land played in that identity,
+// grouped by cycle (checklands, fetchlands, utilitylands, ...). Inclusion is
+// num_decks / potential_decks — the share of all decks of that identity.
+
+export interface ColorIdentityLand {
+  name: string;
+  /** % of decks of this color identity that run it. */
+  inclusion: number;
+  /** EDHREC's grouping tag, e.g. `utilitylands`, `fetchlands`. */
+  section: string;
+}
+
+const colorLandsCache = new Map<string, ColorIdentityLand[]>();
+
+export async function fetchColorIdentityLands(colorIdentity: string[]): Promise<ColorIdentityLand[]> {
+  const slug = colorIdentityToSlug(colorIdentity);
+  const cached = colorLandsCache.get(slug);
+  if (cached) return cached;
+
+  const response = await edhrecFetch<{
+    container?: { json_dict?: { cardlists?: { tag: string; cardviews: { name: string; num_decks?: number; potential_decks?: number }[] }[] } };
+  }>(`/pages/lands/${slug}.json`);
+
+  const seen = new Set<string>();
+  const lands: ColorIdentityLand[] = [];
+  for (const list of response.container?.json_dict?.cardlists ?? []) {
+    for (const cv of list.cardviews ?? []) {
+      if (seen.has(cv.name) || !cv.potential_decks) continue;
+      seen.add(cv.name);
+      lands.push({ name: cv.name, inclusion: ((cv.num_decks ?? 0) / cv.potential_decks) * 100, section: list.tag });
+    }
+  }
+  lands.sort((a, b) => b.inclusion - a.inclusion);
+  colorLandsCache.set(slug, lands);
+  return lands;
+}
+
+// --- Strategy tags (browse by strategy) ---
+// EDHREC's tag system, read directly so we never hardcode an archetype taxonomy.
+// Index: /pages/tags.json (popularity-ordered). Per-tag: /pages/tags/{slug}.json.
+
+interface RawTagEntry {
+  name?: string;
+  sanitized?: string;
+  url?: string;
+  inclusion?: number;
+  num_decks?: number;
+}
+
+interface RawTagsResponse {
+  container?: { json_dict?: { cardlists?: Array<{ tag?: string; cardviews?: RawTagEntry[] }> } };
+}
+
+/** Slug from an EDHREC tag url ("/tags/aristocrats" -> "aristocrats"). */
+function tagSlugFromUrl(url?: string): string {
+  return (url || '').split('/').filter(Boolean).pop() || '';
+}
+
+/** Pure: parse the tags index page into popularity-ordered tags. */
+export function parseTagsIndex(raw: RawTagsResponse): EDHRECTag[] {
+  const lists = raw.container?.json_dict?.cardlists ?? [];
+  const list = lists.find(l => l.tag === 'tagsbypopularitysort');
+  const out: EDHRECTag[] = [];
+  for (const v of list?.cardviews ?? []) {
+    const slug = tagSlugFromUrl(v.url);
+    if (!v.name || !slug) continue;
+    out.push({ name: v.name, slug, numDecks: v.num_decks ?? v.inclusion ?? 0 });
+  }
+  return out;
+}
+
+let allTagsCache: EDHRECTag[] | null = null;
+
+/** Fetch EDHREC's full strategy/tag list, popularity-ordered. [] on failure. Session-cached. */
+export async function fetchAllTags(): Promise<EDHRECTag[]> {
+  if (allTagsCache) return allTagsCache;
+  try {
+    const response = await edhrecFetch<RawTagsResponse>('/pages/tags.json');
+    const tags = parseTagsIndex(response);
+    allTagsCache = tags;
+    return tags;
+  } catch (error) {
+    console.warn('[EDHREC] Failed to fetch tags index:', error);
+    return [];
+  }
+}
+
+interface RawTagCommanderEntry {
+  name?: string;
+  sanitized?: string;
+  inclusion?: number;
+  num_decks?: number;
+}
+
+interface RawTagPageResponse {
+  container?: { json_dict?: { cardlists?: Array<{ tag?: string; cardviews?: RawTagCommanderEntry[] }> } };
+}
+
+/** Pure: parse a tag page into its top commanders (no color enrichment). Drops partner pairs. */
+export function parseTagCommanders(raw: RawTagPageResponse): EDHRECTopCommander[] {
+  const lists = raw.container?.json_dict?.cardlists ?? [];
+  const list = lists.find(l => l.tag === 'topcommanders');
+  const out: EDHRECTopCommander[] = [];
+  let rank = 1;
+  for (const v of list?.cardviews ?? []) {
+    if (!v.name || isPartnerPair(v.name)) continue;
+    out.push({
+      rank: rank++,
+      name: v.name,
+      sanitized: v.sanitized ?? '',
+      colorIdentity: [],
+      numDecks: v.num_decks ?? v.inclusion ?? 0,
+    });
+  }
+  return out;
+}
+
+const tagCommandersCache = new Map<string, { data: EDHRECTopCommander[]; timestamp: number }>();
+
+/**
+ * Fetch the top commanders for an EDHREC strategy tag, optionally narrowed to a color slug
+ * (produced by colorIdentityToSlug). Color identity is absent from tag payloads, so it's
+ * enriched from Scryfall. Returns [] on failure. Cached per slug+colorSlug for CACHE_TTL.
+ */
+export async function fetchTagCommanders(slug: string, colorSlug?: string): Promise<EDHRECTopCommander[]> {
+  const cacheKey = colorSlug ? `${slug}/${colorSlug}` : slug;
+  const cached = tagCommandersCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+
+  try {
+    const endpoint = colorSlug
+      ? `/pages/tags/${slug}/${colorSlug}.json`
+      : `/pages/tags/${slug}.json`;
+    const response = await edhrecFetch<RawTagPageResponse>(endpoint);
+    let commanders = parseTagCommanders(response);
+
+    // Tag payloads omit color identity — enrich from Scryfall (same pattern as fetchTopCommanders).
+    if (commanders.length > 0) {
+      try {
+        const { getCardsByNames } = await import('@/services/scryfall/client');
+        const cardMap = await getCardsByNames(commanders.map(c => c.name));
+        commanders = commanders.map(c => ({
+          ...c,
+          colorIdentity: cardMap.get(c.name)?.color_identity ?? [],
+        }));
+      } catch {
+        // Scryfall enrichment failed — show commanders without color pips.
+      }
+    }
+
+    tagCommandersCache.set(cacheKey, { data: commanders, timestamp: Date.now() });
+    return commanders;
+  } catch (error) {
+    console.warn(`[EDHREC] Failed to fetch tag commanders for "${slug}":`, error);
+    return [];
+  }
+}
+
+// --- Archetype tag-page card pools (archetype cross-reference) ---
+// The same /pages/tags/{slug}[/{colorSlug}].json pages read by fetchTagCommanders also
+// carry full cardlists in the exact commander-page shape. This fetches them as a card
+// pool so the deck builder can cross-reference commander-theme data against the
+// color-filtered archetype aggregate (e.g. golgari + pillow-fort).
+
+export interface TagPageData {
+  cardlists: EDHRECCommanderData['cardlists'];
+  /** Deck count of the archetype population (max potential_decks across cardviews). */
+  potentialDecks: number;
+}
+
+function maxPotentialDecks(response: RawEDHRECResponse): number {
+  let max = 0;
+  for (const list of response.container?.json_dict?.cardlists ?? []) {
+    for (const v of list.cardviews ?? []) {
+      if ((v.potential_decks ?? 0) > max) max = v.potential_decks ?? 0;
+    }
+  }
+  return max;
+}
+
+const tagPageDataCache = new Map<string, { data: TagPageData | null; timestamp: number }>();
+
+/**
+ * Fetch the card pool of an EDHREC archetype tag page, color-filtered to the given
+ * identity. Falls back to the unfiltered tag page if the color page doesn't exist
+ * (this CDN 403s on missing pages). Returns null on total failure — the archetype
+ * layer is always optional and must never block generation.
+ */
+export async function fetchTagPageData(
+  tagSlug: string,
+  colorIdentity: string[]
+): Promise<TagPageData | null> {
+  const colorSlug = colorIdentityToSlug(colorIdentity);
+  const cacheKey = `tagpage-${tagSlug}/${colorSlug}`;
+  const cached = tagPageDataCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data;
+
+  const endpoints = [
+    `/pages/tags/${tagSlug}/${colorSlug}.json`,
+    `/pages/tags/${tagSlug}.json`, // color page missing → whole-archetype fallback (off-color cards filtered downstream)
+  ];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await edhrecFetch<RawEDHRECResponse>(endpoint);
+      const data: TagPageData = {
+        cardlists: parseCardlists(response),
+        potentialDecks: maxPotentialDecks(response),
+      };
+      tagPageDataCache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
+    } catch {
+      console.log(`[EDHREC] No tag page at ${endpoint} (expected for unknown slugs)`);
+    }
+  }
+  tagPageDataCache.set(cacheKey, { data: null, timestamp: Date.now() });
+  return null;
+}

@@ -1,0 +1,423 @@
+import { Archetype, type DeckFormat, type ThemeResult, type EDHRECCommanderStats, type EDHRECCommanderData, type RoleTargetBreakdown } from '@/types';
+import type { Pacing } from './themeDetector';
+import { getCardRole, type RoleKey } from '@/services/tagger/client';
+
+// ─── Role Labels ────────────────────────────────────────────────────
+// Canonical role display labels. Imported by both services (analyzer/generator)
+// and the optimizer UI. Do not redeclare locally.
+
+export const ROLE_LABELS: Record<string, string> = {
+  ramp: 'Ramp',
+  removal: 'Removal',
+  boardwipe: 'Board Wipes',
+  cardDraw: 'Card Advantage',
+  protection: 'Protection',
+};
+
+// ─── EDHREC Blend Tuning ────────────────────────────────────────────
+
+/**
+ * Inclusion a commander staple needs to backfill a themed recommendation list.
+ *
+ * Being off-theme is not a reason to hide a good card, and this bar used to be 50% — which admitted
+ * only true auto-includes. Measured on Sapling of Colfenor's 476-deck page, that let Sol Ring (63%)
+ * and Command Tower (75%) through while dropping Assassin's Trophy (34%), Beast Within (39%),
+ * Putrefy (32%) and Bojuka Bog (47%) for not being self-damage cards. Twelve of the page's 243 cards
+ * cleared it. A Golgari deck obviously wants Assassin's Trophy.
+ *
+ * Swept against that page, counting cards eligible to backfill:
+ *
+ *   50% -> 12    35% -> 45    25% ->  84
+ *   40% -> 32    30% -> 66    18% -> 126
+ *
+ * 30 is the corner: it is the first bar that admits all three of Assassin's Trophy, Beast Within and
+ * Putrefy, while still excluding genuinely fringe cards (Abrupt Decay is 7% here) and keeping the
+ * eligible pool to about a quarter of the page rather than half of it.
+ *
+ * This bar governs BACKFILL ELIGIBILITY only — which staples may pad out a themed recommendation
+ * list. Role targets do not consult it (they are inclusion-weighted averages — see
+ * computeEdhrecRoleTargets), and a card filling a deficient role backfills regardless, via the
+ * fillsDeficit branch at the call site.
+ */
+export const STAPLE_BACKFILL_INCLUSION = 30;
+
+// Weight for the EDHREC-derived role counts in the final blended target.
+// 0.75 means 75% commander stats / 25% rule-of-10 archetype baseline — the
+// commander drives the shape, the baseline nudges it toward known-good ratios.
+// Overridable per-deck via customization.advancedTargets.edhrecBlendWeight.
+export const EDHREC_BLEND_WEIGHT = 0.75;
+
+// Soft floor as a fraction of the rule-of-10 baseline. Even when a commander's
+// EDHREC page is sparse, we never let targets sink below 70% of the baseline —
+// every deck still wants meaningful ramp/removal/draw counts.
+const BASELINE_SOFT_FLOOR = 0.7;
+
+// ─── EDHREC-Derived Role Counts ─────────────────────────────────────
+
+/**
+ * The expected number of cards of each role in an average deck for this commander.
+ *
+ * Every card on the page carries an inclusion percentage — the share of tracked decks playing it —
+ * so summing those fractions across a role's cards IS that role's per-deck average. A card at 40%
+ * inclusion contributes 0.4 of a slot, which is exactly how much of one it occupies.
+ *
+ * This used to COUNT the role's cards above an inclusion threshold, which measures something else
+ * entirely: how broad and well-explored the role's card pool is. The two diverge hardest in green,
+ * where the ramp pool is both enormous and heavily played. On Tom, Bert, and William, 32 distinct
+ * ramp cards clear 18% inclusion while the average deck plays 14 of them — and because the blend
+ * weights EDHREC at 0.75 and the only guard caps the SUM of the four roles rather than any single
+ * one, ramp alone claimed 21 of a 100-card deck's 35-slot budget, squeezing removal and draw below
+ * their own averages. The same overcount inflated protection to 11-13 on Yuriko and Talrand, which
+ * the sum-cap never saw because protection sits deliberately outside it.
+ *
+ * Fractional by design — the blend rounds once, at the end. Lands are skipped (basics dominate the
+ * distribution and role classification doesn't apply to them). Cards with no role are synergy and
+ * payoff pieces, and correctly contribute nothing.
+ */
+export function computeEdhrecRoleTargets(
+  edhrecData: EDHRECCommanderData | null | undefined,
+): Record<RoleKey, number> {
+  const counts: Record<RoleKey, number> = { ramp: 0, removal: 0, boardwipe: 0, cardDraw: 0, protection: 0 };
+  if (!edhrecData?.cardlists?.allNonLand) return counts;
+
+  for (const card of edhrecData.cardlists.allNonLand) {
+    const role = getCardRole(card.name);
+    if (role) counts[role] += card.inclusion / 100;
+  }
+
+  return counts;
+}
+
+// ─── Theme → Archetype Mapping ──────────────────────────────────────
+
+const THEME_TO_ARCHETYPE: Record<string, Archetype> = {
+  // Aggro / Combat
+  aggro:             Archetype.AGGRO,
+  combat:            Archetype.AGGRO,
+  'extra combat':    Archetype.AGGRO,
+  infect:            Archetype.AGGRO,
+  poison:            Archetype.AGGRO,
+
+  // Control
+  control:           Archetype.CONTROL,
+  stax:              Archetype.CONTROL,
+  pillowfort:        Archetype.CONTROL,
+
+  // Combo
+  combo:             Archetype.COMBO,
+  'extra turns':     Archetype.COMBO,
+
+  // Voltron / Equipment / Auras
+  voltron:           Archetype.VOLTRON,
+  equipment:         Archetype.VOLTRON,
+  auras:             Archetype.VOLTRON,
+
+  // Spellslinger
+  spellslinger:      Archetype.SPELLSLINGER,
+  cantrips:          Archetype.SPELLSLINGER,
+
+  // Tokens
+  tokens:            Archetype.TOKENS,
+  'go wide':         Archetype.TOKENS,
+
+  // Aristocrats / Sacrifice
+  aristocrats:       Archetype.ARISTOCRATS,
+  sacrifice:         Archetype.ARISTOCRATS,
+  lifedrain:         Archetype.ARISTOCRATS,
+
+  // Reanimator / Graveyard
+  reanimator:        Archetype.REANIMATOR,
+  graveyard:         Archetype.REANIMATOR,
+  mill:              Archetype.REANIMATOR,
+  dredge:            Archetype.REANIMATOR,
+  flashback:         Archetype.REANIMATOR,
+
+  // Landfall / Lands
+  landfall:          Archetype.LANDFALL,
+  lands:             Archetype.LANDFALL,
+
+  // Artifacts
+  artifacts:         Archetype.ARTIFACTS,
+  treasures:         Archetype.ARTIFACTS,
+  vehicles:          Archetype.ARTIFACTS,
+  clues:             Archetype.ARTIFACTS,
+  food:              Archetype.ARTIFACTS,
+
+  // Enchantress
+  enchantress:       Archetype.ENCHANTRESS,
+  enchantments:      Archetype.ENCHANTRESS,
+  constellation:     Archetype.ENCHANTRESS,
+
+  // Storm
+  storm:             Archetype.STORM,
+
+  // Tribal — individual tribes all map here
+  tribal:            Archetype.TRIBAL,
+  elves:             Archetype.TRIBAL,
+  goblins:           Archetype.TRIBAL,
+  zombies:           Archetype.TRIBAL,
+  vampires:          Archetype.TRIBAL,
+  dragons:           Archetype.TRIBAL,
+  angels:            Archetype.TRIBAL,
+  demons:            Archetype.TRIBAL,
+  wizards:           Archetype.TRIBAL,
+  warriors:          Archetype.TRIBAL,
+  rogues:            Archetype.TRIBAL,
+  clerics:           Archetype.TRIBAL,
+  soldiers:          Archetype.TRIBAL,
+  knights:           Archetype.TRIBAL,
+  merfolk:           Archetype.TRIBAL,
+  spirits:           Archetype.TRIBAL,
+  dinosaurs:         Archetype.TRIBAL,
+  pirates:           Archetype.TRIBAL,
+  cats:              Archetype.TRIBAL,
+  dogs:              Archetype.TRIBAL,
+  beasts:            Archetype.TRIBAL,
+  elementals:        Archetype.TRIBAL,
+  slivers:           Archetype.TRIBAL,
+  allies:            Archetype.TRIBAL,
+  humans:            Archetype.TRIBAL,
+
+  // Midrange-ish strategies
+  '+1/+1 counters':    Archetype.MIDRANGE,
+  '-1/-1 counters':    Archetype.MIDRANGE,
+  counters:            Archetype.MIDRANGE,
+  proliferate:         Archetype.MIDRANGE,
+  blink:               Archetype.MIDRANGE,
+  flicker:             Archetype.MIDRANGE,
+  etb:                 Archetype.MIDRANGE,
+  clones:              Archetype.MIDRANGE,
+  copy:                Archetype.MIDRANGE,
+  lifegain:            Archetype.MIDRANGE,
+  energy:              Archetype.MIDRANGE,
+  cascade:             Archetype.MIDRANGE,
+  monarch:             Archetype.MIDRANGE,
+
+  // Goodstuff / catch-all
+  superfriends:        Archetype.GOODSTUFF,
+  planeswalkers:       Archetype.GOODSTUFF,
+  chaos:               Archetype.GOODSTUFF,
+  politics:            Archetype.GOODSTUFF,
+  wheels:              Archetype.GOODSTUFF,
+  discard:             Archetype.GOODSTUFF,
+  tutors:              Archetype.GOODSTUFF,
+};
+
+// ─── Archetype Role Multipliers ─────────────────────────────────────
+// Applied to format-based baseline targets.
+// >1.0 = archetype wants MORE of this role, <1.0 = wants LESS.
+
+const ARCHETYPE_ROLE_MULTIPLIERS: Record<Archetype, Record<RoleKey, number>> = {
+  // protection: Voltron/commander-centric strategies lean hardest on it; aggro/go-wide least.
+  [Archetype.AGGRO]:        { ramp: 1.10, removal: 0.75, boardwipe: 0.67, cardDraw: 0.80, protection: 0.60 },
+  [Archetype.CONTROL]:      { ramp: 0.90, removal: 1.25, boardwipe: 1.67, cardDraw: 1.10, protection: 1.20 },
+  [Archetype.COMBO]:        { ramp: 1.00, removal: 0.88, boardwipe: 0.67, cardDraw: 1.20, protection: 1.10 },
+  [Archetype.MIDRANGE]:     { ramp: 1.00, removal: 1.00, boardwipe: 1.00, cardDraw: 1.00, protection: 1.00 },
+  [Archetype.VOLTRON]:      { ramp: 1.10, removal: 1.00, boardwipe: 0.33, cardDraw: 0.90, protection: 1.60 },
+  [Archetype.SPELLSLINGER]: { ramp: 0.80, removal: 1.00, boardwipe: 1.00, cardDraw: 1.30, protection: 1.00 },
+  [Archetype.TOKENS]:       { ramp: 1.00, removal: 0.88, boardwipe: 0.67, cardDraw: 1.00, protection: 0.75 },
+  [Archetype.ARISTOCRATS]:  { ramp: 1.00, removal: 0.88, boardwipe: 0.67, cardDraw: 1.10, protection: 0.90 },
+  [Archetype.REANIMATOR]:   { ramp: 0.90, removal: 0.88, boardwipe: 1.00, cardDraw: 1.20, protection: 0.90 },
+  [Archetype.TRIBAL]:       { ramp: 1.00, removal: 0.88, boardwipe: 0.67, cardDraw: 1.00, protection: 0.90 },
+  [Archetype.LANDFALL]:     { ramp: 1.30, removal: 0.75, boardwipe: 1.00, cardDraw: 0.90, protection: 0.90 },
+  [Archetype.ARTIFACTS]:    { ramp: 1.10, removal: 0.88, boardwipe: 1.00, cardDraw: 1.00, protection: 1.00 },
+  [Archetype.ENCHANTRESS]:  { ramp: 0.90, removal: 0.88, boardwipe: 1.00, cardDraw: 1.20, protection: 1.20 },
+  [Archetype.STORM]:        { ramp: 1.10, removal: 0.63, boardwipe: 0.33, cardDraw: 1.40, protection: 1.10 },
+  [Archetype.GOODSTUFF]:    { ramp: 1.00, removal: 1.00, boardwipe: 1.00, cardDraw: 1.00, protection: 1.00 },
+};
+
+// ─── Pacing Adjustments ─────────────────────────────────────────────
+// Small secondary multipliers that fine-tune based on tempo.
+
+export const PACING_ROLE_ADJUSTMENTS: Record<Pacing, Record<RoleKey, number>> = {
+  'aggressive-early': { ramp: 1.10, removal: 0.90, boardwipe: 0.85, cardDraw: 0.90, protection: 0.90 },
+  'fast-tempo':       { ramp: 1.05, removal: 0.95, boardwipe: 0.90, cardDraw: 0.95, protection: 0.95 },
+  'midrange':         { ramp: 1.00, removal: 1.00, boardwipe: 1.00, cardDraw: 1.00, protection: 1.00 },
+  'late-game':        { ramp: 0.90, removal: 1.05, boardwipe: 1.15, cardDraw: 1.10, protection: 1.10 },
+  'balanced':         { ramp: 1.00, removal: 1.00, boardwipe: 1.00, cardDraw: 1.00, protection: 1.00 },
+};
+
+/** Multipliers for mana curve phases by pacing. Used by both generator and analyzer. */
+export const PACING_CURVE_MULTIPLIERS: Record<Pacing, { early: number; mid: number; late: number }> = {
+  'aggressive-early': { early: 1.20, mid: 0.95, late: 0.75 },
+  'fast-tempo':       { early: 1.12, mid: 1.00, late: 0.82 },
+  'balanced':         { early: 1.00, mid: 1.00, late: 1.00 },
+  'midrange':         { early: 0.92, mid: 1.10, late: 0.95 },
+  'late-game':        { early: 0.85, mid: 0.95, late: 1.25 },
+};
+
+// ─── Pacing Estimation from EDHREC Stats ────────────────────────────
+
+/**
+ * Estimate pacing from EDHREC mana curve stats (before card selection).
+ * Same thresholds as detectPacing() but computed from aggregate stats
+ * without keyword analysis.
+ */
+export function estimatePacingFromStats(manaCurve: Record<number, number>): Pacing {
+  const total = Object.values(manaCurve).reduce((s, v) => s + v, 0);
+  if (total === 0) return 'balanced';
+
+  const weightedCmc = Object.entries(manaCurve)
+    .reduce((s, [cmc, count]) => s + Number(cmc) * count, 0);
+  const avgCmc = weightedCmc / total;
+
+  let earlyCount = 0;
+  let lateCount = 0;
+  let midCount = 0;
+  for (const [cmcStr, count] of Object.entries(manaCurve)) {
+    const cmc = Number(cmcStr);
+    if (cmc <= 2) earlyCount += count;
+    else if (cmc >= 5) lateCount += count;
+    else midCount += count;
+  }
+
+  const earlyPct = earlyCount / total;
+  const latePct = lateCount / total;
+  const midPct = midCount / total;
+
+  if (avgCmc <= 2.5 && earlyPct >= 0.50) return 'aggressive-early';
+  if (avgCmc <= 2.7 && earlyPct >= 0.42) return 'fast-tempo';
+  if (avgCmc >= 3.8 || latePct >= 0.28) return 'late-game';
+  if (avgCmc >= 2.8 && avgCmc < 3.8 && midPct >= 0.30) return 'midrange';
+  return 'balanced';
+}
+
+// ─── Archetype Inference ────────────────────────────────────────────
+
+export function inferArchetype(selectedThemes?: ThemeResult[]): Archetype {
+  if (!selectedThemes?.length) return Archetype.GOODSTUFF;
+
+  const selected = selectedThemes.filter(t => t.isSelected);
+  if (!selected.length) return Archetype.GOODSTUFF;
+
+  // Use existing archetype field if populated
+  if (selected[0].archetype) return selected[0].archetype;
+
+  // Look up primary theme name
+  const lower = selected[0].name.toLowerCase().trim();
+  return THEME_TO_ARCHETYPE[lower] ?? Archetype.GOODSTUFF;
+}
+
+// ─── Base Targets (format-only, backward compat) ────────────────────
+
+export function getBaseRoleTargets(format: DeckFormat): Record<RoleKey, number> {
+  if (format >= 99) return { ramp: 10, removal: 8, boardwipe: 3, cardDraw: 10, protection: 4 };
+  if (format >= 60) return { ramp: 4, removal: 5, boardwipe: 2, cardDraw: 4, protection: 2 };
+  if (format >= 40) return { ramp: 2, removal: 3, boardwipe: 1, cardDraw: 2, protection: 1 };
+  const ratio = format / 99;
+  return {
+    ramp: Math.max(1, Math.round(10 * ratio)),
+    removal: Math.max(1, Math.round(8 * ratio)),
+    boardwipe: Math.max(0, Math.round(3 * ratio)),
+    cardDraw: Math.max(1, Math.round(10 * ratio)),
+    protection: Math.max(1, Math.round(4 * ratio)),
+  };
+}
+
+// ─── Dynamic Role Targets (the main export) ─────────────────────────
+
+const ROLE_KEYS: RoleKey[] = ['ramp', 'removal', 'boardwipe', 'cardDraw', 'protection'];
+
+export function getDynamicRoleTargets(
+  format: DeckFormat,
+  selectedThemes?: ThemeResult[],
+  edhrecStats?: EDHRECCommanderStats,
+  edhrecData?: EDHRECCommanderData | null,
+  overrideBlendWeight?: number | null,
+): {
+  targets: Record<RoleKey, number>;
+  archetype: Archetype;
+  pacing: Pacing;
+  breakdown: Record<RoleKey, RoleTargetBreakdown>;
+} {
+  const base = getBaseRoleTargets(format);
+
+  const archetype = inferArchetype(selectedThemes);
+  const archetypeMults = ARCHETYPE_ROLE_MULTIPLIERS[archetype];
+
+  const pacing: Pacing = edhrecStats?.manaCurve
+    ? estimatePacingFromStats(edhrecStats.manaCurve)
+    : 'balanced';
+  const pacingMults = PACING_ROLE_ADJUSTMENTS[pacing];
+
+  // EDHREC-derived counts (zero-filled when edhrecData is missing)
+  const edhrecCounts = edhrecData ? computeEdhrecRoleTargets(edhrecData) : null;
+
+  const blendWeight = Math.min(1, Math.max(0, overrideBlendWeight ?? EDHREC_BLEND_WEIGHT));
+
+  const result = {} as Record<RoleKey, number>;
+  const breakdown = {} as Record<RoleKey, RoleTargetBreakdown>;
+
+  for (const role of ROLE_KEYS) {
+    const archetypeTarget = base[role] * archetypeMults[role];
+    const blendedPrePacing = edhrecCounts
+      ? blendWeight * edhrecCounts[role] + (1 - blendWeight) * archetypeTarget
+      : archetypeTarget;
+    const afterPacing = blendedPrePacing * pacingMults[role];
+
+    const softFloor = Math.max(role === 'boardwipe' ? 0 : 1, Math.round(base[role] * BASELINE_SOFT_FLOOR));
+    const finalCount = Math.max(softFloor, Math.round(afterPacing));
+    result[role] = finalCount;
+
+    breakdown[role] = {
+      edhrecCount: edhrecCounts ? Math.round(edhrecCounts[role] * 10) / 10 : null,
+      archetypeTarget: Math.round(archetypeTarget),
+      pacingMultiplier: pacingMults[role],
+      blended: finalCount,
+    };
+  }
+
+  // Cap/floor the total to a reasonable range (scaled by format). Protection is purely ADDITIVE — it
+  // sits on top of ramp/removal/draw/wipes rather than cannibalizing them — so the bounds apply to the
+  // FOUR ORIGINAL roles only (at the historical 0.28/0.35 ratios) and protection is left untouched.
+  // (Scaling all five together would let protection's ~4 base inflate or deflate the originals, which
+  // is exactly what "the four original roles keep their counts" is meant to prevent.)
+  const ORIGINAL_ROLES: RoleKey[] = ['ramp', 'removal', 'boardwipe', 'cardDraw'];
+  const maxTotal = Math.round(format * 0.35); // ~35 for 99
+  const minTotal = Math.round(format * 0.28); // ~28 for 99
+  const originalTotal = ORIGINAL_ROLES.reduce((s, r) => s + result[r], 0);
+
+  const rescaleOriginals = (scale: number) => {
+    for (const role of ORIGINAL_ROLES) {
+      const softFloor = Math.max(role === 'boardwipe' ? 0 : 1, Math.round(base[role] * BASELINE_SOFT_FLOOR));
+      result[role] = Math.max(softFloor, Math.round(result[role] * scale));
+      breakdown[role].blended = result[role];
+    }
+  };
+  if (originalTotal > maxTotal) rescaleOriginals(maxTotal / originalTotal);
+  else if (originalTotal < minTotal) rescaleOriginals(minTotal / originalTotal);
+
+  console.log(
+    `[DeckGen] Dynamic role targets: archetype=${archetype}, pacing=${pacing}, blend=${blendWeight}`,
+    result,
+    `(total=${Object.values(result).reduce((s, v) => s + v, 0)}, edhrecCounts=${edhrecCounts ? JSON.stringify(edhrecCounts) : 'null'})`,
+  );
+
+  return { targets: result, archetype, pacing, breakdown };
+}
+
+// ─── Recompute Role Targets for Pacing Override ─────────────────────
+// Adjusts existing role targets by dividing out the old pacing multipliers
+// and applying new ones. Used when the user overrides tempo in the optimizer.
+
+export function recomputeRoleTargetsForPacing(
+  currentTargets: Record<string, number>,
+  oldPacing: Pacing,
+  newPacing: Pacing,
+): Record<string, number> {
+  if (oldPacing === newPacing) return currentTargets;
+
+  const oldMults = PACING_ROLE_ADJUSTMENTS[oldPacing] ?? PACING_ROLE_ADJUSTMENTS['balanced'];
+  const newMults = PACING_ROLE_ADJUSTMENTS[newPacing] ?? PACING_ROLE_ADJUSTMENTS['balanced'];
+
+  const result: Record<string, number> = {};
+  for (const role of ROLE_KEYS) {
+    const oldM = oldMults[role] || 1;
+    const newM = newMults[role] || 1;
+    // Divide out old pacing, apply new pacing
+    const raw = (currentTargets[role] || 0) / oldM * newM;
+    result[role] = Math.max(role === 'boardwipe' ? 0 : 1, Math.round(raw));
+  }
+
+  return result;
+}

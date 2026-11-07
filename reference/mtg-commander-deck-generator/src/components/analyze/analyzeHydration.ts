@@ -1,0 +1,211 @@
+// Builds a synthetic GeneratedDeck from a raw list of card names + commander.
+// Mirrors the pattern used in ListDeckView's `buildAndSetDeck`.
+
+import { getCardsByNames, getFrontFaceTypeLine } from '@/services/scryfall/client';
+import { enrichDeckCards } from '@/services/deckBuilder/deckEnricher';
+import { fetchCommanderCombos, fetchColorIdentityCombos } from '@/services/edhrec/client';
+import { detectCombosInDeck, mergeComboPools } from '@/services/combos/detect';
+import { useStore } from '@/store';
+import type { GeneratedDeck, DeckStats, DetectedCombo, EDHRECCombo, ScryfallCard } from '@/types';
+
+/**
+ * Install a deck as the Inspector's subject. Every lane that loads one — paste, share link, saved
+ * list, inline generate — goes through here.
+ *
+ * The clears are the whole reason this exists. `selectedThemes` and `edhrecThemes` are BUILDER
+ * session state: the theme chips the Foundry had highlighted when it last built something. The
+ * Inspector's header falls back to them when the deck in front of it declares no themes of its own,
+ * which is right for the deck the Builder just made and wrong for every other deck — so pasting a
+ * list inherited the last generated deck's themes, and that fallback sits ABOVE auto-detection in
+ * the chain, so it shadowed the classifier's own read of the pasted deck entirely.
+ *
+ * GenerateLane already cleared them for exactly this reason, in a comment that named the failure.
+ * The other three lanes each open-coded the same setState and each missed it — the duplication was
+ * the bug, so the fix is one function rather than three more copies of the clear.
+ */
+export function installAnalyzedDeck(deck: GeneratedDeck, colorIdentity: string[]): void {
+  useStore.setState({
+    commander: deck.commander,
+    partnerCommander: deck.partnerCommander,
+    colorIdentity,
+    generatedDeck: deck,
+    selectedThemes: [],
+    edhrecThemes: [],
+  });
+}
+
+
+export type HydrateStage = 'fetching-cards' | 'detecting-combos' | 'analyzing-roles' | 'done';
+
+export interface HydrateDeckInput {
+  cardNames: string[];
+  commanderName?: string;
+  partnerCommanderName?: string;
+  deckSize?: number;
+  /** Themes assigned to the source list. Passing these switches the enricher from the bare
+   *  commander page to the blended commander-theme + color-filtered archetype pool — the only
+   *  source that knows about cards EDHREC hasn't listed on a thin commander page. Without them
+   *  every such card lands at 0% inclusion and reads as the worst card in the deck. Omit for a
+   *  themeless analysis (pasted decklist, share link). */
+  themes?: Array<{ name: string; slug: string }>;
+  /** EDHREC color segment for "choose a color" commanders. Defaults to the aggregate page. */
+  colorSegment?: string;
+  onProgress?: (stage: HydrateStage) => void;
+  /** Card-resolution progress during 'fetching-cards', counted over the whole
+   *  requested list (cache hits included) so the number the user sees matches
+   *  their decklist rather than the network-miss subset. */
+  onCardProgress?: (fetched: number, total: number) => void;
+}
+
+export interface HydrateDeckResult {
+  deck: GeneratedDeck;
+  colorIdentity: string[];
+}
+
+function computeStatsFromCards(allCards: ScryfallCard[]): DeckStats {
+  const nonLandCards = allCards.filter(
+    card => !getFrontFaceTypeLine(card).toLowerCase().includes('land'),
+  );
+
+  const manaCurve: Record<number, number> = {};
+  nonLandCards.forEach(card => {
+    const cmc = Math.min(Math.floor(card.cmc), 7);
+    manaCurve[cmc] = (manaCurve[cmc] || 0) + 1;
+  });
+
+  const totalCmc = nonLandCards.reduce((sum, card) => sum + card.cmc, 0);
+  const averageCmc = nonLandCards.length > 0 ? totalCmc / nonLandCards.length : 0;
+
+  const colorDistribution: Record<string, number> = {};
+  allCards.forEach(card => {
+    const colors = card.colors || [];
+    if (colors.length === 0) {
+      colorDistribution['C'] = (colorDistribution['C'] || 0) + 1;
+    } else {
+      colors.forEach(color => {
+        colorDistribution[color] = (colorDistribution[color] || 0) + 1;
+      });
+    }
+  });
+
+  const typeDistribution: Record<string, number> = { Planeswalker: 0 };
+  allCards.forEach(card => {
+    const typeLine = getFrontFaceTypeLine(card).toLowerCase();
+    if (typeLine.includes('land')) typeDistribution['Land'] = (typeDistribution['Land'] || 0) + 1;
+    else if (typeLine.includes('creature')) typeDistribution['Creature'] = (typeDistribution['Creature'] || 0) + 1;
+    else if (typeLine.includes('instant')) typeDistribution['Instant'] = (typeDistribution['Instant'] || 0) + 1;
+    else if (typeLine.includes('sorcery')) typeDistribution['Sorcery'] = (typeDistribution['Sorcery'] || 0) + 1;
+    else if (typeLine.includes('artifact')) typeDistribution['Artifact'] = (typeDistribution['Artifact'] || 0) + 1;
+    else if (typeLine.includes('enchantment')) typeDistribution['Enchantment'] = (typeDistribution['Enchantment'] || 0) + 1;
+    else if (typeLine.includes('planeswalker')) typeDistribution['Planeswalker'] = (typeDistribution['Planeswalker'] || 0) + 1;
+    else if (typeLine.includes('battle')) typeDistribution['Battle'] = (typeDistribution['Battle'] || 0) + 1;
+  });
+
+  return {
+    totalCards: allCards.length,
+    averageCmc: Math.round(averageCmc * 100) / 100,
+    manaCurve,
+    colorDistribution,
+    typeDistribution,
+  };
+}
+
+export async function hydrateDeckForAnalysis(input: HydrateDeckInput): Promise<HydrateDeckResult> {
+  const { cardNames, commanderName, partnerCommanderName, onProgress, onCardProgress } = input;
+  onProgress?.('fetching-cards');
+  // getCardsByNames already batches through /cards/collection (75 identifiers per
+  // request, behind the shared rate limiter), so this is one request per ~75 cards
+  // — never one per card. Its progress callback counts only names that missed both
+  // caches, so add the cache hits back in to report against the full decklist.
+  const total = cardNames.length;
+  onCardProgress?.(0, total);
+  const cardMap = await getCardsByNames(cardNames, (fetched, networkTotal) => {
+    onCardProgress?.(Math.min(total - networkTotal + fetched, total), total);
+  });
+  onCardProgress?.(total, total);
+  const cards: ScryfallCard[] = [];
+  for (const name of cardNames) {
+    const c = cardMap.get(name);
+    if (c) cards.push(c);
+  }
+
+  const commanderCard: ScryfallCard | null = commanderName ? cardMap.get(commanderName) ?? null : null;
+  const partnerCard: ScryfallCard | null = partnerCommanderName ? cardMap.get(partnerCommanderName) ?? null : null;
+
+  const commanderNames = new Set<string>();
+  if (commanderCard) commanderNames.add(commanderCard.name);
+  if (partnerCard) commanderNames.add(partnerCard.name);
+
+  const deckCards = commanderNames.size > 0
+    ? cards.filter(c => !commanderNames.has(c.name))
+    : cards;
+
+  const stats = computeStatsFromCards(deckCards);
+
+  // The deck's color identity — also used to fetch off-commander combos in parallel with the
+  // commander's. The commander defines it whenever we know who that is: unioning every card in the
+  // list instead let one stray off-color entry make the whole Inspector treat a mono-red Krenko list
+  // as black-red — a black pip, "1/2 colors covered", and Card Fit suggesting Takenuma, which the
+  // deck can't legally run. The full-list union is only the fallback for a list with no commander.
+  const identitySource = commanderCard
+    ? [commanderCard, ...(partnerCard ? [partnerCard] : [])]
+    : cards;
+  const allColors = new Set<string>();
+  for (const card of identitySource) {
+    for (const c of card.color_identity || []) allColors.add(c.toUpperCase());
+  }
+  const colorIdentity = ['W', 'U', 'B', 'R', 'G'].filter(c => allColors.has(c));
+
+  let detectedCombos: DetectedCombo[] | undefined;
+  onProgress?.('detecting-combos');
+  try {
+    const [commanderCombosRaw, colorCombosRaw] = await Promise.all([
+      commanderCard ? fetchCommanderCombos(commanderCard.name).catch(() => [] as EDHRECCombo[]) : Promise.resolve([] as EDHRECCombo[]),
+      fetchColorIdentityCombos(colorIdentity).catch(() => [] as EDHRECCombo[]),
+    ]);
+    const commanderCombos: EDHRECCombo[] = commanderCombosRaw.map(c => ({ ...c, source: 'commander' as const }));
+    const colorCombos: EDHRECCombo[] = colorCombosRaw.map(c => ({ ...c, source: 'color-identity' as const }));
+
+    const mergedCombos = mergeComboPools(commanderCombos, colorCombos);
+
+    detectedCombos = detectCombosInDeck(mergedCombos, deckCards, commanderCard, partnerCard);
+  } catch {
+    // Combo fetch failed — not critical
+  }
+
+  onProgress?.('analyzing-roles');
+  const enrichResult = await enrichDeckCards(
+    deckCards,
+    input.deckSize ?? cardNames.length,
+    detectedCombos,
+    commanderCard?.name,
+    partnerCard?.name,
+    input.themes,
+    input.colorSegment ?? '',
+  );
+
+  const deck: GeneratedDeck = {
+    commander: commanderCard,
+    partnerCommander: partnerCard,
+    categories: enrichResult.categories,
+    stats,
+    detectedCombos,
+    roleCounts: enrichResult.roleCounts,
+    roleTargets: enrichResult.roleTargets,
+    rampSubtypeCounts: enrichResult.rampSubtypeCounts,
+    removalSubtypeCounts: enrichResult.removalSubtypeCounts,
+    boardwipeSubtypeCounts: enrichResult.boardwipeSubtypeCounts,
+    cardDrawSubtypeCounts: enrichResult.cardDrawSubtypeCounts,
+    protectionSubtypeCounts: enrichResult.protectionSubtypeCounts,
+    bracketEstimation: enrichResult.bracketEstimation,
+    gameChangerNames: enrichResult.gameChangerNames,
+    cardInclusionMap: enrichResult.cardInclusionMap,
+    cardSynergyMap: enrichResult.cardSynergyMap,
+    cardRelevancyMap: enrichResult.cardRelevancyMap,
+    deckScore: enrichResult.deckScore,
+    gapAnalysis: enrichResult.gapAnalysis,
+  };
+
+  onProgress?.('done');
+  return { deck, colorIdentity };
+}

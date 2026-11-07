@@ -1,0 +1,340 @@
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { Package } from 'lucide-react';
+import type { ScryfallCard, DetectedCombo } from '@/types';
+import type { DeckAnalysis, OptimizeSwaps } from '@/services/deckBuilder/deckAnalyzer';
+import { getSwapCandidatesForCard } from '@/services/deckBuilder/cardSwap';
+import { useStore } from '@/store';
+import { ComboDisplay } from '@/components/deck/ComboDisplay';
+import { OptimizePlanDock, OptimizePlanHeader, type OptimizeView } from './OptimizePlanHeader';
+import { OptimizeColumn } from './OptimizeColumn';
+import { OptimizeDrilldown } from './OptimizeDrilldown';
+import { useOptimizePlan } from './useOptimizePlan';
+import { SwapImpactRow } from './SwapImpactRow';
+import { computeSwapImpact } from '@/services/deckBuilder/swapImpact';
+
+// Module-level constant so optional-prop fallbacks don't allocate fresh arrays
+// each render (which would invalidate downstream useMemo deps).
+const EMPTY_COMBOS: DetectedCombo[] = [];
+
+export interface OptimizeTabContentProps {
+  analysis: DeckAnalysis;
+  currentCards: ScryfallCard[];
+  commanderName: string;
+  partnerCommanderName?: string;
+  cardInclusionMap?: Record<string, number>;
+  mustIncludeNames: Set<string>;
+  bannedNames: Set<string>;
+  onApply: (removals: string[], additions: string[]) => void | Promise<void>;
+  onPreviewCard: (name: string) => void;
+  /** Fired when the user opens the drill-down for a cut card. Enables deck-view highlight. */
+  onFocusedMisfitChange?: (name: string | null) => void;
+  /** Direct deck mutators for the combos panel (Inspector context — no regen). */
+  onAddCards?: (names: string[], destination: 'deck' | 'sideboard' | 'maybeboard') => void;
+  onRemoveCards?: (names: string[]) => void;
+  /**
+   * When a user follows a dashboard suggestion into this tab, the suggested
+   * card is pre-checked on the matching side. Cleared via `onPreSelectConsumed`
+   * after it is applied so it doesn't re-apply on tab switches.
+   *
+   * If `comboId` is set, the tab also switches to the Combos sub-view and
+   * scrolls to the matching combo — used by the "complete this combo"
+   * suggestion so users land on the combo breakdown, not the swap columns.
+   */
+  /** `pairs` ticks both sides of each Overview swap, so the tab opens on the trade the player was
+   *  looking at instead of a lone cut (98/99 cards). */
+  preSelect?: { cardName: string; side: 'add' | 'remove'; comboId?: string; pairs?: { out: string; in: string }[] } | null;
+  onPreSelectConsumed?: () => void;
+  /** Shared swap list lifted to DeckOptimizer so dashboard + optimize tab stay in sync. */
+  baseSwaps?: OptimizeSwaps;
+  /** Owned-card names — powers the "In collection" toggle on the ADD column. */
+  collectionNames?: Set<string>;
+  /** The bracket the player is aiming at, when they have one — the impact row marks hitting it. */
+  aimBracket?: number | null;
+}
+
+// Persist the "limit adds to my collection" preference across sessions.
+const COLLECTION_ONLY_KEY = 'mtg-optimize-adds-collection-only';
+const IMPACT_HIDDEN_KEY = 'mtg-optimize-impact-hidden';
+
+export function OptimizeTabContent({
+  analysis, currentCards, commanderName, partnerCommanderName,
+  cardInclusionMap, mustIncludeNames, bannedNames,
+  onApply, onPreviewCard,
+  onFocusedMisfitChange,
+  onAddCards, onRemoveCards,
+  preSelect, onPreSelectConsumed,
+  baseSwaps, collectionNames, aimBracket,
+}: OptimizeTabContentProps) {
+  // Subscribe to store directly so we get a stable reference for the combos
+  // array (Zustand returns the same slice instance until it actually changes).
+  const deck = useStore(s => s.generatedDeck);
+  const detectedCombos = deck?.detectedCombos ?? EMPTY_COMBOS;
+
+  const [activeRemoveName, setActiveRemoveName] = useState<string | null>(null);
+  const [activeAddName, setActiveAddName] = useState<string | null>(null);
+  const [, setHighlightedComboId] = useState<string | null>(null);
+  const [view, setView] = useState<OptimizeView>('swaps');
+
+  const hasCollection = !!collectionNames && collectionNames.size > 0;
+  const [collectionOnly, setCollectionOnly] = useState(
+    () => localStorage.getItem(COLLECTION_ONLY_KEY) === 'true',
+  );
+  const toggleCollectionOnly = useCallback(() => {
+    setCollectionOnly(prev => {
+      const next = !prev;
+      localStorage.setItem(COLLECTION_ONLY_KEY, String(next));
+      return next;
+    });
+  }, []);
+
+  // The impact strip can be folded away; remembered per browser.
+  const [impactHidden, setImpactHidden] = useState(() => {
+    try { return localStorage.getItem(IMPACT_HIDDEN_KEY) === 'true'; } catch { return false; }
+  });
+  const toggleImpact = useCallback(() => {
+    setImpactHidden(prev => {
+      const next = !prev;
+      try { localStorage.setItem(IMPACT_HIDDEN_KEY, String(next)); } catch { /* private mode */ }
+      return next;
+    });
+  }, []);
+
+  const plan = useOptimizePlan({
+    analysis, currentCards, cardInclusionMap,
+    commanderName, partnerCommanderName,
+    mustIncludeNames, bannedNames, detectedCombos,
+    onApply,
+    highlightRemovals: view === 'swaps',
+    baseSwaps,
+    collectionOnly: hasCollection && collectionOnly,
+    collectionNames,
+  });
+  const highlightTimerRef = useRef<number | null>(null);
+  const footerRef = useRef<HTMLDivElement | null>(null);
+  // The dock's size note opens the column that settles it: scroll there, then flash its edge.
+  const cutsRef = useRef<HTMLDivElement | null>(null);
+  const addsRef = useRef<HTMLDivElement | null>(null);
+  const [flashSide, setFlashSide] = useState<'remove' | 'add' | null>(null);
+  const showSide = useCallback((side: 'remove' | 'add') => {
+    (side === 'remove' ? cutsRef : addsRef).current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setFlashSide(side);
+    window.setTimeout(() => setFlashSide(s => (s === side ? null : s)), 1200);
+  }, []);
+  const flash = (side: 'remove' | 'add') =>
+    `rounded-xl transition-shadow duration-500 ${flashSide === side ? (side === 'remove' ? 'ring-2 ring-red-400/60' : 'ring-2 ring-emerald-400/60') : 'ring-0'}`;
+
+  // Explicit set, not a toggle — the column's tile click and Radix's popover
+  // trigger both report the intended state for the same click, so toggling here
+  // would flip twice and the drill-down would never close.
+  const handleSetActiveRemove = useCallback((name: string | null) => {
+    setActiveRemoveName(name);
+  }, []);
+  const handleSetActiveAdd = useCallback((name: string | null) => {
+    setActiveAddName(name);
+  }, []);
+
+  useEffect(() => {
+    onFocusedMisfitChange?.(activeRemoveName);
+    return () => onFocusedMisfitChange?.(null);
+  }, [activeRemoveName, onFocusedMisfitChange]);
+
+  const candidatesForActiveRemove = useMemo<ScryfallCard[] | undefined>(() => {
+    if (!activeRemoveName || !deck) return undefined;
+    const card = currentCards.find(c => c.name === activeRemoveName);
+    if (!card) return undefined;
+    return getSwapCandidatesForCard(deck, card).slice(0, 6);
+  }, [activeRemoveName, deck, currentCards]);
+
+  const comboForActiveAdd = useMemo<DetectedCombo | undefined>(() => {
+    if (!activeAddName || !detectedCombos) return undefined;
+    return detectedCombos.find(c => c.missingCards.length === 1 && c.missingCards[0] === activeAddName);
+  }, [activeAddName, detectedCombos]);
+
+  const flashCombo = useCallback((comboId: string) => {
+    setView('combos');
+    setHighlightedComboId(comboId);
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = window.setTimeout(() => setHighlightedComboId(null), 1500);
+    // Defer scroll to the next frame so the combos panel has rendered.
+    requestAnimationFrame(() => {
+      const el = footerRef.current?.querySelector<HTMLElement>(`[data-combo-id="${comboId}"]`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, []);
+
+  useEffect(() => () => {
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current);
+  }, []);
+
+  const hasSwaps = plan.removals.length > 0 || plan.additions.length > 0;
+  const hasSelections = plan.checkedRemovals.length > 0 || plan.checkedAdditions.length > 0;
+
+  // Apply a pre-selection from a dashboard suggestion. If the suggested card
+  // isn't present in the current optimize list (e.g. due to capping), skip
+  // gracefully — the user will still land on the tab. When the suggestion
+  // carries a comboId, also open the Combos sub-view and flash that combo so
+  // the user sees the combo breakdown instead of the default swap columns.
+  useEffect(() => {
+    if (!preSelect) return;
+    const list = preSelect.side === 'add' ? plan.additions : plan.removals;
+    const exists = list.some(c => c.name === preSelect.cardName);
+    if (exists) {
+      if (preSelect.side === 'add') plan.selectAdditionGroup([preSelect.cardName]);
+      else plan.selectRemovalGroup([preSelect.cardName]);
+    }
+    if (preSelect.pairs?.length) {
+      const cuts = new Set(plan.removals.map(c => c.name));
+      const adds = new Set(plan.additions.map(c => c.name));
+      plan.selectRemovalGroup(preSelect.pairs.map(p => p.out).filter(n => cuts.has(n)));
+      plan.selectAdditionGroup(preSelect.pairs.map(p => p.in).filter(n => adds.has(n)));
+    }
+    if (preSelect.comboId) {
+      flashCombo(preSelect.comboId);
+    }
+    onPreSelectConsumed?.();
+  }, [preSelect, onPreSelectConsumed, plan.additions, plan.removals, plan.selectAdditionGroup, plan.selectRemovalGroup, flashCombo]);
+
+  // What the checked swaps do — recomputed on every toggle; empty selection, no row.
+  const impact = useMemo(() => {
+    if (plan.checkedRemovals.length === 0 && plan.checkedAdditions.length === 0) return null;
+    return computeSwapImpact({
+      cuts: plan.checkedRemovals,
+      adds: plan.checkedAdditions,
+      currentCards,
+      commander: deck?.commander,
+      partnerCommander: deck?.partnerCommander,
+      analysis,
+      combos: detectedCombos,
+      gameChangerNames: deck?.gameChangerNames,
+      roleCounts: deck?.roleCounts,
+      priceDelta: plan.totals.priceDelta,
+    });
+  }, [plan.checkedRemovals, plan.checkedAdditions, plan.totals.priceDelta, currentCards, deck, analysis, detectedCombos]);
+
+  return (
+    // Two flush bands: the plan header, then the columns. Only the columns scroll; the min-height
+    // keeps them usable on a short screen, where the tab itself scrolls instead.
+    <div className="flex flex-1 min-h-0 flex-col">
+      <OptimizePlanHeader
+        hasSwaps={hasSwaps}
+        totalChanges={plan.totals.totalChanges}
+        view={view}
+        onViewChange={setView}
+        comboCount={detectedCombos.length}
+        hasSelections={hasSelections}
+        // Always mounted: with nothing checked (or folded away) the strip animates shut rather than vanishing.
+        impactRow={<SwapImpactRow impact={impactHidden ? null : impact} aim={aimBracket} />}
+        impactHidden={impactHidden}
+        onToggleImpact={toggleImpact}
+      />
+
+      {(view === 'combos' || hasSwaps) && (
+      // The .glass fill and blur, without its border: the band runs flush to the panel's edges.
+      <div className="min-h-[16rem] flex-1 overflow-y-auto bg-card/80 backdrop-blur-md p-3 sm:p-4">
+
+      {hasSwaps && view === 'swaps' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          <div ref={cutsRef} className={flash('remove')}>
+          <OptimizeColumn
+            side="remove"
+            cards={plan.removals}
+            uncheckedNames={plan.uncheckedRemovals}
+            activeName={activeRemoveName}
+            totalCount={plan.removals.length}
+            onSetActive={handleSetActiveRemove}
+            onToggleChecked={plan.toggleRemoval}
+            onSelectAll={plan.selectAllRemovals}
+            onDeselectAll={plan.deselectAllRemovals}
+            onSelectGroup={plan.selectRemovalGroup}
+            onDeselectGroup={plan.deselectRemovalGroup}
+            renderDrilldown={(card) => (
+              <OptimizeDrilldown
+                card={card}
+                side="remove"
+                checked={!plan.uncheckedRemovals.has(card.name)}
+                synergy={deck?.cardSynergyMap?.[card.name]}
+                candidates={candidatesForActiveRemove}
+                onToggle={plan.toggleRemoval}
+                onClose={() => setActiveRemoveName(null)}
+                onPreviewCard={onPreviewCard}
+              />
+            )}
+          />
+          </div>
+
+          <div ref={addsRef} className={flash('add')}>
+          <OptimizeColumn
+            side="add"
+            cards={plan.additions}
+            uncheckedNames={plan.uncheckedAdditions}
+            activeName={activeAddName}
+            totalCount={plan.additions.length}
+            headerExtra={hasCollection ? (
+              <button
+                type="button"
+                onClick={toggleCollectionOnly}
+                aria-pressed={collectionOnly}
+                title="Show only cards you own in your collection"
+                className={`inline-flex items-center gap-1 h-6 px-2 rounded-full border text-[11px] transition-colors ${
+                  collectionOnly
+                    ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100'
+                    : 'border-border/60 bg-card/40 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Package className="w-3 h-3" /> In collection
+              </button>
+            ) : undefined}
+            onSetActive={handleSetActiveAdd}
+            onToggleChecked={plan.toggleAddition}
+            onSelectAll={plan.selectAllAdditions}
+            onDeselectAll={plan.deselectAllAdditions}
+            onSelectGroup={plan.selectAdditionGroup}
+            onDeselectGroup={plan.deselectAdditionGroup}
+            renderDrilldown={(card) => (
+              <OptimizeDrilldown
+                card={card}
+                side="add"
+                checked={!plan.uncheckedAdditions.has(card.name)}
+                synergy={deck?.cardSynergyMap?.[card.name]}
+                combo={comboForActiveAdd}
+                onToggle={plan.toggleAddition}
+                onClose={() => setActiveAddName(null)}
+                onPreviewCard={onPreviewCard}
+                onViewCombo={flashCombo}
+              />
+            )}
+          />
+          </div>
+        </div>
+      )}
+
+      {view === 'combos' && (
+        <div ref={footerRef}>
+          <ComboDisplay
+            combos={detectedCombos}
+            onAddToDeck={onAddCards ? (names) => onAddCards(names, 'deck') : undefined}
+            onRemoveFromDeck={onRemoveCards}
+            forceExpanded
+          />
+        </div>
+      )}
+      </div>
+      )}
+
+      {hasSwaps && view === 'swaps' && (
+        <OptimizePlanDock
+          totals={plan.totals}
+          applying={plan.applying}
+          hasSelections={hasSelections}
+          onApply={plan.apply}
+          onReset={plan.resetSelections}
+          recommendedCount={plan.recommendedCount}
+          isRecommendedSelected={plan.isRecommendedSelected}
+          onSelectRecommended={plan.selectRecommended}
+          scoreGain={impact?.score ? impact.score.to - impact.score.from : null}
+          onShowSide={showSide}
+        />
+      )}
+    </div>
+  );
+}
