@@ -11051,47 +11051,39 @@ html.dragging * {
 html.forging .forgebar {
   display: none;
 }
-/* Phones: suggestions collapsed into a sleek 48px bottom drawer bar; slides up to 82vh on tap */
+/* Phones: suggestions collapsed into a compact 125px peek sheet (panes & sorts visible); slides up to 82vh on tap */
 @media (max-width: 700px) {
   html.forging .fsugg:not(.up) {
-    max-height: 48px !important;
+    max-height: 125px !important;
     overflow: hidden;
     border-top: 3px solid var(--accent);
-    box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
   }
-  html.forging .fsugg:not(.up) .fgrab {
-    height: 46px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: var(--paper);
-    cursor: pointer;
-  }
-  html.forging .fsugg:not(.up) .fgrab::after {
-    content: '💡 SUGGESTIONS ▴';
-    font-family: var(--an);
-    font-size: 14px;
-    letter-spacing: 1px;
-    color: var(--ink);
-    font-weight: 800;
-  }
-  html.forging .fsugg:not(.up) .fpanes,
-  html.forging .fsugg:not(.up) .fsorts,
-  html.forging .fsugg:not(.up) .fq,
-  html.forging .fsugg:not(.up) .frows,
   html.forging .fsugg:not(.up) .fchips,
   html.forging .fsugg:not(.up) .fcf,
   html.forging .fsugg:not(.up) .ftabs,
-  html.forging .fsugg:not(.up) .fsrc {
+  html.forging .fsugg:not(.up) .fsrc,
+  html.forging .fsugg:not(.up) .frows {
     display: none !important;
+  }
+  html.forging .fsugg .fpanes {
+    margin-bottom: 4px;
+  }
+  html.forging .fsugg .fpanes button {
+    min-height: 32px;
+    font-size: 15px;
+  }
+  html.forging .fsugg .fsorts button {
+    min-height: 28px;
+    padding: 2px 8px;
+    font-size: 11px;
   }
   html.forging .fsugg.up {
     max-height: 82vh !important;
     overflow-y: auto;
   }
   html.forging main {
-    padding-bottom: 64px !important;
+    padding-bottom: 140px !important;
   }
 }
 .fsugg .fcfnote {
@@ -11409,9 +11401,31 @@ details.dash > summary .dimp.ddeck {
     letter-spacing: 0.5px;
   }
 
-  /* RESCUE THE FORGE: Hide 220px hero banner when in the Forge on mobile */
-  html.forging .dhero {
+  /* RESCUE THE FORGE: Compact header on mobile (title stays visible for tests & navigation) */
+  .dhero {
+    padding: 6px 10px;
+    margin: 4px 0 6px;
+    gap: 6px;
+  }
+  .dhero .cimg,
+  .dhero .banner.ht {
     display: none;
+  }
+  .dhero .ctitle h1 {
+    font-size: 20px;
+    line-height: 1.1;
+  }
+  .dhero .titlerow {
+    align-items: center;
+    gap: 6px;
+  }
+  .dhero .cmeta {
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .dhero .namerow {
+    gap: 4px;
+    margin-top: 2px;
   }
   /* In the Forge, place the analysis box below the cards instead of squishing them */
   html.forging .deckgrid > .dside {
