@@ -23,7 +23,19 @@ function useOutside() {
  * Build Readiness and Bracket Fit, next to Collection Match (Deck Wizard's three numbers). Logic: brain/validate.ts
  * (readiness, bracketFit); this only shows it. Tap a tile for the checks / the reasons. No scores: counts and verdicts.
  */
-export function ReadyTiles({ ready, fit }: { ready: Readiness; fit?: BracketFit }) {
+export function ReadyTiles({
+  ready,
+  fit,
+  bracket,
+  onBracketChange,
+  brackets,
+}: {
+  ready: Readiness;
+  fit?: BracketFit;
+  bracket?: string;
+  onBracketChange?: (b: string) => void;
+  brackets?: readonly (readonly [string, string, string?])[] | [string, string, string][];
+}) {
   const r = useOutside();
   const f = useOutside();
   return (
@@ -60,6 +72,31 @@ export function ReadyTiles({ ready, fit }: { ready: Readiness; fit?: BracketFit 
             <small>{fit.fit === 'over' ? `above ${ROMAN[fit.aim]}` : fit.fit === 'under' ? `could play ${ROMAN[fit.est]}` : 'on target'}</small>
           </summary>
           <div className="vpop" role="dialog" aria-label="Bracket fit">
+            {brackets && onBracketChange && (
+              <div className="vbracket-target-picker">
+                <span className="vsubhead">TARGET BRACKET:</span>
+                <div className="vbracket-pills" role="radiogroup" aria-label="Target Bracket">
+                  {brackets.map(([v, t, b]) => {
+                    const sel = bracket === v;
+                    return (
+                      <button
+                        key={v}
+                        type="button"
+                        role="radio"
+                        aria-checked={sel}
+                        className={`vbpill${sel ? ' sel' : ''}`}
+                        onClick={() => {
+                          haptic('select');
+                          onBracketChange(v);
+                        }}
+                      >
+                        {b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <p className="vfit-says">{fit.says}</p>
             {fit.over.length > 0 && (
               <div className="vbracket-sec">
@@ -104,7 +141,7 @@ export function ReadyTiles({ ready, fit }: { ready: Readiness; fit?: BracketFit 
                   {fit.combos.map((c, i) => (
                     <li key={i} className={c.early ? 'no' : 'ok'}>
                       <span className="mk" aria-hidden="true">
-                        ⚡
+                        ●
                       </span>
                       <span>{c.cards.join(' + ')}{c.early ? ' (early-game)' : ''}</span>
                     </li>

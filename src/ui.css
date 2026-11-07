@@ -3661,3 +3661,88 @@ main.dpage {
 .addpage {
   margin: 16px 0 24px !important;
 }
+
+/* Single Size Cycle Button in toolbar (replaces 3-button S/M/L) */
+.qzoom-btn {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font: 700 12px/1 var(--u-mono, monospace) !important;
+  letter-spacing: 0.05em !important;
+  background: #141416 !important;
+  color: var(--u-text, #ffffff) !important;
+  border: 1px solid var(--u-line2, #33333e) !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.qzoom-btn:hover {
+  background: #202026 !important;
+  border-color: #ffd400 !important;
+  color: #ffd400 !important;
+}
+.qzoom-btn:active {
+  transform: scale(0.97) !important;
+}
+
+/* Target Bracket Picker inside Verdict Bracket Fit Popover */
+.vbracket-target-picker {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.vbracket-target-picker .vsubhead {
+  display: block;
+  font: 700 11px/1.2 var(--u-display, sans-serif);
+  letter-spacing: 0.06em;
+  color: #ffd400;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.vbracket-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.vbpill {
+  height: 30px;
+  padding: 0 10px;
+  background: #1e1e24;
+  color: var(--u-muted, #999999);
+  border: 1px solid #33333e;
+  border-radius: 6px;
+  font: 700 11px/1 var(--u-mono, monospace);
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vbpill:hover {
+  color: #ffffff;
+  border-color: #555566;
+}
+.vbpill.sel {
+  background: var(--u-red, #e60012);
+  color: #ffffff;
+  border-color: var(--u-red, #e60012);
+  box-shadow: 0 0 10px rgba(230, 0, 18, 0.4);
+}
+
+.vtile {
+  position: relative !important;
+}
+.vtile .vpop,
+.vhero .vtile .vpop {
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  min-width: 300px !important;
+  max-width: min(400px, calc(100vw - 32px)) !important;
+  max-height: min(480px, 70vh) !important;
+  overflow-y: auto !important;
+}
+

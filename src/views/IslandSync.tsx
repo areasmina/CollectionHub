@@ -101,7 +101,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
             onClick={handleSyncNow}
             title="Sync with cloud right now"
           >
-            <span className={`id-sync-icon ${busy || st.status === 'syncing' ? 'spin' : ''}`}>⚡</span>
+            <span className={`id-sync-icon ${busy || st.status === 'syncing' ? 'spin' : ''}`}>⟳</span>
             <span>SYNC NOW</span>
           </button>
         )}
@@ -110,7 +110,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
       {/* Conflict Resolution banner */}
       {st.status === 'conflict' && (
         <div className="id-sync-conflict-box" role="alert">
-          <b>⚡ Pick which copy to keep:</b>
+          <b>Pick which copy to keep:</b>
           <p>{st.msg || 'Both this device and the cloud changed since last sync.'}</p>
           <div className="id-sync-act-row">
             <button
@@ -198,7 +198,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
                 className="id-btn-act"
                 onClick={() => navigator.share({ title: 'DeckMage sync', url: share }).catch(() => {})}
               >
-                📤 SHARE LINK
+                SHARE LINK
               </button>
             )}
             <button
@@ -213,7 +213,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
                 })
               }
             >
-              🔄 CHANGE CODE
+              CHANGE CODE
             </button>
             <button
               type="button"

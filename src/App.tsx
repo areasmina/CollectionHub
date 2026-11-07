@@ -389,7 +389,7 @@ export default function App() {
                   setIslandTab('decks');
                 }}
               >
-                <span>⚡ SAVED DECKS</span>
+                <span>SAVED DECKS</span>
                 {myDecks.length > 0 && <span className="id-tab-badge">{myDecks.length}</span>}
               </button>
               <button

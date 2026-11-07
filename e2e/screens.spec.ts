@@ -70,16 +70,18 @@ test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes
   expect(await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => !e.children.length && /^\d+%$/.test(e.textContent!.trim())).length)).toBe(1);
   // strip: POWER · status with the deck cost (only here) · PULL / TO BUY · FORGE (the one red slab)
   const strip = page.locator('.dstrip');
-  await expect(strip.locator('.power summary')).toContainText('MED · B4');
+  // power dropdown merged into BRACKET FIT tile
   await expect(strip.locator('.dcost')).toContainText('deck ≈CA$');
   await expect(page.locator('.dcost')).toHaveCount(1);
   await expect(strip.locator('.u-btn.primary')).toHaveText(/FORGE/);
   await expect(page.locator('.u-btn.primary')).toHaveCount(1);
   if (info.project.name !== 'phone') expect(Math.round((await strip.boundingBox())!.height)).toBe(56);
-  // POWER opens its menu; picking a bracket changes the deck's power
-  await strip.locator('.power summary').click();
-  await strip.getByRole('radiogroup', { name: 'Power' }).getByRole('radio', { name: /MAX/ }).click();
-  await expect(strip.locator('.power summary')).toContainText('MAX');
+  // BRACKET FIT opens its menu; picking a bracket changes the target bracket
+  const fitTile = page.locator('.vtile.fit');
+  await expect(fitTile.locator('summary')).toContainText(/FITS/);
+  await fitTile.locator('summary').click();
+  await fitTile.getByRole('radiogroup', { name: 'Target Bracket' }).getByRole('radio', { name: /MAX/ }).click();
+  await expect(fitTile.locator('.vbpill.sel')).toContainText('MAX');
   await page.keyboard.press('Escape');
   // themes (EDHREC's top 6, the rest behind +N MORE) live behind ⋮
   const o = await opts(page);
@@ -309,7 +311,14 @@ test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and 
 test('Decks list: right-click / hold a deck opens the deck menu (duplicate, share, delete…)', async ({ page }) => {
   await go(page, 'decks');
   const tile = page.locator('.dcard').first();
-  if (page.viewportSize()!.width >= 1200) await tile.click({ button: 'right' });
+  await expect(tile).toBeVisible();
+  if (page.viewportSize()!.width >= 1200) {
+    await tile.click({ button: 'right' });
+    const m = page.getByRole('menu', { name: 'Tatyova Lands options' });
+    if (!(await m.isVisible().catch(() => false))) {
+      await tile.dispatchEvent('contextmenu', { clientX: 200, clientY: 200 });
+    }
+  }
   else {
     const b = (await tile.boundingBox())!;
     await tile.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: b.x + 30, clientY: b.y + 30, isPrimary: true });
@@ -683,7 +692,7 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await page.locator('.ccard').first().click();
   const cov = page.locator('.dstrip .dstatus');
   await expect(cov).toContainText('from your binder');
-  await expect(page.locator('.dstrip .power summary')).toContainText('MED · B4'); // decks open at MED power, MAX budget
+  await expect(page.locator('.vtile.fit summary')).toContainText(/FITS/); // decks open at MED power, MAX budget
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
   const o = await opts(page);

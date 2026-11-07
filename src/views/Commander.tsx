@@ -500,7 +500,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const Item = view === 'grid' ? CardTile : CardLine;
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
   const [q, setQ] = useState(''); // search the deck by name or rules text
-  const [show, setShow] = useStored<Show>('ch:cshow', 'all', SHOWS.map(([v]) => v));
+  const [show, setShow] = useState<Show>('all');
+  useEffect(() => {
+    setShow('all');
+  }, [slug]);
   const [only, setOnly] = useState<Only>('all'); // Game Changers / price bands, for this visit
 
   // B) The receipt's back: the PULL list, the cards of this deck to take out of your binder (basics left out).
@@ -680,7 +683,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 </small>
               </span>
             </div>
-            {ready && <ReadyTiles ready={ready} fit={fit} />}
+            {ready && <ReadyTiles ready={ready} fit={fit} bracket={bracket} onBracketChange={setBracket} brackets={BRACKETS} />}
           </div>
         </section>
 
@@ -688,9 +691,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             It stays while a new power or theme loads (no jump), saying so in its status line. */}
         {!error && (
           <section className={`dstrip${forging ? ' forging' : ''}`} aria-label="Deck status" aria-busy={!page}>
-            <Menu className="power" label={`Power: ${powerLabel}. Change it`} summary={<><span className="k">POWER</span> {powerLabel} <span className="car" aria-hidden="true">▾</span></>}>
-              <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
-            </Menu>
+
             <p className="dstatus" role="status">
               {!page ? (
                 <span>loading EDHREC data…</span>
@@ -736,7 +737,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
         {page && (wild || wildSet.off) && (
           <section className="wildcard" aria-label="WILDCARD">
-            <b className="wtag">⚡ HIDDEN GEM · WILDCARD</b>
+            <b className="wtag">HIDDEN GEM · WILDCARD</b>
             {wild && !wildSet.off ? (
               <>
                 <div className="wbody">
@@ -874,9 +875,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       disabled={saving}
                       title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)"
                     >
-                      <span className="build-icon">⚡</span>
+                      
                       <span className="build-text">
-                        <strong>⚡ JUST BUILD IT!</strong>
+                        <strong>JUST BUILD IT!</strong>
                         <small>Auto-craft 100 cards from your binder</small>
                       </span>
                       <span className="build-arrow">⚒ BUILD 100 →</span>
@@ -1090,7 +1091,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       {synergyHint && (
                         <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
                           <div className="syn-info">
-                            <span className="syn-badge">⚡ SYNERGY DETECTED</span>
+                            <span className="syn-badge">SYNERGY DETECTED</span>
                             <p>
                               <strong>{synergyHint.card}</strong> {synergyHint.explanation}!
                             </p>
@@ -1103,17 +1104,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                               if (synergyHint.themeSlug) {
                                 setTag(synergyHint.themeSlug);
                               }
-                              setToast({ text: `⚡ Deck auto-tuned to ${synergyHint.card} synergies!` });
+                              setToast({ text: `Deck auto-tuned to ${synergyHint.card} synergies!` });
                             }}
                           >
-                            ⚡ TUNE DECK TO THIS SYNERGY
+                            TUNE DECK TO THIS SYNERGY
                           </button>
                         </div>
                       )}
                       {!synergyHint && cf.inc.length > 0 && (
                         <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
                           <div className="syn-info">
-                            <span className="syn-badge">⚡ CARD PINNED</span>
+                            <span className="syn-badge">CARD PINNED</span>
                             <p>
                               <strong>{cf.inc[0]}</strong> is pinned in your deck.
                             </p>
@@ -1123,10 +1124,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                             className="syn-btn"
                             onClick={() => {
                               haptic('success');
-                              setToast({ text: `⚡ Suggestions auto-tuned for ${cf.inc[0]}!` });
+                              setToast({ text: `Suggestions auto-tuned for ${cf.inc[0]}!` });
                             }}
                           >
-                            ⚡ AUTO-TUNE SUGGESTIONS
+                            AUTO-TUNE SUGGESTIONS
                           </button>
                         </div>
                       )}

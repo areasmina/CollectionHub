@@ -320,13 +320,18 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
                 </button>
               </div>
               {view === 'grid' && (
-                <div className="qsegs" role="group" aria-label="Quick card size">
-                  {(['s', 'm', 'l'] as const).map((z) => (
-                    <button key={z} type="button" aria-pressed={zoom === z} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
-                      {z.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  className="u-btn ghost qzoom-btn"
+                  title={{ s: 'Size: Small. Tap for Medium', m: 'Size: Medium. Tap for Large', l: 'Size: Large. Tap for Small' }[zoom]}
+                  aria-label={`Card size ${zoom.toUpperCase()}: tap to cycle size`}
+                  onClick={() => {
+                    haptic('select');
+                    setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
+                  }}
+                >
+                  SIZE {zoom.toUpperCase()}
+                </button>
               )}
             </>
           }

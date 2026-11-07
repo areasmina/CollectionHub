@@ -268,19 +268,18 @@ export function Discover(s: Shared) {
           label="Commanders: search and options"
           now={empty ? '' : [colours.join(' '), sortName].filter(Boolean).join(' · ')}
           quick={
-            <div className="qsegs qzoom" role="group" aria-label="Deck card size">
-              {(['s', 'm', 'l'] as const).map((z) => (
-                <button
-                  key={z}
-                  type="button"
-                  aria-pressed={zoom === z}
-                  title={{ s: 'Small: see more', m: 'Medium: balanced', l: 'Large: read cards' }[z]}
-                  onClick={() => (haptic('select'), setZoom(z))}
-                >
-                  {z.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              className="u-btn ghost qzoom-btn"
+              title={{ s: 'Size: Small. Tap for Medium', m: 'Size: Medium. Tap for Large', l: 'Size: Large. Tap for Small' }[zoom]}
+              aria-label={`Deck card size ${zoom.toUpperCase()}: tap to cycle size`}
+              onClick={() => {
+                haptic('select');
+                setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
+              }}
+            >
+              SIZE {zoom.toUpperCase()}
+            </button>
           }
         >
           {/* Mana identity filters first (owner request) */}
