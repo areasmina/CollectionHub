@@ -1,0 +1,27 @@
+# Downloaded data (rebuilt automatically, can be large)
+cache/
+
+# Generated output
+decks/
+report.html
+report_tables.json
+*.tmp
+
+# Uploaded / dropped-in collection exports (personal data, change often)
+collection/
+
+# Other collections (a friend's binder: their CSVs, report, decks, pins) and the app's choice of collection
+collections/
+collections.json
+
+# Python
+__pycache__/
+*.pyc
+
+# OS clutter
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Your collection export is personal. Uncomment if you ever push this repo to GitHub:
+# *.csv
