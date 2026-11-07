@@ -3826,3 +3826,138 @@ main.dpage {
   overflow-y: auto !important;
 }
 
+
+/* Swap Window header composition: SWAP <CARD> FOR [search...] */
+.swapnote .nh {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 14px !important;
+}
+.swapnote .nh .swap-title {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font: 800 13px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.04em !important;
+  white-space: nowrap !important;
+}
+.swapnote .nh .swap-title mark {
+  background: #141416 !important;
+  color: #ffffff !important;
+  border: 1px solid #444455 !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+}
+.swapnote .nh .swap-for {
+  color: var(--u-yellow, #ffd400) !important;
+  font: 800 13px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.06em !important;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8) !important;
+}
+.swapnote .swapq.top input {
+  background: #18181c !important;
+  color: #ffffff !important;
+  border: 2px solid #33333e !important;
+  border-radius: 6px !important;
+  font: 400 13px/1 var(--u-mono, monospace) !important;
+  padding: 8px 12px !important;
+  min-height: 40px !important;
+  transition: all 0.15s ease !important;
+}
+.swapnote .swapq.top input:focus {
+  border-color: #ffd400 !important;
+  box-shadow: 0 0 10px rgba(255, 212, 0, 0.25) !important;
+}
+
+/* Indicator text at the bottom */
+.swapnote .picks .hint {
+  display: block !important;
+  margin-top: 12px !important;
+  margin-bottom: 6px !important;
+  font: 400 12px/1.4 var(--u-mono, monospace) !important;
+  color: #888899 !important;
+}
+
+/* Fun Pin Buttons & Good Composition */
+.swapnote .pinrow {
+  margin-top: 16px !important;
+  padding-top: 14px !important;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+.swapnote .pin-btns {
+  display: flex !important;
+  gap: 12px !important;
+  width: 100% !important;
+}
+.swapnote .pin-btn {
+  flex: 1 1 50% !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  font: 800 12px/1 var(--u-display, 'Archivo Black', sans-serif) !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  background: #1c1c22 !important;
+  color: #dddddd !important;
+  border: 2px solid #383844 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
+  box-shadow: 2px 2px 0 #000000 !important;
+}
+.swapnote .pin-btn .pin-tag-mark {
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+.swapnote .pin-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 #000000 !important;
+  color: #ffffff !important;
+}
+.swapnote .pin-btn.pin-in:hover:not(:disabled) {
+  border-color: var(--u-green, #00f5a0) !important;
+}
+.swapnote .pin-btn.pin-out:hover:not(:disabled) {
+  border-color: var(--u-red, #e60012) !important;
+}
+.swapnote .pin-btn:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 #000000 !important;
+}
+.swapnote .pin-btn:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+}
+
+/* Stamped Active States */
+.swapnote .pin-btn.pin-in.is-active {
+  background: var(--u-green, #00f5a0) !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: 3px 3px 0 #000000, 0 0 14px rgba(0, 245, 160, 0.4) !important;
+  transform: rotate(-1deg) !important;
+}
+.swapnote .pin-btn.pin-out.is-active {
+  background: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+  box-shadow: 3px 3px 0 #000000, 0 0 14px rgba(230, 0, 18, 0.4) !important;
+  transform: rotate(1deg) !important;
+}
+.swapnote .pin-hint {
+  font: 400 12px/1.3 var(--u-mono, monospace) !important;
+  color: var(--u-muted, #888888) !important;
+  letter-spacing: 0.02em !important;
+}
+.swapnote .pin-hint b {
+  color: #ffffff !important;
+}

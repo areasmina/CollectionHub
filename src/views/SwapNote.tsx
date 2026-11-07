@@ -165,8 +165,8 @@ export function SwapNote({
         }}
       />
       <div className="nh">
-        <span>
-          SWAP <mark>{now.toUpperCase()}</mark>
+        <span className="swap-title">
+          SWAP <mark>{now.toUpperCase()}</mark> <span className="swap-for">FOR</span>
           {replaced && <small className="was"> · was {name}</small>}
         </span>
         {/* Search sits up top beside the title: any card of yours, by name or rules text */}
@@ -228,10 +228,6 @@ export function SwapNote({
               </li>
             </ul>
           )}
-          <small className="hint">
-            {q.trim().length >= 2 ? `your cards matching “${q.trim()}”` : 'top 3 from your binder'}
-            {mouse() ? ' · hover to read one, click or drag it onto the card' : ' · hold one to read it'}
-          </small>
           {/* While you search, the results take the top-3 spot */}
           {q.trim().length >= 2 ? (
             found.length ? (
@@ -245,20 +241,37 @@ export function SwapNote({
               {options.length === 0 && <p className="small">{loading ? 'Loading suggestions…' : 'No card of yours fits this slot by role. Search up top.'}</p>}
             </>
           )}
+          {/* Indicator text placed at the bottom */}
+          <small className="hint">
+            {q.trim().length >= 2 ? `your cards matching “${q.trim()}”` : 'top 3 from your binder'}
+            {mouse() ? ' · hover to read one, click or drag it onto the card' : ' · hold one to read it'}
+          </small>
           {onPin && (
             <div className="pinrow" role="group" aria-label={`Pins for every ${cmdr} deck`}>
-              <button
-                aria-pressed={pin === 'in'}
-                disabled={!canPinIn && pin !== 'in'}
-                title={canPinIn ? '' : 'Only cards you own can be pinned in'}
-                onClick={() => (haptic(pin === 'in' ? 'undo' : 'success'), onPin('in'))}
-              >
-                📌 ALWAYS IN
-              </button>
-              <button aria-pressed={pin === 'out'} onClick={() => (haptic(pin === 'out' ? 'undo' : 'success'), onPin('out'))}>
-                💀 NEVER USE
-              </button>
-              <small>for every {cmdr} deck</small>
+              <div className="pin-btns">
+                <button
+                  type="button"
+                  className={`pin-btn pin-in${pin === 'in' ? ' is-active' : ''}`}
+                  aria-pressed={pin === 'in'}
+                  disabled={!canPinIn && pin !== 'in'}
+                  title={canPinIn ? 'Always keep this card in every deck of this commander' : 'Only cards you own can be pinned in'}
+                  onClick={() => (haptic(pin === 'in' ? 'undo' : 'success'), onPin('in'))}
+                >
+                  <span className="pin-tag-mark" aria-hidden="true">{pin === 'in' ? '★' : '☆'}</span>
+                  <span>ALWAYS IN</span>
+                </button>
+                <button
+                  type="button"
+                  className={`pin-btn pin-out${pin === 'out' ? ' is-active' : ''}`}
+                  aria-pressed={pin === 'out'}
+                  title="Never suggest or include this card in decks of this commander"
+                  onClick={() => (haptic(pin === 'out' ? 'undo' : 'success'), onPin('out'))}
+                >
+                  <span className="pin-tag-mark" aria-hidden="true">✕</span>
+                  <span>NEVER USE</span>
+                </button>
+              </div>
+              <small className="pin-hint">Pinned for every <b>{cmdr}</b> deck</small>
             </div>
           )}
         </div>
