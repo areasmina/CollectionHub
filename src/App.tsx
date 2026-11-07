@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
 import { ownedMap } from './lib/compare';
-import { db } from './lib/db';
+import { db, type Card } from './lib/db';
+import { norm } from './lib/names';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
 import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
@@ -11,7 +12,7 @@ import { codeFromHash } from './lib/synccode';
 import { useSyncState, syncCode, type SyncStatus } from './lib/syncstate';
 import { turnOn, turnOff } from './lib/sync';
 import { PreviewLayer } from './views/shared';
-import { ZineDefs } from './views/zine';
+import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
@@ -56,26 +57,106 @@ export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
-  const [islandOpen, setIslandOpen] = useState(false);
-  const [pullY, setPullY] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const dragStartY = useRef(0);
+  type IslandDock = 'top' | 'bottom';
+  // Island Dock: default to 'bottom' on phones/mobile (<= 700px), 'top' on desktop
+  const [dock, setDock] = useState<IslandDock>(() => {
+    try {
+      const saved = localStorage.getItem('ch:island_dock') as IslandDock | null;
+      if (saved === 'top' || saved === 'bottom') return saved;
+      return typeof window !== 'undefined' && window.innerWidth <= 700 ? 'bottom' : 'top';
+    } catch {
+      return typeof window !== 'undefined' && window.innerWidth <= 700 ? 'bottom' : 'top';
+    }
+  });
 
-  const onPointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button:not(.island-lip)')) return;
-    dragStartY.current = e.clientY;
-    setDragging(true);
+  const [islandOpen, setIslandOpen] = useState(false);
+  const [pullDist, setPullDist] = useState(0); // rubber-band stretch in pixels
+  const [isRepositioning, setIsRepositioning] = useState(false); // dragging across screen
+  const [dragY, setDragY] = useState(0);
+
+  const dragRef = useRef({
+    startY: 0,
+    startX: 0,
+    startTime: 0,
+    active: false,
+    tab: 'decks' as Tab,
+    didDrag: false,
+  });
+
+  const onIslandDown = (targetTab?: Tab) => (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('.syncpill, .pback')) return;
+    dragRef.current = {
+      startY: e.clientY,
+      startX: e.clientX,
+      startTime: Date.now(),
+      active: true,
+      tab: targetTab ?? 'decks',
+      didDrag: false,
+    };
   };
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging) return;
-    const dy = Math.max(0, e.clientY - dragStartY.current);
-    setPullY(Math.min(dy, 120));
+
+  const onIslandMove = (e: React.PointerEvent) => {
+    if (!dragRef.current.active) return;
+    const dy = e.clientY - dragRef.current.startY;
+    const dx = e.clientX - dragRef.current.startX;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 8) {
+      dragRef.current.didDrag = true;
+    }
+
+    // Dragging > 70px vertically detaches the island so user can reposition it!
+    if (Math.abs(dy) > 70) {
+      setIsRepositioning(true);
+      setDragY(e.clientY);
+      setPullDist(0);
+      return;
+    }
+
+    // Otherwise calculate elastic pull towards the screen interior
+    const stretch = dock === 'top' ? dy : -dy;
+    if (stretch > 0) {
+      // Elastic rubber-band easing: logarithmic damping
+      const damped = Math.min(65, stretch * 0.42);
+      setPullDist(damped);
+    } else {
+      setPullDist(0);
+    }
   };
-  const onPointerUp = () => {
-    if (!dragging) return;
-    setDragging(false);
-    if (pullY > 35) setIslandOpen(true);
-    setPullY(0);
+
+  const onIslandUp = (e: React.PointerEvent) => {
+    if (!dragRef.current.active) return;
+    const wasRepositioning = isRepositioning;
+    const didDrag = dragRef.current.didDrag;
+    const pulled = pullDist;
+
+    dragRef.current.active = false;
+    setPullDist(0);
+    setIsRepositioning(false);
+
+    try {
+      // released naturally
+    } catch {
+      /* ignore */
+    }
+
+    if (wasRepositioning) {
+      const newDock: IslandDock = e.clientY > window.innerHeight / 2 ? 'bottom' : 'top';
+      setDock(newDock);
+      try {
+        localStorage.setItem('ch:island_dock', newDock);
+      } catch {
+        /* ignore */
+      }
+      haptic('select');
+      return;
+    }
+
+    // If dragged enough to open shelf:
+    if (didDrag && pulled > 18) {
+      setIslandOpen(true);
+      haptic('open');
+    }
   };
 
   const toggleSync = async (e: React.MouseEvent) => {
@@ -121,6 +202,14 @@ export default function App() {
   const goTab = (t: Tab) => void canLeave().then((ok) => ok && (setTab(t), window.scrollTo(0, 0)));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const myDecks = useLiveQuery(() => db.decks.where('profile').equals(profile).toArray(), [profile]) ?? [];
+  const cmdrCards =
+    useLiveQuery(
+      async () =>
+        new Map(
+          (await db.cards.where('key').anyOf(myDecks.map((d) => norm(d.commander ?? '')).filter(Boolean)).toArray()).map((c) => [c.key, c]),
+        ),
+      [myDecks],
+    ) ?? new Map<string, Card>();
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
   // Binders: one by default, more when you add them (Collection's binder menu). The "other" binder is the next one,
   // for "in Binder 2" marks; with one binder there is none.
@@ -150,93 +239,122 @@ export default function App() {
       {/* One nav (THE OVERHAUL, part 1): a 48px top bar on tablets and desktop (logo · DISCOVER DECKS COLLECTION · ⚙),
           a compact floating pill on phones (back + the three sections). Sync, haptics and binders also sit in Collection's
           binder menu; ⚙ opens sync from anywhere on wide screens. */}
+      {islandOpen && (
+        <div className="island-scrim" onClick={() => setIslandOpen(false)} aria-hidden="true" />
+      )}
       <nav
-        className={`pillnav notch${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${dragging ? ' dragging' : ''}`}
+        className={`pillnav notch dock-${dock}${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
+        onPointerDown={onIslandDown()}
+        onPointerMove={onIslandMove}
+        onPointerUp={onIslandUp}
+        onPointerCancel={onIslandUp}
         style={{
-          transform: !islandOpen && pullY > 0
-            ? `translateX(-50%) translateY(${pullY * 0.4}px) scaleY(${1 + pullY / 70})`
-            : undefined,
+          transform: isRepositioning
+            ? `translate(-50%, ${dragY - window.innerHeight / 2}px)`
+            : pullDist > 0
+              ? (dock === 'top'
+                  ? `translateX(-50%) translateY(${pullDist * 0.4}px)`
+                  : `translateX(-50%) translateY(${-pullDist * 0.4}px)`)
+              : undefined,
         }}
       >
-        {/* The back arrow shows only when there's somewhere to go back to */}
-        {backFn && (
-          <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
-            <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="2.5" />
-            </svg>
-          </button>
-        )}
-        <div className="pill">
-          {NAV.map(([t, label]) => (
-            <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : t === 'decks' ? goDecks() : goTab(t))}>
-              {label}
+        {/* Gooey black membrane background layer */}
+        <div
+          className="island-membrane"
+          aria-hidden="true"
+          style={{
+            transform: pullDist > 0
+              ? `scaleY(${1 + pullDist / 45})`
+              : undefined,
+            transformOrigin: dock === 'top' ? 'top center' : 'bottom center',
+          }}
+        />
+
+        {/* Crisp text content container (never distorted) */}
+        <div className="island-content">
+          {backFn && (
+            <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
+              <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="2.5" />
+              </svg>
             </button>
-          ))}
+          )}
+          <div className="pill">
+            {NAV.map(([t, label]) => (
+              <button
+                key={t}
+                aria-current={here(t) ? 'page' : undefined}
+                onPointerDown={onIslandDown(t)}
+                onClick={() => {
+                  if (dragRef.current.didDrag) return;
+                  haptic('select');
+                  if (t === 'discover') goDiscover();
+                  else if (t === 'decks') goDecks();
+                  else goTab(t);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* Direct 1-click sync toggle: ON/OFF in place, no modal */}
+          <button
+            type="button"
+            className={`ugear syncpill${syncCode() ? ' on' : ' off'}`}
+            aria-label={`Sync: ${syncCode() ? 'On' : 'Off'}. Tap to toggle`}
+            title={`Sync is ${syncCode() ? 'ON' : 'OFF'}. Tap to turn ${syncCode() ? 'off' : 'on'}`}
+            onClick={toggleSync}
+          >
+            <span className="sdot" aria-hidden="true" />
+            <span>SYNC</span>
+          </button>
+          {/* Gooey venom pull lip at the inner edge of the notch */}
+          <button
+            type="button"
+            className="island-lip"
+            aria-expanded={islandOpen}
+            aria-label={islandOpen ? "Close Dynamic Island" : "Drag for Dynamic Island decks"}
+            title={islandOpen ? "Close Island" : "Drag or tap for Island decks"}
+            onClick={() => (haptic('tap'), setIslandOpen(!islandOpen))}
+          >
+            <span className="lip-bar" aria-hidden="true" />
+          </button>
         </div>
-        {/* Direct 1-click sync toggle: ON/OFF in place, no modal */}
-        <button
-          type="button"
-          className={`ugear syncpill${syncCode() ? ' on' : ' off'}`}
-          aria-label={`Sync: ${syncCode() ? 'On' : 'Off'}. Tap to toggle`}
-          title={`Sync is ${syncCode() ? 'ON' : 'OFF'}. Tap to turn ${syncCode() ? 'off' : 'on'}`}
-          onClick={toggleSync}
-        >
-          <span className="sdot" aria-hidden="true" />
-          <span>SYNC</span>
-        </button>
-        {/* Gooey venom pull lip at the bottom of the notch */}
-        <button
-          type="button"
-          className="island-lip"
-          aria-expanded={islandOpen}
-          aria-label={islandOpen ? "Close Dynamic Island" : "Drag down for Dynamic Island decks"}
-          title={islandOpen ? "Close Island" : "Pull down for Decks shelf"}
-          onClick={() => (haptic('tap'), setIslandOpen(!islandOpen))}
-        >
-          <span className="lip-bar" aria-hidden="true" />
-        </button>
 
         {islandOpen && (
-          <div className="island-drawer" role="dialog" aria-label="Quick Decks & Island Tools">
-            <div className="id-head">
-              <b>⚡ DYNAMIC ISLAND · SAVED DECKS</b>
-              <button type="button" className="id-close" onClick={() => setIslandOpen(false)} aria-label="Close island">✕</button>
-            </div>
+          <div className="island-drawer" role="dialog" aria-label="Dynamic Island Quick Decks">
             {myDecks.length > 0 ? (
               <div className="id-decks" role="group" aria-label="Your saved decks">
-                {myDecks.map((d) => (
-                  <button
-                    key={d.id ?? d.name}
-                    type="button"
-                    className="id-deck-card"
-                    onClick={() => {
-                      haptic('select');
-                      setTab('decks');
-                      openDeck(d.name);
-                      setIslandOpen(false);
-                    }}
-                  >
-                    <div className="id-dinfo">
-                      <b className="id-dname">{d.name}</b>
-                      <span className="id-dmeta">{d.commander || 'Commander'} · {d.cards?.length ?? 0} cards</span>
-                    </div>
-                    <span className="id-dtag">OPEN ↗</span>
-                  </button>
-                ))}
+                {myDecks.map((d) => {
+                  const cCard = d.commander ? cmdrCards.get(norm(d.commander)) : undefined;
+                  const ci = cCard?.ci ?? [];
+                  return (
+                    <button
+                      key={d.id ?? d.name}
+                      type="button"
+                      className="id-deck-card"
+                      onClick={() => {
+                        haptic('select');
+                        setTab('decks');
+                        openDeck(d.name);
+                        setIslandOpen(false);
+                      }}
+                    >
+                      <div className="id-dinfo">
+                        <b className="id-dname">{d.name}</b>
+                        <span className="id-dmeta">{d.commander || 'Commander'} · {d.cards?.length ?? 0} cards</span>
+                      </div>
+                      {ci.length > 0 && <Pips ci={ci} size={18} />}
+                      <span className="id-dtag">OPEN ↗</span>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <p className="id-empty">No saved decks yet in {nameOf(profile)}.</p>
             )}
-            <div className="id-acts">
-              <button type="button" onClick={() => (haptic('select'), goDecks(), setIslandOpen(false))}>+ ADD A DECK</button>
-              <button type="button" onClick={() => (haptic('select'), goDiscover(), setIslandOpen(false))}>DISCOVER COMMANDERS</button>
-              <button type="button" onClick={() => (haptic('open'), setSync(true), setIslandOpen(false))}>SYNC SETTINGS ⚙</button>
-            </div>
           </div>
         )}
       </nav>

@@ -312,53 +312,190 @@
 }
 
 /* ---------- 3. Dynamic Island Notch: Attached flush to top ceiling with gooey venom physics ---------- */
+/* ==========================================================================
+   THE LIVING DYNAMIC ISLAND (Venom symbiote / gooey elastic dock)
+   ========================================================================== */
+
+/* Full-screen backdrop for outside click dismiss */
+.island-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: transparent;
+}
+
+/* Base pillnav */
 .pillnav {
   position: fixed;
-  top: 0;
   left: 50%;
   transform: translateX(-50%);
-  transform-origin: top center;
   z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--u-display);
-  background: #000000;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-top: none;
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
-  height: 44px;
-  padding: 0 14px 2px;
-  gap: 8px;
+  background: transparent;
+  user-select: none;
+  touch-action: none;
   width: fit-content;
   max-width: min(720px, calc(100vw - 20px));
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25), box-shadow 0.25s ease;
-  user-select: none;
-  touch-action: pan-y;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
 }
-.pillnav.dragging {
+
+/* Floating during reposition drag */
+.pillnav.floating {
+  transition: none !important;
+  cursor: grabbing !important;
+  box-shadow: 0 0 35px rgba(230, 0, 18, 0.6), 0 0 70px rgba(0, 0, 0, 0.95);
+}
+
+/* Stretching state */
+.pillnav.stretching {
   transition: none !important;
 }
-/* Organic gooey flared ear concavities meeting top edge of the screen */
-.pillnav::before,
-.pillnav::after {
+
+/* Docked at TOP (Desktop default) */
+.pillnav.dock-top {
+  top: 0;
+  bottom: auto;
+  transform-origin: top center;
+  height: 44px;
+  padding: 0 14px 2px;
+}
+.pillnav.dock-top::before,
+.pillnav.dock-top::after {
   content: '';
   position: absolute;
   top: 0;
   width: 16px;
   height: 16px;
   pointer-events: none;
+  z-index: 1;
 }
-.pillnav::before {
+.pillnav.dock-top::before {
   left: -16px;
   background: radial-gradient(circle at 0 16px, transparent 16px, #000000 16px);
 }
-.pillnav::after {
+.pillnav.dock-top::after {
   right: -16px;
   background: radial-gradient(circle at 16px 16px, transparent 16px, #000000 16px);
 }
+.pillnav.dock-top.away {
+  transform: translate(-50%, -100%);
+  opacity: 0;
+}
+.pillnav.dock-top .island-membrane {
+  top: 0;
+  bottom: auto;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: none;
+}
+.pillnav.dock-top .island-lip {
+  bottom: -8px;
+  top: auto;
+}
+.pillnav.dock-top .island-drawer {
+  top: calc(100% + 10px);
+  bottom: auto;
+  animation: islandDrop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes islandDrop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -14px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Docked at BOTTOM (Mobile default!) */
+.pillnav.dock-bottom {
+  bottom: 0;
+  top: auto;
+  transform-origin: bottom center;
+  height: calc(44px + env(safe-area-inset-bottom, 0px));
+  padding: 2px 14px max(6px, env(safe-area-inset-bottom, 6px));
+}
+.pillnav.dock-bottom::before,
+.pillnav.dock-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+.pillnav.dock-bottom::before {
+  left: -16px;
+  background: radial-gradient(circle at 0 0, transparent 16px, #000000 16px);
+}
+.pillnav.dock-bottom::after {
+  right: -16px;
+  background: radial-gradient(circle at 16px 0, transparent 16px, #000000 16px);
+}
+.pillnav.dock-bottom.away {
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+.pillnav.dock-bottom .island-membrane {
+  bottom: 0;
+  top: auto;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: none;
+}
+.pillnav.dock-bottom .island-lip {
+  top: -8px;
+  bottom: auto;
+}
+.pillnav.dock-bottom .island-drawer {
+  bottom: calc(100% + 10px);
+  top: auto;
+  animation: islandRise 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes islandRise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* The gooey black living membrane background */
+.island-membrane {
+  position: absolute;
+  inset: 0;
+  background: #000000;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 0;
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  filter: url(#venom-goo);
+}
+
+/* Crisp text & controls inside (never distorted) */
+.island-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  transform: none !important;
+}
+
 .pillnav button {
   border: 0;
   background: transparent;
@@ -414,6 +551,7 @@
   background: var(--u-red);
   box-shadow: 0 2px 10px rgba(230, 0, 18, 0.5);
 }
+
 /* 1-click sync toggle pill */
 .pillnav .syncpill {
   display: inline-flex;
@@ -448,17 +586,17 @@
 .pillnav .syncpill.off .sdot {
   background: #555555;
 }
-/* Bottom lip of the notch: venom gooey drag handle */
+
+/* Venom gooey drag handle lip */
 .pillnav .island-lip {
   position: absolute;
-  bottom: -9px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 60px;
-  height: 12px;
+  height: 14px;
   cursor: grab;
   background: transparent;
   border: 0;
@@ -475,17 +613,15 @@
   background: rgba(255, 255, 255, 0.65);
   width: 38px;
 }
+
 html.forging .pillnav {
   display: none;
 }
+
 /* Phones: compact notch */
 @media (max-width: 700px) {
   .pillnav {
-    height: 40px;
-    padding: 0 8px 2px;
     max-width: calc(100vw - 16px);
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
   }
   .pillnav .pill button {
     padding: 0 12px;
@@ -500,132 +636,107 @@ html.forging .pillnav {
     height: 28px;
     justify-content: center;
   }
-  .pillnav.away {
-    transform: translate(-50%, -100%);
-    opacity: 0;
-  }
 }
-/* Expanded Island Drawer with Decks */
+
+/* Dynamic Island Decks Drawer (Clean, focused, only decks) */
 .island-drawer {
   position: absolute;
-  top: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%);
-  width: min(440px, calc(100vw - 24px));
-  background: rgba(12, 12, 12, 0.96);
+  width: min(440px, calc(100vw - 20px));
+  background: rgba(10, 10, 10, 0.98);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.92), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  padding: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  animation: islandPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25) both;
+  gap: 6px;
   z-index: 100;
+  max-height: min(380px, calc(80vh - 80px));
 }
-@keyframes islandPop {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -10px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-.island-drawer .id-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 8px;
-}
-.island-drawer .id-head b {
-  font: 400 13px var(--u-display);
-  letter-spacing: 0.08em;
-  color: #ffffff;
-}
-.island-drawer .id-close {
-  background: transparent;
-  border: 0;
-  color: var(--u-muted);
-  cursor: pointer;
-  font-size: 15px;
-  padding: 4px;
-}
-.island-drawer .id-close:hover {
-  color: #fff;
-}
+
 .island-drawer .id-decks {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
+
 .island-drawer .id-deck-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
   text-align: left;
 }
 .island-drawer .id-deck-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+.island-drawer .id-dinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 .island-drawer .id-dname {
-  display: block;
-  font: 600 14px var(--u-display);
-  color: #fff;
+  font: 700 14px/1.2 var(--u-display);
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .island-drawer .id-dmeta {
-  display: block;
-  font: 400 11px var(--u-mono);
-  color: var(--u-muted);
+  font: 400 11px/1.2 var(--u-mono);
+  color: var(--u-muted, #888888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* Color Identity Pips inside Island Deck Card */
+.island-drawer .pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* OPEN ↗ in Neon Green (User: "red looks weird") */
 .island-drawer .id-dtag {
-  font: 600 11px var(--u-display);
-  color: var(--u-red);
-  padding: 4px 8px;
-  background: rgba(230, 0, 18, 0.12);
-  border-radius: 6px;
+  font: 700 11px/1 var(--u-display);
+  color: var(--u-green, #00d26a);
+  background: rgba(0, 210, 106, 0.12);
+  border: 1px solid rgba(0, 210, 106, 0.35);
+  border-radius: 999px;
+  padding: 5px 11px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
 }
+.island-drawer .id-deck-card:hover .id-dtag {
+  background: var(--u-green, #00d26a);
+  color: #000000;
+  box-shadow: 0 0 12px rgba(0, 210, 106, 0.5);
+}
+
 .island-drawer .id-empty {
-  margin: 8px 0;
+  margin: 12px 0;
   color: var(--u-muted);
   font-size: 13px;
   text-align: center;
-}
-.island-drawer .id-acts {
-  display: flex;
-  gap: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-.island-drawer .id-acts button {
-  flex: 1;
-  height: 34px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #fff;
-  font: 600 12px/1 var(--u-display);
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.island-drawer .id-acts button:hover {
-  background: var(--u-red);
-  border-color: var(--u-red);
 }
 .stage {
   padding-top: 52px;

@@ -198,6 +198,11 @@ export function ZineDefs() {
           <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves={2} stitchTiles="stitch" />
           <feColorMatrix type="saturate" values="0" />
         </filter>
+        <filter id="venom-goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+          <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+        </filter>
       </svg>
       <svg className="grainlayer" aria-hidden="true" width="100%" height="100%">
         <rect width="100%" height="100%" filter="url(#grain)" />
