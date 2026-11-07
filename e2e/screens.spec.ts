@@ -364,7 +364,7 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
 });
 
 test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens the deck, swap window in the Forge', async ({ page }) => {
-  await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'COLLECTION']);
+  await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'DECKS', 'COLLECTION']);
   await expect(page.locator('.shelf')).toHaveCount(0); // Discover stays commanders only
   await addSignet(page);
   await page.locator('.ccard').first().click();
@@ -642,4 +642,80 @@ test('Readiness + Bracket Fit tiles beside Match; the swap window says why the c
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   await expect(page.locator('.dpanel .vtile.ready')).toBeVisible();
+});
+
+test('Platform space pass: multi-column open deck categories on wide screens, side-by-side workbench on tablet and desktop', async ({ page }, info) => {
+  await page.evaluate(() => localStorage.setItem('ch:view', 'grid'));
+  await page.locator('.ccard').first().click();
+  const cats = page.locator('details.cat[open]');
+  await expect(cats.first()).toBeVisible();
+  if (info.project.name !== 'phone') {
+    // On tablet and desktop, small 1-card grid categories share a horizontal row instead of each taking 100% width
+    const [c0, c1] = await Promise.all([cats.nth(0).boundingBox(), cats.nth(1).boundingBox()]);
+    expect(Math.abs(c0!.y - c1!.y)).toBeLessThan(12);
+    expect(c1!.x).toBeGreaterThan(c0!.x + c0!.width - 2);
+    // And the receipt / sidebar sits beside the deck list, not stacked above it
+    const [lists, receipt] = await Promise.all([page.locator('.deckgrid > .lists').boundingBox(), page.locator('aside.receipt').boundingBox()]);
+    expect(receipt!.x).toBeGreaterThanOrEqual(lists!.x + lists!.width - 2);
+  }
+  await fits(page, ['.deckgrid', '.lists', 'aside.receipt']);
+});
+
+test('Add a deck with 0 saved decks: + DECK on closed overview and + ADD A DECK in MY DECKS open the Decks page', async ({ page }) => {
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction('decks', 'readwrite');
+    tx.objectStore('decks').clear();
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await go(page, 'collection');
+  // Closed overview fold shows + DECK right next to IMPORT
+  await expect(page.locator('details.dash > summary .ddeck')).toHaveText('+ DECK');
+  await dash(page);
+  // Inside the open overview, MY DECKS (0) has a + ADD A DECK button even when 0 decks exist
+  const addBtn = page.locator('.shelfhead .adddeckbtn');
+  await expect(addBtn).toBeVisible();
+  await addBtn.click();
+  await expect(page.locator('.addpage h2')).toHaveText('ADD A DECK');
+});
+
+test('Deck vs Collection separation: MY DECKS never hosts Collection Import, and adding a deck never adds cards to the collection binder', async ({ page }) => {
+  await go(page, 'collection');
+  await dash(page);
+  // Collection Import is a separate section, never nested inside the MY DECKS shelf
+  await expect(page.locator('.shelf .importbox')).toHaveCount(0);
+  const beforeEntries = await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    return new Promise<number>((ok) => (db.transaction('entries').objectStore('entries').count().onsuccess = (e: any) => ok(e.target.result)));
+  });
+  // Pasting a deck list into Collection Import warns and offers to save as a deck instead without touching entries
+  const box = page.locator('.importbox');
+  if (!(await box.evaluate((e) => (e as HTMLDetailsElement).open))) await box.locator('summary').click();
+  await box.locator('textarea').fill('Commander\n1 Tatyova, Benthic Druid\n\nDeck\n1 Counterspell');
+  await expect(box.locator('.deckwarn')).toBeVisible();
+  await box.locator('.deckwarn button', { hasText: 'SAVE AS A DECK INSTEAD' }).click();
+  await expect(page.locator('.dhero h1')).toBeVisible();
+  const afterEntries = await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    return new Promise<number>((ok) => (db.transaction('entries').objectStore('entries').count().onsuccess = (e: any) => ok(e.target.result)));
+  });
+  expect(afterEntries).toBe(beforeEntries);
+});
+
+
+test('Cohesive UI overhaul: 3-tab pill nav (DISCOVER · DECKS · COLLECTION), 1-click FORGE & EDIT on Commander, and DECKS workbench actions', async ({ page }) => {
+  await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'DECKS', 'COLLECTION']);
+  // Open Commander and click ⚒ FORGE & EDIT directly without needing a swap first
+  await page.locator('.ccard').first().click();
+  const forgeBtn = page.locator('.strip .cactions button', { hasText: 'FORGE & EDIT' });
+  await expect(forgeBtn).toBeVisible();
+  await forgeBtn.click();
+  await expect(page.locator('.forgetop')).toContainText('FORGE');
+  // Leaving without any edits exits Forge cleanly without an unsaved-changes dialog
+  await page.locator('.forgetop .fleave').click();
+  await expect(page.locator('.forgetop')).toHaveCount(0);
+  // Tap DECKS in the global pill nav to jump straight to MY DECKS from anywhere
+  await page.locator('.pillnav .pill button', { hasText: 'DECKS' }).click();
+  await expect(page.locator('.decksbar')).toBeVisible();
+  await expect(page.locator('.decksactions button', { hasText: 'NEW BLANK DECK' })).toBeVisible();
 });

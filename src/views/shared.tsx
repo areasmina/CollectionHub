@@ -521,7 +521,7 @@ export function SearchBox({ q, setQ, placeholder = 'name or rules text_' }: { q:
  * which opens the options (power, budget, sort, show, view, size, grouping). On wider screens the bar also names the
  * options in use. Kept class names (.dtools / .fsheet / .fbody) so the old hooks still find it.
  */
-export function ToolBar({ q, setQ, placeholder, now, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; now?: string; label?: string; children: ReactNode }) {
+export function ToolBar({ q, setQ, placeholder, now, quick, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; now?: string; quick?: ReactNode; label?: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   // a tap outside the open options closes them
   useEffect(() => {
@@ -534,6 +534,7 @@ export function ToolBar({ q, setQ, placeholder, now, label = 'Cards: search and 
   return (
     <div className="dtools tbar" role="toolbar" aria-label={label}>
       <SearchBox q={q} setQ={setQ} placeholder={placeholder} />
+      {quick && <div className="tquick">{quick}</div>}
       <details className="fsheet tbmore" ref={ref} onToggle={(e) => e.currentTarget.open && haptic('open')}>
         <summary aria-label="Options" title="Options">
           {now && <span className="fnow">{now}</span>}

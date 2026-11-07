@@ -6444,6 +6444,8 @@ details.cat {
 /* Bracket fallback note under the bracket switch (no EDHREC page for that bracket). */
 .strip .bnote {
   display: block;
+  flex: 1 1 100%;
+  width: 100%;
   margin-top: 6px;
   font: 11px/1.3 var(--mono, 'Space Mono', monospace);
   color: #ffcc00;
@@ -10080,7 +10082,10 @@ details.dash[open] > *:not(summary) {
   }
 }
 /* A) Coverage line under the tool bar: where the 99 comes from */
-.lists > .coverage {
+.lists > .coverage,
+.lists > .bnote {
+  flex: 1 1 100%;
+  width: 100%;
   margin: 6px 0 10px;
   font-family: var(--se);
   font-size: 13px;
@@ -11167,4 +11172,326 @@ ul.zcompact > li.zrow .price.tapey {
   font-size: 12px;
   padding: 0 4px;
   white-space: nowrap;
+}
+
+/* ===== Platform Space & Layout Pass (Phone / Tablet / Desktop) ===== */
+
+/* 4. Add a Deck entry points: always reachable even when 0 decks exist */
+.shelfhead h2 > .shelftitle {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+.shelfhead > .adddeckbtn {
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--paper, #f4f1ea);
+  color: var(--ink, #0a0a0a);
+  border: 2px solid var(--ink, #0a0a0a);
+  box-shadow: 4px 4px 0 var(--accent, #e60012);
+  font-family: var(--an);
+  font-size: 18px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transform: rotate(-1deg);
+}
+.shelfhead > .adddeckbtn:hover,
+.shelfhead > .adddeckbtn:focus-visible {
+  background: var(--hazard, #ffcc00);
+}
+details.dash > summary .dimp.ddeck {
+  background: var(--accent, #e60012);
+  color: #fff;
+  transform: rotate(1.5deg);
+}
+
+/* 1. Desktop (1200px+): wider stage, denser commander grid, multi-column open card categories, scrollable workbench */
+@media (min-width: 1200px) {
+  main {
+    max-width: 1640px;
+    padding: 0 32px calc(var(--sp6, 32px) + 96px);
+  }
+  .cgrid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 28px 20px;
+  }
+  /* Open grid categories flow side-by-side (Moxfield-style) so 1–3 card groups share rows; collapsed groups or list views stay full-width */
+  .deckgrid > .lists > details.cat[open]:has(> ul.zgrid) {
+    flex: 1 1 auto;
+    min-width: 280px;
+    max-width: 100%;
+  }
+  .deckgrid > .lists > details.cat:not([open]) {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+  /* Workbench sidebar: wider, sticky, and independently scrollable for long suggestion lists */
+  .dside {
+    flex: 0 0 380px;
+    position: sticky;
+    top: 16px;
+  }
+  html.forging .dside {
+    top: 64px;
+  }
+  .dside > .fsugg > .frows {
+    max-height: calc(100dvh - 340px);
+    min-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  /* Collection stats strip: 4 columns in a single clean row */
+  .stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+  /* Commander settings strip: Match, Readiness/Fit, and Built Around share the top row cleanly */
+  .strip {
+    grid-template-columns: minmax(260px, 1.1fr) minmax(240px, 0.9fr) minmax(300px, 1.5fr);
+    align-items: center;
+  }
+  .strip .cell.wide,
+  .strip .cell.vcell,
+  .strip .builtaround {
+    grid-column: auto;
+  }
+}
+
+/* 2. Tablet & Small Laptop (701px–1199px): side-by-side split workbench instead of stacking 20 suggestions above the deck */
+@media (min-width: 701px) and (max-width: 1199px) {
+  .deckgrid {
+    flex-wrap: nowrap;
+    gap: 20px;
+  }
+  .deckgrid > .lists {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .dside,
+  .deckgrid > .receipt {
+    order: 0;
+    flex: 0 0 300px;
+    max-width: 300px;
+    position: sticky;
+    top: 14px;
+  }
+  html.forging .dside {
+    top: 62px;
+  }
+  .dside > .fsugg > .frows {
+    max-height: calc(100dvh - 340px);
+    min-height: 200px;
+    overflow-y: auto;
+  }
+  /* Open grid categories can also share rows on tablet when small */
+  .deckgrid > .lists > details.cat[open]:has(> ul.zgrid) {
+    flex: 1 1 auto;
+    min-width: 220px;
+  }
+  .deckgrid > .lists > details.cat:not([open]) {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+  /* Collection stats: 2x2 grid on tablet */
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+/* 3. Phones (<= 700px): un-cramp the Forge viewport, prevent sticky bar collisions, tighten vertical stacks */
+@media (max-width: 700px) {
+  /* When forging, only .forgetop and .fmeters stick at the top; .dtools.tbar scrolls naturally so 3 bars don't collide */
+  html.forging .dtools.tbar,
+  html.forging .lists > .dtools.tbar {
+    position: relative;
+    top: auto;
+    z-index: 10;
+  }
+  /* Slimmer bottom sheet peek (30vh instead of 40vh) so more of the deck is visible while forging */
+  html.forging .fsugg:not(.up) {
+    max-height: 30vh;
+  }
+  html.forging main {
+    padding-bottom: 34vh;
+  }
+  /* Tighter Commander strip on phones */
+  .strip {
+    margin-top: var(--sp2, 8px);
+    padding: var(--sp2, 8px) var(--sp3, 12px);
+    gap: var(--sp2, 8px);
+  }
+  .vtiles {
+    margin: 2px 0;
+  }
+  .vtile > summary {
+    min-height: 48px;
+    padding: 4px 8px;
+  }
+  .wildcard {
+    margin: 8px 0;
+    padding: 8px 10px;
+  }
+}
+
+/* 5. Separate MY DECKS from Collection Import + Deck-list guard in Collection Import */
+.shelfhead > .adddeckbtn {
+  margin-left: auto;
+}
+.importbox .deckwarn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  background: var(--hazard, #ffcc00);
+  color: #0a0a0a;
+  border: 2px solid var(--ink, #0a0a0a);
+  box-shadow: 3px 3px 0 var(--ink, #0a0a0a);
+  font-size: 14px;
+}
+.importbox .deckwarn .btn {
+  flex: none;
+}
+
+
+/* ==========================================================================
+   6. Cohesive UI & UX Overhaul:
+      - Commander & Forge action bar (.cactions)
+      - Instant 1-click toolbar controls (.tquick / .qsegs)
+      - MY DECKS top workbench bar (.decksbar / .decksactions)
+   ========================================================================== */
+
+/* Commander strip primary actions (Forge & Edit, Build 100 from Binder, Owned Only) */
+.strip .cactions {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px dashed rgba(244, 239, 226, 0.24);
+}
+.strip .cactions .btn {
+  min-height: 44px;
+  padding: 6px 14px;
+  font-size: 16px;
+}
+.strip .cactions .qpill {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 2px solid var(--ink, #0a0a0a);
+  background: #23211e;
+  color: var(--text, #f4efe2);
+  font-family: var(--an);
+  font-size: 15px;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink, #0a0a0a);
+  transition: transform 80ms ease, background 120ms ease;
+}
+.strip .cactions .qpill:hover {
+  transform: translate(-1px, -1px);
+}
+.strip .cactions .qpill.on,
+.strip .cactions .qpill[aria-pressed='true'] {
+  background: var(--tape, #ffe03b);
+  color: #141414;
+}
+
+/* Quick 1-click segmented pills right inside .tbar on desktop/tablet (> 900px) */
+.tbar > .tquick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  height: 36px;
+}
+.qsegs {
+  display: inline-flex;
+  align-items: stretch;
+  height: 34px;
+  border: 2px solid var(--ink, #0a0a0a);
+  background: #f4efe2;
+  box-shadow: 2px 2px 0 var(--ink, #0a0a0a);
+}
+.qsegs > button {
+  min-height: 30px;
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid rgba(20, 20, 20, 0.28);
+  background: transparent;
+  color: #141414;
+  font-family: var(--an);
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.qsegs > button:last-child {
+  border-right: 0;
+}
+.qsegs > button:hover {
+  background: rgba(20, 20, 20, 0.08);
+}
+.qsegs > button[aria-pressed='true'] {
+  background: var(--accent, #e4002b);
+  color: #fff;
+}
+.qsegs.qviews > button {
+  padding: 0 8px;
+}
+.qsegs.qviews > button svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Keep .tbar strictly single-row (<= 52px) on narrower viewports */
+@media (max-width: 960px) {
+  .tbar > .tquick {
+    display: none;
+  }
+}
+
+/* MY DECKS top header bar + instant actions */
+.decksbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.decksbar .count {
+  margin-bottom: 0;
+}
+.decksactions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+@media (max-width: 700px) {
+  .strip .cactions {
+    gap: 6px;
+    padding-top: 6px;
+  }
+  .strip .cactions .btn,
+  .strip .cactions .qpill {
+    flex: 1 1 auto;
+    font-size: 14px;
+    padding: 4px 10px;
+    text-align: center;
+    justify-content: center;
+  }
 }

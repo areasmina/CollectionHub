@@ -1,6 +1,6 @@
 import { haptic } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
 import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
@@ -11,7 +11,7 @@ import { codeFromHash } from './lib/synccode';
 import { useSyncState, type SyncStatus } from './lib/syncstate';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs } from './views/zine';
-import { useBrainData } from './brain/data';
+import { loadBrainData, useBrainData } from './brain/data';
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
 const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
@@ -21,14 +21,15 @@ const SyncPanel = lazy(() => import('./views/SyncPanel').then((m) => ({ default:
 const SYNC_LABEL: Record<SyncStatus, string> = { off: 'sync off', syncing: 'syncing…', synced: 'up to date', conflict: 'needs you: changed on both sides', offline: 'offline, will sync later', error: 'last sync failed' };
 const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 2500));
 idle(() => {
+  import('./views/Commander');
   import('./views/Collection');
   import('./views/Decks');
   import('./lib/autosync').then((m) => m.startAutoSync());
 });
 
 type Tab = 'discover' | 'collection' | 'decks';
-// Two sections: DISCOVER (commanders you can build) and COLLECTION (your cards, your decks and the Forge).
-const NAV: [Tab, string][] = [['discover', 'DISCOVER'], ['collection', 'COLLECTION']];
+// Three core sections: DISCOVER (commanders you can build), DECKS (your saved decks and the Forge), and COLLECTION (your binder).
+const NAV: [Tab, string][] = [['discover', 'DISCOVER'], ['decks', 'DECKS'], ['collection', 'COLLECTION']];
 // Opened with a sync link (…/#sync/<code>): offer to link this device. The code is taken out of the address bar right away.
 const incomingCode = typeof location !== 'undefined' ? codeFromHash(location.hash) : '';
 if (incomingCode) history.replaceState(null, '', location.pathname + location.search);
@@ -57,6 +58,7 @@ export default function App() {
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   useBrainData(); // card roles + combo files: re-render every view once they arrive
+  useEffect(() => void loadBrainData(), []);
   // The floating nav slides away while you scroll down and comes back on the way up (or near the top / bottom).
   const [navAway, setNavAway] = useState(false);
   useEffect(() => {
@@ -75,9 +77,11 @@ export default function App() {
   const [backFn, setBackFn] = useState<(() => void) | null>(null);
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
-  const here = (t: Tab) => tab === t || (t === 'collection' && tab === 'decks');
+  const [deckHome, setDeckHome] = useState(0); // bumping it remounts Decks: back to the deck list
+  const here = (t: Tab) => tab === t;
   const goDiscover = () => void canLeave().then((ok) => ok && (setTab('discover'), setHome((h) => h + 1), window.scrollTo(0, 0)));
-  const goTab = (t: Tab) => void canLeave().then((ok) => ok && setTab(t));
+  const goDecks = () => void canLeave().then((ok) => ok && (setTab('decks'), setDeckHome((h) => h + 1), window.scrollTo(0, 0)));
+  const goTab = (t: Tab) => void canLeave().then((ok) => ok && (setTab(t), window.scrollTo(0, 0)));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
   // Binders: one by default, more when you add them (Collection's binder menu). The "other" binder is the next one,
@@ -119,7 +123,7 @@ export default function App() {
             </button>
           )}
           {NAV.map(([t, label]) => (
-            <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : goTab(t))}>
+            <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : t === 'decks' ? goDecks() : goTab(t))}>
               {label}
             </button>
           ))}
@@ -143,7 +147,7 @@ export default function App() {
             sync={{ label: SYNC_LABEL[syncSt.status], alert: syncSt.status === 'conflict', open: () => (haptic('open'), setSync(true)) }}
           />
         )}
-        {tab === 'decks' && <Decks {...shared} />}
+        {tab === 'decks' && <Decks key={deckHome} {...shared} />}
       </Suspense>
       <footer className="credits">
         card data and images from <a href="https://scryfall.com">Scryfall</a> · deck data from <a href="https://edhrec.com">EDHREC</a> · not affiliated with Wizards of

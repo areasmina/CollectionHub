@@ -2,7 +2,8 @@ import { haptic } from '../lib/haptics';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
-import { importCollection, resetProfile, type ImportResult } from '../lib/actions';
+import { importCollection, importDeck, resetProfile, type ImportResult } from '../lib/actions';
+import { parseImport } from '../lib/importers';
 import { haptic as buzz, HAPTIC_NOTE, hapticsOn, hapticsSupported, setHaptics } from '../lib/haptics';
 import { useRef } from 'react';
 import { db, type Card } from '../lib/db';
@@ -10,6 +11,7 @@ import { collectionCsv, collectionText, download } from '../lib/export';
 import { cad } from '../lib/prices';
 import { CardsView } from './CardsView';
 import { MyDecks } from './MyDecks';
+import { freeDeckName, openDeck, openDeckList } from '../lib/nav';
 import type { Shared } from './shared';
 import { isCommander } from './Discover';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
@@ -18,11 +20,19 @@ import { snapshot } from '../lib/pricewatch';
 import { priced, priceSum, Progress } from './shared';
 import { Doodles, PageDecor, Ransom, Tape, Title } from './zine';
 
-export function ImportReport({ r }: { r: ImportResult }) {
+export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
   return (
     <div className="report" role="status">
       <p>
-        Read as <b>{r.format === 'manabox' ? 'ManaBox CSV' : r.format === 'csv' ? 'CSV' : 'text list'}</b>: {r.added} cards added.
+        {deck ? (
+          <>
+            Saved deck ({r.added} cards in deck — none added to your collection).
+          </>
+        ) : (
+          <>
+            Read as <b>{r.format === 'manabox' ? 'ManaBox CSV' : r.format === 'csv' ? 'CSV' : 'text list'}</b>: {r.added} cards added.
+          </>
+        )}
       </p>
       {!!r.failed?.length && (
         <p className="error">
@@ -102,6 +112,32 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
     setBusy(null);
   }
 
+  // Detect when a pasted list has deck sections (Commander / Deck / Sideboard) so the user doesn't accidentally dump a deck into their collection binder.
+  const deckLike = (() => {
+    if (!text.trim()) return false;
+    const p = parseImport(text);
+    return p.format === 'text' && p.rows.some((r) => /^(commanders?|companion|deck|main|mainboard|maindeck|sideboard|side|maybe|maybeboard|considering)$/i.test(r.section ?? ''));
+  })();
+
+  async function saveAsDeckInstead() {
+    setError('');
+    setResult(null);
+    setBusy({ done: 0, total: 0 });
+    try {
+      const p = parseImport(text);
+      const cmdrRow = p.rows.find((r) => /commander/i.test(r.section ?? '')) ?? p.rows[0];
+      const baseName = cmdrRow ? `${cmdrRow.name.split(' // ')[0]} deck` : 'Imported deck';
+      const deckName = await freeDeckName(profile, baseName);
+      const r = await importDeck(profile, deckName, text, (done, total) => setBusy({ done, total }));
+      setText('');
+      haptic('success');
+      openDeck(r.deck.name);
+    } catch (e) {
+      setError(`Deck import failed: ${(e as Error).message}`);
+    }
+    setBusy(null);
+  }
+
   const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))])).filter(Boolean).map((c) => [c!.id, c!])), [entries]) ?? new Map<string, Card>();
   const total = entries.reduce((n, e) => n + e.qty, 0);
   const value = priceSum(entries.map((e) => ({ card: priced(cards.get(e.cardId), e.foil), qty: e.qty })));
@@ -165,9 +201,14 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             </span>
             )}
             {!dashOpen && (
-              <span className="dimp" onClick={() => setImportOpen(true)}>
-                IMPORT
-              </span>
+              <>
+                <span className="dimp ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
+                  + DECK
+                </span>
+                <span className="dimp" onClick={() => setImportOpen(true)}>
+                  IMPORT
+                </span>
+              </>
             )}
             <span className="chev" aria-hidden="true">
               ▾
@@ -211,60 +252,68 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             </div>
           </section>
 
-          {/* Import lives in the MY DECKS bar (owner's call, Nov 6): adding cards and decks in one place */}
-          <MyDecks
-            s={s}
-            action={
+          {/* MY DECKS and Collection Import are separate sections so pasting a deck never gets confused with importing owned cards into the binder */}
+          <MyDecks s={s} />
+
           <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
             <summary>
               <span className="stripe" aria-hidden="true" />
               <b>+ IMPORT CARDS</b>
+              <small>cards you own in {name} (not a deck)</small>
               <span className="chev" aria-hidden="true">
                 ▾
               </span>
             </summary>
-          <section className="importrow">
-            <div className="flyer gbox">
-              <Doodles n={433} count={1} spots={[[70, 60]]} paper />
-              <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
-              <p>ManaBox CSV, a CSV with name/quantity columns, or a text list (Moxfield, Archidekt, "1 Sol Ring").</p>
-              <label className="btn ink file">
-                {upload}
-                CHOOSE A FILE
-                <input
-                  type="file"
-                  accept=".csv,.txt,text/csv,text/plain"
-                  disabled={!!busy}
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = '';
-                    if (f) setText(await f.text());
-                  }}
-                />
-              </label>
-            </div>
-            <div className="pastecol">
-              <label className="notebook">
-                <span>…or paste here</span>
-                <textarea className="ruled" rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
-              </label>
-              <div className="btnrow slimbtns">
-                <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
-                  + ADD
-                </button>
-                <button className="btn secondary" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
-                  REPLACE
-                </button>
+            <section className="importrow">
+              <div className="flyer gbox">
+                <Doodles n={433} count={1} spots={[[70, 60]]} paper />
+                <Tape style={{ top: -12, left: 30, width: 80, height: 24, transform: 'rotate(-8deg)' }} />
+                <p>Add cards you own to <b>{name}</b>: ManaBox CSV, a CSV with name/quantity columns, or a card list ("1 Sol Ring"). To add a deck without adding its cards to your collection, use <b>+ ADD A DECK</b> above.</p>
+                <label className="btn ink file">
+                  {upload}
+                  CHOOSE A FILE
+                  <input
+                    type="file"
+                    accept=".csv,.txt,text/csv,text/plain"
+                    disabled={!!busy}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = '';
+                      if (f) setText(await f.text());
+                    }}
+                  />
+                </label>
               </div>
+              <div className="pastecol">
+                <label className="notebook">
+                  <span>…or paste cards you own here</span>
+                  <textarea className="ruled" rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
+                </label>
+                {deckLike && (
+                  <div className="deckwarn" role="status">
+                    <span>
+                      <b>⚠ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
+                    </span>
+                    <button type="button" className="btn" disabled={!!busy} onClick={() => void saveAsDeckInstead()}>
+                      SAVE AS A DECK INSTEAD →
+                    </button>
+                  </div>
+                )}
+                <div className="btnrow slimbtns">
+                  <button className="btn" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
+                    + ADD
+                  </button>
+                  <button className="btn secondary" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
+                    REPLACE
+                  </button>
+                </div>
 
-              {busy && <Progress {...busy} />}
-              {error && <p className="error">{error}</p>}
-              {result && <ImportReport r={result} />}
-            </div>
-          </section>
+                {busy && <Progress {...busy} />}
+                {error && <p className="error">{error}</p>}
+                {result && <ImportReport r={result} />}
+              </div>
+            </section>
           </details>
-            }
-          />
 
           {illegal > 0 && (
             <p className="count">

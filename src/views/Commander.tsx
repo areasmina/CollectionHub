@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { db, type Card } from '../lib/db';
-import { BRACKETS, GEARS, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, GEARS, cachedPage, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
 import { cad, fetchedNote, rateNote, shopUrl, toCad } from '../lib/prices';
 import { searchByText } from '../lib/search';
@@ -23,7 +23,9 @@ import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
 import { allocate } from '../lib/allocation';
-import { bracketFit, readiness } from '../brain/validate';
+import { bracketFit, karstenLands, readiness } from '../brain/validate';
+import { buildDeck } from '../brain/build';
+import { commanderThemes, themeOf } from '../brain/themes';
 import { whyCard } from '../brain/why';
 import { bracketOf } from '../lib/deckstats';
 import { gameChangers } from '../lib/scryfall';
@@ -120,9 +122,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const sugg = filtered?.page ?? recs;
 
   useEffect(() => {
-    showPage(pagePath('commander', slug), (p) => setTags(p.tags)).catch(() => setTags([]));
-  }, [slug]);
-  useEffect(() => {
     let live = true;
     setPage(null);
     setRecs(null);
@@ -132,47 +131,91 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     // No page for this bracket (thin commanders): the same view across all brackets, said under the bracket switch.
     setNoBracket(false);
     setNoBudget(false);
-    // Fallbacks, in order: this power at any budget, then every bracket at any budget.
-    showPage(path, (p) => live && setPage(p))
+    // Instant preview: if the exact bracket/budget page isn't cached yet, show the cached unfiltered average deck right away while the exact one loads.
+    if (bracket || budget) {
+      void (async () => {
+        const exact = await cachedPage(path);
+        if (exact) return;
+        const base = await cachedPage(pagePath(kind, slug, '', tag, ''));
+        if (live && base) {
+          setPage((cur) => cur ?? base.page);
+          if (base.page.tags?.length) setTags((cur) => (cur.length ? cur : base.page.tags));
+        }
+      })();
+    }
+    const onMainPage = (p: EdhPage) => {
+      if (!live) return;
+      setPage(p);
+      if (p.tags?.length) setTags((cur) => (cur.length ? cur : p.tags));
+    };
+    const onRecsPage = (p: EdhPage) => {
+      if (!live) return;
+      setRecs(p);
+      if (p.tags?.length) setTags((cur) => (cur.length ? cur : p.tags));
+    };
+    // Priority 1: fetch the actual deck (`page`) FIRST so it never queues behind tags or recommendations.
+    showPage(path, onMainPage)
       .catch((e) => {
         if (!(e instanceof NoPage) || !budget) throw e;
         if (live) setNoBudget(true);
-        return showPage(pagePath(kind, slug, bracket, tag, ''), (p) => live && setPage(p));
+        return showPage(pagePath(kind, slug, bracket, tag, ''), onMainPage);
       })
       .catch((e) => {
         if (!(e instanceof NoPage) || !bracket) throw e;
         if (live) setNoBracket(true);
-        return showPage(pagePath(kind, slug, '', tag, ''), (p) => live && setPage(p));
+        return showPage(pagePath(kind, slug, '', tag, ''), onMainPage);
       })
       .catch((e) => live && setError(e.message));
+    // Priority 2: recommendations and unfiltered tags run right behind the main deck.
     if (kind === 'average')
-      showPage(pagePath('commander', slug, bracket, tag, budget), (p) => live && setRecs(p))
-        .catch(() => showPage(pagePath('commander', slug, bracket, tag, ''), (p) => live && setRecs(p)))
-        .catch(() => showPage(pagePath('commander', slug, '', tag, budget), (p) => live && setRecs(p)))
-        .catch(() => showPage(pagePath('commander', slug), (p) => live && setRecs(p)))
+      showPage(pagePath('commander', slug, bracket, tag, budget), onRecsPage)
+        .catch(() => showPage(pagePath('commander', slug, bracket, tag, ''), onRecsPage))
+        .catch(() => showPage(pagePath('commander', slug, '', tag, budget), onRecsPage))
+        .catch(() => showPage(pagePath('commander', slug), onRecsPage))
         .catch(() => {});
     return () => {
       live = false;
     };
   }, [path]);
+  useEffect(() => {
+    showPage(pagePath('commander', slug), (p) => setTags(p.tags)).catch(() => setTags([]));
+  }, [slug]);
 
   // EDHREC lists carry Scryfall ids but no prices: prices/images/types from Scryfall (cached a week), cheapest printing's price.
+  // Load the 99-card deck (`page`) first and only look up cheapest printings for cards in the deck (not all 250 recommendations).
   const [cards, setCards] = useState<Map<string, Card>>(new Map());
   useEffect(() => {
-    const want = [...ids(page), ...ids(recs)];
+    const want = ids(page);
     let live = true;
     if (want.length)
-      cardsByIds(want)
+      cardsByIds(want, undefined, (partial) => {
+        if (live) setCards((prev) => new Map([...prev, ...partial]));
+      })
         .then(async (m) => {
-          if (live) setCards(m);
-          const cheap = await cheapest([...m.values()].map((c) => c.name));
-          if (live) setCards(new Map([...m].map(([id, c]) => [id, withCheapest(c, cheap)!])));
+          if (!live) return;
+          setCards((prev) => new Map([...prev, ...m]));
+          const nonBasics = [...m.values()].map((c) => c.name).filter((n) => !BASICS.has(norm(n)));
+          await cheapest(nonBasics, (ch) => {
+            if (live) setCards((prev) => new Map([...prev, ...[...m].map(([id, c]) => [id, withCheapest(c, ch)!] as const)]));
+          });
         })
         .catch(() => {});
     return () => {
       live = false;
     };
-  }, [page, recs]);
+  }, [page]);
+  useEffect(() => {
+    const pageSet = new Set(ids(page));
+    const want = ids(recs).filter((id) => !pageSet.has(id));
+    let live = true;
+    if (want.length)
+      cardsByIds(want, undefined, (partial) => {
+        if (live) setCards((prev) => new Map([...prev, ...partial]));
+      }).catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [recs]);
 
   // Average deck: Commander, Planeswalkers, Creatures, Instants, Sorceries, Enchantments, Artifacts, Lands (EDHREC's own order otherwise).
   const sections = page ? (kind === 'average' ? orderSections(page.lists, page.card ? { name, id: page.card.id, qty: 1 } : undefined) : page.lists) : [];
@@ -233,7 +276,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const inDeck = new Set([...eff.values()].map((x) => norm(x.name)));
   const candidates = owned.filter((c) => !inDeck.has(norm(c.name)));
   // The swap window's top 3: owned cards EDHREC lists here, plus the rest of your binder in these colours.
-  const suggest = (c: EdhCard) => rankSubs(slotInfo(c), binderCandidates(candidates, binder, ci, never).filter((x) => !inDeck.has(norm(x.name))));
+  const tagLabel = tags.find((t) => t.slug === tag)?.value;
+  const autoThemes = commanderThemes(cmdr ?? (page?.card?.id ? cards.get(page.card.id) : undefined), tags);
+  const focusStack = tagLabel ? [themeOf(tagLabel), ...autoThemes.filter((t) => t.label.toLowerCase() !== tagLabel.toLowerCase())] : autoThemes;
+  const suggest = (c: EdhCard, ctx?: Parameters<typeof rankSubs>[3]) => rankSubs(slotInfo(c), binderCandidates(candidates, binder, ci, never).filter((x) => !inDeck.has(norm(x.name))), 3, ctx);
   const binderCard = new Map(binder.map((c) => [c.key, c]));
   const optionOf = (sub: SubCard) => {
     const sc = recCard.get(norm(sub.name));
@@ -309,14 +355,15 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     await db.profiles.update(s.profile, { swaps: rest });
   }
 
-  // The forging zone: your first swap on this deck starts it; leaving asks whether to keep the deck.
+  // The forging zone: your first swap on this deck (or clicking ⚒ FORGE & EDIT) starts it; leaving with unsaved swaps asks whether to keep the deck.
+  const [manualForge, setManualForge] = useState(false);
   const changes = Object.keys(swapsOk).length;
-  const forging = kind === 'average' && changes > 0;
+  const forging = kind === 'average' && (changes > 0 || manualForge);
   const [leaving, setLeaving] = useState<((go: boolean) => void) | null>(null);
-  const live = useRef({ forging, saveDeck, clearSwaps });
-  live.current = { forging, saveDeck, clearSwaps };
+  const live = useRef({ changes, saveDeck, clearSwaps });
+  live.current = { changes, saveDeck, clearSwaps };
   useEffect(() => {
-    setLeaveGuard(() => (live.current.forging ? new Promise<boolean>((go) => (haptic('warn'), setLeaving(() => go))) : Promise.resolve(true)));
+    setLeaveGuard(() => (live.current.changes > 0 ? new Promise<boolean>((go) => (haptic('warn'), setLeaving(() => go))) : Promise.resolve(true)));
     return () => setLeaveGuard(null);
   }, []);
   const leave = async (choice: 'save' | 'drop' | 'stay') => {
@@ -377,12 +424,30 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const aggression = AGGRESSION_OF[bracket] ?? 'hungry';
   const ready = page && kind === 'average' ? readiness({ deck: deckNow, cardOf: cardByName, commander: name, identity: ci, bracket: bracketNum, aggression }) : undefined;
   const fit = page && kind === 'average' ? bracketFit(bracketOf(deckNow.map((c) => ({ name: c.name, card: cardByName(c.name) })), gc), bracketNum) : undefined;
+  const brainCtx = { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression, taste: profile?.brain?.taste, focus: focusStack[0] };
   const whyOf = (slot: string) => {
     const sl = eff.get(slot);
     const now = sl?.name ?? slot;
     const how = sl && sl.name !== slot ? (sl.why === 'pin' ? 'pin' : sl.why === 'auto' || sl.why === 'never' ? 'stand-in' : 'swap') : undefined;
-    return whyCard({ name: now, ctx: { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression }, rec: recInfo.get(norm(now)), how, slot: how ? slot : undefined, gc });
+    return whyCard({ name: now, ctx: brainCtx, rec: recInfo.get(norm(now)), how, slot: how ? slot : undefined, gc });
   };
+  async function forgeFromBinder() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const pool = binderCandidates(owned, binder, ci, never);
+      const landsN = karstenLands({ avgMv: forgeSt.avgMv || 3.1, cheapFlow: forgeSt.roles.ramp + forgeSt.roles.draw, bracket: bracketNum });
+      const built = buildDeck({ commander: name, identity: ci, owned: pool, cardOf: cardByName, bracket: bracketNum, aggression, gc, focus: focusStack, pins: pinsOk, lands: landsN });
+      const deckName = await freeDeckName(s.profile, `${name} (binder build)`);
+      await db.decks.add({ profile: s.profile, name: deckName, commander: name, source: bracket || undefined, cards: built.cards, updated: Date.now() });
+      haptic('success');
+      openDeck(deckName);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
   // The Forge on the commander page: focus mode from your first swap; suggestions go into slots (drag, or tap then tap).
   useForgeMode(forging);
   const [placing, setPlacing] = useState<string | null>(null);
@@ -629,6 +694,33 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <ReadyTiles ready={ready} fit={fit} />
             </div>
           )}
+          {page && kind === 'average' && (
+            <div className="cactions" role="group" aria-label="Deck actions">
+              {!forging ? (
+                <button type="button" className="btn forge" onClick={() => (haptic('open'), setManualForge(true))} title="Open The Forge workbench with live role meters and ranked suggestions">
+                  ⚒ FORGE &amp; EDIT
+                </button>
+              ) : (
+                <button type="button" className="btn forge" onClick={() => void saveDeck()} disabled={saving}>
+                  ✓ SAVE TO MY DECKS
+                </button>
+              )}
+              {binder.length > 0 && (
+                <button type="button" className="btn ink" onClick={() => void forgeFromBinder()} disabled={saving} title="Build a complete 100-card deck from your binder using Karsten mana math + strategy scoring">
+                  ⚡ BUILD 100 FROM BINDER
+                </button>
+              )}
+              <button
+                type="button"
+                className={`qpill${ownMode === 'owned' ? ' on' : ''}`}
+                aria-pressed={ownMode === 'owned'}
+                onClick={() => (haptic('select'), setOwnMode(ownMode === 'owned' ? 'prefer' : 'owned'))}
+                title="Fill every missing slot with the best stand-in you already own"
+              >
+                {ownMode === 'owned' ? '✓ OWNED ONLY' : 'OWNED ONLY'}
+              </button>
+            </div>
+          )}
             {/* Built around (EDHREC themes) sits with the deck settings, so the commander header stays clean */}
             {tags.length > 0 && (
               <div className="builtaround">
@@ -719,7 +811,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             )}
           </section>
         )}
-        {forging && <ForgeTop label={label} sub={`${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save`} undo={undoLast} onLeave={onBack} onSave={() => saveDeck()} saving={saving} />}
+        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => setManualForge(false) : onBack} onSave={() => saveDeck()} saving={saving} />}
         {leaving && (
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />
@@ -780,8 +872,34 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           <div className="deckgrid after-sw">
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             <div className="lists" {...(forging ? drop : {})}>
-              {/* The one slim bar (owner's rule): search, then ⋮ with POWER, GEAR, SORT, SHOW, VIEW and EDHREC's With / Without card */}
-              <ToolBar q={q} setQ={setQ} now={[powerLabel, `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}>
+              {/* The one slim bar (owner's rule): search, quick view/filter pills on wider screens, then ⋮ with POWER, GEAR, SORT, SHOW, VIEW and EDHREC's With / Without card */}
+              <ToolBar
+                q={q}
+                setQ={setQ}
+                now={[powerLabel, `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, kind === 'average' && ownMode === 'owned' ? 'OWNED' : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+                quick={
+                  <>
+                    <div className="qsegs" role="group" aria-label="Quick filter">
+                      {(['all', 'owned', 'missing'] as Show[]).map((v) => (
+                        <button key={v} type="button" aria-pressed={show === v} onClick={() => (haptic('select'), setShow(v), setMenuFor(null))}>
+                          {v === 'all' ? 'ALL' : v === 'owned' ? 'OWNED' : 'MISSING'}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="qsegs qviews" role="group" aria-label="Quick view">
+                      <button type="button" aria-pressed={view === 'grid'} title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                        <GridIcon />
+                      </button>
+                      <button type="button" aria-pressed={view === 'list'} title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                        <ListIcon />
+                      </button>
+                      <button type="button" aria-pressed={view === 'compact'} title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
+                        <CompactIcon />
+                      </button>
+                    </div>
+                  </>
+                }
+              >
                 <OptRow label="POWER">
                   <Segs label="Power" value={bracket} options={BRACKETS.map(([v, t, b]) => [v, b ? `${t.toUpperCase()} · B${b}` : t.toUpperCase(), b ? `Bracket ${b}` : 'Every bracket'])} onChange={setBracket} />
                 </OptRow>
@@ -791,6 +909,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 {kind === 'average' && (
                   <OptRow label="CARDS">
                     <Segs label="Cards" value={ownMode} options={OWN_MODES.map(([v, t]) => [v, t, v === 'owned' ? 'Only cards you own: missing ones get your best stand-in' : 'Your cards win unless a missing one is clearly better'])} onChange={(v) => setOwnMode(v as OwnMode)} />
+                    {binder.length > 0 && (
+                      <button type="button" className="btn ink" onClick={() => void forgeFromBinder()} disabled={saving} title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)">
+                        ⚒ BUILD 100
+                      </button>
+                    )}
                   </OptRow>
                 )}
                 {kind === 'average' && (
@@ -929,7 +1052,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                                 big={imgOf(c.id, 'normal')}
                                 replaced={repl}
                                 loading={!recs}
-                                options={suggest(c).map(optionOf)}
+                                options={suggest(c, brainCtx).map(optionOf)}
                                 pool={binder
                                   .filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key) && b.key !== norm(name))
                                   .map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }))}

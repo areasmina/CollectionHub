@@ -5,7 +5,7 @@ import { CardSpin } from './CardSpin';
 
 const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m.CommanderView })));
 import { db, type Card } from '../lib/db';
-import { cachedPage, fetchPage, NoPage, pagePath } from '../lib/edhrec';
+import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
@@ -88,9 +88,19 @@ export function Discover(s: Shared) {
   const [sort, setSort] = useState('match'); // most owned first
   const [colours, setColours] = useState<string[]>([]);
   const [fOpen, setFOpen] = useState(false); // phones: filters collapsed until asked for
-  const phone = window.innerWidth <= 700;
+  const [phone, setPhone] = useState(() => (typeof matchMedia === 'function' ? matchMedia('(max-width: 700px)').matches : window.innerWidth <= 700));
   // up to tablets the eye sits on the logo (behind the letters) instead of taking a third of the first screen
-  const eyeOnLogo = window.innerWidth <= 1024;
+  const [eyeOnLogo, setEyeOnLogo] = useState(() => (typeof matchMedia === 'function' ? matchMedia('(max-width: 1024px)').matches : window.innerWidth <= 1024));
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const mp = matchMedia('(max-width: 700px)');
+    const me = matchMedia('(max-width: 1024px)');
+    const onP = () => setPhone(mp.matches);
+    const onE = () => setEyeOnLogo(me.matches);
+    mp.addEventListener('change', onP);
+    me.addEventListener('change', onE);
+    return () => (mp.removeEventListener('change', onP), me.removeEventListener('change', onE));
+  }, []);
   // The tagline lines up under the word BUILD: measured from the title's 4th cut-out word, kept in step on resize.
   const underObs = useRef<ResizeObserver | null>(null);
   const underBuild = (el: HTMLParagraphElement | null) => {
@@ -143,7 +153,7 @@ export function Discover(s: Shared) {
   }, [s.profile]);
   const commanders = data?.commanders ?? [];
 
-  // Stats for every commander. First recount from pages already on the device (fast, no network), then fetch missing
+  // Stats for every commander. First recount from pages already on the device (fast bulk read, no network), then fetch missing
   // or old pages from EDHREC one by one (paced, cached), saving as it goes. Paused while a commander is open.
   const work = saved && data ? plan(commanders.map((c) => c.key), saved.map, saved.sig === sig, Date.now(), REFRESH_MS) : null;
   // The progress bar counts only commanders with nothing to show yet or a recount under way; old pages refresh silently.
@@ -154,38 +164,63 @@ export function Discover(s: Shared) {
     const profile = s.profile;
     const byKey = new Map(commanders.map((c) => [c.key, c]));
     const map = saved.sig === sig ? new Map(saved.map) : new Map([...saved.map].filter(([k]) => byKey.has(k)));
-    const put = (k: string, v: SavedStat) => {
-      map.set(k, v);
+    let lastFlush = 0;
+    let lastSave = 0;
+    const flush = (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastFlush < 250) return;
+      lastFlush = now;
       memo = { profile, sig, map: new Map(map) };
       setSaved(memo);
+      if (force || now - lastSave > 2000) {
+        lastSave = now;
+        void saveStats(profile, sig, map);
+      }
     };
     (async () => {
       const refresh = new Set(work.refresh);
-      for (const k of work.recount) {
+      if (work.recount.length) {
+        const pairs = work.recount.map((k) => [k, pagePath('average', slug(byKey.get(k)!.name))] as const);
+        const hits = await cachedPages(pairs.map(([, p]) => p));
         if (!live) return;
-        const hit = await cachedPage(pagePath('average', slug(byKey.get(k)!.name)));
-        if (hit) put(k, { stat: statOf(hit.page, s.mine), at: hit.at });
-        else refresh.add(k);
+        let anyHit = false;
+        for (const [k, p] of pairs) {
+          const hit = hits.get(p);
+          if (hit) {
+            map.set(k, { stat: statOf(hit.page, s.mine), at: hit.at });
+            anyHit = true;
+          } else {
+            refresh.add(k);
+          }
+        }
+        if (anyHit) flush(true);
       }
       if (live) await saveStats(profile, sig, map);
-      for (const k of [...refresh].sort((a, b) => byKey.get(a)!.name.localeCompare(byKey.get(b)!.name))) {
-        if (!live) return;
-        const path = pagePath('average', slug(byKey.get(k)!.name));
-        // No EDHREC page = null; offline or an error: keep what's shown and try again next time.
-        const stat = await fetchPage(path, REFRESH_MS)
-          .then((p) => statOf(p, s.mine))
-          .catch((e) => (e instanceof NoPage ? null : undefined));
-        if (!live) return;
-        if (stat !== undefined) put(k, { stat, at: Date.now() });
-        else continue;
-        await saveStats(profile, sig, map);
-      }
+      const queue = [...refresh].sort((a, b) => byKey.get(a)!.name.localeCompare(byKey.get(b)!.name));
+      let idx = 0;
+      const worker = async () => {
+        while (live && idx < queue.length) {
+          const k = queue[idx++];
+          const path = pagePath('average', slug(byKey.get(k)!.name));
+          // No EDHREC page = null; offline or an error: keep what's shown and try again next time.
+          const stat = await fetchPage(path, REFRESH_MS)
+            .then((p) => statOf(p, s.mine))
+            .catch((e) => (e instanceof NoPage ? null : undefined));
+          if (!live) return;
+          if (stat !== undefined) {
+            map.set(k, { stat, at: Date.now() });
+            flush(false);
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: 6 }, () => worker()));
+      if (live) flush(true);
     })();
     return () => {
       live = false;
       saveStats(profile, sig, map);
     };
-  }, [saved?.profile, saved ? saved.sig === sig : false, sig, commanders.length, open, !!data]);
+  }, [saved?.profile, sig, commanders.length, open, !!data]);
 
   if (open)
     return (
@@ -219,6 +254,12 @@ export function Discover(s: Shared) {
     .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name));
   const empty = commanders.length === 0; // nothing to sort or filter yet
   const toggle = (col: string) => setColours((cs) => (cs.includes(col) ? cs.filter((x) => x !== col) : [...cs, col]));
+  const warmCmdr = (name: string) => {
+    void import('./Commander');
+    const sSlug = slug(name);
+    void cachedPage(pagePath('average', sSlug));
+    void cachedPage(pagePath('commander', sSlug));
+  };
 
   return (
     <>
@@ -349,7 +390,14 @@ export function Discover(s: Shared) {
             const ready = st && st.pct >= 90;
             return (
               <li key={c.id}>
-                <button className="ccard" style={{ transform: `rotate(${ROTS[i % ROTS.length]}deg)` }} onClick={() => (setOpenNo(i + 1), setOpen(c.name))} aria-label={`${c.name}${st ? `, ${st.pct}% owned, ${st.missing} cards missing` : ''}`}>
+                <button
+                  className="ccard"
+                  style={{ transform: `rotate(${ROTS[i % ROTS.length]}deg)` }}
+                  onPointerEnter={() => warmCmdr(c.name)}
+                  onTouchStart={() => warmCmdr(c.name)}
+                  onClick={() => (setOpenNo(i + 1), setOpen(c.name))}
+                  aria-label={`${c.name}${st ? `, ${st.pct}% owned, ${st.missing} cards missing` : ''}`}
+                >
                   <span className="worn" aria-hidden="true" />
                   <span className="hair" aria-hidden="true" />
                   {i % 3 !== 2 && <Tape style={TAPES[i % 3]} />}

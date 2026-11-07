@@ -11,16 +11,21 @@ import { deckColour } from '../lib/deckcolor';
 /** How many decks the sideways row shows before its SEE ALL card. */
 const SHELF = 6;
 
-/** Your saved decks, newest first, in one sideways row ending with SEE ALL: one tap opens the deck in the Forge. */
-export function MyDecks({ s, action }: { s: Shared; action?: React.ReactNode }) {
+/** Your saved decks, newest first, in one sideways row ending with SEE ALL (or + ADD A DECK when empty): one tap opens the deck in the Forge. */
+export function MyDecks({ s }: { s: Shared }) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
   const arts = useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? ''))).toArray()).map((c) => [c.key, c.img])), [decks]) ?? new Map<string, string | undefined>();
-  if (!decks.length && !action) return null;
   return (
     <section className="shelf" aria-label="My decks">
       <div className="shelfhead">
-        <h2>MY DECKS ({decks.length})</h2>
-        {action}
+        <h2>
+          <button type="button" className="shelftitle" onClick={() => (haptic('open'), openDeckList())} title="Open My Decks & add a deck">
+            MY DECKS ({decks.length}) →
+          </button>
+        </h2>
+        <button type="button" className="adddeckbtn" onClick={() => (haptic('open'), openDeckList())}>
+          + ADD A DECK
+        </button>
       </div>
       {decks.length > 0 && (
       <ul className="shelfrow">

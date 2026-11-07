@@ -191,7 +191,8 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
         {/* one dot per deck, in that deck's colour */}
         {(tints?.get(norm(e.name)) ?? []).map((c) => (
           <i key={c} style={{ background: c }} aria-hidden="true" />
-        ))}{' '}
+        ))}
+        {' '}
         in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
       </span>
     ) : null;
@@ -299,43 +300,68 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
           )}
         </div>
       )}
-      {/* One row: search, List / Grid, and a ⋯ menu for the rarely used options (grouping, exports). */}
+      {/* One row: search, quick List/Grid + S/M/L pills, and a ⋯ menu for the rarely used options (grouping, exports). */}
       {/* Title and the tools bar share one line */}
       <div className="collbar" data-zoom={zoom}>
-      {title}
-      {/* One slim row (owner's rule): search, then ⋮ with card size, list / grid, group by set and the exports */}
-      <ToolBar q={q} setQ={setQ ?? (() => {})} now={[view === 'grid' ? `SIZE ${zoom.toUpperCase()}` : 'LIST', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}>
-        <OptRow label="VIEW">
-          <div className="viewsw icons" role="group" aria-label="Card view">
-            <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
-              <ListIcon />
-            </button>
-            <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
-              <GridIcon />
-            </button>
-          </div>
-        </OptRow>
-        {view === 'grid' && (
-          <OptRow label="SIZE">
-            <div className="zoomsw" role="radiogroup" aria-label="Card size">
-              {(['s', 'm', 'l'] as const).map((z) => (
-                <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
-                  <i className={`zc ${z}`} aria-hidden="true" />
+        {title}
+        {/* One slim row (owner's rule): search, quick view/size pills, then ⋮ with card size, list / grid, group by set and the exports */}
+        <ToolBar
+          q={q}
+          setQ={setQ ?? (() => {})}
+          now={[view === 'grid' ? `SIZE ${zoom.toUpperCase()}` : 'LIST', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}
+          quick={
+            <>
+              <div className="qsegs qviews" role="group" aria-label="Quick view">
+                <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                  <ListIcon />
                 </button>
-              ))}
+                <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                  <GridIcon />
+                </button>
+              </div>
+              {view === 'grid' && (
+                <div className="qsegs" role="group" aria-label="Quick card size">
+                  {(['s', 'm', 'l'] as const).map((z) => (
+                    <button key={z} type="button" aria-pressed={zoom === z} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
+                      {z.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+        >
+          <OptRow label="VIEW">
+            <div className="viewsw icons" role="group" aria-label="Card view">
+              <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
+                <ListIcon />
+              </button>
+              <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
+                <GridIcon />
+              </button>
             </div>
           </OptRow>
-        )}
-        <label className="check">
-          <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
-        </label>
-        {group === 'on' && (
+          {view === 'grid' && (
+            <OptRow label="SIZE">
+              <div className="zoomsw" role="radiogroup" aria-label="Card size">
+                {(['s', 'm', 'l'] as const).map((z) => (
+                  <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
+                    <i className={`zc ${z}`} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            </OptRow>
+          )}
           <label className="check">
-            <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
+            <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
           </label>
-        )}
-        {more && <div className="optmore">{more}</div>}
-      </ToolBar>
+          {group === 'on' && (
+            <label className="check">
+              <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
+            </label>
+          )}
+          {more && <div className="optmore">{more}</div>}
+        </ToolBar>
       </div>
 
       {group === 'on' ? (

@@ -16,6 +16,7 @@ import { roleSource } from '../lib/deckstats';
 import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
 import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
 import { whyCard } from '../brain/why';
+import { commanderThemes } from '../brain/themes';
 import { ReadyTiles } from './Verdict';
 import { allocate } from '../lib/allocation';
 import { inUseChip } from '../brain/chips';
@@ -575,12 +576,16 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     const want = (sugg?.lists ?? []).flatMap((l) => l.cards.map((c) => c.id)).filter(Boolean) as string[];
     let live = true;
     if (want.length)
-      cardsByIds(want.slice(0, 400))
+      cardsByIds(want.slice(0, 400), undefined, (partial) => {
+        if (live) setEdhCards((prev) => new Map([...prev, ...[...partial.values()].map((c) => [c.key, c] as const)]));
+      })
         .then(async (m) => {
+          if (!live) return;
           const named = new Map([...m.values()].map((c) => [c.key, c]));
-          if (live) setEdhCards(named);
-          const ch = await cheapest([...m.values()].map((c) => c.name));
-          if (live) setEdhCards(new Map([...named].map(([k, c]) => [k, withCheapest(c, ch)!])));
+          setEdhCards((prev) => new Map([...prev, ...named]));
+          await cheapest([...m.values()].map((c) => c.name), (ch) => {
+            if (live) setEdhCards((prev) => new Map([...prev, ...[...named].map(([k, c]) => [k, withCheapest(c, ch)!] as const)]));
+          });
         })
         .catch(() => {});
     return () => void (live = false);
@@ -731,7 +736,33 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <b>⚒ THE FORGE</b> tap any card to swap it · drag a suggestion onto a card to swap, or onto the deck to add · drag a card back to the list to cut it
             </div>
             {/* How the cards are split and ordered, right above them */}
-            <ToolBar q={q} setQ={setQ} now={[GROUPINGS.find(([v]) => v === grouping)?.[1], SORTS.find(([v]) => v === sort)?.[1], only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}>
+            <ToolBar
+              q={q}
+              setQ={setQ}
+              now={[GROUPINGS.find(([v]) => v === grouping)?.[1], SORTS.find(([v]) => v === sort)?.[1], only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+              quick={
+                <>
+                  <div className="qsegs" role="group" aria-label="Ownership filter">
+                    {ONLYS.map(([v, l]) => (
+                      <button key={v} type="button" aria-pressed={only === v} onClick={() => (haptic('select'), setOnly(v))}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="qsegs qviews" role="group" aria-label="Quick view">
+                    <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                      <GridIcon />
+                    </button>
+                    <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                      <ListIcon />
+                    </button>
+                    <button type="button" aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
+                      <CompactIcon />
+                    </button>
+                  </div>
+                </>
+              }
+            >
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
@@ -790,7 +821,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                               name={c.name}
                               missing={slotInfo(c.name)}
                               big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
-                              options={rankSubs(slotInfo(c.name), candidates).map(optionOf)}
+                              options={rankSubs(slotInfo(c.name), candidates, 3, { deck: deck.cards, cardOf: anyCard, commander: deck.commander, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0] }).map(optionOf)}
                               pool={forgePool()}
                               loading={!!deck.commander && !recs}
                               pin={pinOf(pins, c.name)}
@@ -917,17 +948,49 @@ export function Decks(s: Shared) {
     setBusy(null);
   }
 
+  async function createBlankDeck() {
+    const raw = prompt('Name your new deck:', 'New Brew')?.trim();
+    if (!raw) return;
+    haptic('open');
+    const id = await db.decks.add({
+      profile: s.profile,
+      name: raw,
+      cards: [{ name: 'Sol Ring', qty: 1 }],
+      updated: Date.now(),
+    });
+    setOpen(id);
+    scrollTo(0, 0);
+  }
+
+  function jumpToAdd() {
+    const el = document.querySelector<HTMLElement>('.addpage');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el?.querySelector<HTMLInputElement>('input')?.focus();
+  }
+
   return (
     <>
       <PageDecor seed={902} rays="80% 14%" sheet={{ side: 'left', top: 700, rot: 8 }} />
       <main>
-        <section style={{ display: 'inline-block', marginTop: 24 }}>
-          <Title text="MY DECKS" label="My decks" size={72} seed={33} />
-        </section>
-        <p className="count" style={{ color: 'var(--text)' }}>
-          {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
-          <span className="cur">_</span>
-        </p>
+        <div className="decksbar">
+          <div>
+            <section style={{ display: 'inline-block', marginTop: 24 }}>
+              <Title text="MY DECKS" label="My decks" size={72} seed={33} />
+            </section>
+            <p className="count" style={{ color: 'var(--text)' }}>
+              {decks.length} {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
+              <span className="cur">_</span>
+            </p>
+          </div>
+          <div className="decksactions">
+            <button type="button" className="btn save" onClick={jumpToAdd}>
+              + IMPORT / PASTE DECK ↓
+            </button>
+            <button type="button" className="btn ink" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+              ⚒ NEW BLANK DECK
+            </button>
+          </div>
+        </div>
         <ShortAlert items={short} />
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid">
@@ -980,6 +1043,7 @@ export function Decks(s: Shared) {
             <div className="stripe" aria-hidden="true" />
             <h2>ADD A DECK</h2>
           </div>
+          <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
           <label>
             deck name
             <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} />
@@ -1010,7 +1074,7 @@ export function Decks(s: Shared) {
           </button>
           {busy && <Progress {...busy} />}
           {error && <p className="error">{error}</p>}
-          {result && <ImportReport r={result} />}
+          {result && <ImportReport r={result} deck />}
         </section>
       </main>
     </>
