@@ -29,28 +29,48 @@ test('Discover: title, eye art, filters and commanders fit the screen', async ({
   } else await fits(page, ['.hero .titlewrap', '.hero .fpanel', '.eyedoodle', '.ccard']);
 });
 
-test('Commander page: header stats, tags row stays inside its frame', async ({ page }) => {
+test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes behind ⋮', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.chero h1')).toBeVisible();
-  await expect(page.locator('.hstats .price')).toBeVisible();
-  const row = await page.locator('.strip .hscroll').boundingBox();
-  const frame = await page.locator('.strip').boundingBox();
-  expect(row!.x + row!.width).toBeLessThanOrEqual(frame!.x + frame!.width + 1);
-  // EDHREC's top 6 tags, the rest behind +N MORE
-  await expect(page.locator('.strip .hscroll button:not(.tagmore)')).toHaveCount(6);
-  await page.locator('.tagmore').click();
-  await expect(page.locator('.strip .hscroll button:not(.tagmore)')).toHaveCount(10);
-  await page.locator('.tagmore').click();
-  await fits(page, ['.chero', '.strip']);
+  // hero: name, the quiet meta line, match % (only here)
+  await expect(page.locator('.vhero h1')).toBeVisible();
+  await expect(page.locator('.vhero .vmeta')).toContainText('4,321 decks');
+  await expect(page.locator('.vhero .vmatch .num')).toHaveText('100%');
+  // say it once: the match % appears in one place on the page
+  expect(await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => !e.children.length && /^\d+%$/.test(e.textContent!.trim())).length)).toBe(1);
+  // strip: POWER · status with the deck cost (only here) · PULL / TO BUY · FORGE (the one red slab)
+  const strip = page.locator('.dstrip');
+  await expect(strip.locator('.power summary')).toContainText('MED · B4');
+  await expect(strip.locator('.dcost')).toContainText('deck ≈CA$');
+  await expect(page.locator('.dcost')).toHaveCount(1);
+  await expect(strip.locator('.u-btn.primary')).toHaveText(/FORGE/);
+  await expect(page.locator('.u-btn.primary')).toHaveCount(1);
+  if (info.project.name !== 'phone') expect(Math.round((await strip.boundingBox())!.height)).toBe(56);
+  // POWER opens its menu; picking a bracket changes the deck's power
+  await strip.locator('.power summary').click();
+  await strip.getByRole('radiogroup', { name: 'Power' }).getByRole('radio', { name: /MAX/ }).click();
+  await expect(strip.locator('.power summary')).toContainText('MAX');
+  await page.keyboard.press('Escape');
+  // themes (EDHREC's top 6, the rest behind +N MORE) live behind ⋮
+  const o = await opts(page);
+  const themes = o.locator('.themes[aria-label="EDHREC themes"] button:not(.tagmore)');
+  await expect(themes).toHaveCount(6);
+  await o.locator('.tagmore').click();
+  await expect(themes).toHaveCount(10);
+  await themes.first().click();
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('#LANDFALL');
+  await expect(page.locator('.dstrip .dcost')).toBeVisible(); // the theme's EDHREC page loaded (the strip stays while it loads)
+  await fits(page, ['.vhero', '.dstrip', '.tbar .fbody']);
+  await page.screenshot({ path: `test-results/overhaul-deck-${info.project.name}.png` });
 });
 
 test('Commander settings on a wide screen: tags stay compact (two rows at most)', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop');
   await page.setViewportSize({ width: 2000, height: 1100 });
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.tagmore')).toHaveText('+4 MORE');
-  const ys = await page.locator('.strip .hscroll button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top / 30)));
-  expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows (the strip is tilted a little, so tops differ by a few px)
+  const o = await opts(page);
+  await expect(o.locator('.tagmore')).toHaveText('+4 MORE');
+  const ys = await o.locator('.themes button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
+  expect(new Set(ys).size).toBeLessThanOrEqual(2); // rows
   await page.screenshot({ path: 'test-results/commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
 });
 
@@ -273,7 +293,7 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   expect(heads.map((h) => h.replace(/\s*\(\d+\)\s*$/, ''))).toEqual(['CREATURES', 'INSTANTS', 'SORCERIES', 'ENCHANTMENTS', 'ARTIFACTS', 'LANDS']);
   // no one-card Commander section, and the match % shows once (the strip's bar, not by the title)
   await expect(page.locator('.chero .bigpct')).toHaveCount(0);
-  await expect(page.locator('.strip .match .num')).toContainText('%');
+  await expect(page.locator('.vhero .vmatch .num')).toContainText('%');
   expect(heads.at(-1)).toMatch(/\(20\)$/); // 10 Forest + 10 Island
   // every section shows what its cards cost
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
@@ -308,7 +328,7 @@ test('Reload: commander stats come back from the device, no EDHREC requests', as
 
 test('Commander page: an old saved page shows at once even when EDHREC is down', async ({ page }) => {
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.hstats .price')).toBeVisible(); // its EDHREC pages are saved by now
+  await expect(page.locator('.dstrip .dcost')).toBeVisible(); // its EDHREC pages are saved by now
   // Age every saved page past a day, cut EDHREC off, reopen.
   await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
@@ -320,8 +340,8 @@ test('Commander page: an old saved page shows at once even when EDHREC is down',
   await page.route(/json\.edhrec\.com/, (r) => r.abort());
   await page.reload();
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.chero h1')).toBeVisible();
-  await expect(page.locator('.hstats .price')).toBeVisible();
+  await expect(page.locator('.vhero h1')).toBeVisible();
+  await expect(page.locator('.dstrip .dcost')).toBeVisible();
 });
 
 test('Swap window: every card swaps, search your binder, undo, pins', async ({ page }, info) => {
@@ -349,17 +369,18 @@ test('Swap window: every card swaps, search your binder, undo, pins', async ({ p
   // Pin the new card in, then undo the swap from its window
   await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
   await page.getByRole('dialog', { name: 'Swap Arcane Signet' }).getByRole('button', { name: '📌 ALWAYS IN' }).click();
-  await expect(page.locator('.pinchip', { hasText: 'Arcane Signet' })).toBeVisible();
-  await page.locator('.pinchip', { hasText: 'Arcane Signet' }).click();
+  // pins sit behind ⋮ (the bar says how many), each one tap to unpin
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('1 PINNED');
+  await (await opts(page)).locator('.pinchip', { hasText: 'Arcane Signet' }).click();
   await expect(page.locator('.pinchip')).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Swap Arcane Signet (in place of Sol Ring)' }).click();
   await page.getByRole('button', { name: /UNDO back to/ }).click();
   await expect(page.locator('.swapmark', { hasText: 'for Sol Ring' })).toHaveCount(0);
   // Never use: no other card of yours fits, so Sol Ring stays, marked, and the pin can be taken off
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: '💀 NEVER USE' }).click();
-  await expect(page.locator('.pinchip', { hasText: 'Sol Ring' })).toBeVisible();
-  await page.locator('.pinchip', { hasText: 'Sol Ring' }).click();
+  await (await opts(page)).locator('.pinchip', { hasText: 'Sol Ring' }).click();
   await expect(page.locator('.pinchip')).toHaveCount(0);
 });
 
@@ -575,9 +596,10 @@ test('EDHREC With / Without card: self-testing filter, honest fallback', async (
 
 test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UNDER marks, never removes', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
-  const cov = page.locator('.lists > .coverage');
+  const cov = page.locator('.dstrip .dstatus');
   await expect(cov).toContainText('from your binder');
-  await expect(page.locator('.lists > .tbar .fnow')).toContainText('MED · B4 · 3RD GEAR'); // decks open at MED power, MAX budget
+  await expect(page.locator('.dstrip .power summary')).toContainText('MED · B4'); // decks open at MED power, MAX budget
+  await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Cards' }).getByRole('radio', { name: 'OWNED ONLY' }).click();
@@ -611,7 +633,12 @@ test('C: the swap window says "in <deck>" when another deck uses the copy (no "f
 
 test('B: the TO BUY receipt flips to a PULL list of your cards, and prints', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
-  const r = page.locator('aside.receipt');
+  // nothing to buy: the strip's button says PULL and opens the drawer (a bottom sheet on phones)
+  await page.locator('.dstrip .tobuy').click();
+  const sheet = page.getByRole('dialog', { name: 'Pull list' });
+  await expect(sheet).toBeVisible();
+  if (info.project.name !== 'phone') expect(Math.round((await sheet.boundingBox())!.width)).toBe(360);
+  const r = sheet.locator('aside.receipt');
   await expect(r).toBeVisible();
   await r.getByRole('button', { name: 'PULL' }).click();
   await expect(r.locator('h2')).toHaveText('*** PULL LIST ***');
@@ -628,7 +655,7 @@ test('B: the TO BUY receipt flips to a PULL list of your cards, and prints', asy
 
 test('Readiness + Bracket Fit tiles beside Match; the swap window says why the card is in', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
-  const tiles = page.locator('.strip .vtiles');
+  const tiles = page.locator('.vhero .vtiles');
   await expect(tiles.locator('.vtile.ready summary')).toContainText(/READY|ALMOST|NOT READY|NOT LEGAL/);
   await expect(tiles.locator('.vtile.fit summary')).toContainText(/FITS|PLAYS/);
   await tiles.locator('.vtile.ready summary').click();
@@ -654,11 +681,12 @@ test('Platform space pass: multi-column open deck categories on wide screens, si
     const [c0, c1] = await Promise.all([cats.nth(0).boundingBox(), cats.nth(1).boundingBox()]);
     expect(Math.abs(c0!.y - c1!.y)).toBeLessThan(12);
     expect(c1!.x).toBeGreaterThan(c0!.x + c0!.width - 2);
-    // And the receipt / sidebar sits beside the deck list, not stacked above it
-    const [lists, receipt] = await Promise.all([page.locator('.deckgrid > .lists').boundingBox(), page.locator('aside.receipt').boundingBox()]);
-    expect(receipt!.x).toBeGreaterThanOrEqual(lists!.x + lists!.width - 2);
+    // The deck takes the full width: TO BUY / PULL is a drawer now, not a column beside it
+    const [lists, strip] = await Promise.all([page.locator('.deckgrid > .lists').boundingBox(), page.locator('.dstrip').boundingBox()]);
+    expect(Math.abs(lists!.width - strip!.width)).toBeLessThan(4);
+    await expect(page.locator('aside.receipt')).toHaveCount(0);
   }
-  await fits(page, ['.deckgrid', '.lists', 'aside.receipt']);
+  await fits(page, ['.deckgrid', '.lists']);
 });
 
 test('Add a deck with 0 saved decks: + DECK on closed overview and + ADD A DECK in MY DECKS open the Decks page', async ({ page }) => {
@@ -707,7 +735,7 @@ test('Cohesive UI overhaul: 3-tab pill nav (DISCOVER · DECKS · COLLECTION), 1-
   await expect(page.locator('.pillnav .pill button')).toHaveText(['DISCOVER', 'DECKS', 'COLLECTION']);
   // Open Commander and click ⚒ FORGE & EDIT directly without needing a swap first
   await page.locator('.ccard').first().click();
-  const forgeBtn = page.locator('.strip .cactions button', { hasText: 'FORGE & EDIT' });
+  const forgeBtn = page.locator('.dstrip .u-btn.primary', { hasText: 'FORGE' });
   await expect(forgeBtn).toBeVisible();
   await forgeBtn.click();
   await expect(page.locator('.forgetop')).toContainText('FORGE');

@@ -6,6 +6,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 | Date | Decision | Status | Notes |
 |---|---|---|---|
+| 2026-11-07 | THE OVERHAUL (`docs/THE_OVERHAUL.md`) is the UI design system: frame loud, content quiet; screens move one at a time, old CSS deleted as each moves | decided | Phase 1 + 2 in the overhaul PR |
+| 2026-11-07 | Forge stays in place as a mode; 48px top bar on desktop, compact bottom pill on phones | decided | – |
+| 2026-11-07 | Deck page: POWER sits on the strip only (not also in ⋮); themes and pins move behind ⋮; the one-time swap tip and the separate BUILD 100 / OWNED ONLY buttons leave the strip (both stay in ⋮ → CARDS) | proposed | overhaul PR, Guillermo to confirm |
 | 2026-11-06 | Paper-ball TO BUY and the price-tape unroll on hold until Guillermo says go | parked | 22:27 "hold this idea" |
 | 2026-11-06 | Forge round: no FORGE IT button (first swap opens it; a saved deck opens in it); GEAR 1ST/2ND/3RD; POWER labels show B3/B4/B5; compact list is the phone default; TO BUY grouped by play rate; decks from Discover open at MED + $$$ | decided | Shipped in #17 / #20 |
 | 2026-11-06 | Work rulebook: `CLAUDE.md`, `docs/FEATURES.md`, this file, PR template with Checks, browser checks required in CI | decided | Ideas adapted from the MIT [product-harness-starter](https://github.com/beamnxw/my_works). Skipped: separate planner/builder/evaluator sessions, a shared handoff file, evidence folders in git |

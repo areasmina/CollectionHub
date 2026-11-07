@@ -9,12 +9,13 @@ test.beforeEach(async ({ page }) => {
 test('Phone round: card is its own swap button, % in the burst, one FILTERS button', async ({ page }, info) => {
   await page.evaluate(() => localStorage.setItem('ch:view', 'grid')); // these checks are about the card grid
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.match .num')).toHaveText(/%$/);
-  // the % comes after the bar (inside the burst on the right)
-  const [bar, num] = await Promise.all([page.locator('.match .meter').boundingBox(), page.locator('.match .num').boundingBox()]);
-  expect(num!.x).toBeGreaterThan(bar!.x + bar!.width - 2);
+  await expect(page.locator('.vmatch .num')).toHaveText(/%$/);
+  // the big % leads, the slanted green bars follow it
+  const [num, bar] = await Promise.all([page.locator('.vmatch .num').boundingBox(), page.locator('.vmatch .u-meter').boundingBox()]);
+  expect(bar!.x).toBeGreaterThan(num!.x + num!.width - 2);
+  await expect(page.locator('.vmatch .u-meter i.on')).toHaveCount(10);
   await page.screenshot({ path: `test-results/round-top-${info.project.name}.png` });
-  await page.locator('.match').scrollIntoViewIfNeeded();
+  await page.locator('.dstrip').scrollIntoViewIfNeeded();
   await page.screenshot({ path: `test-results/round-strip-${info.project.name}.png` });
   // FILTERS opens a sheet holding sort and show
   const sheet = page.locator('.fsheet');
@@ -62,22 +63,23 @@ test('Title answer: deck count tucked behind the title, tagline under BUILD (wid
   await page.locator('.hero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
 });
 
-test('One slim bar: search + ⋮ (POWER, BUDGET inside), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {
+test('One slim bar: search + ⋮ (GEAR inside, POWER on the strip), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
   const bar = page.locator('.lists > .tbar');
-  await expect(page.locator('.slimbar')).toHaveCount(0); // POWER and BUDGET live in the bar's options now
+  await expect(page.locator('.slimbar')).toHaveCount(0);
   await expect(bar.locator('.tsearch input')).toBeVisible();
   expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52); // one slim row at every width
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
-  await expect(bar.locator('.fnow')).toHaveText(/MIN|ALL|MED|MAX/);
+  await expect(page.locator('.dstrip .power summary')).toHaveText(/MIN|ALL|MED|MAX/); // POWER is said once: on the strip
+  await expect(bar.locator('.fnow')).not.toContainText(/MED|B4/);
   const o = await opts(page);
-  await expect(o.getByRole('radiogroup', { name: 'Power' })).toBeVisible();
+  await expect(o.getByRole('radiogroup', { name: 'Power' })).toHaveCount(0);
   await expect(o.getByRole('radiogroup', { name: 'Gear' })).toBeVisible();
   await fits(page, ['.tbar', '.tbar .fbody']);
   await page.screenshot({ path: `test-results/bar-open-${info.project.name}.png` });
   await o.locator('summary').click();
-  await expect(page.locator('.namerow .cstamp')).toContainText('DECKS');
-  expect(await page.locator('.hstats .price').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  await expect(page.locator('.vhero .vmeta')).toContainText('decks');
+  expect(await page.locator('.dstrip .dcost').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   expect(await page.locator('.cat > summary .gval').first().evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   // every group is its own full-width row, collapsed or not, and its header is one line
   const sums = page.locator('details.cat > summary');
@@ -101,7 +103,8 @@ test('One slim bar: search + ⋮ (POWER, BUDGET inside), groups stacked full wid
   const moved = (await page.evaluate(() => scrollY)) - y0;
   const y = (await bar.boundingBox())!.y;
   expect(y).toBeGreaterThanOrEqual(0);
-  expect(Math.round(y)).toBeLessThanOrEqual(Math.max(8, Math.round(start - moved) + 2));
+  const stick = await bar.evaluate((e) => parseFloat(getComputedStyle(e).top)); // under the top bar and the strip on wide screens
+  expect(Math.round(y)).toBeLessThanOrEqual(Math.max(stick + 2, Math.round(start - moved) + 2));
   await page.mouse.wheel(0, -300);
   await expect(page.locator('.pillnav.away')).toHaveCount(0);
 });
