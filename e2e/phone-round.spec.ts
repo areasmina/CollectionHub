@@ -50,8 +50,8 @@ test('Title answer: deck count tucked behind the title letters', async ({ page }
   const z = await page.evaluate(() => [getComputedStyle(document.querySelector('.titlewrap > .tanswer')!).zIndex, getComputedStyle(document.querySelector('.titlewrap > .ztitle')!).zIndex]);
   expect(Number(z[0])).toBeLessThan(Number(z[1]));
   await expect(page.locator('.tagline')).toHaveCount(1);
-  await fits(page, ['.dhero']);
-  await page.locator('.dhero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
+  await fits(page, ['.discohero']);
+  await page.locator('.discohero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
 });
 
 test('One slim bar: search + ⋮ (GEAR inside, POWER on the strip), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {

@@ -1344,7 +1344,7 @@ main.dpage {
 }
 
 /* ---------- 5. Discover: loud frame (title, eye, tagline) → one toolbar → flat commander grid ---------- */
-.dhero {
+.discohero {
   position: relative;
   isolation: isolate;
   display: grid;
@@ -1353,7 +1353,7 @@ main.dpage {
   gap: var(--s2) var(--s5);
   padding: var(--s5) 0 var(--s4);
 }
-.dhero .tagline {
+.discohero .tagline {
   margin: 0;
   font: 400 13px/1.4 var(--u-mono);
   color: var(--u-muted);
@@ -1361,10 +1361,10 @@ main.dpage {
 }
 /* wide screens: the eye gets its own cell beside the title */
 @media (min-width: 1025px) {
-  .dhero {
+  .discohero {
     grid-template-columns: minmax(0, 1fr) auto;
   }
-  .dhero > .eyedoodle {
+  .discohero > .eyedoodle {
     grid-column: 2;
     grid-row: 1 / span 2;
     width: auto;

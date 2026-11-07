@@ -237,7 +237,7 @@ export function Discover(s: Shared) {
   // THE OVERHAUL, Discover: the loud frame (ransom title, the eye, one tagline) → one tool bar → a flat grid of commanders.
   return (
     <main className="dpage disc">
-      <section className="dhero" aria-label="What can I build?">
+      <section className="discohero" aria-label="What can I build?">
         {/* Up to tablets the eye blazes behind the title letters; wide screens give it its own cell. */}
         <Title
           text="WHAT CAN I BUILD?"

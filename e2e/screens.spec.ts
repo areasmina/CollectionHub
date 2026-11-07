@@ -12,9 +12,9 @@ const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'coll
 };
 
 test('Discover (overhaul): loud title + eye + tagline, one toolbar (sort and colours behind ⋮), flat commander grid', async ({ page }, info) => {
-  await expect(page.locator('.dhero .titlewrap')).toBeVisible();
+  await expect(page.locator('.discohero .titlewrap')).toBeVisible();
   await expect(page.locator('.eyedoodle')).toBeVisible();
-  await expect(page.locator('.dhero .tagline')).toHaveText('Your collection. Real decks. No guesswork.');
+  await expect(page.locator('.discohero .tagline')).toHaveText('Your collection. Real decks. No guesswork.');
   // the title answers itself: how many decks this binder can build
   await expect(page.locator('.titlewrap > .tanswer')).toHaveAttribute('aria-label', '1 commander decks you can build');
   // one slim toolbar at every width: search + ⋮ (no FILTERS tag, no taped panel)
@@ -38,7 +38,7 @@ test('Discover (overhaul): loud title + eye + tagline, one toolbar (sort and col
     const cols = await page.locator('.cgrid').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length);
     expect(cols).toBe(2);
   }
-  await fits(page, ['.dhero', '.dfind', '.ccard']);
+  await fits(page, ['.discohero', '.dfind', '.ccard']);
   // ⋮ holds SORT and COLOUR; picking a colour the commander lacks filters it out, the title answer says so
   await bar.locator('summary').click();
   await expect(bar.getByRole('radiogroup', { name: 'Sort' })).toBeVisible();
