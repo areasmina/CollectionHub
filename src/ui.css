@@ -36,7 +36,7 @@
 @media (min-width: 701px) {
   :root {
     --gutter: 24px;
-    --navh: 64px;
+    --navh: 48px;
   }
   html.forging {
     --navh: 0px; /* the Forge has its own top bar */
@@ -311,13 +311,53 @@
   color: var(--u-green);
 }
 
-/* ---------- 3. Dynamic Island Nav: Centered, floating, interactive (tablet, desktop, phones) ---------- */
+/* ---------- 3. Dynamic Island Notch: Attached flush to top ceiling with gooey venom physics ---------- */
 .pillnav {
-  z-index: 50;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: top center;
+  z-index: 60;
   display: flex;
   align-items: center;
+  justify-content: center;
   font-family: var(--u-display);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: none;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  height: 44px;
+  padding: 0 14px 2px;
+  gap: 8px;
+  width: fit-content;
+  max-width: min(720px, calc(100vw - 20px));
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25), box-shadow 0.25s ease;
+  user-select: none;
+  touch-action: pan-y;
+}
+.pillnav.dragging {
+  transition: none !important;
+}
+/* Organic gooey flared ear concavities meeting top edge of the screen */
+.pillnav::before,
+.pillnav::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+.pillnav::before {
+  left: -16px;
+  background: radial-gradient(circle at 0 16px, transparent 16px, #000000 16px);
+}
+.pillnav::after {
+  right: -16px;
+  background: radial-gradient(circle at 16px 16px, transparent 16px, #000000 16px);
 }
 .pillnav button {
   border: 0;
@@ -329,251 +369,166 @@
   outline: 2px solid var(--u-yellow);
   outline-offset: -2px;
 }
-.pillnav .pill {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-.pillnav .pill button {
-  font: 400 15px/1 var(--u-display);
-  letter-spacing: 0.06em;
-  white-space: nowrap;
-}
-.pillnav .pback,
-.pillnav .ugear {
+.pillnav .pback {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--u-text);
+  background: rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  padding: 0;
+  transition: all 0.15s ease;
 }
-.pillnav .ugear {
-  position: relative;
-  color: var(--u-muted);
-  border-radius: 50%;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.2s ease;
+.pillnav .pback:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.06);
 }
-.pillnav .ugear:hover {
-  color: var(--u-text);
-  background: rgba(255, 255, 255, 0.08);
-  transform: rotate(30deg);
-}
-.pillnav .ugear.alert::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--u-yellow);
-}
-.pillnav .ulogo {
+.pillnav .pill {
   display: flex;
   align-items: center;
-  gap: var(--s2);
-  height: 34px;
-  padding: 0 var(--s2);
-  font: 400 17px/1 var(--u-display);
-  letter-spacing: 0.08em;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px;
   border-radius: 999px;
-  transition: background 0.15s ease, opacity 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  height: 34px;
 }
-.pillnav .ulogo:hover {
-  background: rgba(255, 255, 255, 0.06);
+.pillnav .pill button {
+  height: 100%;
+  padding: 0 16px;
+  color: var(--u-muted);
+  border-radius: 999px;
+  border: 0;
+  font: 400 14px/1 var(--u-display);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+.pillnav .pill button:hover {
+  color: var(--u-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+.pillnav .pill button[aria-current='page'] {
+  color: #ffffff;
+  background: var(--u-red);
+  box-shadow: 0 2px 10px rgba(230, 0, 18, 0.5);
+}
+/* 1-click sync toggle pill */
+.pillnav .syncpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font: 600 12px/1 var(--u-display);
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--u-text);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.pillnav .syncpill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.pillnav .syncpill .sdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--u-muted);
+  transition: all 0.2s ease;
+}
+.pillnav .syncpill.on .sdot {
+  background: var(--u-green, #00d26a);
+  box-shadow: 0 0 8px var(--u-green, #00d26a);
+}
+.pillnav .syncpill.off .sdot {
+  background: #555555;
+}
+/* Bottom lip of the notch: venom gooey drag handle */
+.pillnav .island-lip {
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 12px;
+  cursor: grab;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.pillnav .island-lip .lip-bar {
+  width: 32px;
+  height: 3.5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+.pillnav:hover .island-lip .lip-bar {
+  background: rgba(255, 255, 255, 0.65);
+  width: 38px;
 }
 html.forging .pillnav {
   display: none;
 }
-@media (min-width: 701px) {
-  .pillnav {
-    position: sticky;
-    top: 10px;
-    margin: 0 auto;
-    height: 48px;
-    padding: 0 10px 0 14px;
-    gap: var(--s3);
-    width: fit-content;
-    max-width: min(840px, calc(100vw - 32px));
-    background: rgba(14, 14, 14, 0.88);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  }
-  .pillnav:hover {
-    border-color: rgba(255, 255, 255, 0.22);
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  }
-  .pillnav .pback {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    color: var(--u-text);
-    background: rgba(255, 255, 255, 0.06);
-    transition: all 0.15s ease;
-  }
-  .pillnav .pback:hover {
-    background: rgba(255, 255, 255, 0.16);
-    transform: scale(1.06);
-  }
-  .pillnav .pill {
-    height: 36px;
-    gap: 3px;
-    background: rgba(255, 255, 255, 0.04);
-    padding: 3px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  .pillnav .pill button {
-    height: 100%;
-    padding: 0 16px;
-    color: var(--u-muted);
-    border-radius: 999px;
-    border: 0;
-    transition: all 0.18s ease;
-  }
-  .pillnav .pill button:hover {
-    color: var(--u-text);
-    background: rgba(255, 255, 255, 0.08);
-  }
-  .pillnav .pill button[aria-current='page'] {
-    color: #ffffff;
-    background: var(--u-red);
-    box-shadow: 0 2px 10px rgba(230, 0, 18, 0.45);
-  }
-  .pillnav .ugear {
-    margin-left: 0;
-  }
-}
+/* Phones: compact notch */
 @media (max-width: 700px) {
   .pillnav {
-    position: fixed;
-    top: calc(10px + env(safe-area-inset-top));
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 50;
-    height: 42px;
-    padding: 3px 6px;
-    gap: 4px;
-    max-width: calc(100vw - 20px);
-    background: rgba(14, 14, 14, 0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
-    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    height: 40px;
+    padding: 0 8px 2px;
+    max-width: calc(100vw - 16px);
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+  }
+  .pillnav .pill button {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .pillnav .syncpill span:not(.sdot) {
+    display: none;
+  }
+  .pillnav .syncpill {
+    padding: 0 8px;
+    width: 28px;
+    height: 28px;
+    justify-content: center;
   }
   .pillnav.away {
-    transform: translate(-50%, -75px);
+    transform: translate(-50%, -100%);
     opacity: 0;
   }
-  .pillnav .ulogo,
-  .pillnav .ugear {
-    display: none;
-  }
-  .pillnav .pback {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--u-text);
-  }
-  .pillnav .pill {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .pillnav .pill button {
-    height: 34px;
-    padding: 0 13px;
-    border-radius: 999px;
-    font-size: 13px;
-    color: var(--u-muted);
-    transition: all 0.15s ease;
-  }
-  .pillnav .pill button[aria-current='page'] {
-    background: var(--u-red);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(230, 0, 18, 0.4);
-  }
-  .stage {
-    padding-top: calc(58px + env(safe-area-inset-top));
-    padding-bottom: env(safe-area-inset-bottom);
-  }
 }
-@media (max-width: 360px) {
-  .pillnav .pill button {
-    padding: 0 10px;
-    font-size: 13px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pillnav {
-    transition: none;
-  }
-}
-/* Dynamic Island Expandable Widget */
-.island-capsule {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-  color: var(--u-muted);
-  font: 600 11px/1 var(--u-display);
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.island-capsule:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: scale(1.03);
-}
-.island-capsule .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--u-green);
-  box-shadow: 0 0 8px var(--u-green);
-}
-@media (max-width: 700px) {
-  .island-capsule {
-    display: none;
-  }
-}
+/* Expanded Island Drawer with Decks */
 .island-drawer {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%);
-  width: min(380px, calc(100vw - 32px));
-  background: rgba(18, 18, 18, 0.95);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 18px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  width: min(440px, calc(100vw - 24px));
+  background: rgba(12, 12, 12, 0.96);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.92), 0 0 0 1px rgba(255, 255, 255, 0.08);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  animation: islandPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: islandPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25) both;
   z-index: 100;
 }
 @keyframes islandPop {
   from {
     opacity: 0;
-    transform: translate(-50%, -8px) scale(0.96);
+    transform: translate(-50%, -10px) scale(0.95);
   }
   to {
     opacity: 1;
@@ -590,50 +545,75 @@ html.forging .pillnav {
 .island-drawer .id-head b {
   font: 400 13px var(--u-display);
   letter-spacing: 0.08em;
-  color: #fff;
+  color: #ffffff;
 }
 .island-drawer .id-close {
   background: transparent;
   border: 0;
   color: var(--u-muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   padding: 4px;
 }
 .island-drawer .id-close:hover {
   color: #fff;
 }
-.island-drawer .id-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.island-drawer .id-decks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
 }
-.island-drawer .id-tile {
+.island-drawer .id-deck-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
 }
-.island-drawer .id-tile span {
-  font-size: 11px;
-  color: var(--u-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.island-drawer .id-deck-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(2px);
 }
-.island-drawer .id-tile b {
-  font-size: 14px;
+.island-drawer .id-dname {
+  display: block;
+  font: 600 14px var(--u-display);
   color: #fff;
+}
+.island-drawer .id-dmeta {
+  display: block;
+  font: 400 11px var(--u-mono);
+  color: var(--u-muted);
+}
+.island-drawer .id-dtag {
+  font: 600 11px var(--u-display);
+  color: var(--u-red);
+  padding: 4px 8px;
+  background: rgba(230, 0, 18, 0.12);
+  border-radius: 6px;
+}
+.island-drawer .id-empty {
+  margin: 8px 0;
+  color: var(--u-muted);
+  font-size: 13px;
+  text-align: center;
 }
 .island-drawer .id-acts {
   display: flex;
   gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .island-drawer .id-acts button {
   flex: 1;
-  height: 32px;
+  height: 34px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -646,6 +626,9 @@ html.forging .pillnav {
 .island-drawer .id-acts button:hover {
   background: var(--u-red);
   border-color: var(--u-red);
+}
+.stage {
+  padding-top: 52px;
 }
 
 /* Sticky bars sit under the top bar */

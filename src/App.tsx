@@ -1,14 +1,15 @@
 import { haptic } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
 import { ownedMap } from './lib/compare';
 import { db } from './lib/db';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
-import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDeckList } from './lib/nav';
+import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
 import { codeFromHash } from './lib/synccode';
-import { useSyncState, type SyncStatus } from './lib/syncstate';
+import { useSyncState, syncCode, type SyncStatus } from './lib/syncstate';
+import { turnOn, turnOff } from './lib/sync';
 import { PreviewLayer } from './views/shared';
 import { ZineDefs } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
@@ -56,6 +57,41 @@ export default function App() {
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
   const [islandOpen, setIslandOpen] = useState(false);
+  const [pullY, setPullY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragStartY = useRef(0);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button:not(.island-lip)')) return;
+    dragStartY.current = e.clientY;
+    setDragging(true);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragging) return;
+    const dy = Math.max(0, e.clientY - dragStartY.current);
+    setPullY(Math.min(dy, 120));
+  };
+  const onPointerUp = () => {
+    if (!dragging) return;
+    setDragging(false);
+    if (pullY > 35) setIslandOpen(true);
+    setPullY(0);
+  };
+
+  const toggleSync = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (syncCode()) {
+      turnOff();
+      haptic('undo');
+    } else {
+      try {
+        await turnOn();
+        haptic('success');
+      } catch {
+        /* fallback */
+      }
+    }
+  };
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   useBrainData(); // card roles + combo files: re-render every view once they arrive
@@ -84,6 +120,7 @@ export default function App() {
   const goDecks = () => void canLeave().then((ok) => ok && (setTab('decks'), setDeckHome((h) => h + 1), window.scrollTo(0, 0)));
   const goTab = (t: Tab) => void canLeave().then((ok) => ok && (setTab(t), window.scrollTo(0, 0)));
   const profiles = useLiveQuery(() => db.profiles.toArray(), []) ?? [];
+  const myDecks = useLiveQuery(() => db.decks.where('profile').equals(profile).toArray(), [profile]) ?? [];
   const entries = useLiveQuery(() => db.entries.toArray(), []) ?? [];
   // Binders: one by default, more when you add them (Collection's binder menu). The "other" binder is the next one,
   // for "in Binder 2" marks; with one binder there is none.
@@ -113,7 +150,19 @@ export default function App() {
       {/* One nav (THE OVERHAUL, part 1): a 48px top bar on tablets and desktop (logo · DISCOVER DECKS COLLECTION · ⚙),
           a compact floating pill on phones (back + the three sections). Sync, haptics and binders also sit in Collection's
           binder menu; ⚙ opens sync from anywhere on wide screens. */}
-      <nav className={`pillnav${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
+      <nav
+        className={`pillnav notch${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${dragging ? ' dragging' : ''}`}
+        aria-label="Sections"
+        onFocus={() => setNavAway(false)}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        style={{
+          transform: !islandOpen && pullY > 0
+            ? `translateX(-50%) translateY(${pullY * 0.4}px) scaleY(${1 + pullY / 70})`
+            : undefined,
+        }}
+      >
         {/* The back arrow shows only when there's somewhere to go back to */}
         {backFn && (
           <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
@@ -122,10 +171,6 @@ export default function App() {
             </svg>
           </button>
         )}
-        <button className="ulogo" aria-label="DeckMage home" title="Discover" onClick={() => (haptic('select'), goDiscover())}>
-          <img src="/icon.svg" alt="" width={24} height={24} />
-          <span>DECKMAGE</span>
-        </button>
         <div className="pill">
           {NAV.map(([t, label]) => (
             <button key={t} aria-current={here(t) ? 'page' : undefined} onClick={() => (haptic('select'), t === 'discover' ? goDiscover() : t === 'decks' ? goDecks() : goTab(t))}>
@@ -133,43 +178,64 @@ export default function App() {
             </button>
           ))}
         </div>
+        {/* Direct 1-click sync toggle: ON/OFF in place, no modal */}
         <button
           type="button"
-          className="island-capsule"
+          className={`ugear syncpill${syncCode() ? ' on' : ' off'}`}
+          aria-label={`Sync: ${syncCode() ? 'On' : 'Off'}. Tap to toggle`}
+          title={`Sync is ${syncCode() ? 'ON' : 'OFF'}. Tap to turn ${syncCode() ? 'off' : 'on'}`}
+          onClick={toggleSync}
+        >
+          <span className="sdot" aria-hidden="true" />
+          <span>SYNC</span>
+        </button>
+        {/* Gooey venom pull lip at the bottom of the notch */}
+        <button
+          type="button"
+          className="island-lip"
           aria-expanded={islandOpen}
-          aria-label="Dynamic Island Quick Info"
-          title="Dynamic Island: Quick status and actions"
+          aria-label={islandOpen ? "Close Dynamic Island" : "Drag down for Dynamic Island decks"}
+          title={islandOpen ? "Close Island" : "Pull down for Decks shelf"}
           onClick={() => (haptic('tap'), setIslandOpen(!islandOpen))}
         >
-          <span className="dot" aria-hidden="true" />
-          <span>{syncSt.status === 'synced' ? 'LIVE' : SYNC_LABEL[syncSt.status].toUpperCase()}</span>
-        </button>
-        <button className={`ugear${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-label="Sync and settings" title={`Sync: ${SYNC_LABEL[syncSt.status]}`} onClick={() => (haptic('open'), setSync(true))}>
-          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)" />
-          </svg>
+          <span className="lip-bar" aria-hidden="true" />
         </button>
 
         {islandOpen && (
-          <div className="island-drawer" role="dialog" aria-label="Quick island info">
+          <div className="island-drawer" role="dialog" aria-label="Quick Decks & Island Tools">
             <div className="id-head">
-              <b>⚡ DYNAMIC ISLAND</b>
+              <b>⚡ DYNAMIC ISLAND · SAVED DECKS</b>
               <button type="button" className="id-close" onClick={() => setIslandOpen(false)} aria-label="Close island">✕</button>
             </div>
-            <div className="id-stats">
-              <div className="id-tile">
-                <span>Active Binder</span>
-                <b>{nameOf(profile)}</b>
+            {myDecks.length > 0 ? (
+              <div className="id-decks" role="group" aria-label="Your saved decks">
+                {myDecks.map((d) => (
+                  <button
+                    key={d.id ?? d.name}
+                    type="button"
+                    className="id-deck-card"
+                    onClick={() => {
+                      haptic('select');
+                      setTab('decks');
+                      openDeck(d.name);
+                      setIslandOpen(false);
+                    }}
+                  >
+                    <div className="id-dinfo">
+                      <b className="id-dname">{d.name}</b>
+                      <span className="id-dmeta">{d.commander || 'Commander'} · {d.cards?.length ?? 0} cards</span>
+                    </div>
+                    <span className="id-dtag">OPEN ↗</span>
+                  </button>
+                ))}
               </div>
-              <div className="id-tile">
-                <span>Binder Cards</span>
-                <b>{entries.filter((e) => e.profile === profile).length} cards</b>
-              </div>
-            </div>
+            ) : (
+              <p className="id-empty">No saved decks yet in {nameOf(profile)}.</p>
+            )}
             <div className="id-acts">
-              <button type="button" onClick={() => (haptic('select'), goDiscover(), setIslandOpen(false))}>DISCOVER</button>
-              <button type="button" onClick={() => (haptic('select'), goDecks(), setIslandOpen(false))}>DECKS</button>
-              <button type="button" onClick={() => (haptic('open'), setSync(true), setIslandOpen(false))}>SYNC ⚙</button>
+              <button type="button" onClick={() => (haptic('select'), goDecks(), setIslandOpen(false))}>+ ADD A DECK</button>
+              <button type="button" onClick={() => (haptic('select'), goDiscover(), setIslandOpen(false))}>DISCOVER COMMANDERS</button>
+              <button type="button" onClick={() => (haptic('open'), setSync(true), setIslandOpen(false))}>SYNC SETTINGS ⚙</button>
             </div>
           </div>
         )}
