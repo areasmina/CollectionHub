@@ -33,7 +33,7 @@ import { gameChangers } from '../lib/scryfall';
 import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
-import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, OWN_MODES, ownedOnly, type OwnMode } from '../brain/modes';
+import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
 import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
@@ -254,8 +254,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   };
   const byName = new Map(all.map((c) => [c.name, c]));
   const binderType = new Map(binder.map((c) => [c.key, c.type]));
-  // OWNED ONLY / PREFER OWNED and the buy cap (per device): see brain/modes.ts for the rules.
-  const [ownMode, setOwnMode] = useStored<OwnMode>('ch:own', 'prefer', OWN_MODES.map(([v]) => v));
+  // OWNED ONLY was removed (Guillermo, Nov 7): only PREFER OWNED is allowed, so a device that had
+  // OWNED ONLY saved falls back to PREFER OWNED instead of being stuck with no switch. Buy cap per device.
+  const [ownMode] = useStored<OwnMode>('ch:own', 'prefer', ['prefer']);
   const [capS, setCap] = useStored('ch:buycap', '0', BUY_CAPS.map(([v]) => v));
   const cap = Number(capS);
   // The deck after your swaps and pins (slot = EDHREC's card).
@@ -704,7 +705,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       deck ≈{cad(deckCost)}
                     </span>
                   )}
-                  {ownMode === 'owned' && <span className="cmode">owned only</span>}
                   {filtered?.pins && <span className="cmode">suggestions from {filtered.page.numDecks?.toLocaleString()} EDHREC decks that fit your pins</span>}
                 </>
               ) : (

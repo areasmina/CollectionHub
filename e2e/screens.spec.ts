@@ -697,7 +697,7 @@ test('EDHREC With / Without card: self-testing filter, honest fallback', async (
   await expect(page.locator('.cfnote')).toContainText('Suggestions from 529 EDHREC decks with Rhystic Study');
 });
 
-test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UNDER marks, never removes', async ({ page }, info) => {
+test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, never removes', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
   const cov = page.locator('.dstrip .dstatus');
   await expect(cov).toContainText('from your binder');
@@ -713,6 +713,16 @@ test('A + D: coverage line under the bar; OWNED ONLY fills missing slots; BUY UN
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();
   await fits(page, ['.lists']);
   await page.screenshot({ path: `test-results/ad-${info.project.name}.png` });
+});
+
+test('OWNED ONLY is gone: a device that had it saved builds with PREFER OWNED', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:own', 'owned'));
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  await expect(page.locator('.dstrip .dstatus')).toContainText('from your binder');
+  await expect(page.locator('.dstrip .cmode', { hasText: 'owned only' })).toHaveCount(0);
+  const o = await opts(page);
+  await expect(o.getByRole('radiogroup', { name: 'Cards' })).toHaveCount(0);
 });
 
 test('C: the swap window says "in <deck>" when another deck uses the copy (no "free" chip)', async ({ page }, info) => {
