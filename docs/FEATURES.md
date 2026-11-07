@@ -26,7 +26,8 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 
 | Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
-| Commanders in your binder, ranked; search any commander | Live | v1 | e2e "Discover: title, eye art, filters" |
+| Commanders in your binder, ranked; search any commander | Live | v1 | e2e "Discover (overhaul)" |
+| Overhaul phase 3, Discover: loud frame (ransom title, the eye, tagline, "N DECKS" answer), one toolbar (search, Enter opens; SORT and COLOUR behind ⋮, chosen ones named on the bar), flat commander tiles (art, name + pips, match % + green meter, decks · price, READY / N MISSING), two across on phones | In PR | – | e2e "Discover (overhaul)", "Title answer" |
 | Commander stats cached on the device (no EDHREC reload on app start) | Live | #3 | `lib/cmdrstats.test.ts`, e2e "Reload: commander stats come back from the device" |
 | Saved commander page shows at once even when EDHREC is down | Live | #3 | e2e "an old saved page shows at once" |
 | Commander page: sections in order with count + cost, grid / list, tags, Built around | Live | #6 | e2e "Commander page (Discover): sections in order", "Deck page (overhaul)" |
@@ -83,7 +84,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Card-spin loader | Live | #4 | manual |
 | Haptics on mobile | Live | #6 | `lib/haptics.test.ts` |
 | Pill nav, back arrow only where there's somewhere to go | Live | #6 | e2e "Pill menu" |
-| Overhaul nav: 48px top bar on tablet and desktop (logo · DISCOVER DECKS COLLECTION · ⚙ sync), 40px bottom pill on phones | Live | #21 | e2e "Pill menu", "Cohesive UI overhaul" |
+| Overhaul nav: 48px top bar on tablet and desktop (logo · DISCOVER DECKS COLLECTION · ⚙ sync), 40px bottom pill on phones | Replaced | #21 | Replaced on main (Nov 7, commits 4c2b784 and 76145d2, not a Claude thread) by a "Dynamic Island" notch at the top on every width; e2e "Pill menu", "Cohesive UI overhaul" |
 | Overhaul phase 1: tokens (one colour one meaning, 4·8·12·16·24·32·48 scale) and the 7 parts in `src/ui.css` + `views/parts.tsx` | Live | #21 | `lib/parts.test.ts` |
 | Security headers (frame-ancestors) | Planned | #2 open | – |
 | Card scanning | Parked | – | likely needs a paid service |

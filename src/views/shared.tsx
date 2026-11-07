@@ -311,7 +311,7 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
   return (
     <div className="segs" role="radiogroup" aria-label={label}>
       {options.map(([v, text, tip]) => (
-        <button key={v} role="radio" className={roman && v ? 'roman' : ''} title={tip} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
+        <button key={v} type="button" role="radio" className={roman && v ? 'roman' : ''} title={tip} aria-checked={value === v} onClick={() => (haptic('select'), onChange(v))}>
           {text}
         </button>
       ))}
@@ -506,11 +506,11 @@ export function CmdrCard({ src, name, onMenu, children }: { src: string; name: s
 }
 
 /** The SEARCH segment every toolbar starts with: cards by name or rules text (Oracle + reminder text). */
-export function SearchBox({ q, setQ, placeholder = 'name or rules text_' }: { q: string; setQ: (v: string) => void; placeholder?: string }) {
+export function SearchBox({ q, setQ, placeholder = 'name or rules text_', ariaLabel = 'Search cards by name or rules text' }: { q: string; setQ: (v: string) => void; placeholder?: string; ariaLabel?: string }) {
   return (
     <label className="sbox dark tsearch">
       <span className="tab">SEARCH</span>
-      <input type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cards by name or rules text" />
+      <input type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label={ariaLabel} enterKeyHint="search" />
       <span aria-hidden="true" className="fade" />
     </label>
   );
@@ -521,7 +521,7 @@ export function SearchBox({ q, setQ, placeholder = 'name or rules text_' }: { q:
  * which opens the options (power, budget, sort, show, view, size, grouping). On wider screens the bar also names the
  * options in use. Kept class names (.dtools / .fsheet / .fbody) so the old hooks still find it.
  */
-export function ToolBar({ q, setQ, placeholder, now, quick, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; now?: string; quick?: ReactNode; label?: string; children: ReactNode }) {
+export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: string; quick?: ReactNode; label?: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   // a tap outside the open options closes them
   useEffect(() => {
@@ -533,7 +533,7 @@ export function ToolBar({ q, setQ, placeholder, now, quick, label = 'Cards: sear
   }, []);
   return (
     <div className="dtools tbar" role="toolbar" aria-label={label}>
-      <SearchBox q={q} setQ={setQ} placeholder={placeholder} />
+      <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />
       {quick && <div className="tquick">{quick}</div>}
       <details className="fsheet tbmore" ref={ref} onToggle={(e) => e.currentTarget.open && haptic('open')}>
         <summary aria-label="Options" title="Options">

@@ -1342,3 +1342,246 @@ main.dpage {
   letter-spacing: 0.06em;
   padding: 2px 6px;
 }
+
+/* ---------- 5. Discover: loud frame (title, eye, tagline) → one toolbar → flat commander grid ---------- */
+.dhero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s2) var(--s5);
+  padding: var(--s5) 0 var(--s4);
+}
+.dhero .tagline {
+  margin: 0;
+  font: 400 13px/1.4 var(--u-mono);
+  color: var(--u-muted);
+  letter-spacing: 0.02em;
+}
+/* wide screens: the eye gets its own cell beside the title */
+@media (min-width: 1025px) {
+  .dhero {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .dhero > .eyedoodle {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: auto;
+    height: 168px;
+    margin: 0;
+  }
+}
+.disc .dfind {
+  margin: 0 0 var(--s5);
+}
+.disc .dfind > .tbar {
+  border-width: 1px;
+  border-color: var(--u-line2);
+  box-shadow: none;
+}
+.disc .sorts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.disc .sorts .u-chip[aria-checked='true'] {
+  border-color: var(--u-red);
+  background: var(--u-red);
+  color: #fff;
+}
+.disc .colours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+.disc .colours .u-chip {
+  border: 1px solid var(--u-line2);
+  background: transparent;
+  color: var(--u-text);
+  box-shadow: none;
+  transform: none;
+  width: var(--tap);
+  height: var(--tap);
+  justify-content: center;
+  padding: 0;
+}
+.disc .colours .u-chip svg,
+.disc .colours .u-chip img {
+  width: 26px;
+  height: 26px;
+}
+.disc .colours .u-chip[aria-pressed='true'] {
+  background: transparent;
+  border-color: var(--u-red);
+  box-shadow: inset 0 0 0 1px var(--u-red);
+}
+.disc > .progress,
+.disc > .count {
+  margin: 0 0 var(--s4);
+}
+
+/* The grid: flat contact-sheet tiles, two across on phones */
+.cgrid {
+  list-style: none;
+  margin: 0 0 var(--s7);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(208px, 1fr));
+  gap: var(--s4);
+}
+@media (max-width: 700px) {
+  .cgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s3);
+  }
+}
+.ccard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 1px solid var(--u-line);
+  border-radius: 4px;
+  background: var(--u-carbon);
+  color: var(--u-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.ccard:hover {
+  border-color: var(--u-line2);
+}
+.ccard:focus-visible {
+  outline: 2px solid var(--u-yellow);
+  outline-offset: 2px;
+}
+.ccard .cart {
+  display: block;
+  aspect-ratio: 4 / 3;
+  background: #1a1a1a;
+}
+.ccard .cart img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ccard .cinfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  padding: var(--s3);
+}
+.ccard .nm {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s2);
+  font: 400 16px/1.15 var(--u-display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.ccard .nm > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ccard .cmatch {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.ccard .cmatch b {
+  font: 400 24px/1 var(--u-display);
+}
+.ccard .cmatch .u-meter {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  max-width: 160px;
+}
+.ccard .cmatch .u-meter i {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 3px;
+  height: 14px;
+}
+.ccard .own {
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.ccard .cfoot {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s1) var(--s2);
+  font: 400 11px var(--u-mono);
+  color: var(--u-muted);
+}
+.ccard .cstate {
+  padding: 2px 6px;
+  border: 1px solid var(--u-line2);
+  font: 400 11px var(--u-display);
+  letter-spacing: 0.06em;
+  color: var(--u-text);
+}
+.ccard .cstate.ready {
+  border-color: var(--u-green);
+  color: var(--u-green);
+}
+@media (max-width: 700px) {
+  .ccard .cinfo {
+    padding: var(--s2);
+  }
+  .ccard .nm {
+    font-size: 14px;
+  }
+  .ccard .cmatch b {
+    font-size: 20px;
+  }
+}
+
+/* First run: three numbered steps, flat */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  align-items: flex-start;
+  padding: var(--s5);
+  margin-bottom: var(--s6);
+}
+.welcome ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s4);
+  width: 100%;
+}
+.welcome li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s1) var(--s3);
+}
+.welcome .wn {
+  grid-row: 1 / span 2;
+  font: 400 32px/1 var(--u-display);
+  color: var(--u-red);
+}
+.welcome li b {
+  font: 400 16px var(--u-display);
+  letter-spacing: 0.04em;
+}
+.welcome li span:not(.wn) {
+  font: 400 13px/1.4 var(--u-mono);
+  color: var(--u-muted);
+}
+.welcome .count {
+  margin: 0;
+}

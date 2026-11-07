@@ -43,24 +43,15 @@ test('Phone round: eye behind the logo; Collection tools on one row', async ({ p
   await page.screenshot({ path: `test-results/round-coll-${info.project.name}.png`, fullPage: true });
 });
 
-test('Title answer: deck count tucked behind the title, tagline under BUILD (wider screens)', async ({ page }, info) => {
+test('Title answer: deck count tucked behind the title letters', async ({ page }, info) => {
   const ans = page.locator('.titlewrap > .tanswer');
   await expect(ans).toContainText(/DECK|OF/);
   // behind the letters: below the title in stacking order
   const z = await page.evaluate(() => [getComputedStyle(document.querySelector('.titlewrap > .tanswer')!).zIndex, getComputedStyle(document.querySelector('.titlewrap > .ztitle')!).zIndex]);
   expect(Number(z[0])).toBeLessThan(Number(z[1]));
   await expect(page.locator('.tagline')).toHaveCount(1);
-  if (info.project.name !== 'phone') {
-    const [tag, build] = await Promise.all([page.locator('.tagline.tunder').boundingBox(), page.locator('.ztitle .rword').nth(3).boundingBox()]);
-    // under BUILD, slid left only as far as needed to stay on one line inside the title
-    const wrap = (await page.locator('.hero .titlewrap').boundingBox())!;
-    expect(tag!.x).toBeLessThan(build!.x + 16);
-    expect(tag!.x + tag!.width).toBeLessThanOrEqual(wrap.x + wrap.width + 2);
-    expect(tag!.height).toBeLessThan(40); // one line
-    expect(tag!.y).toBeGreaterThan(build!.y + build!.height - 12);
-  }
-  await fits(page, ['.hero']);
-  await page.locator('.hero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
+  await fits(page, ['.dhero']);
+  await page.locator('.dhero').screenshot({ path: `test-results/title-answer-${info.project.name}.png` });
 });
 
 test('One slim bar: search + ⋮ (GEAR inside, POWER on the strip), groups stacked full width, quiet totals, nav hides on scroll', async ({ page }, info) => {

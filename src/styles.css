@@ -236,9 +236,7 @@ h2 {
     stroke-dashoffset: 600;
   }
 }
-.gbox:hover .doodle path,
-.ccard:hover .doodle path,
-.ccard:focus-visible .doodle path {
+.gbox:hover .doodle path {
   animation: draw 0.7s ease-out both;
 }
 .grainlayer {
@@ -248,32 +246,6 @@ h2 {
   pointer-events: none;
   opacity: 0.3;
   mix-blend-mode: overlay;
-}
-.hfade {
-  position: relative;
-  overflow: hidden;
-}
-.hfade::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 60%;
-  background: radial-gradient(circle, var(--ink) 30%, transparent 33%) 0 0/6px 6px;
-  mask-image: linear-gradient(90deg, transparent, #000 70%);
-  pointer-events: none;
-}
-.hfade::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 30%;
-  background: radial-gradient(circle, var(--ink) 48%, transparent 52%) 3px 3px/6px 6px;
-  mask-image: linear-gradient(90deg, transparent, #000);
-  pointer-events: none;
 }
 
 /* ---------- page decor ---------- */
@@ -723,71 +695,7 @@ a.price:hover {
     transform: translateX(-50%);
   }
 }
-.hero {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px 40px;
-  align-items: center;
-  margin-top: 22px;
-}
-.hero .titlewrap {
-  flex: 999 1 520px;
-  min-width: 0;
-}
-.hero .filters {
-  flex: 1 1 400px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.fhead {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-.fhead h2 {
-  position: relative;
-  margin: 4px 0 0;
-  padding: 8px 64px 8px 16px;
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 22px;
-  letter-spacing: 1px;
-  color: var(--fh);
-}
-.fhead h2 .worn {
-  border-color: var(--fh);
-}
-.fhead h2::after {
-  content: '';
-  position: absolute;
-  right: -3px;
-  top: -4px;
-  bottom: -4px;
-  width: 36px;
-  background: repeating-linear-gradient(90deg, var(--fh) 0 2px, transparent 2px 5px, var(--fh) 5px 6px, transparent 6px 10px);
-  mask-image: linear-gradient(180deg, #000 0 18%, transparent 20% 34%, #000 36% 62%, transparent 64% 72%, #000 74%);
-  pointer-events: none;
-}
-.fpanel {
-  position: relative;
-  margin-top: 12px;
-  background: var(--white);
-  color: var(--ink);
-  padding: 18px 18px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 18px;
-  align-items: flex-end;
-  transform: rotate(-0.4deg);
-}
-.fpanel .sbox.search {
-  flex: 999 1 280px;
-}
-.fpanel .sbox.sort {
-  flex: 1 1 240px;
-  cursor: pointer;
-}
+
 .colours {
   flex: 1 1 100%;
   display: grid;
@@ -821,56 +729,7 @@ a.price:hover {
   font-size: 15px;
   color: var(--muted);
 }
-.cgrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(236px, 1fr));
-  gap: 40px 26px;
-  margin-top: 26px;
-  padding: 0;
-  list-style: none;
-}
-.ccard {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-  color: #f1ebdc;
-  background: #0d0d0d;
-  border: 0;
-  border-radius: 12px;
-  padding: 14px 14px 12px;
-  box-shadow: 6px 6px 0 #000;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-.ccard:hover,
-.ccard:focus-visible {
-  transform: rotate(0deg) translateY(-8px) !important;
-  box-shadow: 9px 9px 0 var(--accent);
-}
-.ccard .worn {
-  border: 4px solid var(--cream);
-  border-radius: 12px;
-}
-.ccard .hair {
-  position: absolute;
-  inset: 6px;
-  border: 1px solid rgba(237, 230, 214, 0.35);
-  border-radius: 8px;
-  pointer-events: none;
-}
-.ccard .nm {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 8px;
-  font-weight: 800;
-  font-size: 18px;
-  line-height: 1.12;
-  text-transform: uppercase;
-  letter-spacing: -0.2px;
-}
+
 .pips {
   display: inline-flex;
   gap: 3px;
@@ -886,78 +745,7 @@ a.price:hover {
   border: 2px solid #f1ebdc;
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
 }
-.ccard .mat {
-  display: block;
-  position: relative;
-  margin-top: 10px;
-  aspect-ratio: 4 / 3;
-  background: var(--cream);
-  padding: 4px;
-}
-.ccard .frame {
-  display: block;
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border: 3px solid var(--ink);
-  overflow: hidden;
-  background: #333;
-}
-.ccard .frame img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.ccard:hover .frame img,
-.ccard:focus-visible .frame img {
-  filter: brightness(1.15) saturate(1.4);
-}
-.ccard .own {
-  font-family: var(--se);
-  font-size: 13px;
-  line-height: 1.45;
-  margin-top: 12px;
-}
-.badge {
-  align-self: flex-start;
-  margin-top: 8px;
-  font-family: var(--se);
-  font-size: 13px;
-  padding: 2px 8px;
-  border: 1.5px solid var(--hazard);
-  color: var(--hazard);
-}
-.badge.ready {
-  background: #c8102e;
-  color: #f1ebdc;
-  border-color: #c8102e;
-}
-.ccard .foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 10px;
-}
-.ccard .mono {
-  font-family: 'Space Mono', monospace;
-  font-size: 10px;
-  line-height: 1.35;
-  color: #b5ae9f;
-  text-transform: uppercase;
-}
-.ccard .pct {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  font-weight: 800;
-  font-size: 32px;
-  line-height: 1;
-}
+
 .rise {
   display: flex;
   align-items: flex-end;
@@ -2123,29 +1911,25 @@ a.price:hover {
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   .ticker > span,
-  .titlewrap .slash,
-  .jit,
-  .cur,
-  .stamp,
-  .streak,
-  .note-pop,
-  .gbox:hover .doodle path,
-  .ccard:hover .doodle path,
-  .ccard:focus-visible .doodle path {
+.titlewrap .slash,
+.jit,
+.cur,
+.stamp,
+.streak,
+.note-pop,
+.gbox:hover .doodle path {
     animation: none;
   }
-  .ccard,
   .btn,
-  .xart,
-  .xerox,
-  .crow,
-  .zrow,
-  .dcard {
+.xart,
+.xerox,
+.crow,
+.zrow,
+.dcard {
     transition: none;
   }
-  .ccard:hover,
   .dcard:hover,
-  .crow:hover {
+.crow:hover {
     transform: none;
   }
 }
@@ -2609,49 +2393,12 @@ button.logo {
   gap: 12px;
   min-width: 0;
 }
-.ftoggle {
-  background: none;
-  border: 0;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-  padding: 0;
-  min-height: 44px;
-  cursor: pointer;
-}
-.fhint {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--se);
-  font-size: 14px;
-  color: var(--hazard);
-}
-.filters.shut .fpanel,
+
 .filters.shut .caption {
   display: none;
 }
 @media (max-width: 700px) {
-  .hero {
-    gap: 14px;
-  }
-  .fhead > svg {
-    display: none;
-  }
-  .fhead h2 {
-    padding: 0 40px 0 12px;
-    font-size: 20px;
-  }
-  .fpanel {
-    margin-top: 10px;
-    padding: 12px;
-    gap: 10px;
-    transform: none;
-  }
-  .fpanel .sbox {
-    flex-basis: 100%;
-  }
+
   .colours {
     gap: 6px;
   }
@@ -3967,20 +3714,6 @@ ul.popnote .small {
 }
 
 /* Discover: a light halftone dot screen over the commander art (eases off on hover) */
-.ccard .frame::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(rgba(10, 10, 10, 0.55) 0.9px, transparent 1.4px) 0 0 / 4px 4px;
-  mix-blend-mode: multiply;
-  opacity: 0.35;
-  transition: opacity 0.2s;
-}
-.ccard:hover .frame::after,
-.ccard:focus-visible .frame::after {
-  opacity: 0.18;
-}
 
 /* Deck page header art: lighter halftone and grain than the commander page */
 .dhero .cimg .cmdrimg::after {
@@ -4977,56 +4710,6 @@ ul.popnote .small {
 
 /* Discover header, desktop: title on one line, then the filters as one slim taped bar (search · sort · colours),
    caption and progress tucked under it, so the commander grid starts much higher. Phones unchanged. */
-@media (min-width: 701px) {
-  .hero {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .hero .titlewrap,
-  .hero .filters {
-    flex: none;
-  }
-  .hero .fhead {
-    display: none;
-  }
-  .hero .fpanel {
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 12px;
-    margin-top: 6px;
-    padding: 10px 12px;
-    transform: rotate(-0.25deg);
-  }
-  .hero .fpanel .sbox {
-    min-height: 46px;
-  }
-  .hero .fpanel .sbox.search {
-    flex: 1 1 auto;
-  }
-  .hero .fpanel .sbox.sort {
-    flex: 0 1 300px;
-  }
-  .hero .colours {
-    flex: 0 0 auto;
-    display: flex;
-    gap: 6px;
-  }
-  .hero .colours button {
-    width: 46px;
-    height: 46px;
-    font-size: 15px;
-  }
-  .hero .caption {
-    margin: 4px 0 0;
-    font-size: 13px;
-  }
-  .hero + .progress,
-  .hero ~ .count {
-    margin-top: 10px;
-  }
-}
 
 /* Yellow marker crown scribbled on the commanders counter */
 .stat .crown {
@@ -5103,15 +4786,7 @@ ul.popnote .small {
 
 /* Discover: flaming eye art (owner's folk-tattoo style) in its own cell right of the title, wide screens only */
 @media (min-width: 1100px) {
-  .hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    column-gap: 20px;
-  }
-  .hero .filters {
-    grid-column: 1 / -1;
-  }
+
   .eyedoodle {
     width: auto;
     height: 178px;
@@ -5120,19 +4795,7 @@ ul.popnote .small {
   }
 }
 /* Phones and narrow windows: the eye art is its own band under the title + tagline, above the filters */
-@media (max-width: 1099px) {
-  .hero .titlewrap { order: 0; }
-  .hero .tagline { order: 1; }
-  .hero .eyedoodle {
-    order: 2;
-    display: block;
-    align-self: center;
-    width: min(100%, 420px);
-    height: auto;
-    margin: -6px auto -10px;
-  }
-  .hero .filters { order: 3; }
-}
+
 @media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
   .eyedoodle path:first-of-type {
     transform-origin: 50% 50%;
@@ -5369,119 +5032,8 @@ ul.popnote .small {
   filter: url(#grain);
   opacity: 0.55;
 }
-.hero .tagline {
-  grid-column: 1;
-  position: relative;
-  z-index: 2;
-  margin: -14px 0 0 12px;
-  font-family: var(--se);
-  font-size: 15px;
-  color: #fff;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
-  transform: rotate(-1deg);
-}
-@media (min-width: 1100px) {
-  .hero .eyedoodle {
-    grid-row: 1 / span 2;
-  }
-  .hero .tagline {
-    margin-top: -46px;
-    margin-left: 150px;
-  }
-}
-@media (min-width: 701px) and (max-width: 1099px) {
-  .hero .tagline {
-    margin: -40px 0 0 150px;
-  }
-}
 
 /* Filter bar: dark search with magnifier, SORT label + dark select, mana-symbol colour buttons, on a taped strip */
-.hero .fpanel {
-  background: #121212;
-  border: 2px solid #e9dfc8;
-  box-shadow: inset 0 0 0 4px #121212, inset 0 0 0 5px rgba(233, 223, 200, 0.25), 4px 5px 0 rgba(0, 0, 0, 0.6);
-}
-.hero .fpanel .sbox {
-  background: #1d1d1d;
-  border: 2px solid #3a3a3a;
-  border-radius: 6px;
-  color: #eee;
-}
-.hero .fpanel .sbox .tab {
-  background: transparent;
-  color: #eee;
-  padding: 0 4px 0 14px;
-}
-.hero .fpanel .sbox.sort .tab {
-  font-family: var(--an);
-  font-size: 18px;
-  padding-right: 10px;
-  border-right: 1px solid #3a3a3a;
-}
-.hero .fpanel .sbox input,
-.hero .fpanel .sbox select {
-  color: #eee;
-  background: transparent;
-  font-family: 'Archivo', sans-serif;
-  font-weight: 600;
-  font-size: 16px;
-}
-.hero .fpanel .sbox input::placeholder {
-  color: #9a9a9a;
-  font-family: 'Archivo', sans-serif;
-  font-weight: 500;
-}
-.hero .fpanel .sbox .fade,
-.hero .fpanel .sbox .hfade {
-  display: none;
-}
-.hero .fpanel .sbox .arrow {
-  background: none;
-}
-.hero .fpanel .sbox .arrow span {
-  background: none;
-  color: #eee;
-}
-.hero .colours button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  border: 2px solid #0a0a0a;
-  border-radius: 5px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 2px 2px 0 rgba(0, 0, 0, 0.7);
-  padding: 2px 0 0;
-  color: #0a0a0a;
-}
-.hero .colours button b {
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 10px;
-  line-height: 1;
-}
-.hero .colours button i {
-  display: none;
-}
-.hero .colours button:nth-child(1) { background: #efe4c2; }
-.hero .colours button:nth-child(2) { background: #3d8fe0; }
-.hero .colours button:nth-child(3) { background: #8c8c90; }
-.hero .colours button:nth-child(4) { background: #e9534a; }
-.hero .colours button:nth-child(5) { background: #3aa65f; }
-.hero .colours button[aria-pressed='false'] {
-  filter: saturate(0.75) brightness(0.92);
-}
-.hero .colours button[aria-pressed='true'] {
-  filter: none;
-  outline: 3px solid var(--hazard);
-  outline-offset: 1px;
-  transform: translateY(-2px);
-}
-@media (min-width: 701px) {
-  .hero .colours button {
-    width: 50px;
-    height: 50px;
-  }
-}
 
 /* Grid / List switch: icon + word, dark pills, red when active */
 .viewsw {
@@ -5523,27 +5075,7 @@ ul.popnote .small {
     border-color: #ccc;
   }
 }
-@media (min-width: 1100px) {
-  .hero .titlewrap {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  .hero .eyedoodle {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-  }
-  .hero .tagline {
-    grid-column: 1;
-    grid-row: 2;
-    margin: -26px 0 0 120px;
-  }
-  .hero .filters {
-    grid-row: 3;
-  }
-}
-.hero .fpanel .sbox.sort {
-  flex-basis: 340px;
-}
+
 .logo .brandmark .hat {
   filter: drop-shadow(1px 1px 0 rgba(230, 0, 18, 0.7));
 }
@@ -5596,129 +5128,20 @@ ul.popnote .small {
 
 /* Colour identity buttons in the zine style: torn paper squares with halftone, inked mana symbols, stencil letters,
    slight tilt; the selected ones get a strip of yellow tape and a hard black shadow. */
-.hero .colours {
-  gap: 8px;
-}
-.hero .colours button {
-  position: relative;
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  clip-path: polygon(2% 4%, 30% 0, 62% 3%, 98% 0, 100% 34%, 97% 70%, 100% 97%, 66% 100%, 34% 96%, 0 100%, 3% 64%, 0 30%);
-  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 0.9px, transparent 1.4px), linear-gradient(160deg, rgba(255, 255, 255, 0.18), transparent 45%, rgba(0, 0, 0, 0.22));
-  background-size: 4px 4px, 100% 100%;
-  color: #0e0e0e;
-  transform: rotate(-2deg);
-  transition: transform 0.12s;
-}
-.hero .colours button:nth-child(even) {
-  transform: rotate(2deg);
-}
-.hero .colours button:nth-child(1) { background-color: #ece0bb; }
-.hero .colours button:nth-child(2) { background-color: #3a86d6; color: #08223f; }
-.hero .colours button:nth-child(3) { background-color: #8a8a8e; color: #111; }
-.hero .colours button:nth-child(4) { background-color: #e0453a; color: #3a0905; }
-.hero .colours button:nth-child(5) { background-color: #3c9e5c; color: #062a12; }
-.hero .colours button svg {
-  filter: url(#rough) drop-shadow(1px 1px 0 rgba(255, 255, 255, 0.35));
-}
-.hero .colours button b {
-  font-family: 'Black Ops One', sans-serif;
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 1px;
-}
-.hero .colours button[aria-pressed='false'] {
-  filter: saturate(0.6) brightness(0.85);
-}
-.hero .colours button[aria-pressed='true'] {
-  outline: none;
-  filter: drop-shadow(3px 3px 0 #0a0a0a);
-  transform: rotate(0deg) translateY(-3px) scale(1.05);
-}
-.hero .colours button[aria-pressed='true']::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: 50%;
-  width: 70%;
-  height: 9px;
-  translate: -50% 0;
-  rotate: -6deg;
-  background: rgba(255, 204, 0, 0.85);
-}
-.hero .colours button:focus-visible {
-  outline: 3px solid var(--hazard);
-  outline-offset: 2px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero .colours button {
-    transition: none;
-  }
-}
 
 /* Colour buttons v2: each colour its own paper, texture and cut, so they read apart at a glance */
-.hero .colours button {
-  background-size: auto;
-}
-.hero .colours button svg {
-  width: 26px;
-  height: 26px;
-}
+
 /* W: cream paper, sunburst rays */
-.hero .colours button:nth-child(1) {
-  background: repeating-conic-gradient(from 0deg at 50% 42%, rgba(196, 150, 70, 0.28) 0 6deg, transparent 6deg 18deg), #f1e6c4;
-  color: #5a3d0a;
-  clip-path: polygon(0 6%, 50% 0, 100% 5%, 96% 52%, 100% 100%, 48% 95%, 0 100%, 4% 50%);
-  transform: rotate(-3deg);
-}
+
 /* U: deep blue, wavy water lines */
-.hero .colours button:nth-child(2) {
-  background: repeating-radial-gradient(circle at 50% 120%, transparent 0 5px, rgba(255, 255, 255, 0.18) 5px 6.5px), linear-gradient(180deg, #3f8fe0, #1f5aa8);
-  color: #e8f2ff;
-  clip-path: polygon(6% 0, 100% 3%, 97% 30%, 100% 62%, 95% 100%, 2% 97%, 0 66%, 4% 34%);
-  transform: rotate(2.5deg);
-}
+
 /* B: true black, splatter + cracks, cream symbol */
-.hero .colours button:nth-child(3) {
-  background: radial-gradient(circle at 22% 30%, rgba(241, 235, 220, 0.22) 0 2px, transparent 2.5px), radial-gradient(circle at 78% 70%, rgba(241, 235, 220, 0.18) 0 3px, transparent 3.5px), radial-gradient(circle at 70% 22%, rgba(241, 235, 220, 0.15) 0 1.5px, transparent 2px), repeating-linear-gradient(118deg, transparent 0 9px, rgba(255, 255, 255, 0.07) 9px 10px), #141414;
-  color: #f1ebdc;
-  box-shadow: inset 0 0 0 2px #3a3a3a;
-  clip-path: polygon(0 0, 92% 4%, 100% 40%, 96% 100%, 40% 96%, 4% 100%, 0 58%);
-  transform: rotate(-1.5deg);
-}
+
 /* R: red, flame licks rising from the bottom */
-.hero .colours button:nth-child(4) {
-  background: radial-gradient(ellipse 30% 55% at 20% 100%, rgba(255, 204, 0, 0.55), transparent 70%), radial-gradient(ellipse 26% 70% at 60% 105%, rgba(255, 140, 0, 0.55), transparent 70%), radial-gradient(ellipse 22% 50% at 90% 100%, rgba(255, 204, 0, 0.45), transparent 70%), #d8261a;
-  color: #fff3e0;
-  clip-path: polygon(4% 3%, 96% 0, 100% 48%, 94% 100%, 70% 94%, 50% 100%, 28% 93%, 0 98%, 3% 50%);
-  transform: rotate(3deg);
-}
+
 /* G: green, leafy cross-hatching */
-.hero .colours button:nth-child(5) {
-  background: repeating-linear-gradient(45deg, transparent 0 6px, rgba(10, 40, 18, 0.25) 6px 7px), repeating-linear-gradient(-45deg, transparent 0 9px, rgba(220, 255, 220, 0.12) 9px 10px), #2f8e4e;
-  color: #eaffef;
-  clip-path: polygon(3% 2%, 40% 6%, 100% 0, 97% 60%, 100% 96%, 55% 100%, 0 97%, 5% 45%);
-  transform: rotate(-2.5deg);
-}
-.hero .colours button svg {
-  filter: url(#rough) drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.5));
-}
-.hero .colours button[aria-pressed='false'] {
-  filter: saturate(0.45) brightness(0.7);
-}
-.hero .colours button[aria-pressed='true'] {
-  filter: none;
-  transform: rotate(0deg) translateY(-3px) scale(1.08);
-}
-.hero .colours button[aria-pressed='false'] {
-  filter: saturate(0.6) brightness(0.82);
-}
+
 /* no tape on selected colour buttons */
-.hero .colours button[aria-pressed='true']::after {
-  content: none;
-}
 
 /* DeckMage logo, one word, xeroxed: tight tiles, toner speckle, uneven ink, a faint photocopy streak */
 .logo .brandmark .word.xerox {
@@ -5745,151 +5168,13 @@ ul.popnote .small {
 .logo .brandmark .word.xerox .lt:nth-child(3n) {
   filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.7)) url(#rough);
 }
-@media (min-width: 701px) and (max-width: 1099px) {
-  .hero .fpanel {
-    flex-wrap: wrap;
-  }
-  .hero .fpanel .sbox.search {
-    flex: 1 1 100%;
-  }
-  .hero .fpanel .sbox.sort {
-    flex: 1 1 260px;
-  }
-}
 
 /* Phones: same filter bar as desktop, always open (no FILTERS toggle): search, then sort, then the colour buttons */
-@media (max-width: 700px) {
-  .hero .fhead {
-    display: none;
-  }
-  .hero .filters.shut .fpanel,
-  .hero .filters.shut .caption {
-    display: flex;
-  }
-  .hero .filters.shut .caption {
-    display: block;
-  }
-  .hero .fpanel {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px;
-    margin-top: 4px;
-    transform: rotate(-0.3deg);
-  }
-  .hero .fpanel .sbox {
-    flex: 1 1 100%;
-    min-height: 48px;
-  }
-  .hero .colours {
-    flex: 1 1 100%;
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-  }
-  .hero .colours button {
-    flex: 1;
-    height: 54px;
-  }
-  .hero .caption {
-    font-size: 13px;
-  }
-}
 
 /* Desktop: the flap is just part of the bar */
-.hero .flap {
-  display: contents;
-}
+
 /* Phones: search always visible; sort + colours live on a scrapbook flap that unfolds from a tag under the eye */
-@media (max-width: 700px) {
-  .hero .ftag {
-    order: 2;
-    align-self: center;
-    position: relative;
-    z-index: 3;
-    margin: -24px auto 2px;
-    padding: 0;
-    background: none;
-    border: 0;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .hero .eyedoodle {
-    order: 1;
-  }
-  .hero .filters {
-    order: 3;
-  }
-  .ftag .string {
-    width: 2px;
-    height: 22px;
-    background: repeating-linear-gradient(180deg, #e9dfc8 0 3px, #b9ac90 3px 5px);
-  }
-  .ftag .tagbody {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 16px 8px 30px;
-    background: radial-gradient(rgba(0, 0, 0, 0.14) 0.8px, transparent 1.3px) 0 0 / 4px 4px, #efe6d2;
-    color: #0e0e0e;
-    clip-path: polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 50%);
-    filter: drop-shadow(3px 4px 0 rgba(0, 0, 0, 0.7));
-    transform: rotate(-3deg);
-    transform-origin: 50% -22px;
-    animation: tagswing 3.4s ease-in-out infinite;
-  }
-  .ftag.open .tagbody {
-    animation: none;
-    transform: rotate(0deg);
-    background-color: var(--hazard);
-  }
-  .ftag .hole {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    margin-top: -4px;
-    border-radius: 50%;
-    background: #0a0a0a;
-    box-shadow: 0 0 0 2px #b9ac90;
-  }
-  .ftag b {
-    font-family: 'Black Ops One', sans-serif;
-    font-weight: 400;
-    font-size: 17px;
-    letter-spacing: 1.5px;
-  }
-  .ftag small {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-family: var(--se);
-    font-size: 12px;
-    color: #a1150c;
-  }
-  .ftag .chev {
-    font-size: 11px;
-  }
-  .hero .filters.shut .fpanel {
-    display: flex;
-  }
-  .hero .filters .flap {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    flex: 1 1 100%;
-    transform-origin: 50% 0;
-    animation: unfold 0.38s cubic-bezier(0.2, 1.3, 0.4, 1) both;
-  }
-  .hero .filters.shut .flap {
-    display: none;
-  }
-}
+
 @keyframes unfold {
   0% {
     opacity: 0;
@@ -5907,48 +5192,9 @@ ul.popnote .small {
   0%, 100% { transform: rotate(-4deg); }
   50% { transform: rotate(3deg); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .ftag .tagbody,
-  .hero .filters .flap {
-    animation: none;
-  }
-}
-@media (max-width: 700px) {
-  .hero .filters .flap > .sbox,
-  .hero .filters .flap > .colours {
-    flex: none;
-    width: 100%;
-  }
-  .hero .filters .flap > .sbox {
-    height: 48px;
-    min-height: 48px;
-  }
-  .hero .filters .flap {
-    overflow: hidden;
-  }
-}
+
 /* Phones: the whole bar (search too) folds into the tag */
-@media (max-width: 700px) {
-  .hero .filters.shut .fpanel,
-  .hero .filters.shut .caption {
-    display: none;
-  }
-  .hero .filters .fpanel {
-    transform-origin: 50% 0;
-    animation: unfold 0.38s cubic-bezier(0.2, 1.3, 0.4, 1) both;
-  }
-  .hero .filters .flap,
-  .hero .filters.shut .flap {
-    display: flex;
-    animation: none;
-    overflow: visible;
-  }
-}
-@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
-  .hero .filters .fpanel {
-    animation: none;
-  }
-}
+
 .pageload {
   min-height: 60vh;
 }
@@ -6288,107 +5534,23 @@ details.cat {
 
 /* Phones: less scrolling before the cards. The eye art is a smaller band, and the commander page's settings strip
    puts two controls per row (bracket | budget, missing | save) with lower switches. */
-@media (max-width: 700px) {
-  .hero .eyedoodle {
-    width: min(70%, 260px);
-    margin: -10px auto -14px;
-  }
-
-}
 
 /* Discover, first run: three taped steps and one button to the import box. */
-.welcome {
-  margin: 22px 0 10px;
-}
-.welcome ol {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 22px 18px;
-}
-.welcome li {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 18px 16px 16px;
-  background: var(--white);
-  color: var(--ink);
-}
-.welcome li b {
-  font-family: var(--an);
-  font-size: 20px;
-  line-height: 1.05;
-}
-.welcome li span:last-child {
-  font-size: 14px;
-  line-height: 1.35;
-}
-.welcome .wn {
-  font-family: var(--an);
-  font-size: 34px;
-  line-height: 1;
-  color: var(--accent);
-}
-.welcome .btn {
-  margin-top: 6px;
-}
 
 /* ---------- Fit pass (Nov 2026): phones and wide screens ---------- */
 /* Doodles never sit on top of a commander's name. */
-.ccard .nm {
-  position: relative;
-  z-index: 3;
-}
+
 @media (max-width: 700px) {
   /* Discover: two commanders per row instead of one card per screen. */
-  .cgrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 22px 12px;
-    margin-top: 18px;
-  }
-  .ccard {
-    padding: 10px 9px 9px;
-    box-shadow: 4px 4px 0 #000;
-  }
-  .ccard .nm {
-    font-size: 12.5px;
-    gap: 4px;
-  }
-  .ccard .nm .pips {
-    transform: scale(0.8);
-    transform-origin: top right;
-  }
-  .ccard .badge {
-    font-size: 10.5px;
-    padding: 1px 5px;
-  }
-  .ccard .foot {
-    padding-top: 6px;
-  }
-  .ccard .mono {
-    font-size: 9px;
-  }
-  .ccard .pct {
-    font-size: 22px;
-  }
+
   /* Small cards: the marker doodles would sit on the text, so they stay on the wider layouts. */
-  .ccard .doodle {
-    display: none;
-  }
+
   /* Commander page: the card image no longer fills the first screen. */
   .chero .cimg {
     width: min(165px, 44vw);
   }
 }
 /* Doodles stay under a card's text (name, tags, numbers). */
-.ccard .foot,
-.ccard .badge {
-  position: relative;
-  z-index: 3;
-}
 
 /* Copies warning: title and summary on one line (it was a tall band holding one sentence). */
 .shortalert {
@@ -7652,18 +6814,6 @@ details.cat {
 }
 
 /* Discover search reads like the Collection one: SEARCH tab + typewriter text */
-.hero .fpanel .sbox.search .tab {
-  font-family: var(--an);
-  font-size: 18px;
-  letter-spacing: 1px;
-  padding: 0 12px;
-  border-right: 1px solid #3a3a3a;
-}
-.hero .fpanel .sbox.search input,
-.hero .fpanel .sbox.search input::placeholder {
-  font-family: var(--se);
-  font-weight: 400;
-}
 
 /* WHAT CAN I BUILD? → the answer in the same cut-out letters, stuck on under the title like a reply */
 .tanswer {
@@ -8069,13 +7219,6 @@ details.cat {
   z-index: 0;
   margin-top: calc(-1 * var(--sp2));
   transform: rotate(-4deg) translateY(var(--sp2));
-}
-.hero .titlewrap > .tagline.tunder {
-  position: absolute;
-  z-index: 2;
-  margin: 0;
-  text-wrap: balance;
-  transform: rotate(-2deg);
 }
 
 /* ===== Design brief round (Nov 6): sticky slim bar · one loud price · colour meanings · plain sections · nav · hero ===== */
@@ -8795,39 +7938,15 @@ main {
   padding-bottom: calc(var(--sp6, 48px) + 96px);
 }
 /* 17–18. Decoration never sits behind text: the empty-binder line sits on paper, the credits and the tagline on ink */
-.welcome .count {
-  position: relative;
-  z-index: 2;
-  display: inline-block;
-  max-width: 62ch;
-  background: var(--paper, #f4efe4);
-  color: #141414;
-  padding: var(--sp2, 8px) var(--sp3, 12px);
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
-}
-.welcome {
-  position: relative;
-  z-index: 2;
-}
+
 .credits {
   z-index: 3;
   background: var(--bg);
   margin-bottom: 120px; /* clear of the pill nav */
 }
-.hero .tagline {
-  position: relative;
-  z-index: 3;
-}
-.hero .titlewrap > .tagline.tunder {
-  background: var(--ink, #0a0a0a);
-  padding: 2px 8px;
-  width: max-content;
-  max-width: 100%;
-}
+
 /* 19. With nothing to filter, only the search shows (no FILTERS heading, sort or colours) */
-.filters.bare .fhead {
-  display: none;
-}
+
 /* 20. Tablets: the eye on the logo, behind the letters, kept to the title's height */
 @media (min-width: 701px) and (max-width: 1024px) {
   .titlewrap > .eyedoodle {
@@ -9449,14 +8568,7 @@ details.dash[open] > *:not(summary) {
   }
 }
 /* Phones: the logo moves up, no empty black band above it (owner's call, Nov 6) */
-@media (max-width: 700px) {
-  main > section.hero {
-    margin-top: 4px;
-  }
-  main > section.hero > .titlewrap {
-    padding-top: 12px;
-  }
-}
+
 /* A) Coverage line under the tool bar: where the 99 comes from */
 .lists > .bnote {
   flex: 1 1 100%;
@@ -10598,10 +9710,7 @@ details.dash > summary .dimp.ddeck {
     max-width: 1640px;
     padding: 0 32px calc(var(--sp6, 32px) + 96px);
   }
-  .cgrid {
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 28px 20px;
-  }
+
   /* Open grid categories flow side-by-side (Moxfield-style) so 1–3 card groups share rows; collapsed groups or list views stay full-width */
   .deckgrid > .lists > details.cat[open]:has(> ul.zgrid) {
     flex: 1 1 auto;
