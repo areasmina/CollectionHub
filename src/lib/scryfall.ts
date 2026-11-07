@@ -4,30 +4,38 @@ import { norm } from './names';
 
 const API = 'https://api.scryfall.com';
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-let last = 0;
+let nextSlot = 0;
 
-// Scryfall allows /cards/collection twice a second. Browsers don't let pages set User-Agent;
-// Scryfall accepts the browser's own one with an Accept header.
-async function req(url: string, init: RequestInit, tries = 4): Promise<any> {
-  const wait = last + 600 - Date.now();
-  if (wait > 0) await sleep(wait);
-  last = Date.now();
-  // A 429 comes without CORS headers, so the browser reports it as a network error: back off either way.
-  const r = await fetch(url, { ...init, headers: { ...init.headers, Accept: 'application/json' } }).catch(() => null);
-  // waits 5 s, 10 s, 20 s (was 20 / 40 / 60 s: an import sat at 0 for 2 minutes when Scryfall was down)
-  if ((!r || r.status === 429) && tries > 1) return sleep(5000 * 2 ** (4 - tries)).then(() => req(url, init, tries - 1));
+/** Reserves a strictly sequential 120ms time slot (~8.3 req/s) so concurrent callers never burst Scryfall. */
+async function takeSlot() {
+  const now = Date.now();
+  const target = Math.max(now, nextSlot);
+  nextSlot = target + 120;
+  if (target > now) await sleep(target - now);
+}
+
+// Scryfall's official rate limit is 10 requests a second; we pace sequentially at 120ms.
+// Browsers don't let pages set User-Agent; Scryfall accepts the browser's own one with an Accept header.
+async function req(url: string, init: RequestInit, tries = 2): Promise<any> {
+  await takeSlot();
+  const sig = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(10000) : undefined;
+  const r = await fetch(url, { ...init, signal: sig, headers: { ...init.headers, Accept: 'application/json' } }).catch(() => null);
+  if ((!r || r.status === 429 || r.status >= 500) && tries > 1) return sleep(1500 * (3 - tries)).then(() => req(url, init, tries - 1));
   if (!r) throw new Error('Could not reach Scryfall (offline, or rate-limited: wait a minute)');
   if (r.status === 404) return { data: [] }; // search with no results
+  if (r.status === 400 || r.status === 422) return { data: [], badBatch: true };
   if (!r.ok) throw new Error(`Scryfall answered ${r.status}`);
   return r.json();
 }
-const post = (path: string, body: unknown) => req(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const post = (path: string, body: unknown, tries = 2) => req(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, tries);
 
 /** Cheapest paper printing (USD, non-foil first) per card name, cached a week. */
-export async function cheapest(names: string[]): Promise<Map<string, Cheap>> {
+export async function cheapest(names: string[], onProgress?: (cheap: Map<string, Cheap>) => void): Promise<Map<string, Cheap>> {
   const keys = [...new Map(names.map((n) => [norm(n), n.split(/\s\/\/?\s/)[0]])).entries()];
+  if (!keys.length) return new Map();
   const out = new Map<string, Cheap>();
   (await db.cheap.bulkGet(keys.map(([k]) => k))).forEach((c) => c && Date.now() - c.at < WEEK && (c.id || !c.usd) && out.set(c.key, c)); // entries from before `id` are fetched again
+  if (out.size) onProgress?.(new Map(out));
   const need = keys.filter(([k]) => !out.has(k));
   for (let i = 0; i < need.length; i += 40) {
     const batch = need.slice(i, i + 40);
@@ -45,6 +53,7 @@ export async function cheapest(names: string[]): Promise<Map<string, Cheap>> {
     }
     await db.cheap.bulkPut([...best.values()]);
     best.forEach((v, k) => out.set(k, v));
+    onProgress?.(new Map(out));
   }
   return out;
 }
@@ -64,6 +73,8 @@ export function toCard(c: any): Card {
     type: c.type_line ?? face?.type_line ?? '',
     text: c.oracle_text ?? (c.card_faces ?? []).map((f: any) => f.oracle_text).join('\n'),
     ci: c.color_identity ?? [],
+    set: c.set ? String(c.set).toLowerCase() : undefined,
+    cn: c.collector_number ? String(c.collector_number) : undefined,
     img: c.image_uris?.small ?? face?.image_uris?.small,
     usd: c.prices?.usd ?? c.prices?.usd_foil ?? c.prices?.usd_etched ?? undefined,
     usdFoil: c.prices?.usd_foil ?? c.prices?.usd_etched ?? undefined,
@@ -78,60 +89,156 @@ export function toCard(c: any): Card {
 }
 
 const WEEK = 7 * 864e5;
+const setCnCache = new Map<string, Card>();
 
 /** Card data (prices, images) by Scryfall id: cache first, prices refreshed weekly. */
-export async function cardsByIds(ids: string[], maxAge = WEEK): Promise<Map<string, Card>> {
+export async function cardsByIds(ids: string[], maxAge = WEEK, onProgress?: (cards: Map<string, Card>) => void): Promise<Map<string, Card>> {
   const uniq = [...new Set(ids)];
+  if (!uniq.length) return new Map();
   const out = new Map<string, Card>();
   // pv 2 = has the foil price: older cache entries are fetched again once.
   (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.pv === 2 && Date.now() - c.at < maxAge && out.set(c.id, c));
+  if (out.size) onProgress?.(new Map(out));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {
     const res = await post('/cards/collection', { identifiers: need.slice(i, i + 75).map((id) => ({ id })) });
-    const cards = res.data.map(toCard);
+    const cards = (res.data ?? []).map(toCard);
     await db.cards.bulkPut(cards);
     for (const c of cards) out.set(c.id, c);
+    onProgress?.(new Map(out));
   }
   return out;
 }
 
 type Ident = { id: string } | { name: string } | { set: string; collector_number: string };
-const identKey = (i: any) => (i.id ? 'id:' + i.id : i.name ? 'n:' + norm(i.name) : `s:${i.set}|${i.collector_number}`.toLowerCase());
-const cardKeys = (c: any) => ['id:' + c.id, 'n:' + norm(c.name), `s:${c.set}|${c.collector_number}`.toLowerCase()];
-const identOf = (r: Row): Ident => (r.id ? { id: r.id } : r.set && r.cn ? { set: r.set, collector_number: r.cn } : { name: r.name });
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Scryfall /cards/collection rejects compound collector numbers (like PLST "CMM-123") or special promo symbols ("123★").
+const SET_RE = /^(?!plst$|mb1$|cmb1$|cmb2$)[a-z0-9]{3,5}$/i;
+const CN_RE = /^[0-9]{1,5}[a-z]?$/i;
+const cleanName = (n: string) => n.split(/\s+\/\/?\s+/)[0].trim();
+const identKey = (i: any) => (i.id ? 'id:' + i.id.toLowerCase() : i.name ? 'n:' + norm(i.name) : `s:${i.set}|${i.collector_number}`.toLowerCase());
+const cardKeys = (c: any) => [
+  'id:' + String(c.id).toLowerCase(),
+  'n:' + norm(c.name),
+  'n:' + norm(cleanName(c.name)),
+  `s:${c.set}|${c.collector_number}`.toLowerCase(),
+];
+const identOf = (r: Row): Ident =>
+  r.id && UUID_RE.test(r.id)
+    ? { id: r.id.toLowerCase() }
+    : r.set && r.cn && SET_RE.test(r.set) && CN_RE.test(r.cn)
+      ? { set: r.set.toLowerCase(), collector_number: r.cn }
+      : { name: cleanName(r.name) };
 
-/** Finds Scryfall data for each row (cache first, then /cards/collection in batches of 75). */
+/** Finds Scryfall data for each row (bulk cache lookup first, then /cards/collection in batches of 75). */
 export async function resolveRows(rows: Row[], onProgress: (done: number, total: number) => void) {
   const found = new Map<string, Card>();
   const need: Ident[] = [];
+  const needSeen = new Set<string>();
+  const nameOfIdent = new Map<string, string>();
+  const wantIds = [...new Set(rows.filter((r) => r.id && UUID_RE.test(r.id)).map((r) => r.id!.toLowerCase()))];
+  const wantKeys = [...new Set(rows.flatMap((r) => [norm(r.name), norm(cleanName(r.name))]))];
+  const hasSetCn = rows.some((r) => !r.id && r.set && r.cn);
+  const [byIdArr, byKeyArr, existingEntries] = await Promise.all([
+    wantIds.length ? db.cards.bulkGet(wantIds) : Promise.resolve([]),
+    wantKeys.length ? db.cards.where('key').anyOf(wantKeys).toArray() : Promise.resolve([]),
+    hasSetCn ? db.entries.toArray() : Promise.resolve([]),
+  ]);
+  const cachedById = new Map<string, Card>();
+  for (const c of byIdArr) if (c) cachedById.set(c.id.toLowerCase(), c);
+  const cachedByKey = new Map<string, Card>();
+  for (const c of byKeyArr) {
+    cachedById.set(c.id.toLowerCase(), c);
+    if (!cachedByKey.has(c.key)) cachedByKey.set(c.key, c);
+    const front = norm(cleanName(c.name));
+    if (!cachedByKey.has(front)) cachedByKey.set(front, c);
+    if (c.set && c.cn) setCnCache.set(`s:${c.set}|${c.cn}`.toLowerCase(), c);
+  }
+  if (hasSetCn && existingEntries.length) {
+    const entryIds = [...new Set(existingEntries.filter((e) => !cachedById.has(e.cardId.toLowerCase())).map((e) => e.cardId))];
+    if (entryIds.length) {
+      for (const c of await db.cards.bulkGet(entryIds)) {
+        if (c) {
+          cachedById.set(c.id.toLowerCase(), c);
+          if (!cachedByKey.has(c.key)) cachedByKey.set(c.key, c);
+          const front = norm(cleanName(c.name));
+          if (!cachedByKey.has(front)) cachedByKey.set(front, c);
+        }
+      }
+    }
+    for (const e of existingEntries) {
+      const card = cachedById.get(e.cardId.toLowerCase());
+      if (card) {
+        if (e.set && e.cn) setCnCache.set(`s:${e.set}|${e.cn}`.toLowerCase(), card);
+        const en = norm(e.name);
+        if (!cachedByKey.has(en)) cachedByKey.set(en, card);
+      }
+    }
+  }
+
   for (const r of rows) {
     const ident = identOf(r);
     const k = identKey(ident);
+    nameOfIdent.set(k, cleanName(r.name));
     if (found.has(k)) continue;
-    // A row naming its printing (set + number) must get that printing, not whichever one of the name is cached.
-    const hit = r.id ? await db.cards.get(r.id) : r.set && r.cn ? undefined : await db.cards.where('key').equals(norm(r.name)).first();
+    // A row naming its printing (set + number) checks setCnCache first, then cachedByKey if already in the binder.
+    const hit =
+      'id' in ident
+        ? cachedById.get(ident.id)
+        : 'set' in ident
+          ? (setCnCache.get(k) ?? cachedByKey.get(norm(r.name)) ?? cachedByKey.get(norm(cleanName(r.name))))
+          : (cachedByKey.get(norm(r.name)) ?? cachedByKey.get(norm(cleanName(r.name))));
     if (hit) found.set(k, hit);
-    else if (!need.some((n) => identKey(n) === k)) need.push(ident);
+    else if (!needSeen.has(k)) {
+      needSeen.add(k);
+      need.push(ident);
+    }
   }
-  // If Scryfall stops answering, keep what came back and report the rest as not looked up (not as "not found").
+  // If Scryfall stops answering completely, keep what came back and report the rest as not looked up.
   let down: string | undefined;
+  const storeCards = async (data: any[], byKey: Map<string, Card>) => {
+    const cards: Card[] = [];
+    for (const c of data ?? []) {
+      const card = toCard(c);
+      cards.push(card);
+      for (const k of cardKeys(c)) {
+        byKey.set(k, card);
+        if (k.startsWith('s:')) setCnCache.set(k, card);
+      }
+    }
+    if (cards.length) await db.cards.bulkPut(cards);
+  };
   const fetchAll = async (idents: Ident[], base: number, total: number) => {
     const missed: Ident[] = [];
-    for (let i = 0; i < idents.length && !down; i += 75) {
+    let consecutiveFails = 0;
+    for (let i = 0; i < idents.length; i += 75) {
       const batch = idents.slice(i, i + 75);
-      const res = await post('/cards/collection', { identifiers: batch }).catch((e: Error) => ((down = e.message), null));
-      if (!res) break;
-      const cards: Card[] = [];
-      const byKey = new Map<string, Card>();
-      for (const c of res.data) {
-        const card = toCard(c);
-        cards.push(card);
-        for (const k of cardKeys(c)) byKey.set(k, card);
+      let lastErr = '';
+      let res = await post('/cards/collection', { identifiers: batch }, 1).catch((e: Error) => ((lastErr = e.message), null));
+      // If a batch with set/cn or id fails (e.g. a bad collector_number triggers a CORS-less 400 on Scryfall),
+      // immediately fall back to looking up that batch by card name so one bad row never kills 75+ cards!
+      if (!res || res.badBatch) {
+        const byName = [...new Set(batch.map((b) => ('name' in b ? b.name : nameOfIdent.get(identKey(b)) ?? '')).filter(Boolean))].map((name) => ({ name }));
+        if (byName.length) {
+          res = await post('/cards/collection', { identifiers: byName }, 2).catch((e: Error) => ((lastErr = e.message), null));
+        }
       }
-      await db.cards.bulkPut(cards);
+      if (!res) {
+        consecutiveFails++;
+        if (consecutiveFails >= 2) {
+          down = lastErr || 'Could not reach Scryfall';
+          break;
+        }
+        continue;
+      }
+      consecutiveFails = 0;
+      const byKey = new Map<string, Card>();
+      await storeCards(res.data, byKey);
       for (const b of batch) {
-        const card = byKey.get(identKey(b));
-        if (card) found.set(identKey(b), card);
+        const k = identKey(b);
+        const nm = 'name' in b ? b.name : nameOfIdent.get(k);
+        const card = byKey.get(k) ?? (nm ? byKey.get('n:' + norm(nm)) : undefined);
+        if (card) found.set(k, card);
         else missed.push(b);
       }
       onProgress(base + Math.min(i + 75, idents.length), total);
@@ -141,16 +248,19 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
   onProgress(0, need.length);
   const missed = await fetchAll(need, 0, need.length);
   // A set/number Scryfall doesn't know (e.g. a site-specific code): retry by name.
-  const missedKeys = new Set(missed.filter((m) => 'set' in m).map(identKey));
-  const retry = [...new Set(rows.filter((r) => missedKeys.has(identKey(identOf(r)))).map((r) => r.name))].map((name) => ({ name }));
-  if (retry.length) await fetchAll(retry, 0, retry.length);
+  const missedKeys = new Set(missed.filter((m) => 'set' in m || 'id' in m).map(identKey));
+  const retry = [...new Set(rows.filter((r) => missedKeys.has(identKey(identOf(r)))).map((r) => cleanName(r.name)))].map((name) => ({ name }));
+  if (retry.length && !down) await fetchAll(retry, 0, retry.length);
 
   const matched: { row: Row; card: Card }[] = [];
   const unmatched: Row[] = [];
   const failed: Row[] = []; // never looked up: Scryfall didn't answer
   const asked = new Set(need.map(identKey));
   for (const r of rows) {
-    const card = found.get(identKey(identOf(r))) ?? found.get(identKey({ name: r.name }));
+    const card =
+      found.get(identKey(identOf(r))) ??
+      found.get(identKey({ name: cleanName(r.name) })) ??
+      found.get(identKey({ name: r.name }));
     if (card) matched.push({ row: r, card });
     else if (down && asked.has(identKey(identOf(r)))) failed.push(r);
     else unmatched.push(r);
@@ -159,8 +269,8 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
   // MTGO-only or not priced yet (Underground Sea -> Vintage Masters). Use the cheapest paper printing with a price instead.
   if (!down) {
     const named = (r: Row) => !r.id && !(r.set && r.cn);
-    const unpriced = matched.filter((m) => named(m.row) && !m.card.usd);
-    if (unpriced.length) {
+    const unpriced = matched.filter((m) => named(m.row) && m.card.legal && !m.card.usd);
+    if (unpriced.length && unpriced.length <= 40) {
       const cheap = await cheapest(unpriced.map((m) => m.card.name)).catch(() => new Map<string, Cheap>());
       const ids = [...new Set(unpriced.map((m) => cheap.get(m.card.key)?.id).filter((x): x is string => !!x))];
       const paper = ids.length ? await cardsByIds(ids).catch(() => new Map<string, Card>()) : new Map<string, Card>();

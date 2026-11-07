@@ -8,6 +8,8 @@ export interface Card {
   type: string;
   text: string;
   ci: string[];
+  set?: string; // lowercase set code (e.g. 'cmm')
+  cn?: string; // collector number
   img?: string;
   usd?: string;
   usdFoil?: string; // foil (else etched) price of this printing
@@ -102,6 +104,5 @@ class DB extends Dexie {
 }
 
 export const db = new DB();
-export const PROFILES = [1, 2] as const;
-// One binder to start; more come from Collection's binder menu.
-db.on('populate', () => db.profiles.bulkAdd([{ id: 1, name: 'Binder 1' }]));
+export const DEFAULT_PROFILE = 1;
+export const DEFAULT_NAME = 'My Cards';

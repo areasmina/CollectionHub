@@ -5,7 +5,7 @@
  * Terms (https://edhrec.com/terms, read Nov 6 2026): access is licensed for personal, noncommercial use; automated
  * queries and building a competing site are not allowed. Browser-side fetching does NOT by itself establish compliance.
  * Rules we keep: each user's browser asks only for pages that user opens (no server proxy, no bulk download), every page
- * is cached (a day; salt a week), requests are paced (~3/s), EDHREC is credited and linked, and no paid tier or public
+ * is cached (a day; salt a week), requests are paced (~3-5/s), EDHREC is credited and linked, and no paid tier or public
  * launch is built on this data without EDHREC's written permission. Details: docs/data-sources.md.
  */
 import { db } from '../db';
@@ -48,35 +48,80 @@ export const pagePath = (kind: 'commander' | 'average', slug: string, bracket = 
 const DAY = 864e5;
 export class NoPage extends Error {}
 let nextSlot = 0;
+const inFlight = new Map<string, Promise<EdhPage>>();
+const memCache = new Map<string, { page: EdhPage; at: number }>();
+
+function remember(path: string, page: EdhPage, at: number) {
+  if (memCache.size > 400) {
+    const first = memCache.keys().next().value;
+    if (first) memCache.delete(first);
+  }
+  memCache.set(path, { page, at });
+  return { page, at };
+}
 
 /** The saved copy of a page, however old (null if never fetched): lets a view show something at once. */
 export async function cachedPage(path: string): Promise<{ page: EdhPage; at: number } | null> {
+  const mem = memCache.get(path);
+  if (mem) return mem;
   const hit = await db.edhrec.get(path).catch(() => undefined);
-  return hit ? { page: parsePage(hit.data), at: hit.at } : null;
+  return hit ? remember(path, parsePage(hit.data), hit.at) : null;
+}
+
+/** Bulk-read saved copies of many pages in a single IndexedDB call (for Discover recounting). */
+export async function cachedPages(paths: string[]): Promise<Map<string, { page: EdhPage; at: number }>> {
+  const out = new Map<string, { page: EdhPage; at: number }>();
+  const miss: string[] = [];
+  for (const p of paths) {
+    const mem = memCache.get(p);
+    if (mem) out.set(p, mem);
+    else miss.push(p);
+  }
+  if (miss.length) {
+    const rows = await db.edhrec.bulkGet(miss).catch(() => []);
+    for (const hit of rows) {
+      if (hit) out.set(hit.path, remember(hit.path, parsePage(hit.data), hit.at));
+    }
+  }
+  return out;
 }
 
 /** A page from the cache when younger than maxAge (default a day), else from EDHREC (stale copy if EDHREC can't answer). */
 export async function fetchPage(path: string, maxAge = DAY): Promise<EdhPage> {
+  const mem = memCache.get(path);
+  if (mem && Date.now() - mem.at < maxAge) return mem.page;
   const hit = await db.edhrec.get(path);
-  if (hit && Date.now() - hit.at < maxAge) return parsePage(hit.data);
-  // Be polite: at most ~3 page requests a second (e.g. when ranking every commander).
-  const start = Math.max(nextSlot, Date.now());
-  nextSlot = start + 350;
-  if (start > Date.now()) await new Promise((r) => setTimeout(r, start - Date.now()));
-  // json.edhrec.com sends Access-Control-Allow-Origin: *, so no proxy is needed.
-  const r = await fetch(`https://json.edhrec.com/pages/${path}.json`).catch(() => null);
-  if (!r) {
-    if (hit) return parsePage(hit.data);
-    throw new Error('Could not reach EDHREC (offline?)');
-  }
-  if (r.status === 403 || r.status === 404) throw new NoPage('EDHREC has no page for this combination.');
-  if (!r.ok) {
-    if (hit) return parsePage(hit.data); // stale beats nothing
-    throw new Error(`EDHREC answered ${r.status}`);
-  }
-  const data = await r.json();
-  await db.edhrec.put({ path, data, at: Date.now() });
-  return parsePage(data);
+  if (hit && Date.now() - hit.at < maxAge) return remember(path, parsePage(hit.data), hit.at).page;
+  const existing = inFlight.get(path);
+  if (existing) return existing;
+  const job = (async () => {
+    try {
+      // Static CloudFront JSON pages: pace smoothly (~20/s across workers) with an 8s timeout so a stalled socket never hangs a worker.
+      const start = Math.max(nextSlot, Date.now());
+      nextSlot = start + 50;
+      if (start > Date.now()) await new Promise((r) => setTimeout(r, start - Date.now()));
+      const sig = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(8000) : undefined;
+      // json.edhrec.com sends Access-Control-Allow-Origin: *, so no proxy is needed.
+      const r = await fetch(`https://json.edhrec.com/pages/${path}.json`, { signal: sig }).catch(() => null);
+      if (!r) {
+        if (hit) return remember(path, parsePage(hit.data), hit.at).page;
+        throw new Error('Could not reach EDHREC (offline?)');
+      }
+      if (r.status === 403 || r.status === 404) throw new NoPage('EDHREC has no page for this combination.');
+      if (!r.ok) {
+        if (hit) return remember(path, parsePage(hit.data), hit.at).page; // stale beats nothing
+        throw new Error(`EDHREC answered ${r.status}`);
+      }
+      const data = await r.json();
+      const now = Date.now();
+      await db.edhrec.put({ path, data, at: now });
+      return remember(path, parsePage(data), now).page;
+    } finally {
+      inFlight.delete(path);
+    }
+  })();
+  inFlight.set(path, job);
+  return job;
 }
 
 /**
@@ -121,7 +166,7 @@ export function saltMap(): Promise<Map<string, number>> {
     const rows: [string, number][] = [];
     // shortcut: top 1,000 only (salt >= ~0.85); cards below count as 0. Fetch more pages if low-salt totals matter.
     for (let i = 0; i < 10; i++) {
-      if (i) await new Promise((r) => setTimeout(r, 350));
+      if (i) await new Promise((r) => setTimeout(r, 200));
       const j = await fetch(`https://json.edhrec.com/pages/top/salt${i ? `--${i}` : ''}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
       const views: any[] = j?.cardviews ?? j?.container?.json_dict?.cardlists?.[0]?.cardviews ?? [];
       if (!views.length) break;
@@ -164,7 +209,7 @@ export async function fetchFiltered(path: string, f: CardFilter, base: EdhPage):
   let data = hit && Date.now() - hit.at < DAY ? hit.data : null;
   if (!data) {
     const start = Math.max(nextSlot, Date.now());
-    nextSlot = start + 350;
+    nextSlot = start + 200;
     if (start > Date.now()) await new Promise((r) => setTimeout(r, start - Date.now()));
     const r = await fetch(`https://json.edhrec.com/pages/${path}.json?f=${encodeURIComponent(q)}`).catch(() => null);
     if (!r?.ok) return { page: base, applied: false };
@@ -184,6 +229,7 @@ export const EDHREC = {
   page: (slug: string, bracket = '', tag = '', budget = '') => fetchPage(pagePath('commander', slug, bracket, tag, budget)),
   average: (slug: string, bracket = '', tag = '', budget = '') => fetchPage(pagePath('average', slug, bracket, tag, budget)),
   cached: cachedPage,
+  cachedMany: cachedPages,
   show: showPage,
   filtered: fetchFiltered,
   salt: saltMap,
