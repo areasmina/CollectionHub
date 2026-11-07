@@ -308,7 +308,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
         <ToolBar
           q={q}
           setQ={setQ ?? (() => {})}
-          now={[view === 'grid' ? `SIZE ${zoom.toUpperCase()}` : 'LIST', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}
+          now={[view === 'list' ? 'LIST' : '', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}
           quick={
             <>
               <div className="qsegs qviews" role="group" aria-label="Quick view">
@@ -341,17 +341,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
               </button>
             </div>
           </OptRow>
-          {view === 'grid' && (
-            <OptRow label="SIZE">
-              <div className="zoomsw" role="radiogroup" aria-label="Card size">
-                {(['s', 'm', 'l'] as const).map((z) => (
-                  <button key={z} role="radio" aria-checked={zoom === z} aria-label={{ s: 'Small cards', m: 'Medium cards', l: 'Large cards' }[z]} title={{ s: 'Small cards: see more', m: 'Medium cards', l: 'Large cards: read them' }[z]} onClick={() => (haptic('select'), setZoom(z))}>
-                    <i className={`zc ${z}`} aria-hidden="true" />
-                  </button>
-                ))}
-              </div>
-            </OptRow>
-          )}
+
           <label className="check">
             <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
           </label>

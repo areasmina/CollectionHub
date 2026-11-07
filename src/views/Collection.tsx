@@ -18,7 +18,7 @@ import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { snapshot } from '../lib/pricewatch';
 import { priced, priceSum, Progress } from './shared';
-import { Title } from './zine';
+import { Doodles, Title } from './zine';
 
 export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
   return (
@@ -197,7 +197,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             <span role="button" tabIndex={0} className="u-btn ghost ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
               + DECK
             </span>
-            <span role="button" tabIndex={0} className="u-btn dimp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), setDash(true), setImportOpen(true))}>
+            <span role="button" tabIndex={0} className="u-btn dimp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), setDash(true), setImportOpen(!importOpen))}>
               IMPORT
             </span>
             <span className="chev" aria-hidden="true">
@@ -206,9 +206,46 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           </span>
         </summary>
 
-        {/* MY DECKS and Collection Import are separate sections so pasting a deck never gets confused with importing owned cards into the binder */}
-        <MyDecks s={s} />
+        {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
+        <section className="stats">
+          <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
+            <span className="worn" aria-hidden="true" />
+            <span className="spray" aria-hidden="true" />
+            <b>{total.toLocaleString()}</b>
+            <span>cards</span>
+            <Doodles n={377} count={1} spots={[[70, -24]]} />
+          </div>
+          <div className="stat" style={{ transform: 'rotate(0.6deg)' }}>
+            <span className="worn" aria-hidden="true" />
+            <span className="spray" aria-hidden="true" />
+            <b>{unique.toLocaleString()}</b>
+            <span>unique cards</span>
+          </div>
+          <div className="stat red gbox" style={{ transform: 'rotate(-1.2deg)' }}>
+            <span className="worn" aria-hidden="true" />
+            <span className="spray" aria-hidden="true" />
+            <b>{commanders.toLocaleString()}</b>
+            <span>commanders</span>
+            <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
+              <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
+              <path d="M5 40 C20 37 42 42 58 38" />
+              <circle cx="30" cy="4" r="2.6" />
+              <circle cx="4" cy="10" r="2.2" />
+              <circle cx="58" cy="8" r="2.2" />
+            </svg>
+          </div>
+          <div className="slip" style={{ transform: 'rotate(-0.5deg)' }}>
+            <span className="warn">warning</span>
+            <span className="se">worth about</span>
+            <b>{value > 0 ? cad(value) : 'CA$—'}</b>
+            <span className="se small" title={PRICE_METHOD}>
+              est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
+            </span>
+            {value > 0 && <span className="stamp">APPRAISED</span>}
+          </div>
+        </section>
 
+        {/* Single upload option at the top (no duplicate below MyDecks) */}
         <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
           <summary>
             <b>+ IMPORT CARDS</b>
@@ -262,6 +299,8 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             {result && <ImportReport r={result} />}
           </section>
         </details>
+
+        <MyDecks s={s} />
       </details>
 
       {illegal > 0 && (

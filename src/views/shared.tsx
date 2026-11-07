@@ -515,7 +515,6 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, label =
   }, []);
   return (
     <div className="dtools tbar" role="toolbar" aria-label={label}>
-      <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />
       {quick && <div className="tquick">{quick}</div>}
       <details className="fsheet tbmore" ref={ref} onToggle={(e) => e.currentTarget.open && haptic('open')}>
         <summary aria-label="Options" title="Options">
@@ -528,6 +527,7 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, label =
         </summary>
         <div className="fbody">{children}</div>
       </details>
+      <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />
     </div>
   );
 }

@@ -1010,6 +1010,38 @@ export function Decks(s: Shared) {
             </span>
           </p>
         )}
+        <section className="addpage u-panel" aria-label="Add a deck">
+            <h2>ADD A DECK</h2>
+            <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
+            <label>
+              deck name
+              <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <label className="u-btn file">
+              CHOOSE A FILE
+              <input
+                type="file"
+                accept=".txt,.csv,text/plain,text/csv"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!f) return;
+                  setText(await f.text());
+                  if (!name) setName(f.name.replace(/\.\w+$/, ''));
+                }}
+              />
+            </label>
+            <label>
+              …or paste the list
+              <textarea rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
+            </label>
+            <button className="u-btn primary" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
+              SAVE DECK
+            </button>
+            {busy && <Progress {...busy} />}
+            {error && <p className="error">{error}</p>}
+            {result && <ImportReport r={result} deck />}
+          </section>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid cgrid">
           {decks.map((d) => {
@@ -1050,38 +1082,7 @@ export function Decks(s: Shared) {
           {decks.length === 0 && <li className="dempty">No decks yet. Save one from a commander page, or paste a list below.</li>}
         </ul>
 
-        <section className="addpage u-panel" aria-label="Add a deck">
-          <h2>ADD A DECK</h2>
-          <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
-          <label>
-            deck name
-            <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label className="u-btn file">
-            CHOOSE A FILE
-            <input
-              type="file"
-              accept=".txt,.csv,text/plain,text/csv"
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = '';
-                if (!f) return;
-                setText(await f.text());
-                if (!name) setName(f.name.replace(/\.\w+$/, ''));
-              }}
-            />
-          </label>
-          <label>
-            …or paste the list
-            <textarea rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
-          </label>
-          <button className="u-btn primary" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
-            SAVE DECK
-          </button>
-          {busy && <Progress {...busy} />}
-          {error && <p className="error">{error}</p>}
-          {result && <ImportReport r={result} deck />}
-        </section>
+
       </main>
     </>
   );

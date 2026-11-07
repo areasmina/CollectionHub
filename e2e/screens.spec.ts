@@ -117,11 +117,12 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   await expect(sum).toContainText('1 commander');
   await expect(sum).toContainText(/≈CA\$236/);
   await expect(sum).toContainText('1 deck');
-  // say it once: no stat tiles or appraisal slip repeat the numbers, and the ribbon stays when the overview is open
+  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics
   await dash(page);
-  await expect(page.locator('.stats, .slip')).toHaveCount(0);
+  await expect(page.locator('.stats')).toBeVisible();
+  await expect(page.locator('.stats .stat')).toHaveCount(3);
+  await expect(page.locator('.stats .slip')).toBeVisible();
   await expect(sum).toContainText('20 cards');
-  await expect(page.locator('main.coll .tape, main.coll .doodle')).toHaveCount(0);
   // IMPORT opens the import box (and keeps the overview open)
   await page.locator('details.dash > summary .dimp').click();
   await expect(page.locator('details.dash')).toHaveAttribute('open', '');
@@ -157,6 +158,7 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await expect(page.locator('ul.zlist').first()).toBeVisible();
   await sw.getByRole('button', { name: 'Grid view' }).click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
+  await page.keyboard.press('Escape');
   const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
   // the deck re-renders while card data loads: retry until the tile is settled in view
   await expect(async () => {
