@@ -458,7 +458,7 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await expect(page.locator('.slimbar .btn.forge')).toHaveCount(0); // no FORGE IT button: the first swap starts the Forge
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
-  await page.locator('.forgetop .btn.forge').click();
+  await page.locator('.forgetop .forge').click();
   await expect(page.locator('.forgehint')).toBeVisible();
   await page.getByRole('button', { name: 'Swap Counterspell', exact: true }).click();
   const note = page.getByRole('dialog', { name: 'Swap Counterspell' });

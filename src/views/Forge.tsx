@@ -71,16 +71,16 @@ export function ForgeTop({ label, sub, undo, onLeave, onSave, saving, reserved }
         {sub && <small>{sub}</small>}
       </span>
       {undo && (
-        <button className="fundo" onClick={() => (haptic('undo'), undo.run())} title="Undo (Ctrl+Z)">
+        <button className="u-btn ghost fundo" onClick={() => (haptic('undo'), undo.run())} title="Undo (Ctrl+Z)">
           ↺ UNDO <small>{undo.text}</small>
         </button>
       )}
       {onSave && (
-        <button className="btn forge" onClick={onSave} disabled={saving}>
+        <button className="u-btn primary forge" onClick={onSave} disabled={saving}>
           SAVE
         </button>
       )}
-      <button className="btn ink fleave" onClick={() => (haptic('tap'), onLeave())} title="Leave the Forge (Esc)">
+      <button className="u-btn ghost fleave" onClick={() => (haptic('tap'), onLeave())} title="Leave the Forge (Esc)">
         ✕ LEAVE
       </button>
     </div>
@@ -402,9 +402,9 @@ export function ForgeSuggest({
               <span className="tab">WITHOUT</span>
               <input value={cfDraft.exc} onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })} placeholder="card left out_" aria-label="Without card" />
             </label>
-            <button className="btn">APPLY</button>
+            <button className="u-btn">APPLY</button>
             {cf && (cf.inc.length > 0 || cf.exc.length > 0) && (
-              <button type="button" className="btn secondary" onClick={() => (haptic('undo'), setCfDraft({ inc: '', exc: '' }), onCf({ inc: [], exc: [] }))}>
+              <button type="button" className="u-btn ghost" onClick={() => (haptic('undo'), setCfDraft({ inc: '', exc: '' }), onCf({ inc: [], exc: [] }))}>
                 CLEAR
               </button>
             )}
