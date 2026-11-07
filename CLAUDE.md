@@ -6,10 +6,11 @@ Live: https://collection-hub-ashen.vercel.app (every merge to `main` deploys).
 
 ## Read first, every session
 
-1. `docs/FEATURES.md` – what exists, its status and the tests that prove it. A Live feature is extended, never rebuilt.
-2. `docs/DECISIONS.md` – choices already made with Guillermo. Follow them; don't re-ask or re-propose a rejected one.
-3. `docs/MONOREPO.md` – how the folders of this repo fit together (what is active, what is reference only).
-4. The code itself. Notes can be stale; the current `main` wins.
+1. `docs/THE_OVERHAUL.md` – the agreed UI design system (Frame Loud, Content Quiet; 6 core rules; 7 parts; spacing scale).
+2. `docs/FEATURES.md` – what exists, its status and the tests that prove it. A Live feature is extended, never rebuilt.
+3. `docs/DECISIONS.md` – choices already made with Guillermo. Follow them; don't re-ask or re-propose a rejected one.
+4. `docs/MONOREPO.md` – how the folders of this repo fit together (what is active, what is reference only).
+5. The code itself. Notes can be stale; the current `main` wins.
 
 ## Stack and commands
 
