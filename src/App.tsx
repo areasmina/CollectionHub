@@ -55,6 +55,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
   const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
   const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
+  const [islandOpen, setIslandOpen] = useState(false);
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   useBrainData(); // card roles + combo files: re-render every view once they arrive
@@ -112,7 +113,7 @@ export default function App() {
       {/* One nav (THE OVERHAUL, part 1): a 48px top bar on tablets and desktop (logo · DISCOVER DECKS COLLECTION · ⚙),
           a compact floating pill on phones (back + the three sections). Sync, haptics and binders also sit in Collection's
           binder menu; ⚙ opens sync from anywhere on wide screens. */}
-      <nav className={`pillnav${navAway ? ' away' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
+      <nav className={`pillnav${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}`} aria-label="Sections" onFocus={() => setNavAway(false)}>
         {/* The back arrow shows only when there's somewhere to go back to */}
         {backFn && (
           <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
@@ -132,11 +133,46 @@ export default function App() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="island-capsule"
+          aria-expanded={islandOpen}
+          aria-label="Dynamic Island Quick Info"
+          title="Dynamic Island: Quick status and actions"
+          onClick={() => (haptic('tap'), setIslandOpen(!islandOpen))}
+        >
+          <span className="dot" aria-hidden="true" />
+          <span>{syncSt.status === 'synced' ? 'LIVE' : SYNC_LABEL[syncSt.status].toUpperCase()}</span>
+        </button>
         <button className={`ugear${syncSt.status === 'conflict' ? ' alert' : ''}`} aria-label="Sync and settings" title={`Sync: ${SYNC_LABEL[syncSt.status]}`} onClick={() => (haptic('open'), setSync(true))}>
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
             <path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)" />
           </svg>
         </button>
+
+        {islandOpen && (
+          <div className="island-drawer" role="dialog" aria-label="Quick island info">
+            <div className="id-head">
+              <b>⚡ DYNAMIC ISLAND</b>
+              <button type="button" className="id-close" onClick={() => setIslandOpen(false)} aria-label="Close island">✕</button>
+            </div>
+            <div className="id-stats">
+              <div className="id-tile">
+                <span>Active Binder</span>
+                <b>{nameOf(profile)}</b>
+              </div>
+              <div className="id-tile">
+                <span>Binder Cards</span>
+                <b>{entries.filter((e) => e.profile === profile).length} cards</b>
+              </div>
+            </div>
+            <div className="id-acts">
+              <button type="button" onClick={() => (haptic('select'), goDiscover(), setIslandOpen(false))}>DISCOVER</button>
+              <button type="button" onClick={() => (haptic('select'), goDecks(), setIslandOpen(false))}>DECKS</button>
+              <button type="button" onClick={() => (haptic('open'), setSync(true), setIslandOpen(false))}>SYNC ⚙</button>
+            </div>
+          </div>
+        )}
       </nav>
       {sync && (
         <Suspense fallback={null}>

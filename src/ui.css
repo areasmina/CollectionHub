@@ -36,7 +36,7 @@
 @media (min-width: 701px) {
   :root {
     --gutter: 24px;
-    --navh: 48px;
+    --navh: 64px;
   }
   html.forging {
     --navh: 0px; /* the Forge has its own top bar */
@@ -277,13 +277,17 @@
 }
 .u-menubody {
   position: absolute;
-  z-index: 60;
+  z-index: 100;
   top: calc(100% + var(--s2));
   left: 0;
-  min-width: 220px;
-  padding: var(--s3);
-  background: var(--u-carbon);
-  border: 1px solid var(--u-line2);
+  min-width: 240px;
+  padding: var(--s2);
+  background: #111111;
+  border: 1px solid var(--u-line2, #333333);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Meter: slanted green bars for a match %. */
@@ -307,12 +311,13 @@
   color: var(--u-green);
 }
 
-/* ---------- 3. Nav: 48px top bar (tablet, desktop), 40px bottom pill (phones) ---------- */
+/* ---------- 3. Dynamic Island Nav: Centered, floating, interactive (tablet, desktop, phones) ---------- */
 .pillnav {
-  z-index: 41;
+  z-index: 50;
   display: flex;
   align-items: center;
   font-family: var(--u-display);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .pillnav button {
   border: 0;
@@ -340,22 +345,26 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: var(--tap);
-  height: var(--tap);
+  width: 34px;
+  height: 34px;
   padding: 0;
 }
 .pillnav .ugear {
   position: relative;
   color: var(--u-muted);
+  border-radius: 50%;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.2s ease;
 }
 .pillnav .ugear:hover {
   color: var(--u-text);
+  background: rgba(255, 255, 255, 0.08);
+  transform: rotate(30deg);
 }
 .pillnav .ugear.alert::after {
   content: '';
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -365,10 +374,15 @@
   display: flex;
   align-items: center;
   gap: var(--s2);
-  height: var(--tap);
-  padding: 0;
-  font: 400 18px/1 var(--u-display);
+  height: 34px;
+  padding: 0 var(--s2);
+  font: 400 17px/1 var(--u-display);
   letter-spacing: 0.08em;
+  border-radius: 999px;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+.pillnav .ulogo:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 html.forging .pillnav {
   display: none;
@@ -376,57 +390,87 @@ html.forging .pillnav {
 @media (min-width: 701px) {
   .pillnav {
     position: sticky;
-    top: 0;
-    height: var(--navh);
-    padding: 0 var(--gutter);
-    gap: var(--s5);
-    background: var(--u-ink);
-    border-bottom: 1px solid var(--u-line);
+    top: 10px;
+    margin: 0 auto;
+    height: 48px;
+    padding: 0 10px 0 14px;
+    gap: var(--s3);
+    width: fit-content;
+    max-width: min(840px, calc(100vw - 32px));
+    background: rgba(14, 14, 14, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+  .pillnav:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
   .pillnav .pback {
-    margin-right: calc(-1 * var(--s4));
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     color: var(--u-text);
+    background: rgba(255, 255, 255, 0.06);
+    transition: all 0.15s ease;
+  }
+  .pillnav .pback:hover {
+    background: rgba(255, 255, 255, 0.16);
+    transform: scale(1.06);
   }
   .pillnav .pill {
-    height: 100%;
-    gap: var(--s1);
+    height: 36px;
+    gap: 3px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
   .pillnav .pill button {
     height: 100%;
-    padding: 0 var(--s4);
+    padding: 0 16px;
     color: var(--u-muted);
-    border-bottom: 2px solid transparent;
-    border-top: 2px solid transparent;
+    border-radius: 999px;
+    border: 0;
+    transition: all 0.18s ease;
   }
   .pillnav .pill button:hover {
     color: var(--u-text);
+    background: rgba(255, 255, 255, 0.08);
   }
   .pillnav .pill button[aria-current='page'] {
-    color: var(--u-text);
-    border-bottom-color: var(--u-red);
+    color: #ffffff;
+    background: var(--u-red);
+    box-shadow: 0 2px 10px rgba(230, 0, 18, 0.45);
   }
   .pillnav .ugear {
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 @media (max-width: 700px) {
   .pillnav {
     position: fixed;
+    top: calc(10px + env(safe-area-inset-top));
     left: 50%;
-    bottom: calc(var(--s3) + env(safe-area-inset-bottom));
     transform: translateX(-50%);
-    height: 40px;
-    padding: 0 3px;
-    gap: 2px;
-    max-width: calc(100vw - 2 * var(--gutter));
-    background: var(--u-ink);
-    border: 1px solid var(--u-line2);
+    z-index: 50;
+    height: 42px;
+    padding: 3px 6px;
+    gap: 4px;
+    max-width: calc(100vw - 20px);
+    background: rgba(14, 14, 14, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 999px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
-    transition: transform 0.2s ease;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
   }
   .pillnav.away {
-    transform: translate(-50%, calc(100% + 32px));
+    transform: translate(-50%, -75px);
+    opacity: 0;
   }
   .pillnav .ulogo,
   .pillnav .ugear {
@@ -436,18 +480,30 @@ html.forging .pillnav {
     width: 34px;
     height: 34px;
     border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--u-text);
+  }
+  .pillnav .pill {
+    display: flex;
+    align-items: center;
+    gap: 2px;
   }
   .pillnav .pill button {
     height: 34px;
-    padding: 0 14px;
+    padding: 0 13px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 13px;
+    color: var(--u-muted);
+    transition: all 0.15s ease;
   }
   .pillnav .pill button[aria-current='page'] {
     background: var(--u-red);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(230, 0, 18, 0.4);
   }
   .stage {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-top: calc(58px + env(safe-area-inset-top));
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 @media (max-width: 360px) {
@@ -461,6 +517,137 @@ html.forging .pillnav {
     transition: none;
   }
 }
+/* Dynamic Island Expandable Widget */
+.island-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: var(--u-muted);
+  font: 600 11px/1 var(--u-display);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.island-capsule:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.03);
+}
+.island-capsule .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--u-green);
+  box-shadow: 0 0 8px var(--u-green);
+}
+@media (max-width: 700px) {
+  .island-capsule {
+    display: none;
+  }
+}
+.island-drawer {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(380px, calc(100vw - 32px));
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: islandPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  z-index: 100;
+}
+@keyframes islandPop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+.island-drawer .id-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+.island-drawer .id-head b {
+  font: 400 13px var(--u-display);
+  letter-spacing: 0.08em;
+  color: #fff;
+}
+.island-drawer .id-close {
+  background: transparent;
+  border: 0;
+  color: var(--u-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+.island-drawer .id-close:hover {
+  color: #fff;
+}
+.island-drawer .id-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.island-drawer .id-tile {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.island-drawer .id-tile span {
+  font-size: 11px;
+  color: var(--u-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.island-drawer .id-tile b {
+  font-size: 14px;
+  color: #fff;
+}
+.island-drawer .id-acts {
+  display: flex;
+  gap: 6px;
+}
+.island-drawer .id-acts button {
+  flex: 1;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font: 600 12px/1 var(--u-display);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.island-drawer .id-acts button:hover {
+  background: var(--u-red);
+  border-color: var(--u-red);
+}
+
 /* Sticky bars sit under the top bar */
 @media (min-width: 701px) {
   html:not(.forging) .dtools.tbar {
@@ -725,28 +912,39 @@ main.dpage {
 .dstrip .power .segs {
   display: flex;
   flex-direction: column;
-  gap: var(--s1);
+  gap: 4px;
+  height: auto !important;
+  min-height: 0;
+  width: 100%;
   border: 0;
-  background: none;
+  background: transparent;
   box-shadow: none;
   transform: none;
 }
 .dstrip .power .segs button {
-  min-height: 40px;
+  min-height: 38px;
+  height: 38px;
+  width: 100%;
   padding: 0 var(--s3);
   border: 1px solid transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--u-text);
-  font: 400 14px var(--u-display);
+  font: 400 14px/38px var(--u-display);
   letter-spacing: 0.04em;
   text-align: left;
   transform: none;
   box-shadow: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.dstrip .power .segs button:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 .dstrip .power .segs button[aria-checked='true'] {
   border-color: var(--u-red);
-  background: transparent;
-  color: var(--u-text);
+  background: rgba(230, 0, 18, 0.15);
+  color: #ffffff;
 }
 .dstrip .power .segs button[aria-checked='true']::before {
   content: '● ';
@@ -959,27 +1157,196 @@ main.dpage {
     overflow: visible;
   }
 }
-/* quick filters and views in the toolbar: flat outlined toggles, the chosen one filled */
+/* quick filters and views in the toolbar: symmetric widths, clean outlines */
 .dpage .tquick .qsegs {
   border: 0;
   box-shadow: none;
   gap: 0;
-}
-.dpage .tquick .qsegs button {
-  min-height: 36px;
   background: transparent;
+}
+.dpage .tquick .qsegs:not(.qviews) button {
+  min-height: 36px;
+  height: 36px;
+  min-width: 72px;
+  text-align: center;
+  justify-content: center;
+  background: #141414;
   color: var(--u-muted);
   border: 1px solid var(--u-line2);
   box-shadow: none;
   transform: none;
+  font-family: var(--u-display);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s ease;
 }
-.dpage .tquick .qsegs button + button {
+.dpage .tquick .qsegs:not(.qviews) button + button {
   border-left: 0;
 }
-.dpage .tquick .qsegs button[aria-pressed='true'] {
+.dpage .tquick .qsegs:not(.qviews) button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.dpage .tquick .qsegs:not(.qviews) button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.dpage .tquick .qsegs:not(.qviews) button[aria-pressed='true'] {
   background: var(--u-text);
   color: var(--u-ink);
   border-color: var(--u-text);
+}
+.dpage .tquick .qsegs.qviews button {
+  min-height: 36px;
+  height: 36px;
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #141414;
+  color: var(--u-muted);
+  border: 1px solid var(--u-line2);
+  box-shadow: none;
+  transform: none;
+  transition: all 0.15s ease;
+}
+.dpage .tquick .qsegs.qviews button + button {
+  border-left: 0;
+}
+.dpage .tquick .qsegs.qviews button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+.dpage .tquick .qsegs.qviews button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.dpage .tquick .qsegs.qviews button[aria-pressed='true'] {
+  background: var(--u-text);
+  color: var(--u-ink);
+  border-color: var(--u-text);
+}
+
+/* Options menu (⋮) overhaul: clean scrolling, no overlapping theme chips, tamed select dropdowns */
+.dtools.tbar > .tbmore > .fbody {
+  width: min(440px, calc(100vw - 24px)) !important;
+  max-height: min(600px, calc(100vh - 120px)) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  background: #141414 !important;
+  border: 1px solid #333333 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  padding: 16px !important;
+  gap: 12px !important;
+}
+.dtools.tbar > .tbmore .optrow {
+  padding-top: 10px;
+  border-top: 1px solid #242424;
+  gap: 8px;
+}
+.dtools.tbar > .tbmore .optrow:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.dtools.tbar > .tbmore .optrow > .lbl {
+  color: var(--u-muted, #888);
+  font: 600 12px/1 var(--u-display, sans-serif);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dtools .fbody .themes,
+.dpage .themes {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.dtools .fbody .themes button,
+.dpage .themes button,
+.dpage .themes .u-chip {
+  width: auto !important;
+  min-width: 0 !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  font: 600 12px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.04em !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: #202020 !important;
+  color: #e0e0e0 !important;
+  border: 1px solid #383838 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.dtools .fbody .themes button:hover,
+.dpage .themes button:hover {
+  background: #2a2a2a !important;
+  border-color: #555 !important;
+  color: #fff !important;
+}
+.dtools .fbody .themes button[aria-pressed='true'],
+.dpage .themes button[aria-pressed='true'] {
+  background: var(--u-red, #e60012) !important;
+  color: #fff !important;
+  border-color: var(--u-red, #e60012) !important;
+}
+.dtools .fbody .themes small,
+.dpage .themes small {
+  opacity: 0.65;
+  font-size: 11px;
+}
+.tbar .fbody .sbox.pick {
+  background: #181818 !important;
+  border: 1px solid #333333 !important;
+  border-radius: 6px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  overflow: hidden;
+}
+.tbar .fbody .sbox.pick .tab {
+  background: #222222 !important;
+  color: #999999 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 0 10px !important;
+  border-right: 1px solid #333333 !important;
+  letter-spacing: 0.06em;
+}
+.tbar .fbody .sbox.pick select {
+  background: transparent !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-family: var(--u-mono, monospace) !important;
+}
+.tbar .fbody .cfilter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px solid #242424;
+}
+.tbar .fbody .cfilter .sbox {
+  background: #181818;
+  border: 1px solid #333;
+  border-radius: 6px;
+  height: 38px;
+}
+.tbar .fbody .cfilter .sbox .tab {
+  background: #222;
+  color: #999;
+  font-size: 11px;
+  font-weight: 700;
+  border-right: 1px solid #333;
+  padding: 0 10px;
+}
+.tbar .fbody .cfilter .sbox input {
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
 }
 /* missing = grey, flat (red is for the one primary action); the tile itself is already dimmed */
 .dpage .ztile .misstape {

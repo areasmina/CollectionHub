@@ -912,7 +912,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       onSubmit={(e) => {
                         e.preventDefault();
                         haptic('select');
-                        setCf({ inc: cfDraft.inc.trim() ? [cfDraft.inc.trim()] : [], exc: cfDraft.exc.trim() ? [cfDraft.exc.trim()] : [] });
+                        const inc = cfDraft.inc.trim();
+                        const exc = cfDraft.exc.trim();
+                        if (inc && !pins.in.includes(inc)) void setPin(inc, 'in');
+                        if (exc && !pins.out.includes(exc)) void setPin(exc, 'out');
+                        setCf({ inc: inc ? [inc] : [], exc: exc ? [exc] : [] });
                       }}
                     >
                       <label className="sbox">
@@ -931,7 +935,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       <div className="cfbtns">
                         <button className="btn">APPLY</button>
                         {(cf.inc.length > 0 || cf.exc.length > 0) && (
-                          <button type="button" className="btn secondary" onClick={() => (haptic('undo'), setCf({ inc: [], exc: [] }), setCfDraft({ inc: '', exc: '' }))}>
+                          <button
+                            type="button"
+                            className="btn secondary"
+                            onClick={() => {
+                              haptic('undo');
+                              if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
+                              if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
+                              setCf({ inc: [], exc: [] });
+                              setCfDraft({ inc: '', exc: '' });
+                            }}
+                          >
                             CLEAR
                           </button>
                         )}
@@ -942,7 +956,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                             ? 'Asking EDHREC…'
                             : filtered.applied
                               ? `Suggestions from ${filtered.page.numDecks?.toLocaleString()} EDHREC decks${cf.inc.length ? ` with ${cf.inc.join(', ')}` : ''}${cf.exc.length ? ` without ${cf.exc.join(', ')}` : ''}.`
-                              : `EDHREC didn't filter this page from the app${cf.exc.length ? `; ${cf.exc.join(', ')} is left out of your suggestions` : ''}.`}{' '}
+                              : `EDHREC didn't filter this page from the app${cf.inc.length ? `; ${cf.inc.join(', ')} is pinned in your deck` : ''}${cf.exc.length ? `; ${cf.exc.join(', ')} is left out of your suggestions` : ''}.`}{' '}
                           <a href={filterWebUrl(pagePath('commander', slug, bracket, tag, budget), cf)} target="_blank" rel="noreferrer">
                             Open filtered on EDHREC ↗
                           </a>
