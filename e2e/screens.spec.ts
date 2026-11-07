@@ -156,6 +156,8 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
     await page.waitForTimeout(650);
   }
   await expect(page.locator('.cardmenu')).toBeVisible();
+  // measure where it lands, not mid-way through its 0.18 s drop-in (rotated, so its box pokes past the edge on slow runners)
+  await page.locator('.cardmenu').evaluate((e) => Promise.all(e.getAnimations().map((a) => a.finished)));
   const menu = await page.locator('.cardmenu').boundingBox();
   const vw = page.viewportSize()!.width;
   expect(menu!.x).toBeGreaterThanOrEqual(0);
