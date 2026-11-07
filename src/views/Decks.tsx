@@ -33,6 +33,7 @@ import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type 
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { ImportReport } from './Collection';
+import { MyDecks } from './MyDecks';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
@@ -659,7 +660,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           <div className="vinfo">
             <div className="vname">
               <span className="vslash" aria-hidden="true" />
-              <h1 aria-label={deck.name}>
+              <h1 aria-label={deck.name} {...heroPress}>
                 <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={narrow ? (deck.name.length > 16 ? 22 : 28) : deck.name.length > 28 ? 34 : 46} seed={33} />
               </h1>
               {/* Active / off sits at the end of the name, in the deck's own colour */}
@@ -1010,6 +1011,7 @@ export function Decks(s: Shared) {
             </span>
           </p>
         )}
+        <MyDecks s={s} onAdd={jumpToAdd} onSeeAll={() => document.querySelector('.dgrid')?.scrollIntoView({ behavior: 'smooth' })} />
         <section className="addpage u-panel" aria-label="Add a deck">
             <h2>ADD A DECK</h2>
             <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>

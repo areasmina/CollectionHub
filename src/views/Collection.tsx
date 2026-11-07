@@ -10,7 +10,6 @@ import { db, type Card } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
 import { cad } from '../lib/prices';
 import { CardsView } from './CardsView';
-import { MyDecks } from './MyDecks';
 import { freeDeckName, openDeck, openDeckList } from '../lib/nav';
 import type { Shared } from './shared';
 import { isCommander } from './Discover';
@@ -299,8 +298,6 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             {result && <ImportReport r={result} />}
           </section>
         </details>
-
-        <MyDecks s={s} />
       </details>
 
       {illegal > 0 && (

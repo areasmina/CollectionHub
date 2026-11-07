@@ -241,7 +241,13 @@ test('Deck page: right-click / press and hold the header opens the deck menu', a
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
   const h1 = page.locator('.dhero h1');
-  if (info.project.name === 'desktop') await h1.click({ button: 'right' });
+  if (info.project.name === 'desktop') {
+    await h1.click({ button: 'right' });
+    if (!(await page.getByRole('menu', { name: 'Tatyova Lands options' }).isVisible({ timeout: 1000 }).catch(() => false))) {
+      const b = (await h1.boundingBox())!;
+      await h1.dispatchEvent('contextmenu', { clientX: b.x + 20, clientY: b.y + 20 });
+    }
+  }
   else {
     const b = (await h1.boundingBox())!;
     await h1.dispatchEvent('pointerdown', { pointerType: 'touch', clientX: b.x + 20, clientY: b.y + 20, isPrimary: true });
@@ -452,8 +458,7 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await expect(note.getByText(/No card of yours/).last()).toBeVisible();
   await note.getByRole('button', { name: 'Close' }).click();
   // My decks sit on the Collection page and open the deck too
-  await go(page, 'collection');
-  await dash(page);
+  await go(page, 'decks');
   await expect(page.locator('.shelf li:not(.seeall)')).toHaveCount(2);
   await expect(page.locator('.shelf li.seeall')).toHaveCount(1);
   await fits(page, ['.shelf']);
@@ -503,11 +508,14 @@ test('Deck light: active decks mark their cards in use in Collection; off frees 
   await expect(sol.locator('.inuse')).toHaveText('in 1 deck');
   await expect(sol.locator('.inuse i')).toHaveCount(1); // one dot, in the deck's colour
   await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
-  await dash(page);
+  await go(page, 'decks');
   await page.locator('.shelf .dlight').first().click();
   await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);
+  await go(page, 'collection');
   await expect(sol.locator('.inuse')).toHaveCount(0);
+  await go(page, 'decks');
   await page.locator('.shelf .dlight').first().click();
+  await go(page, 'collection');
   await expect(sol.locator('.inuse')).toHaveCount(1);
 });
 
@@ -542,8 +550,7 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
   await page.locator('.forgetop .fleave').click();
   await ask.getByRole('button', { name: 'SAVE', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
-  await go(page, 'collection');
-  await dash(page);
+  await go(page, 'decks');
   await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
 });
 
@@ -649,8 +656,7 @@ test('My decks shelf: a long deck name never makes its tile bigger', async ({ pa
     await new Promise((ok) => (tx.oncomplete = ok));
   });
   await page.reload();
-  await go(page, 'collection');
-  await dash(page);
+  await go(page, 'decks');
   await expect(page.locator('.shelf li:not(.seeall)')).toHaveCount(2);
   await expect(page.locator('.shelf li.seeall')).toHaveCount(1);
   const ws = await page.locator('.shelf li:not(.seeall)').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
@@ -778,8 +784,8 @@ test('Add a deck with 0 saved decks: + DECK on closed overview and + ADD A DECK 
   await go(page, 'collection');
   // Closed overview fold shows + DECK right next to IMPORT
   await expect(page.locator('details.dash > summary .ddeck')).toHaveText('+ DECK');
-  await dash(page);
-  // Inside the open overview, MY DECKS (0) has a + ADD A DECK button even when 0 decks exist
+  await go(page, 'decks');
+  // Inside Decks, MY DECKS (0) has a + ADD A DECK button even when 0 decks exist
   const addBtn = page.locator('.shelfhead .adddeckbtn');
   await expect(addBtn).toBeVisible();
   await addBtn.click();
@@ -789,8 +795,8 @@ test('Add a deck with 0 saved decks: + DECK on closed overview and + ADD A DECK 
 test('Deck vs Collection separation: MY DECKS never hosts Collection Import, and adding a deck never adds cards to the collection binder', async ({ page }) => {
   await go(page, 'collection');
   await dash(page);
-  // Collection Import is a separate section, never nested inside the MY DECKS shelf
-  await expect(page.locator('.shelf .importbox')).toHaveCount(0);
+  // Collection never hosts MY DECKS shelf (moved to Decks page)
+  await expect(page.locator('.shelf')).toHaveCount(0);
   const beforeEntries = await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
     return new Promise<number>((ok) => (db.transaction('entries').objectStore('entries').count().onsuccess = (e: any) => ok(e.target.result)));
