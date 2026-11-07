@@ -5,7 +5,7 @@ import type { Card, DeckCard } from '../lib/db';
 import { brainData } from './data';
 import { AGGRESSION, comboAllowed, finisherPlans, killCheck, type Aggression } from './win';
 import { tasteFor, type TasteEvent } from './taste';
-import type { Theme } from './themes';
+import { themeRoleOf, type Theme } from './themes';
 
 /**
  * scoreCard / suggestCards: one needs-aware score for "what should go in this slot", shared by every view.
@@ -42,6 +42,7 @@ const SURPLUS = -0.05; // a role already above the usual range
 const WIN_NEED = 0.2; // a finisher while the deck has fewer ways to win than the dial asks for
 const COMBO = 0.25; // completes a two-card combo the bracket allows
 const THEME = 0.15; // fits the theme you picked (Deck Wizard FOCUS_W)
+const BALANCE = 0.08; // enabler/payoff balance when the deck has one half of an engine without the other
 const SIGNAL_W = 0.5; // EDHREC lift, on the old synergy scale (Deck Wizard SYN_W)
 const ROLE_LABEL: Record<Role, string> = { ramp: 'ramp', draw: 'card draw', removal: 'removal', wipes: 'board wipes', tutors: 'tutors' };
 
@@ -51,7 +52,17 @@ export function deckNeeds(ctx: DeckContext) {
   const dial = AGGRESSION[ctx.aggression];
   const kill = killCheck(ctx.deck.map((c) => ({ name: c.name, card: ctx.cardOf(c.name) })), ctx.bracket);
   const range = (r: Role): [number, number] | undefined => (r === 'tutors' ? undefined : dial[r]);
-  return { stats, dial, kill, range, names: new Set(ctx.deck.map((c) => norm(c.name))) };
+  const themeBalance = { enablers: 0, payoffs: 0 };
+  if (ctx.focus) {
+    for (const c of ctx.deck) {
+      const m = ctx.cardOf(c.name);
+      if (!m) continue;
+      const tr = themeRoleOf(ctx.focus.label, m);
+      if (tr === 'enabler') themeBalance.enablers += c.qty;
+      else if (tr === 'payoff') themeBalance.payoffs += c.qty;
+    }
+  }
+  return { stats, dial, kill, range, themeBalance, names: new Set(ctx.deck.map((c) => norm(c.name))) };
 }
 export type Needs = ReturnType<typeof deckNeeds>;
 
@@ -92,7 +103,17 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
   if (card?.cmc != null && card.cmc > 4 && needs.stats.avgMv > needs.dial.maxAvgMv)
     parts.push({ label: `curve already high (${needs.stats.avgMv.toFixed(1)} average)`, value: -0.03 * (card.cmc - 4), source: 'deck needs' });
 
-  if (ctx.focus && card && ctx.focus.test(card)) parts.push({ label: `fits ${ctx.focus.label.toLowerCase()}`, value: THEME, source: 'card text' });
+  if (ctx.focus && card && ctx.focus.test(card)) {
+    const lbl = ctx.focus.label.toLowerCase();
+    parts.push({ label: `fits ${lbl}`, value: THEME, source: 'card text' });
+    const tr = themeRoleOf(ctx.focus.label, card);
+    const { enablers, payoffs } = needs.themeBalance;
+    if (tr === 'enabler' && payoffs >= 3 && enablers < Math.ceil(payoffs * 0.75)) {
+      parts.push({ label: `enabler for ${lbl} (deck has ${payoffs} payoffs, ${enablers} enablers)`, value: BALANCE, source: 'deck needs' });
+    } else if (tr === 'payoff' && enablers >= 4 && payoffs < 2) {
+      parts.push({ label: `payoff for ${lbl} (deck has ${enablers} enablers, ${payoffs} payoffs)`, value: BALANCE, source: 'deck needs' });
+    }
+  }
 
   const t = ctx.taste ? tasteFor(ctx.taste, norm(c.name), c.name) : null;
   if (t) parts.push({ label: t.why, value: t.delta, source: 'your taste' });

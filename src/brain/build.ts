@@ -7,7 +7,7 @@ import { inIdentity } from './identity';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from './score';
 import { landColours } from './validate';
 import type { Aggression } from './win';
-import { STACK_WEIGHTS } from './themes';
+import { STACK_WEIGHTS, themeRoleOf } from './themes';
 
 type FocusTheme = { label: string; test: (c: Pick<Card, 'type' | 'text'> & { name: string }) => boolean };
 
@@ -22,7 +22,8 @@ type FocusTheme = { label: string; test: (c: Pick<Card, 'type' | 'text'> & { nam
  * (CLAUDE.md "strategy independence": EDHREC is evidence, not a requirement).
  */
 export const FOCUS_W = 0.3;
-/** Lands when the curve says nothing else (template; Karsten's formula comes with the mana-base phase). */
+const BALANCE_W = 0.08;
+/** Lands when the curve says nothing else (Karsten's formula is in validate.ts karstenLands). */
 export const LANDS = 36;
 export const LANDS_CEDH = 29;
 /** Basics kept at least, by number of colours, so the mana works with owned duals first (Deck Wizard owned_duals). */
@@ -102,6 +103,18 @@ export function buildDeck(o: {
   while (deck.length - lead.length < spellTarget) {
     const needs = deckNeeds(ctx);
     const gcFull = gcCount() >= gcCap;
+    // Count enablers vs payoffs for the primary strategy theme so we don't build all payoffs with no engine.
+    let enablers = 0;
+    let payoffs = 0;
+    if (stack[0]) {
+      for (const dc of deck) {
+        const m = o.cardOf(dc.name);
+        if (!m) continue;
+        const tr = themeRoleOf(stack[0].label, m);
+        if (tr === 'enabler') enablers += dc.qty;
+        else if (tr === 'payoff') payoffs += dc.qty;
+      }
+    }
     let best: BuildPick | undefined;
     for (const c of spells) {
       if (has.has(norm(c.name))) continue;
@@ -115,6 +128,16 @@ export function buildDeck(o: {
         const w = FOCUS_W * (STACK_WEIGHTS[i] ?? 0);
         parts.push({ label: `strategy: ${t.label}`, value: w, source: 'card text' });
         total += w;
+        if (i === 0) {
+          const tr = themeRoleOf(t.label, c.meta);
+          if (tr === 'enabler' && payoffs >= 3 && enablers < Math.ceil(payoffs * 0.75)) {
+            parts.push({ label: `enabler for ${t.label.toLowerCase()}`, value: BALANCE_W, source: 'deck needs' });
+            total += BALANCE_W;
+          } else if (tr === 'payoff' && enablers >= 4 && payoffs < 2) {
+            parts.push({ label: `payoff for ${t.label.toLowerCase()}`, value: BALANCE_W, source: 'deck needs' });
+            total += BALANCE_W;
+          }
+        }
       });
       if (!best || total > best.total || (total === best.total && c.name < best.name)) best = { name: c.name, total, parts };
     }
@@ -122,15 +145,28 @@ export function buildDeck(o: {
     add(best.name, best);
   }
 
-  // Lands: owned non-basics making the identity's colours (EDHREC-listed first), then basics split by pips.
+  // Lands: owned non-basics weighted by the deck's coloured pip demand (Karsten's colour math), then basics split by pips.
   const colours = ['W', 'U', 'B', 'R', 'G'].filter((x) => o.identity.includes(x));
+  const pips: Record<string, number> = Object.fromEntries(colours.map((x) => [x, 0]));
+  const multiPip: Record<string, number> = Object.fromEntries(colours.map((x) => [x, 0]));
+  for (const c of deck) {
+    const syms = o.cardOf(c.name)?.mana?.match(/\{[^}]+\}/g) ?? [];
+    for (const x of colours) {
+      const count = syms.filter((s) => s.includes(x)).length;
+      if (count > 0) pips[x] += count;
+      if (count >= 2) multiPip[x] += count - 1;
+    }
+  }
+  const maxDemand = Math.max(1, ...colours.map((x) => pips[x] + 0.5 * multiPip[x]));
   const landSlots = slots - (deck.length - lead.length);
   const nonbasicMax = Math.max(0, landSlots - (BASICS_MIN[colours.length] ?? 0));
   const ranked = pool
     .filter((c) => isLand(c.meta.type) && !has.has(norm(c.name)))
     .map((c) => {
-      const made = [...landColours(c.meta)].filter((x) => colours.includes(x)).length;
-      return { c, made, rank: (c.incl ?? 0) + 0.1 * made + (/enters (the battlefield )?tapped/i.test(c.meta.text) && !/unless/i.test(c.meta.text) ? -0.05 : 0) };
+      const cols = [...landColours(c.meta)].filter((x) => colours.includes(x));
+      const made = cols.length;
+      const demandSum = cols.reduce((s, x) => s + (0.75 + 0.5 * ((pips[x] + 0.5 * multiPip[x]) / maxDemand)), 0);
+      return { c, made, rank: (c.incl ?? 0) + 0.1 * demandSum + (/enters (the battlefield )?tapped/i.test(c.meta.text) && !/unless/i.test(c.meta.text) ? -0.05 : 0) };
     })
     .filter((x) => x.made > 0 || (x.c.incl ?? 0) > 0)
     .sort((a, b) => b.rank - a.rank || a.c.name.localeCompare(b.c.name))
@@ -147,11 +183,10 @@ export function buildDeck(o: {
   if (basicsLeft > 0) {
     if (!colours.length) basics.Wastes = basicsLeft;
     else {
-      // Split by coloured pips of the spells (Manafoundry countColorPips idea, MIT), at least one of each colour.
-      const pips: Record<string, number> = Object.fromEntries(colours.map((x) => [x, 0]));
-      for (const c of deck) for (const s of o.cardOf(c.name)?.mana?.match(/\{[^}]+\}/g) ?? []) for (const x of colours) if (s.includes(x)) pips[x]++;
-      const sum = colours.reduce((n, x) => n + Math.max(1, pips[x]), 0);
-      const raw = colours.map((x) => ({ x, v: (basicsLeft * Math.max(1, pips[x])) / sum }));
+      // Split by coloured pips + Karsten double-pip demand (Manafoundry countColorPips + Karsten multi-pip weight), at least one of each colour.
+      const weight = (x: string) => Math.max(1, pips[x] + 0.5 * multiPip[x]);
+      const sum = colours.reduce((n, x) => n + weight(x), 0);
+      const raw = colours.map((x) => ({ x, v: (basicsLeft * weight(x)) / sum }));
       for (const r of raw) basics[BASIC_OF[r.x]] = Math.floor(r.v);
       let left = basicsLeft - raw.reduce((n, r) => n + Math.floor(r.v), 0);
       for (const r of [...raw].sort((a, b) => (b.v % 1) - (a.v % 1))) if (left-- > 0) basics[BASIC_OF[r.x]]++;

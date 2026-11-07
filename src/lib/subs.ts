@@ -24,6 +24,7 @@ function signalTag(c: SubCard): string | undefined {
 }
 
 import { brainData, ROLE_BITS } from '../brain/data';
+import { deckNeeds, scoreCard, type DeckContext, type Needs } from '../brain/score';
 import { BASICS } from './compare';
 import { norm } from './names';
 
@@ -43,14 +44,26 @@ export function sharedRoles(a: string, b: string): (typeof ROLE_BITS)[number][] 
 /**
  * Owned stand-ins for a missing card. What the card *does* comes first (veteran playtest round 2: Basalt Monolith was
  * offered Sylvan Library): each shared Scryfall Tagger role +3, and a card doing none of the missing card's jobs -3;
- * then the same EDHREC category, card type, close mana value, then lift/inclusion. Basic lands are never offered.
+ * then the same EDHREC category, card type, close mana value, then lift/inclusion.
+ * When `ctx` (DeckContext) is provided, the unified brain (`scoreCard`) also factors in what the overall deck is short
+ * of, active strategy themes, allowed/forbidden combos, and your personal taste. Basic lands are never offered.
  */
-export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCard[] {
+export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3, ctx?: DeckContext, preNeeds?: Needs): SubCard[] {
   const mBits = tagBits(missing.name);
+  const nd = ctx ? (preNeeds ?? deckNeeds(ctx)) : undefined;
   const job = (c: SubCard) => {
     const shared = sharedRoles(missing.name, c.name);
     if (!shared) return 0;
     return shared.length ? 3 * shared.length : mBits ? -3 : 0;
+  };
+  const brainBonus = (c: SubCard) => {
+    if (!ctx || !nd) return 0;
+    const sc = scoreCard(c, ctx, nd);
+    if (sc.blocked) return -100; // never auto-pick a card that violates the bracket's combo rules
+    const delta = sc.parts
+      .filter((p) => p.source !== 'EDHREC')
+      .reduce((sum, p) => sum + p.value, 0);
+    return delta * 4;
   };
   const score = (c: SubCard) =>
     job(c) +
@@ -58,12 +71,14 @@ export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3): SubCar
     (mainType(missing.type) && mainType(c.type) === mainType(missing.type) ? 2 : 0) +
     (missing.cmc != null && c.cmc != null ? Math.max(0, 2 - Math.abs(missing.cmc - c.cmc)) * 0.5 : 0) +
     edhSignal(c) +
-    (c.incl ?? 0);
+    (c.incl ?? 0) +
+    brainBonus(c);
   // Never offer a land for a spell or a spell for a land.
   const isLand = (c: SubCard) => mainType(c.type) === 'Land';
   return candidates
     .filter((c) => c.name !== missing.name && !BASICS.has(norm(c.name)) && (!missing.type || !c.type || isLand(c) === isLand(missing)))
     .map((c) => ({ c, s: score(c) }))
+    .filter((x) => x.s > -50) // exclude bracket-blocked combos when ctx is active
     .sort((a, b) => b.s - a.s || a.c.name.localeCompare(b.c.name))
     .slice(0, n)
     .map((x) => x.c);
@@ -81,12 +96,19 @@ export function whyIn(c: SubCard): string[] {
   return out;
 }
 
-/** Short tags saying why an owned card was suggested for a missing one (same reasons rankSubs scores on). */
-export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0): string[] {
+/** Short tags saying why an owned card was suggested for a missing one (same reasons rankSubs scores on, plus brain context when provided). */
+export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0, ctx?: DeckContext): string[] {
   const out: string[] = [];
-  if (missing.category && sub.category === missing.category) out.push(`Same role: ${sub.category}`);
+  if (missing.category && sub.category === missing.category) out.push(`Same role: ${missing.category}`);
   const job = sharedRoles(missing.name, sub.name);
   if (job?.length) out.push(`Same job: ${job.join(', ')} (Scryfall Tagger)`);
+  if (ctx) {
+    const sc = scoreCard(sub, ctx);
+    for (const p of sc.parts) {
+      if (p.source === 'EDHREC') continue;
+      if (p.value > 0 || p.source === 'your taste') out.push(p.label);
+    }
+  }
   const t = mainType(sub.type);
   if (t && t === mainType(missing.type)) out.push(`${t} like it`);
   if (sub.cmc != null && missing.cmc != null) out.push(sub.cmc === missing.cmc ? `Same mana value (${sub.cmc})` : `Mana value ${sub.cmc} (vs ${missing.cmc})`);

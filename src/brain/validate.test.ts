@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { landColours, readiness } from './validate';
+import { bracketFit, karstenLands, karstenSources, landColours, readiness } from './validate';
+import { whyCard } from './why';
+import { setBrainData } from './data';
 
 type C = { type: string; text: string; cmc?: number; mana?: string; ci: string[]; legal: boolean };
 const cards: Record<string, C> = {
@@ -10,6 +12,7 @@ const cards: Record<string, C> = {
   'Mana Crypt': { type: 'Artifact', text: '{T}: Add {C}{C}.', cmc: 0, mana: '{0}', ci: [], legal: false },
   Kaya: { type: 'Legendary Planeswalker — Kaya', text: '', cmc: 7, mana: '{3}{W}{W}{B}{B}', ci: ['W', 'B'], legal: true },
   Bear: { type: 'Creature — Bear', text: '', cmc: 2, mana: '{1}{B}', ci: ['B'], legal: true },
+  HeavyBlack: { type: 'Creature — Demon', text: '', cmc: 4, mana: '{1}{B}{B}{B}', ci: ['B'], legal: true },
 };
 const cardOf = (n: string) => cards[n.replace(/ \d+$/, '')] ?? cards.Bear;
 const deck = (extra: [string, number][] = []) => [
@@ -40,6 +43,23 @@ describe('readiness', () => {
   });
 });
 
+describe('Karsten mana & colour math', () => {
+  it('karstenLands scales with average mana value, cheap ramp/draw flow, and bracket', () => {
+    expect(karstenLands({ avgMv: 2.5, cheapFlow: 14, bracket: 4 })).toBe(35);
+    expect(karstenLands({ avgMv: 3.8, cheapFlow: 6, bracket: 3 })).toBe(40);
+    expect(karstenLands({ avgMv: 1.9, cheapFlow: 18, bracket: 5 })).toBe(26);
+  });
+  it('karstenSources raises colour source targets for pip-heavy and multi-pip colours', () => {
+    const heavyB = [
+      { name: 'Cmdr', qty: 1 },
+      ...Array.from({ length: 12 }, (_, i) => ({ name: `HeavyBlack ${i}`, qty: 1 })),
+    ];
+    const targets = karstenSources({ deck: heavyB, cardOf, identity: ['U', 'B'] });
+    expect(targets.U).toBe(10); // light splash stays at baseline 10
+    expect(targets.B).toBeGreaterThanOrEqual(16); // heavy triple-pip black demands 16+ sources
+  });
+});
+
 describe('landColours', () => {
   it('reads basic types, Add text, any-colour lands and fetches', () => {
     expect([...landColours({ type: 'Land — Island Swamp', text: '' })].sort()).toEqual(['B', 'U']);
@@ -49,12 +69,11 @@ describe('landColours', () => {
   });
 });
 
-import { bracketFit } from './validate';
 describe('bracketFit', () => {
   const call = (o: Partial<Parameters<typeof bracketFit>[0]>) => ({ bracket: 2 as const, reasons: [], gameChangers: [], mld: [], extraTurns: [], tutors: [], combos: [], combosChecked: true, ...o });
   it('fits, over with the cause, under', () => {
     expect(bracketFit(call({ bracket: 3, gameChangers: ['Rhystic Study'] }), 3).fit).toBe('fits');
-    const o = bracketFit(call({ bracket: 4, combos: [{ cards: ['Thassa\'s Oracle', 'Demonic Consultation'], early: true, mv: 2, id: 'x' }] }), 3);
+    const o = bracketFit(call({ bracket: 4, combos: [{ cards: ["Thassa's Oracle", 'Demonic Consultation'], early: true, mv: 2, id: 'x' }] }), 3);
     expect(o).toMatchObject({ fit: 'over', est: 4 });
     expect(o.over[0]).toContain('early two-card combo');
     expect(bracketFit(call({ bracket: 2 }), 4).fit).toBe('under');
@@ -62,8 +81,6 @@ describe('bracketFit', () => {
   });
 });
 
-import { whyCard } from './why';
-import { setBrainData } from './data';
 describe('whyCard', () => {
   it('states how it got in, its job with the source, combos and what cutting it breaks', () => {
     setBrainData({ combos: new Map([['basalt monolith', [{ cards: ['Kinnan, Bonder Prodigy', 'Basalt Monolith'], infinite: true, relevant: true, definite: true, mv: 5, id: 'k1', tag: 'R', mustBeCommander: [true, false] }]], ['kinnan, bonder prodigy', []]]) as never });

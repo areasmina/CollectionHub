@@ -66,7 +66,7 @@ const MECHANICS: Record<string, RegExp> = {
   morph: /\bmorph\b|\bdisguise\b|\bmanifest\b|face[- ]down/i,
   monarch: /\bmonarch\b|\binitiative\b/i,
   politics: /\bvote\b|\bgoad\b|\bmonarch\b|each opponent may/i,
-  goad: /\bgoad/i,
+  goad: /\bgoad\b/i,
   wither: /\bwither\b|-1\/-1 counters?/i,
   '-1/-1 counters': /-1\/-1 counters?|\bwither\b/i,
   dragons: /\bDragon\b/,
@@ -97,3 +97,115 @@ export function themeOf(name: string): Theme {
 
 /** The strategy stack: a primary theme counts full, up to two secondary ones half (CLAUDE.md Build mode). */
 export const STACK_WEIGHTS = [1, 0.5, 0.5] as const;
+
+/**
+ * Enabler vs Payoff rules for two-part strategies (r/EDH's #1 synergy check: don't build all payoffs with no engine).
+ * Returns 'enabler' (sets up the mechanic), 'payoff' (rewards it), or undefined when not applicable.
+ */
+const ROLE_PAIRS: Record<string, { enabler: RegExp; payoff: RegExp }> = {
+  aristocrats: {
+    enabler: /\bsacrifice (a|another|an)\b|create[s]? [^.]{0,40}\btokens?\b|when [^.]{0,30}dies, create/i,
+    payoff: /whenever [^.]{0,50}(dies|is put into a graveyard|you sacrifice)|each opponent loses \d+ life/i,
+  },
+  sacrifice: {
+    enabler: /\bsacrifice (a|another|an)\b|create[s]? [^.]{0,40}\btokens?\b/i,
+    payoff: /whenever [^.]{0,50}(dies|you sacrifice)/i,
+  },
+  discard: {
+    enabler: /\bdiscards? (a|two|three|\w+) cards?|\bloot|\bconnive|\bcycling\b|\bwheel\b|each player discards/i,
+    payoff: /whenever (you|a player|an opponent) discards?|\bmadness\b|\bflashback\b|from your graveyard/i,
+  },
+  reanimator: {
+    enabler: /\bmills?\b|\bdiscards?\b|\bsurveil\b|put [^.]{0,40}from your library into your graveyard/i,
+    payoff: /return [^.]{0,60}from (your|a) graveyard to the battlefield|put [^.]{0,40}from (a|your) graveyard onto the battlefield|\breanimat/i,
+  },
+  tokens: {
+    enabler: /create[s]? [^.]{0,40}\btokens?\b|\bpopulate\b/i,
+    payoff: /tokens you control (get|have)|creatures you control (get|have) \+|whenever (a|one or more) [^.]{0,25}tokens? enters/i,
+  },
+  'go wide': {
+    enabler: /create[s]? [^.]{0,40}\btokens?\b/i,
+    payoff: /creatures you control (get|have) \+|for each creature you control/i,
+  },
+  blink: {
+    enabler: /exile [^.]{0,60}(then )?return (it|that card|them) to the battlefield|\bflicker|\bblink/i,
+    payoff: /when [^.]{0,40}enters|whenever [^.]{0,40}enters/i,
+  },
+  landfall: {
+    enabler: /play an additional land|search your library for [^.]{0,35}land card[^.]{0,30}onto the battlefield|put [^.]{0,30}land cards? onto the battlefield/i,
+    payoff: /\blandfall\b|whenever a land (you control )?enters/i,
+  },
+  spellslinger: {
+    enabler: /\b(Instant|Sorcery)\b/,
+    payoff: /whenever you cast (an|a) (instant|sorcery|noncreature)|\bmagecraft\b|\bstorm\b|\bprowess\b/i,
+  },
+  '+1/+1 counters': {
+    enabler: /put (a|\w+) \+1\/\+1 counters? on|\badapt\b|\bevolve\b|\boutlast\b/i,
+    payoff: /\bproliferate\b|each creature you control with a \+1\/\+1 counter|whenever one or more \+1\/\+1 counters/i,
+  },
+};
+
+export function themeRoleOf(themeLabel: string, c: C): 'enabler' | 'payoff' | undefined {
+  const key = themeLabel.trim().toLowerCase();
+  const pair = ROLE_PAIRS[key];
+  if (!pair) return undefined;
+  const text = c.text ?? '';
+  const type = c.type ?? '';
+  if (pair.payoff.test(text)) return 'payoff';
+  if (key === 'spellslinger' ? pair.enabler.test(type) : pair.enabler.test(text)) return 'enabler';
+  return undefined;
+}
+
+/**
+ * Auto-detect up to 3 strategy themes directly from a commander's Oracle text and type line
+ * (optionally cross-referenced with EDHREC's top tags for that commander).
+ */
+const AUTO_ORDER: [string, string, RegExp][] = [
+  ['Connive', 'connive', /\bconniv/i],
+  ['Ninjutsu', 'ninjutsu', /\bninjutsu\b/i],
+  ['Landfall', 'landfall', /\blandfall\b|whenever a land (you control )?enters|play an additional land/i],
+  ['Discard', 'discard', /whenever (you|a player) discards?|\bdiscards? a card\b|\bconniv/i],
+  ['Lifegain', 'lifegain', /whenever you gain life|you gain .* life|\blifelink\b/i],
+  ['Tokens', 'tokens', /\bpopulate\b|create[s]? [^.]{0,40}\btokens?\b/i],
+  ['Aristocrats', 'aristocrats', /whenever (a|another) creature (you control )?dies|\bsacrifice (a|another) creature\b/i],
+  ['+1/+1 Counters', '+1/+1 counters', /\+1\/\+1 counters?|\bproliferate\b/i],
+  ['Blink', 'blink', /exile [^.]{0,60}return (it|that card|them) to the battlefield/i],
+  ['Reanimator', 'reanimator', /return [^.]{0,60}from (your|a) graveyard to the battlefield/i],
+  ['Spellslinger', 'spellslinger', /whenever you cast (an|a) (instant|sorcery|noncreature)/i],
+  ['Equipment', 'equipment', /\bequip(ped|ment)?\b/i],
+  ['Auras', 'auras', /\bauras?\b|enchanted creature/i],
+  ['Enchantress', 'enchantress', /whenever you cast an enchantment|\bconstellation\b/i],
+  ['Treasure', 'treasure', /\btreasure tokens?\b/i],
+  ['Artifacts', 'artifacts', /\bartifacts? you control\b|whenever an artifact/i],
+  ['Cascade', 'cascade', /\bcascade\b|\bdiscover\b/i],
+  ['Mill', 'mill', /\bmills?\b/i],
+  ['Goad', 'goad', /\bgoad\b/i],
+];
+
+export function commanderThemes(cmdr?: C, edhTags?: { value: string; count?: number }[]): Theme[] {
+  if (!cmdr) return [];
+  const out: Theme[] = [];
+  const seen = new Set<string>();
+  const add = (label: string) => {
+    const k = label.toLowerCase();
+    if (seen.has(k) || out.length >= STACK_WEIGHTS.length) return;
+    seen.add(k);
+    out.push(themeOf(label));
+  };
+  const text = cmdr.text ?? '';
+  const subTypes = (cmdr.type?.split('—')[1] ?? '').trim().split(/\s+/).filter((w) => /^[A-Z][a-z]{2,}$/.test(w));
+  // If the commander's rules text explicitly cares about one of its own creature types (e.g. "Villains", "Ninjas", "Elves"):
+  for (const st of subTypes) {
+    if (new RegExp(`\\b${st}s?\\b`, 'i').test(text)) add(`${st}s`);
+  }
+  for (const [label, , rx] of AUTO_ORDER) {
+    if (rx.test(text)) add(label);
+  }
+  // Cross-reference with EDHREC's top tags when the commander text didn't fill the stack
+  if (edhTags?.length && out.length < 2) {
+    for (const t of edhTags.slice(0, 3)) {
+      if (MECHANICS[t.value.toLowerCase()]) add(t.value);
+    }
+  }
+  return out;
+}

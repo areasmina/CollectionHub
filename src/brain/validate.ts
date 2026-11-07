@@ -35,10 +35,54 @@ export interface Readiness {
 
 /** "Any number of cards named …" (Relentless Rats, Shadowborn Apostle…) and "A deck can have up to N" cards. */
 const ANY_NUMBER = /a deck can have (any number of|up to \w+) cards named/i;
-/** Land sources each colour of the identity should have (house range: Karsten-style colour math isn't ported yet). */
+/** Baseline land sources each colour of the identity should have; Karsten's pip math raises it for pip-heavy colours. */
 export const SOURCES_MIN = 10;
 const COLOURS = ['W', 'U', 'B', 'R', 'G'] as const;
 const BASIC_TYPE: Record<string, (typeof COLOURS)[number]> = { Plains: 'W', Island: 'U', Swamp: 'B', Mountain: 'R', Forest: 'G' };
+
+/**
+ * Frank Karsten's 99-card Commander land count formula:
+ *   lands = 31.42 + 3.13 * avgMv - 0.28 * cheapFlow
+ * where `cheapFlow` is the number of cheap (MV <= 2) ramp and card-draw spells.
+ * Clamped to [33, 40] for brackets 1–4, and [25, 31] for bracket 5 (cEDH).
+ */
+export function karstenLands(o: { avgMv: number; cheapFlow?: number; bracket?: number }): number {
+  const flow = o.cheapFlow ?? 10;
+  const raw = 31.42 + 3.13 * (o.avgMv || 3.0) - 0.28 * flow;
+  if (o.bracket === 5) return Math.max(25, Math.min(31, Math.round(raw - 6)));
+  return Math.max(33, Math.min(40, Math.round(raw)));
+}
+
+/**
+ * Karsten-inspired coloured mana source targets per colour in the commander's identity.
+ * Every colour starts at SOURCES_MIN (10), rising up to 18 for colours with heavy pip share or multiple double/triple-pip spells.
+ */
+export function karstenSources(o: {
+  deck: DeckCard[];
+  cardOf: (name: string) => Pick<Card, 'type' | 'text' | 'cmc' | 'mana'> | undefined;
+  identity: string[];
+}): Record<string, number> {
+  const colours = COLOURS.filter((x) => o.identity.includes(x));
+  if (!colours.length) return {};
+  const pips: Record<string, number> = Object.fromEntries(colours.map((x) => [x, 0]));
+  const multiPip: Record<string, number> = Object.fromEntries(colours.map((x) => [x, 0]));
+  for (const c of o.deck) {
+    const card = o.cardOf(c.name);
+    if (!card || isLand(card.type)) continue;
+    const syms = card.mana?.match(/\{[^}]+\}/g) ?? [];
+    for (const x of colours) {
+      const count = syms.filter((s) => s.includes(x)).length;
+      if (count > 0) pips[x] += count * c.qty;
+      if (count >= 2) multiPip[x] += (count - 1) * c.qty;
+    }
+  }
+  const out: Record<string, number> = {};
+  for (const x of colours) {
+    const extra = Math.max(0, Math.floor((pips[x] - 20) / 6)) + Math.floor(multiPip[x] / 3);
+    out[x] = Math.min(18, SOURCES_MIN + extra);
+  }
+  return out;
+}
 
 /** Colours a land can make, from its type line (basic land types) and its "Add …" text. */
 export function landColours(c: Pick<Card, 'type' | 'text'>): Set<string> {
@@ -106,8 +150,22 @@ export function readiness(o: {
       const made = landColours(card);
       for (const x of colours) if (made.has(x)) src[x] += c.qty;
     }
+    const kTargets = karstenSources(o);
     const weakest = colours.reduce((a, b) => (src[b] < src[a] ? b : a));
-    add({ key: 'colours', kind: 'build', label: 'Colour sources', value: `${weakest} ${src[weakest]}`, target: `${SOURCES_MIN}+ each`, ok: src[weakest] >= SOURCES_MIN, says: src[weakest] >= SOURCES_MIN ? `Every colour has ${SOURCES_MIN}+ land sources (weakest: ${weakest} ${src[weakest]}).` : `Only ${src[weakest]} lands make ${weakest}: add duals or basics for it.` });
+    const pipShort = colours.find((x) => src[x] < (kTargets[x] ?? SOURCES_MIN));
+    const ok = src[weakest] >= SOURCES_MIN;
+    const note = pipShort && src[pipShort] >= SOURCES_MIN ? ` (${pipShort} has heavy pips and wants ~${kTargets[pipShort]} sources)` : '';
+    add({
+      key: 'colours',
+      kind: 'build',
+      label: 'Colour sources',
+      value: `${weakest} ${src[weakest]}`,
+      target: `${SOURCES_MIN}+ each`,
+      ok,
+      says: ok
+        ? `Every colour has ${SOURCES_MIN}+ land sources (weakest: ${weakest} ${src[weakest]})${note}.`
+        : `Only ${src[weakest]} lands make ${weakest} (Karsten target: ${kTargets[weakest] ?? SOURCES_MIN}+): add duals or basics for it.`,
+    });
   }
 
   const rulesOk = checks.filter((c) => c.kind === 'rules').every((c) => c.ok);

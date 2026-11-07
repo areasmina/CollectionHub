@@ -5,12 +5,14 @@ import { pickWildcards, seedOf } from './wildcard';
 import { addTaste, tasteFor, tasteSummary, type TasteEvent } from './taste';
 import { scoreCard, suggestCards, type DeckContext } from './score';
 import { themeOf } from './themes';
+import { rankSubs } from '../lib/subs';
 
 const t = (type: string, text: string, cmc = 2) => ({ type, text, cmc, mana: '' });
 const CARDS: Record<string, ReturnType<typeof t>> = {
   'Craterhoof Behemoth': t('Creature — Beast', 'Haste\nWhen Craterhoof Behemoth enters, creatures you control gain trample and get +X/+X until end of turn, where X is the number of creatures you control.', 8),
   'Torment of Hailfire': t('Sorcery', 'Repeat the following process X times. Each opponent loses 3 life unless that player sacrifices a nonland permanent or discards a card.', 2),
   'Blood Artist': t('Creature — Vampire', 'Whenever Blood Artist or another creature dies, target player loses 1 life and you gain 1 life.', 2),
+  'Viscera Seer': t('Creature — Vampire Wizard', 'Sacrifice a creature: Scry 1.', 1),
   "Thassa's Oracle": t('Creature — Merfolk Wizard', "When Thassa's Oracle enters, look at the top X cards of your library, where X is your devotion to blue. Put up to one of them on top of your library and the rest on the bottom of your library in a random order. If X is greater than or equal to the number of cards in your library, you win the game.", 2),
   'Demonic Consultation': t('Instant', 'Choose a card name. Exile the top six cards of your library, then reveal cards from the top of your library until you reveal the named card. Put that card into your hand and exile all other cards revealed this way.', 1),
   'Cultivate': t('Sorcery', 'Search your library for up to two basic land cards, reveal those cards, put one onto the battlefield tapped and the other into your hand, then shuffle.', 3),
@@ -107,6 +109,32 @@ describe('suggestions follow the deck (proof the brain is personal and live)', (
     expect(artist.parts.find((p) => p.label === 'fits aristocrats')?.value).toBe(0.15);
     expect(scoreCard({ name: 'Grizzly Bears' }, base(['Forest'], { focus })).parts.some((p) => /^fits/.test(p.label))).toBe(false);
     expect(scoreCard({ name: 'Blood Artist' }, base(['Forest'])).parts.some((p) => /^fits/.test(p.label))).toBe(false);
+  });
+  it('balances enablers and payoffs when a theme deck is lopsided', () => {
+    const focus = themeOf('Aristocrats');
+    const payoffHeavy = base(['Forest', 'Payoff 1', 'Payoff 2', 'Payoff 3'], {
+      focus,
+      cardOf: (n) => (n.startsWith('Payoff') ? CARDS['Blood Artist'] : CARDS[n]),
+    });
+    const seer = scoreCard({ name: 'Viscera Seer', incl: 0.3 }, payoffHeavy);
+    const artist = scoreCard({ name: 'Blood Artist', incl: 0.3 }, payoffHeavy);
+    expect(seer.parts.some((p) => /enabler for aristocrats/.test(p.label))).toBe(true);
+    expect(seer.total).toBeGreaterThan(artist.total);
+  });
+  it('unifies rankSubs with scoreCard when DeckContext is provided', () => {
+    setBrainData({ combos });
+    const ctxB3 = base(["Thassa's Oracle"], { bracket: 3 });
+    // Demonic Consultation is an early 2-card combo with Thassa's Oracle, forbidden in Bracket 3
+    const subs = rankSubs(
+      { name: 'Brainstorm', type: 'Instant', cmc: 1 },
+      [
+        { name: 'Demonic Consultation', type: 'Instant', cmc: 1, incl: 0.8 },
+        { name: 'Harmonize', type: 'Sorcery', cmc: 4, incl: 0.3 },
+      ],
+      3,
+      ctxB3,
+    );
+    expect(subs.map((c) => c.name)).toEqual(['Harmonize']);
   });
   it('flags a card that completes a combo the bracket forbids, and rewards it where allowed', () => {
     setBrainData({ combos });

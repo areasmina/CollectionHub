@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { themeOf } from './themes';
+import { commanderThemes, themeOf, themeRoleOf } from './themes';
 
 const c = (type: string, text: string) => ({ type, text });
 describe('themeOf', () => {
@@ -20,5 +20,17 @@ describe('themeOf', () => {
   it('an unknown theme falls back to its words in the text', () => {
     expect(themeOf('Investigate').test(c('Sorcery', 'Investigate twice.'))).toBe(true);
     expect(themeOf('Investigate').test(c('Sorcery', 'Draw a card.'))).toBe(false);
+  });
+  it('auto-detects strategy stack from a commander’s own text and type line', () => {
+    const doom = c('Legendary Creature — Human Artificer Villain', 'Whenever another Villain you control enters, it connives. Whenever you discard a card, each opponent loses 1 life.');
+    expect(commanderThemes(doom).map((t) => t.label)).toEqual(['Villains', 'Connive', 'Discard']);
+    const yuriko = c('Legendary Creature — Human Ninja', 'Commander ninjutsu {U}{B}\nWhenever a Ninja you control deals combat damage to a player, reveal the top card of your library.');
+    expect(commanderThemes(yuriko).map((t) => t.label)).toEqual(['Ninjas', 'Ninjutsu']);
+  });
+  it('classifies enablers vs payoffs for two-part strategies', () => {
+    expect(themeRoleOf('Aristocrats', c('Creature — Vampire', 'Sacrifice another creature: Scry 1.'))).toBe('enabler');
+    expect(themeRoleOf('Aristocrats', c('Creature — Vampire', 'Whenever another creature dies, each opponent loses 1 life.'))).toBe('payoff');
+    expect(themeRoleOf('Discard', c('Instant', 'Draw two cards, then discard two cards.'))).toBe('enabler');
+    expect(themeRoleOf('Discard', c('Enchantment', 'Whenever an opponent discards a card, you draw a card.'))).toBe('payoff');
   });
 });
