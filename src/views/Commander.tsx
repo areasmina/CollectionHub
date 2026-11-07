@@ -17,6 +17,7 @@ import { identityGate, offIdentity } from '../brain/identity';
 import { comboAllowed } from '../brain/win';
 import { brainData } from '../brain/data';
 import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
+import { detectCardSynergies, type CardSynergyMatch } from '../brain/themes';
 import { arrange, noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins, type PinSide } from '../lib/pins';
 import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
@@ -85,6 +86,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   // EDHREC's With card / Without card: suggestions come from decks that do / don't run those cards
   const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
   const [cfDraft, setCfDraft] = useState({ inc: '', exc: '' });
+  const [cfFocus, setCfFocus] = useState<'inc' | 'exc' | null>(null);
   const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean; pins?: boolean } | null>(null);
   const [tags, setTags] = useState<EdhPage['tags']>([]);
   const [error, setError] = useState('');
@@ -516,6 +518,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     window.print();
   };
   // TO BUY marks: completes a two-card combo with a card in this deck (Commander Spellbook data)
+    const activePinnedName = cf.inc[0] || pins.in[0];
+  const activePinnedCard = activePinnedName ? cardByName(activePinnedName) : undefined;
+  const synergyHint = activePinnedName ? detectCardSynergies(activePinnedName, activePinnedCard, tags) : null;
+
   const comboWith = (n: string) => brainData().combos?.get(norm(n))?.map((k) => k.cards.find((x) => norm(x) !== norm(n))!).find((o) => o && deckNames.some((d) => norm(d) === norm(o)));
   // What the deck takes from your binder and what's left to buy: said once, in the strip.
   const covText = coverageText(coverage([...eff].filter(([k]) => norm(k) !== norm(name)).map(([k, v]) => ({ slot: k, name: v.name, qty: byName.get(k)?.qty ?? 1 })), (n) => statusOf(n, s.mine) === 'owned'));
@@ -730,21 +736,32 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
         {page && (wild || wildSet.off) && (
           <section className="wildcard" aria-label="WILDCARD">
-            <b className="wtag">WILDCARD</b>
+            <b className="wtag">⚡ HIDDEN GEM · WILDCARD</b>
             {wild && !wildSet.off ? (
               <>
-                <span className="wtxt">
-                  <b>{wild.name}</b> <small>{wild.why} · for {wild.slot}</small>
-                </span>
-                <button className="btn" onClick={() => (haptic('success'), setSwap(wild.slot, wild.name))}>
-                  SWAP IN
-                </button>
-                <button className="btn ink" onClick={() => setWild(s.profile, name, { roll: (wildSet.roll ?? 0) + 1 })} aria-label="Reroll the wildcard">
-                  ↻ REROLL
-                </button>
-                <button className="btn ink" onClick={() => setWild(s.profile, name, { off: true })}>
-                  OFF
-                </button>
+                <div className="wbody">
+                  {(cardByName(wild.name)?.img ?? imgOf(recCard.get(norm(wild.name))?.id)) && (
+                    <img src={cardByName(wild.name)?.img ?? imgOf(recCard.get(norm(wild.name))?.id)} alt="" className="wthumb" loading="lazy" />
+                  )}
+                  <div className="wtxt">
+                    <b>{wild.name}</b>
+                    <div className="wmeta">
+                      <span className="wbadge">{wild.why}</span>
+                      <span>↔ for {wild.slot}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="wacts">
+                  <button className="btn btn-swap-in" onClick={() => (haptic('success'), setSwap(wild.slot, wild.name))}>
+                    SWAP IN
+                  </button>
+                  <button className="btn ink" onClick={() => setWild(s.profile, name, { roll: (wildSet.roll ?? 0) + 1 })} aria-label="Reroll the wildcard">
+                    ↻ REROLL
+                  </button>
+                  <button className="btn ink" onClick={() => setWild(s.profile, name, { off: true })}>
+                    OFF
+                  </button>
+                </div>
               </>
             ) : (
               <button className="btn ink" onClick={() => setWild(s.profile, name, { off: false })}>
@@ -811,8 +828,13 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {error && <p className="error">{error}</p>}
         {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
-          <div className="deckgrid after-sw">
+          <div className={`deckgrid after-sw${forging ? ' forge-split' : ''}`}>
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
+            {forging && (
+              <div className="dside forge-analysis">
+                <ForgeMeters st={forgeSt} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} match={sum.pct} />
+              </div>
+            )}
             <div className="lists" {...(forging ? drop : {})}>
               {/* The one slim bar (owner's rule): search, quick view/filter pills on wider screens, then ⋮ with POWER, GEAR, SORT, SHOW, VIEW and EDHREC's With / Without card */}
               <ToolBar
@@ -872,17 +894,30 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     </div>
                   </OptRow>
                 )}
+                {kind === 'average' && binder.length > 0 && (
+                  <div className="just-build-banner">
+                    <button
+                      type="button"
+                      className="btn-just-build"
+                      onClick={() => void forgeFromBinder()}
+                      disabled={saving}
+                      title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)"
+                    >
+                      <span className="build-icon">⚡</span>
+                      <span className="build-text">
+                        <strong>⚡ JUST BUILD IT!</strong>
+                        <small>Auto-craft 100 cards from your binder</small>
+                      </span>
+                      <span className="build-arrow">⚒ BUILD 100 →</span>
+                    </button>
+                  </div>
+                )}
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
                 {kind === 'average' && (
                   <OptRow label="CARDS">
                     <Segs label="Cards" value={ownMode} options={OWN_MODES.map(([v, t]) => [v, t, v === 'owned' ? 'Only cards you own: missing ones get your best stand-in' : 'Your cards win unless a missing one is clearly better'])} onChange={(v) => setOwnMode(v as OwnMode)} />
-                    {binder.length > 0 && (
-                      <button type="button" className="btn ink" onClick={() => void forgeFromBinder()} disabled={saving} title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)">
-                        ⚒ BUILD 100
-                      </button>
-                    )}
                   </OptRow>
                 )}
                 {kind === 'average' && (
@@ -903,9 +938,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     </button>
                   </div>
                 </OptRow>
-                <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
-                <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
+                <div className="pickgrid">
+                  <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                  <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
+                  <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
+                </div>
                     {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
                     <form
                       className="cfilter"
@@ -916,23 +953,110 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         const exc = cfDraft.exc.trim();
                         if (inc && !pins.in.includes(inc)) void setPin(inc, 'in');
                         if (exc && !pins.out.includes(exc)) void setPin(exc, 'out');
+                        setCfFocus(null);
                         setCf({ inc: inc ? [inc] : [], exc: exc ? [exc] : [] });
                       }}
                     >
-                      <label className="sbox">
-                        <span className="tab">WITH</span>
-                        <input list="cfnames" value={cfDraft.inc} onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })} placeholder="card in the deck_" aria-label="With card" />
-                      </label>
-                      <label className="sbox">
-                        <span className="tab">WITHOUT</span>
-                        <input list="cfnames" value={cfDraft.exc} onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })} placeholder="card left out_" aria-label="Without card" />
-                      </label>
+                      <div className="cglance-wrap">
+                        <label className="sbox">
+                          <span className="tab">WITH</span>
+                          <input
+                            list="cfnames"
+                            value={cfDraft.inc}
+                            onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })}
+                            onFocus={() => setCfFocus('inc')}
+                            onBlur={() => setTimeout(() => setCfFocus(null), 200)}
+                            placeholder="card in the deck_"
+                            aria-label="With card"
+                          />
+                        </label>
+                        {cfFocus === 'inc' && cfDraft.inc.trim().length >= 2 && (
+                          <div className="cglance-popover" role="listbox">
+                            {[...recCard.values(), ...binder]
+                              .filter((c, idx, arr) => arr.findIndex((x) => norm(x.name) === norm(c.name)) === idx)
+                              .filter((c) => norm(c.name).includes(norm(cfDraft.inc)) || (('type' in c && typeof c.type === 'string' ? c.type : cardByName(c.name)?.type) ?? '').toLowerCase().includes(norm(cfDraft.inc)))
+                              .slice(0, 8)
+                              .map((m) => {
+                                const id = 'id' in m ? m.id : undefined;
+                                const img = ('img' in m && m.img) || imgOf(id, 'small');
+                                const isOwned = statusOf(m.name, s.mine) === 'owned';
+                                return (
+                                  <div
+                                    key={m.name}
+                                    className="cglance-item"
+                                    role="option"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setCfDraft({ ...cfDraft, inc: m.name });
+                                      setCfFocus(null);
+                                      haptic('select');
+                                    }}
+                                  >
+                                    {img && <img src={img} alt="" className="cglance-thumb" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />}
+                                    <div className="cglance-meta">
+                                      <span className="cglance-name">{m.name}</span>
+                                      <span className="cglance-sub">{('type' in m && typeof m.type === 'string' ? m.type : cardByName(m.name)?.type) ?? 'Card'}</span>
+                                    </div>
+                                    {isOwned && <span className="cglance-badge">✓ OWNED</span>}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="cglance-wrap">
+                        <label className="sbox">
+                          <span className="tab">WITHOUT</span>
+                          <input
+                            list="cfnames"
+                            value={cfDraft.exc}
+                            onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })}
+                            onFocus={() => setCfFocus('exc')}
+                            onBlur={() => setTimeout(() => setCfFocus(null), 200)}
+                            placeholder="card left out_"
+                            aria-label="Without card"
+                          />
+                        </label>
+                        {cfFocus === 'exc' && cfDraft.exc.trim().length >= 2 && (
+                          <div className="cglance-popover" role="listbox">
+                            {[...recCard.values(), ...binder]
+                              .filter((c, idx, arr) => arr.findIndex((x) => norm(x.name) === norm(c.name)) === idx)
+                              .filter((c) => norm(c.name).includes(norm(cfDraft.exc)) || (('type' in c && typeof c.type === 'string' ? c.type : cardByName(c.name)?.type) ?? '').toLowerCase().includes(norm(cfDraft.exc)))
+                              .slice(0, 8)
+                              .map((m) => {
+                                const id = 'id' in m ? m.id : undefined;
+                                const img = ('img' in m && m.img) || imgOf(id, 'small');
+                                const isOwned = statusOf(m.name, s.mine) === 'owned';
+                                return (
+                                  <div
+                                    key={m.name}
+                                    className="cglance-item"
+                                    role="option"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      setCfDraft({ ...cfDraft, exc: m.name });
+                                      setCfFocus(null);
+                                      haptic('select');
+                                    }}
+                                  >
+                                    {img && <img src={img} alt="" className="cglance-thumb" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />}
+                                    <div className="cglance-meta">
+                                      <span className="cglance-name">{m.name}</span>
+                                      <span className="cglance-sub">{('type' in m && typeof m.type === 'string' ? m.type : cardByName(m.name)?.type) ?? 'Card'}</span>
+                                    </div>
+                                    {isOwned && <span className="cglance-badge">✓ OWNED</span>}
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        )}
+                      </div>
                       <datalist id="cfnames">
                         {[...recCard.values()].slice(0, 300).map((c) => (
                           <option key={c.name} value={c.name} />
                         ))}
                       </datalist>
-                      <div className="cfbtns">
+                      <div className="cfbtns" onPointerDown={() => setCfFocus(null)}>
                         <button className="btn">APPLY</button>
                         {(cf.inc.length > 0 || cf.exc.length > 0) && (
                           <button
@@ -961,6 +1085,49 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                             Open filtered on EDHREC ↗
                           </a>
                         </p>
+                      )}
+                      {synergyHint && (
+                        <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
+                          <div className="syn-info">
+                            <span className="syn-badge">⚡ SYNERGY DETECTED</span>
+                            <p>
+                              <strong>{synergyHint.card}</strong> {synergyHint.explanation}!
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="syn-btn"
+                            onClick={() => {
+                              haptic('success');
+                              if (synergyHint.themeSlug) {
+                                setTag(synergyHint.themeSlug);
+                              }
+                              setToast({ text: `⚡ Deck auto-tuned to ${synergyHint.card} synergies!` });
+                            }}
+                          >
+                            ⚡ TUNE DECK TO THIS SYNERGY
+                          </button>
+                        </div>
+                      )}
+                      {!synergyHint && cf.inc.length > 0 && (
+                        <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
+                          <div className="syn-info">
+                            <span className="syn-badge">⚡ CARD PINNED</span>
+                            <p>
+                              <strong>{cf.inc[0]}</strong> is pinned in your deck.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="syn-btn"
+                            onClick={() => {
+                              haptic('success');
+                              setToast({ text: `⚡ Suggestions auto-tuned for ${cf.inc[0]}!` });
+                            }}
+                          >
+                            ⚡ AUTO-TUNE SUGGESTIONS
+                          </button>
+                        </div>
                       )}
                     </form>
               </ToolBar>
@@ -1053,8 +1220,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               })}
             </div>
             {forging ? (
-              <div className="dside">
-                <ForgeMeters st={forgeSt} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} match={sum.pct} />
+              <div className="dside forge-suggestions">
                 <ForgeSuggest
                   profile={s.profile}
                   deck={deckNow}

@@ -923,6 +923,22 @@ export function Decks(s: Shared) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+
+  // Deck Arsenal Overview Stats
+  const readyDecks = decks.filter((d) => summarize(d.cards.map((c) => c.name), s.mine, s.other).pct === 100).length;
+  const uniqueCardsInDecks = new Set(decks.flatMap((d) => d.cards.map((c) => norm(c.name)))).size;
+  const colorCounts: Record<string, number> = { W: 0, U: 0, B: 0, R: 0, G: 0 };
+  for (const d of decks) {
+    const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
+    const ci = lead?.ci ?? [];
+    for (const c of ci) {
+      if (colorCounts[c] !== undefined) colorCounts[c]++;
+    }
+  }
+  const bracketsWithScores = decks
+    .map((d) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket)
+    .filter((b) => b > 0);
+  const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
   const [error, setError] = useState('');
 
   const short = shortfalls(decks, s.mine);
@@ -992,6 +1008,36 @@ export function Decks(s: Shared) {
           </div>
         </div>
         <ShortAlert items={short} />
+        {decks.length > 0 && (
+          <div className="decks-overview-bar" role="region" aria-label="Deck collection overview">
+            <div className="ov-stat">
+              <span className="ov-val">{decks.length}</span>
+              <span className="ov-lbl">TOTAL DECKS</span>
+            </div>
+            <div className="ov-stat">
+              <span className="ov-val">{readyDecks}</span>
+              <span className="ov-lbl">READY TO PLAY</span>
+            </div>
+            <div className="ov-stat">
+              <span className="ov-val">{uniqueCardsInDecks}</span>
+              <span className="ov-lbl">CARDS IN PLAY</span>
+            </div>
+            <div className="ov-stat ov-colors">
+              <span className="ov-lbl">COLOR IDENTITY</span>
+              <div className="ov-pips">
+                {(['W', 'U', 'B', 'R', 'G'] as const).map((c) => (
+                  <span key={c} className={`ov-pip pip-${c.toLowerCase()} ${colorCounts[c] ? 'active' : ''}`} title={`${colorCounts[c]} decks include ${c}`}>
+                    {c} <small>{colorCounts[c] || 0}</small>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="ov-stat">
+              <span className="ov-val">B{avgBracket}</span>
+              <span className="ov-lbl">AVG POWER</span>
+            </div>
+          </div>
+        )}
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid">
           {decks.map((d, i) => {
@@ -1026,13 +1072,15 @@ export function Decks(s: Shared) {
               </li>
             );
           })}
-          <li className="dempty">
-            your next deck goes here.
-            <br />
-            save one from a commander page
-            <br />
-            or paste a list below ↓
-          </li>
+          {decks.length === 0 && (
+            <li className="dempty">
+              your next deck goes here.
+              <br />
+              save one from a commander page
+              <br />
+              or paste a list below ↓
+            </li>
+          )}
         </ul>
 
         <section className="addpage graph gbox">

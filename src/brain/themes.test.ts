@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commanderThemes, themeOf, themeRoleOf } from './themes';
+import { commanderThemes, themeOf, themeRoleOf, detectCardSynergies } from './themes';
 
 const c = (type: string, text: string) => ({ type, text });
 describe('themeOf', () => {
@@ -32,5 +32,12 @@ describe('themeOf', () => {
     expect(themeRoleOf('Aristocrats', c('Creature — Vampire', 'Whenever another creature dies, each opponent loses 1 life.'))).toBe('payoff');
     expect(themeRoleOf('Discard', c('Instant', 'Draw two cards, then discard two cards.'))).toBe('enabler');
     expect(themeRoleOf('Discard', c('Enchantment', 'Whenever an opponent discards a card, you draw a card.'))).toBe('payoff');
+  });
+  it('detects card synergies for pinned cards like Elesh Norn', () => {
+    const elesh = c('Legendary Creature — Phyrexian Praetor', 'If a permanent entering the battlefield causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.');
+    const match = detectCardSynergies('Elesh Norn, Mother of Machines', elesh, [{ slug: 'blink', value: 'Blink' }, { slug: 'tokens', value: 'Tokens' }]);
+    expect(match).not.toBeNull();
+    expect(match?.themeLabel).toBe('Blink');
+    expect(match?.explanation).toContain('Enter-the-Battlefield triggers');
   });
 });

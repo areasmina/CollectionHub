@@ -312,53 +312,190 @@
 }
 
 /* ---------- 3. Dynamic Island Notch: Attached flush to top ceiling with gooey venom physics ---------- */
+/* ==========================================================================
+   THE LIVING DYNAMIC ISLAND (Venom symbiote / gooey elastic dock)
+   ========================================================================== */
+
+/* Full-screen backdrop for outside click dismiss */
+.island-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: transparent;
+}
+
+/* Base pillnav */
 .pillnav {
   position: fixed;
-  top: 0;
   left: 50%;
   transform: translateX(-50%);
-  transform-origin: top center;
   z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--u-display);
-  background: #000000;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-top: none;
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
-  height: 44px;
-  padding: 0 14px 2px;
-  gap: 8px;
+  background: transparent;
+  user-select: none;
+  touch-action: none;
   width: fit-content;
   max-width: min(720px, calc(100vw - 20px));
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.25), box-shadow 0.25s ease;
-  user-select: none;
-  touch-action: pan-y;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
 }
-.pillnav.dragging {
+
+/* Floating during reposition drag */
+.pillnav.floating {
+  transition: none !important;
+  cursor: grabbing !important;
+  box-shadow: 0 0 35px rgba(230, 0, 18, 0.6), 0 0 70px rgba(0, 0, 0, 0.95);
+}
+
+/* Stretching state */
+.pillnav.stretching {
   transition: none !important;
 }
-/* Organic gooey flared ear concavities meeting top edge of the screen */
-.pillnav::before,
-.pillnav::after {
+
+/* Docked at TOP (Desktop default) */
+.pillnav.dock-top {
+  top: 0;
+  bottom: auto;
+  transform-origin: top center;
+  height: 44px;
+  padding: 0 14px 2px;
+}
+.pillnav.dock-top::before,
+.pillnav.dock-top::after {
   content: '';
   position: absolute;
   top: 0;
   width: 16px;
   height: 16px;
   pointer-events: none;
+  z-index: 1;
 }
-.pillnav::before {
+.pillnav.dock-top::before {
   left: -16px;
   background: radial-gradient(circle at 0 16px, transparent 16px, #000000 16px);
 }
-.pillnav::after {
+.pillnav.dock-top::after {
   right: -16px;
   background: radial-gradient(circle at 16px 16px, transparent 16px, #000000 16px);
 }
+.pillnav.dock-top.away {
+  transform: translate(-50%, -100%);
+  opacity: 0;
+}
+.pillnav.dock-top .island-membrane {
+  top: 0;
+  bottom: auto;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: none;
+}
+.pillnav.dock-top .island-lip {
+  bottom: -8px;
+  top: auto;
+}
+.pillnav.dock-top .island-drawer {
+  top: calc(100% + 10px);
+  bottom: auto;
+  animation: islandDrop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes islandDrop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -14px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* Docked at BOTTOM (Mobile default!) */
+.pillnav.dock-bottom {
+  bottom: 0;
+  top: auto;
+  transform-origin: bottom center;
+  height: calc(44px + env(safe-area-inset-bottom, 0px));
+  padding: 2px 14px max(6px, env(safe-area-inset-bottom, 6px));
+}
+.pillnav.dock-bottom::before,
+.pillnav.dock-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+.pillnav.dock-bottom::before {
+  left: -16px;
+  background: radial-gradient(circle at 0 0, transparent 16px, #000000 16px);
+}
+.pillnav.dock-bottom::after {
+  right: -16px;
+  background: radial-gradient(circle at 16px 0, transparent 16px, #000000 16px);
+}
+.pillnav.dock-bottom.away {
+  transform: translate(-50%, 100%);
+  opacity: 0;
+}
+.pillnav.dock-bottom .island-membrane {
+  bottom: 0;
+  top: auto;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: none;
+}
+.pillnav.dock-bottom .island-lip {
+  top: -8px;
+  bottom: auto;
+}
+.pillnav.dock-bottom .island-drawer {
+  bottom: calc(100% + 10px);
+  top: auto;
+  animation: islandRise 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes islandRise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* The gooey black living membrane background */
+.island-membrane {
+  position: absolute;
+  inset: 0;
+  background: #000000;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  z-index: 0;
+  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  filter: url(#venom-goo);
+}
+
+/* Crisp text & controls inside (never distorted) */
+.island-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  transform: none !important;
+}
+
 .pillnav button {
   border: 0;
   background: transparent;
@@ -414,6 +551,7 @@
   background: var(--u-red);
   box-shadow: 0 2px 10px rgba(230, 0, 18, 0.5);
 }
+
 /* 1-click sync toggle pill */
 .pillnav .syncpill {
   display: inline-flex;
@@ -448,17 +586,17 @@
 .pillnav .syncpill.off .sdot {
   background: #555555;
 }
-/* Bottom lip of the notch: venom gooey drag handle */
+
+/* Venom gooey drag handle lip */
 .pillnav .island-lip {
   position: absolute;
-  bottom: -9px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 60px;
-  height: 12px;
+  height: 14px;
   cursor: grab;
   background: transparent;
   border: 0;
@@ -475,17 +613,15 @@
   background: rgba(255, 255, 255, 0.65);
   width: 38px;
 }
+
 html.forging .pillnav {
   display: none;
 }
+
 /* Phones: compact notch */
 @media (max-width: 700px) {
   .pillnav {
-    height: 40px;
-    padding: 0 8px 2px;
     max-width: calc(100vw - 16px);
-    border-bottom-left-radius: 16px;
-    border-bottom-right-radius: 16px;
   }
   .pillnav .pill button {
     padding: 0 12px;
@@ -500,132 +636,107 @@ html.forging .pillnav {
     height: 28px;
     justify-content: center;
   }
-  .pillnav.away {
-    transform: translate(-50%, -100%);
-    opacity: 0;
-  }
 }
-/* Expanded Island Drawer with Decks */
+
+/* Dynamic Island Decks Drawer (Clean, focused, only decks) */
 .island-drawer {
   position: absolute;
-  top: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%);
-  width: min(440px, calc(100vw - 24px));
-  background: rgba(12, 12, 12, 0.96);
+  width: min(440px, calc(100vw - 20px));
+  background: rgba(10, 10, 10, 0.98);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.92), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  padding: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  animation: islandPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.25) both;
+  gap: 6px;
   z-index: 100;
+  max-height: min(380px, calc(80vh - 80px));
 }
-@keyframes islandPop {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -10px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-.island-drawer .id-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding-bottom: 8px;
-}
-.island-drawer .id-head b {
-  font: 400 13px var(--u-display);
-  letter-spacing: 0.08em;
-  color: #ffffff;
-}
-.island-drawer .id-close {
-  background: transparent;
-  border: 0;
-  color: var(--u-muted);
-  cursor: pointer;
-  font-size: 15px;
-  padding: 4px;
-}
-.island-drawer .id-close:hover {
-  color: #fff;
-}
+
 .island-drawer .id-decks {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 220px;
+  max-height: 320px;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
+
 .island-drawer .id-deck-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
   text-align: left;
 }
 .island-drawer .id-deck-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+.island-drawer .id-dinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
 }
 .island-drawer .id-dname {
-  display: block;
-  font: 600 14px var(--u-display);
-  color: #fff;
+  font: 700 14px/1.2 var(--u-display);
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .island-drawer .id-dmeta {
-  display: block;
-  font: 400 11px var(--u-mono);
-  color: var(--u-muted);
+  font: 400 11px/1.2 var(--u-mono);
+  color: var(--u-muted, #888888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* Color Identity Pips inside Island Deck Card */
+.island-drawer .pips {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* OPEN ↗ in Neon Green (User: "red looks weird") */
 .island-drawer .id-dtag {
-  font: 600 11px var(--u-display);
-  color: var(--u-red);
-  padding: 4px 8px;
-  background: rgba(230, 0, 18, 0.12);
-  border-radius: 6px;
+  font: 700 11px/1 var(--u-display);
+  color: var(--u-green, #00d26a);
+  background: rgba(0, 210, 106, 0.12);
+  border: 1px solid rgba(0, 210, 106, 0.35);
+  border-radius: 999px;
+  padding: 5px 11px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
 }
+.island-drawer .id-deck-card:hover .id-dtag {
+  background: var(--u-green, #00d26a);
+  color: #000000;
+  box-shadow: 0 0 12px rgba(0, 210, 106, 0.5);
+}
+
 .island-drawer .id-empty {
-  margin: 8px 0;
+  margin: 12px 0;
   color: var(--u-muted);
   font-size: 13px;
   text-align: center;
-}
-.island-drawer .id-acts {
-  display: flex;
-  gap: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-.island-drawer .id-acts button {
-  flex: 1;
-  height: 34px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #fff;
-  font: 600 12px/1 var(--u-display);
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.island-drawer .id-acts button:hover {
-  background: var(--u-red);
-  border-color: var(--u-red);
 }
 .stage {
   padding-top: 52px;
@@ -1584,4 +1695,422 @@ main.dpage {
 }
 .welcome .count {
   margin: 0;
+}
+
+/* ==========================================================================
+   ENHANCEMENTS: Theme Scroll, Just Build It, Redesigned Wildcard,
+   Visual Card Glance, Synergy Auto-Tune, Split Forge, Decks Overview
+   ========================================================================== */
+
+/* 1. Theme Pills: Horizontal Scroll with clean swiping (Item 1) */
+.dtools .fbody .themes {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  gap: 8px !important;
+  padding: 4px 2px !important;
+  max-width: 100% !important;
+}
+.dtools .fbody .themes::-webkit-scrollbar {
+  display: none !important;
+}
+.dtools .fbody .themes .u-chip,
+.dtools .fbody .themes button {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  width: auto !important;
+}
+
+/* 2. Opaque dropdown popovers - no bleedthrough (Item 1 & 3) */
+.u-menubody,
+.dstrip .power .u-menubody {
+  background: #0d0d0d !important;
+  opacity: 1 !important;
+  z-index: 1000 !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.98), 0 0 0 1px #2a2a2a !important;
+}
+
+/* 3. JUST BUILD IT! Banner Button (Item 2) */
+.just-build-banner {
+  margin: 6px 0 10px;
+  width: 100%;
+}
+.btn-just-build {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(230, 0, 18, 0.16) 0%, rgba(20, 20, 20, 0.98) 100%);
+  border: 1px solid var(--u-red, #e60012);
+  border-left: 5px solid var(--u-red, #e60012);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 16px rgba(230, 0, 18, 0.25);
+  box-sizing: border-box;
+}
+.btn-just-build:hover {
+  background: linear-gradient(135deg, rgba(230, 0, 18, 0.28) 0%, rgba(30, 30, 30, 1) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(230, 0, 18, 0.4);
+}
+.btn-just-build .build-icon {
+  font-size: 20px;
+  color: #fff824;
+  margin-right: 10px;
+}
+.btn-just-build .build-text {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  flex: 1;
+}
+.btn-just-build .build-text strong {
+  font: 700 15px/1.1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+.btn-just-build .build-text small {
+  font: 400 11px/1.2 var(--u-mono, monospace);
+  color: var(--u-muted, #888888);
+  margin-top: 2px;
+}
+.btn-just-build .build-arrow {
+  font-size: 16px;
+  color: var(--u-red, #e60012);
+  font-weight: 700;
+}
+
+/* 4. Compact SORT/SHOW/ONLY grid inside ⋮ options menu (Item 3) */
+.tbar .fbody .pickgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0;
+}
+@media (max-width: 680px) {
+  .tbar .fbody .pickgrid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* 5. Standout Wildcard ("Hidden Gem") Card (Item 4) */
+.dpage .wildcard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255, 248, 36, 0.08) 0%, rgba(20, 20, 18, 0.98) 100%);
+  border: 1px solid rgba(255, 248, 36, 0.45);
+  border-left: 5px solid #fff824;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(255, 248, 36, 0.03);
+}
+.dpage .wildcard .wtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff824;
+  color: #000000;
+  padding: 4px 10px;
+  font: 700 12px/1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.dpage .wildcard .wbody {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+.dpage .wildcard .wthumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 248, 36, 0.4);
+  flex-shrink: 0;
+}
+.dpage .wildcard .wtxt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #eeeeee;
+  font-size: 13px;
+  text-align: left;
+}
+.dpage .wildcard .wtxt b {
+  font: 700 15px/1.2 var(--u-display, sans-serif);
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+.dpage .wildcard .wtxt .wmeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: #aaaaaa;
+}
+.dpage .wildcard .wtxt .wbadge {
+  background: rgba(255, 248, 36, 0.15);
+  color: #fff824;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+}
+.dpage .wildcard .wacts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.dpage .wildcard .wacts .btn-swap-in {
+  background: var(--u-red, #e60012);
+  color: #ffffff;
+  border: 1px solid #ff2a3a;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font: 700 13px/1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(230, 0, 18, 0.4);
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+.dpage .wildcard .wacts .btn-swap-in:hover {
+  background: #ff1a2b;
+  transform: translateY(-1px);
+}
+
+/* 6. Visual Card Glance Popover in Autocomplete (Item 6) */
+.cglance-wrap {
+  position: relative;
+  width: 100%;
+}
+.cglance-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  background: #141414;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.cglance-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #222222;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.cglance-item:last-child {
+  border-bottom: none;
+}
+.cglance-item:hover,
+.cglance-item:focus {
+  background: rgba(230, 0, 18, 0.15);
+}
+.cglance-thumb {
+  width: 32px;
+  height: 44px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #222222;
+  border: 1px solid #333333;
+}
+.cglance-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.cglance-name {
+  font: 700 13px/1.2 var(--u-display, sans-serif);
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cglance-sub {
+  font: 400 11px/1.2 var(--u-mono, monospace);
+  color: var(--u-muted, #888888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cglance-badge {
+  font: 600 10px/1 var(--u-mono, monospace);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(26, 178, 107, 0.18);
+  color: var(--u-green, #1ab26b);
+  border: 1px solid rgba(26, 178, 107, 0.4);
+  flex-shrink: 0;
+}
+
+/* 7. Synergy Auto-Tune Card (Item 7) */
+.synergy-autotune-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 6px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(230, 0, 18, 0.12) 0%, rgba(25, 25, 28, 0.98) 100%);
+  border: 1px solid rgba(230, 0, 18, 0.35);
+  border-left: 4px solid var(--u-red, #e60012);
+  border-radius: 8px;
+}
+.synergy-autotune-card .syn-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  flex: 1;
+  min-width: 200px;
+}
+.synergy-autotune-card .syn-badge {
+  font: 700 10px/1 var(--u-display, Impact, sans-serif);
+  color: var(--u-red, #e60012);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.synergy-autotune-card p {
+  margin: 0;
+  font: 400 12px/1.3 var(--u-mono, monospace);
+  color: #dddddd;
+}
+.synergy-autotune-card p strong {
+  color: #ffffff;
+}
+.synergy-autotune-card p em {
+  color: #fff824;
+  font-style: normal;
+}
+.synergy-autotune-card .syn-btn {
+  background: var(--u-red, #e60012);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font: 700 12px/1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(230, 0, 18, 0.3);
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+.synergy-autotune-card .syn-btn:hover {
+  background: #ff1a2b;
+}
+
+/* 8. Desktop Split View for Forge: Analysis Left, Deck Middle, Suggestions Right (Item 5) */
+@media (min-width: 1100px) {
+  html.forging .deckgrid.forge-split {
+    display: grid !important;
+    grid-template-columns: 320px minmax(0, 1fr) 350px !important;
+    gap: 24px !important;
+    align-items: start !important;
+  }
+  html.forging .forge-analysis {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  html.forging .forge-suggestions {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+  }
+}
+
+/* 9. Decks Arsenal Overview Bar (Item 8) */
+.decks-overview-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 12px 0 20px;
+  padding: 12px 16px;
+  background: #141414;
+  border: 1px solid #282828;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+.decks-overview-bar .ov-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+.decks-overview-bar .ov-val {
+  font: 700 20px/1 var(--u-display, Impact, sans-serif);
+  color: #ffffff;
+  letter-spacing: 0.04em;
+}
+.decks-overview-bar .ov-lbl {
+  font: 400 10px/1 var(--u-mono, monospace);
+  color: var(--u-muted, #888888);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.decks-overview-bar .ov-colors .ov-pips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.decks-overview-bar .ov-pip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font: 700 11px/1 var(--u-display, sans-serif);
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #222222;
+  color: #777777;
+  border: 1px solid #333333;
+}
+.decks-overview-bar .ov-pip.active {
+  color: #ffffff;
+  border-color: #555555;
+}
+.decks-overview-bar .ov-pip.pip-w.active { background: rgba(248, 246, 216, 0.15); border-color: #f8f6d8; }
+.decks-overview-bar .ov-pip.pip-u.active { background: rgba(14, 104, 171, 0.25); border-color: #0e68ab; }
+.decks-overview-bar .ov-pip.pip-b.active { background: rgba(21, 11, 0, 0.6); border-color: #a69f9d; }
+.decks-overview-bar .ov-pip.pip-r.active { background: rgba(211, 32, 42, 0.25); border-color: #d3202a; }
+.decks-overview-bar .ov-pip.pip-g.active { background: rgba(0, 115, 62, 0.25); border-color: #00733e; }
+
+.tbar .fbody .cfilter .cfbtns {
+  position: relative !important;
+  z-index: 1300 !important;
 }
