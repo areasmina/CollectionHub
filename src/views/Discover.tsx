@@ -335,9 +335,9 @@ export function Discover(s: Shared) {
               >
                 <span className="cart">{c.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}</span>
                 <span className="cinfo">
-                  <span className="nm">
+                  <span className={`nm${c.ci.length >= 4 ? ' wide-pips' : ''}`}>
                     <span>{c.name.split(' // ')[0]}</span>
-                    <Pips ci={c.ci} />
+                    <Pips ci={c.ci} size={zoom === 's' ? (c.ci.length >= 4 ? 12 : 14) : zoom === 'l' ? 22 : 17} />
                   </span>
                   {st ? (
                     <span className="cmatch">

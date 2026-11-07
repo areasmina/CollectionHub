@@ -1665,7 +1665,9 @@ main.dpage {
 }
 .ccard .nm > span:first-child {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: none;
 }
 .ccard .cmatch {
   display: flex;
@@ -2980,8 +2982,10 @@ main.dpage {
 }
 .dcard .nm > b {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
   font-weight: 400;
+  hyphens: none;
 }
 .dcard .dtags {
   font: 400 12px var(--u-mono);
@@ -3366,14 +3370,72 @@ main.dpage {
 }
 /* Commander Deck grid sizing with [S] [M] [L] pills */
 .cgrid[data-zoom='s'] {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(154px, 1fr)) !important;
   gap: 10px !important;
 }
 .cgrid[data-zoom='s'] .cart {
   aspect-ratio: 16/9;
 }
-.cgrid[data-zoom='s'] .nm span {
-  font-size: 13px !important;
+.cgrid[data-zoom='s'] .ccard .cinfo {
+  padding: 8px 10px !important;
+  gap: 6px !important;
+}
+.cgrid[data-zoom='s'] .ccard .nm {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 3px 6px !important;
+  font: 400 11.5px/1.15 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.01em !important;
+}
+.cgrid[data-zoom='s'] .ccard .nm > span:first-child {
+  font-size: 11.5px !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0.01em !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  hyphens: none !important;
+}
+.cgrid[data-zoom='s'] .ccard .nm.wide-pips {
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 3px !important;
+}
+.cgrid[data-zoom='s'] .ccard .nm.wide-pips > span:first-child {
+  width: 100% !important;
+}
+.cgrid[data-zoom='s'] .pips {
+  gap: 1.5px !important;
+  flex-shrink: 0 !important;
+}
+.cgrid[data-zoom='s'] .pip {
+  width: 13px !important;
+  height: 13px !important;
+  font-size: 7.5px !important;
+  line-height: 1 !important;
+  border-width: 1px !important;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6) !important;
+}
+.cgrid[data-zoom='s'] .cmatch {
+  gap: 6px !important;
+}
+.cgrid[data-zoom='s'] .cmatch b {
+  font-size: 18px !important;
+}
+.cgrid[data-zoom='s'] .cmatch .u-meter {
+  max-width: 120px !important;
+}
+.cgrid[data-zoom='s'] .cmatch .u-meter i {
+  height: 10px !important;
+}
+.cgrid[data-zoom='s'] .cfoot {
+  font-size: 10px !important;
+  gap: 2px 6px !important;
+}
+.cgrid[data-zoom='s'] .cfoot .cstate {
+  font-size: 10px !important;
+  padding: 1px 5px !important;
 }
 .cgrid[data-zoom='m'] {
   grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)) !important;
@@ -3390,6 +3452,24 @@ main.dpage {
   .cgrid[data-zoom='s'] {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 6px !important;
+  }
+  .cgrid[data-zoom='s'] .ccard .cinfo {
+    padding: 6px !important;
+    gap: 4px !important;
+  }
+  .cgrid[data-zoom='s'] .ccard .nm > span:first-child {
+    font-size: 10px !important;
+  }
+  .cgrid[data-zoom='s'] .pip {
+    width: 11px !important;
+    height: 11px !important;
+    font-size: 6.5px !important;
+  }
+  .cgrid[data-zoom='s'] .cmatch b {
+    font-size: 15px !important;
+  }
+  .cgrid[data-zoom='s'] .cmatch .u-meter i {
+    height: 8px !important;
   }
   .cgrid[data-zoom='m'] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
