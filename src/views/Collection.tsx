@@ -182,33 +182,33 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
               <span className="dsum dhide">HIDE THE OVERVIEW</span>
             ) : (
             <span className="dsum">
-              <span>
+              <span className="dsum-chip">
                 <b>{total.toLocaleString()}</b> cards
               </span>
-              <span>
+              <span className="dsum-chip cmdr-chip">
                 <b>{commanders.toLocaleString()}</b> {commanders === 1 ? 'commander' : 'commanders'}
               </span>
               {value > 0 && (
-                <span>
+                <span className="dsum-chip val-chip">
                   <b>{cad(value).replace(/\.\d\d$/, '')}</b>
                 </span>
               )}
               {decks > 0 && (
-                <span>
+                <span className="dsum-chip deck-chip">
                   <b>{decks}</b> {decks === 1 ? 'deck' : 'decks'}
                 </span>
               )}
             </span>
             )}
             {!dashOpen && (
-              <>
+              <div className="dash-quick-actions">
                 <span className="dimp ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
                   + DECK
                 </span>
                 <span className="dimp" onClick={() => setImportOpen(true)}>
-                  IMPORT
+                  IMPORT ▼
                 </span>
-              </>
+              </div>
             )}
             <span className="chev" aria-hidden="true">
               ▾
