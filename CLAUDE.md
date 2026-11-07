@@ -8,7 +8,8 @@ Live: https://collection-hub-ashen.vercel.app (every merge to `main` deploys).
 
 1. `docs/FEATURES.md` – what exists, its status and the tests that prove it. A Live feature is extended, never rebuilt.
 2. `docs/DECISIONS.md` – choices already made with Guillermo. Follow them; don't re-ask or re-propose a rejected one.
-3. The code itself. Notes can be stale; the current `main` wins.
+3. `docs/MONOREPO.md` – how the folders of this repo fit together (what is active, what is reference only).
+4. The code itself. Notes can be stale; the current `main` wins.
 
 ## Stack and commands
 
@@ -38,5 +39,7 @@ CI (`.github/workflows/ci.yml`) runs all four checks on every pull request.
   replacing a working feature, or anything that could lose user data.
 - User data is never lost: Dexie versions only add, imports never delete existing cards, sync never overwrites silently.
 - Check every UI change at phone, tablet and desktop width. Dark mode only.
-- Deck-building rules come from the Python Deck Wizard (`areasmina/DeckWizard`, its `CLAUDE.md`); port its rules
+- Deck-building rules come from the Python Deck Wizard, now in `legacy/DeckWizard/` (read its `CLAUDE.md`); port its rules
   rather than reinventing them, with a test per rule.
+- `legacy/` is reference only: read it, never edit it. If Card Hunt is added later it goes in `integrations/card-hunt/`:
+  its own web page with no build step, and the app talks to it only through a small link or API, never by importing its code.
