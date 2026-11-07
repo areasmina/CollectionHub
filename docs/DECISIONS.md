@@ -6,6 +6,7 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 | Date | Decision | Status | Notes |
 |---|---|---|---|
+| 2026-11-07 | Collection and My decks headers: the flat overhaul ribbon wins over the boxed coloured chips and "arsenal console" pushed to main the same day; the sync panel and Discover eye from that push stay | decided | decision card, Nov 7 20:07 |
 | 2026-11-07 | THE OVERHAUL (`docs/THE_OVERHAUL.md`) is the UI design system: frame loud, content quiet; screens move one at a time, old CSS deleted as each moves | decided | Phase 1 + 2 in the overhaul PR |
 | 2026-11-07 | Forge stays in place as a mode; 48px top bar on desktop, compact bottom pill on phones | decided | – |
 | 2026-11-07 | Deck page: POWER sits on the strip only (not also in ⋮); themes and pins move behind ⋮; the one-time swap tip and the separate BUILD 100 / OWNED ONLY buttons leave the strip (both stay in ⋮ → CARDS) | decided | Guillermo, Nov 7: approved because it makes the page cleaner (one control in one place) |
