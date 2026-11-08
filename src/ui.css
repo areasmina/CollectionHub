@@ -3561,43 +3561,67 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s2) var(--s4);
+  gap: 10px 14px;
   margin: 0 0 var(--s4);
-  padding: 12px 16px;
+  padding: 14px 18px;
   background: #141418;
-  border: 1px solid #2e2e38;
-  border-top: 3px solid #e60012;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.6px);
+  background-size: 5px 5px;
+  border: 2px solid #2e2e38;
+  border-top: 4px solid #e60012;
   border-radius: 4px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  font: 400 12px/1.3 var(--u-mono);
-  color: var(--u-muted);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  font: 400 14px/1.4 var(--se, "Special Elite", monospace);
+  color: #d0c8b8;
 }
 .dribbon > span {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
-  padding: 4px 8px;
-  background: #0d0d10;
-  border: 1px solid #262630;
-  border-radius: 3px;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #0a0a0d;
+  border: 1px solid #383846;
+  border-radius: 4px;
+  box-shadow: 1px 1px 0 #000000;
+  color: #cfc8b8;
+  font-size: 14px;
+  letter-spacing: 0.02em;
 }
 .dribbon b {
-  font: 700 16px/1 var(--u-display, sans-serif);
+  font-family: var(--an, "Anton", sans-serif);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
   color: #ffffff;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 .dribbon .dcols {
   display: inline-flex;
-  gap: var(--s2);
+  gap: 8px;
+  align-items: center;
+}
+.dribbon .ov-pip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: var(--se, "Special Elite", monospace);
+  font-size: 13px;
+  font-weight: 700;
 }
 .dribbon .ov-pip b {
-  font-size: 14px;
+  font-family: var(--an, "Anton", sans-serif);
+  font-size: 20px;
 }
-.dribbon .pip-w b { color: #e9ddb5; }
-.dribbon .pip-u b { color: #6f9be6; }
-.dribbon .pip-b b { color: #b8a8c8; }
-.dribbon .pip-r b { color: #e86a5c; }
-.dribbon .pip-g b { color: #4fc27a; }
+.dribbon .pip-w { color: #f4ecd8; }
+.dribbon .pip-w b { color: #fff2c4; text-shadow: 0 0 6px rgba(255, 242, 196, 0.4); }
+.dribbon .pip-u { color: #8bb5ff; }
+.dribbon .pip-u b { color: #6fa4ff; text-shadow: 0 0 6px rgba(111, 164, 255, 0.4); }
+.dribbon .pip-b { color: #c4b8d4; }
+.dribbon .pip-b b { color: #d4b8e8; text-shadow: 0 0 6px rgba(212, 184, 232, 0.4); }
+.dribbon .pip-r { color: #ff8274; }
+.dribbon .pip-r b { color: #ff5240; text-shadow: 0 0 6px rgba(255, 82, 64, 0.4); }
+.dribbon .pip-g { color: #72e098; }
+.dribbon .pip-g b { color: #40d478; text-shadow: 0 0 6px rgba(64, 212, 120, 0.4); }
 
 /* Deck Workbench Toolbar */
 .decktoolbar {
