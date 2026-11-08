@@ -5000,14 +5000,23 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* ==========================================================================
-   COLLECTION DASHBOARD STATS: ORDERLY COMPOSITION WITH RICH ZINE SOUL
+   COLLECTION DASHBOARD STATS: AUTHENTIC DECKWIZARD ZINE COMPOSITION
    ========================================================================== */
 .coll .stats {
+  position: relative !important;
   display: flex !important;
   flex-wrap: wrap !important;
-  align-items: stretch !important;
   gap: 14px !important;
+  align-items: stretch !important;
   margin: 18px 0 20px !important;
+}
+
+@media (min-width: 701px) {
+  .coll .stats {
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+  }
 }
 
 .coll .stat {
@@ -5019,44 +5028,40 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  background: #0d0d0e !important;
-  border: 2px solid var(--text, #ffffff) !important;
-  box-shadow: 4px 4px 0 var(--text, #ffffff) !important;
+  background: var(--ink, #0a0a0a) !important;
+  color: var(--white, #ffffff) !important;
   overflow: visible !important;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.6px) !important;
-  background-size: 6px 6px !important;
+  /* Authentic DeckWizard dot halftone texture */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px) !important;
+  background-size: 5px 5px !important;
 }
 
-.coll .stat .spray {
-  position: absolute !important;
-  inset: 0 !important;
-  pointer-events: none !important;
-  background: radial-gradient(circle at 80% 20%, rgba(255, 47, 160, 0.18), transparent 45%),
-              radial-gradient(circle at 15% 85%, rgba(25, 211, 230, 0.15), transparent 40%),
-              radial-gradient(circle at 88% 28%, #ff2fa0 0 1px, transparent 1.5px),
-              radial-gradient(circle at 10% 75%, #19d3e6 0 1px, transparent 1.5px) !important;
-  opacity: 0.8 !important;
+.coll .stat b {
+  display: block !important;
+  font-family: var(--an, "Anton", sans-serif) !important;
+  font-size: clamp(34px, 4.5vw, 48px) !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  color: #ffffff !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.coll .stat span {
+  display: block !important;
+  font-family: var(--se, "Special Elite", monospace) !important;
+  font-size: 13px !important;
+  color: #b5b5b5 !important;
+  margin-top: 4px !important;
+  letter-spacing: 0.5px !important;
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 .coll .stat.red {
   background: var(--accent, #e60012) !important;
-  border-color: #000000 !important;
-  box-shadow: 4px 4px 0 #000000 !important;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1.5px, transparent 1.9px) !important;
-  background-size: 6px 6px !important;
-}
-
-.coll .stat.red .spray {
-  background: radial-gradient(circle at 75% 25%, rgba(255, 204, 0, 0.28), transparent 45%),
-              radial-gradient(circle at 20% 80%, rgba(0, 0, 0, 0.25), transparent 40%) !important;
-}
-
-.coll .stat .worn {
-  position: absolute !important;
-  inset: 0 !important;
-  border: 2px solid rgba(255, 255, 255, 0.2) !important;
-  filter: url(#worn) !important;
-  pointer-events: none !important;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.3) 1.5px, transparent 1.9px) !important;
+  background-size: 5px 5px !important;
 }
 
 .coll .stat.red b {
@@ -5064,92 +5069,239 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 .coll .stat.red span {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
 }
 
+/* Authentic DeckWizard borders & perforated ticket notches between joined boxes */
+@media (min-width: 701px) {
+  .coll .stats .stat {
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    padding: 12px 26px !important;
+    transform: rotate(-0.6deg) !important;
+    border-top: 3px solid var(--text, #ffffff) !important;
+    border-bottom: 3px solid var(--text, #ffffff) !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .coll .stats .stat:first-child {
+    border-left: 3px solid var(--text, #ffffff) !important;
+  }
+
+  /* Perforated ticket punch notches between joined stat tiles */
+  .coll .stats .stat + .stat {
+    background-image: radial-gradient(circle at 0 0, var(--bg, #0a0a0a) 6px, transparent 6.5px),
+                      radial-gradient(circle at 0 100%, var(--bg, #0a0a0a) 6px, transparent 6.5px),
+                      radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px) !important;
+    background-repeat: no-repeat, no-repeat, repeat !important;
+    background-size: auto, auto, 5px 5px !important;
+    border-left: 2px dashed var(--muted, #b5b5b5) !important;
+  }
+
+  .coll .stats .stat.red {
+    border-color: var(--accent, #e60012) !important;
+  }
+
+  .coll .stats .stat.red + .stat {
+    border-left-color: var(--accent, #e60012) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .coll .stat {
+    border: 2px solid var(--text, #ffffff) !important;
+    box-shadow: 3px 3px 0 var(--text, #ffffff) !important;
+  }
+  .coll .stat.red {
+    border-color: var(--accent, #e60012) !important;
+    box-shadow: 3px 3px 0 #000000 !important;
+  }
+}
+
+/* Jinx spray paint overspray flecks */
+.coll .stat .spray {
+  position: absolute !important;
+  z-index: 1 !important;
+  top: 4px !important;
+  right: 10% !important;
+  bottom: 22% !important;
+  left: 4px !important;
+  pointer-events: none !important;
+  background: radial-gradient(circle at 30% 45%, rgba(255, 47, 160, 0.38), transparent 46%),
+              radial-gradient(circle at 70% 60%, rgba(25, 211, 230, 0.22), transparent 40%),
+              radial-gradient(circle at 12% 20%, #ff2fa0 0 1.4px, transparent 2px),
+              radial-gradient(circle at 82% 18%, #ff2fa0 0 1.1px, transparent 1.7px),
+              radial-gradient(circle at 90% 70%, #19d3e6 0 1.3px, transparent 1.9px),
+              radial-gradient(circle at 20% 88%, #ff2fa0 0 1px, transparent 1.6px),
+              radial-gradient(circle at 56% 8%, #19d3e6 0 1px, transparent 1.6px),
+              radial-gradient(circle at 44% 96%, #ff2fa0 0 1.5px, transparent 2.1px) !important;
+  filter: blur(0.4px) !important;
+  opacity: 0.85 !important;
+}
+
+.coll .stat:nth-child(2) .spray {
+  transform: scaleX(-1) rotate(8deg) !important;
+}
+
+.coll .stat.red .spray {
+  background: radial-gradient(circle at 40% 50%, rgba(255, 204, 0, 0.32), transparent 46%),
+              radial-gradient(circle at 75% 35%, rgba(10, 10, 10, 0.3), transparent 38%),
+              radial-gradient(circle at 15% 25%, #ffcc00 0 1.4px, transparent 2px),
+              radial-gradient(circle at 86% 76%, #0a0a0a 0 1.3px, transparent 1.9px),
+              radial-gradient(circle at 64% 10%, #ffcc00 0 1.1px, transparent 1.7px),
+              radial-gradient(circle at 26% 90%, #0a0a0a 0 1px, transparent 1.6px) !important;
+  transform: rotate(-6deg) !important;
+}
+
+.coll .stat .worn {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  border: 3px solid var(--white, #ffffff) !important;
+  filter: url(#worn) !important;
+  pointer-events: none !important;
+  display: none !important; /* replaced by crisp double-strike borders on desktop */
+}
+
+/* Graffiti crown on commanders box */
 .coll .stat .crown {
   position: absolute !important;
-  top: -18px !important;
-  left: -8px !important;
-  width: 54px !important;
-  height: 38px !important;
-  stroke: #000000 !important;
-  stroke-width: 2.5 !important;
-  fill: #ffd400 !important;
-  z-index: 5 !important;
+  z-index: 4 !important;
+  top: -22px !important;
+  right: -14px !important;
+  width: 46px !important;
+  height: 32px !important;
+  transform: rotate(14deg) !important;
+  fill: none !important;
+  stroke: var(--hazard, #ffcc00) !important;
+  stroke-width: 3.5 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  filter: url(#rough) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7)) !important;
   pointer-events: none !important;
 }
 
+.coll .stat .crown circle {
+  fill: var(--hazard, #ffcc00) !important;
+  stroke: none !important;
+}
+
+@media (max-width: 700px) {
+  .coll .stat .crown {
+    top: -16px !important;
+    right: -6px !important;
+    width: 36px !important;
+    height: 26px !important;
+  }
+}
+
+/* Paper appraisal receipt slip */
 .coll .slip {
   position: relative !important;
   flex: 2 1 300px !important;
-  min-width: 260px !important;
-  min-height: 84px !important;
-  padding: 14px 20px 10px !important;
+  background: var(--white, #ffffff) !important;
+  color: var(--ink, #0a0a0a) !important;
+  padding: 12px 22px 10px 18px !important;
+  transform: rotate(-0.6deg) !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  background: #faf7f0 !important;
-  color: #111111 !important;
-  border: 2px solid #111111 !important;
-  box-shadow: 4px 4px 0 #111111 !important;
+  margin-left: -2px !important;
+  box-shadow: 4px 4px 0 #000000 !important;
+  border: 2px solid #000000 !important;
   overflow: visible !important;
 }
 
-.coll .slip .warn {
-  position: absolute !important;
-  left: 12px !important;
-  top: -14px !important;
-  background: #ffd400 !important;
-  color: #000000 !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 1px !important;
-  text-transform: uppercase !important;
-  padding: 2px 8px !important;
-  border: 1px solid #000000 !important;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4) !important;
-  transform: rotate(-2deg) !important;
-}
-
-.coll .slip .se {
-  font-family: var(--se, monospace) !important;
-  font-size: 12px !important;
-  color: #555555 !important;
+@media (max-width: 700px) {
+  .coll .slip {
+    flex-basis: 100% !important;
+    margin-top: 14px !important;
+    margin-left: 0 !important;
+  }
 }
 
 .coll .slip b {
   display: block !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: clamp(26px, 3.5vw, 36px) !important;
-  line-height: 1.1 !important;
-  color: #111111 !important;
+  font-family: var(--an, "Anton", sans-serif) !important;
+  font-weight: 400 !important;
+  font-size: clamp(34px, 5vw, 48px) !important;
+  line-height: 1 !important;
+  color: var(--ink, #0a0a0a) !important;
   margin: 2px 0 !important;
 }
 
+.coll .slip .se {
+  font-family: var(--se, "Special Elite", monospace) !important;
+  font-size: 13px !important;
+  color: #333333 !important;
+}
+
 .coll .slip .small {
+  display: block !important;
   font-size: 11px !important;
-  color: #777777 !important;
+  line-height: 1.3 !important;
+  color: #666666 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
 
+/* Hazard tape warning badge over slip */
+.coll .slip .warn {
+  position: absolute !important;
+  left: 12px !important;
+  top: -18px !important;
+  background: radial-gradient(rgba(0, 0, 0, 0.25) 1px, transparent 1.6px) 0 0/5px 7px,
+              radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1.5px) 2px 3px/9px 11px,
+              var(--hazard, #ffcc00) !important;
+  color: var(--ink, #0a0a0a) !important;
+  font-family: "Archivo Black", sans-serif !important;
+  font-size: 12px !important;
+  text-transform: lowercase !important;
+  letter-spacing: 0.5px !important;
+  padding: 6px 12px !important;
+  line-height: 1 !important;
+  clip-path: polygon(0 5%, 22% 0, 51% 4%, 78% 0, 100% 3%, 98% 50%, 100% 96%, 70% 100%, 38% 96%, 12% 100%, 0 96%, 2% 48%) !important;
+  transform: rotate(-4deg) !important;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.coll .slip .warn:before,
+.coll .slip .warn:after {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 4px !important;
+  background: repeating-linear-gradient(-45deg, var(--ink, #0a0a0a) 0 4px, transparent 4px 8px) !important;
+}
+
+.coll .slip .warn:before {
+  top: 1px !important;
+}
+
+.coll .slip .warn:after {
+  bottom: 1px !important;
+}
+
+/* APPRAISED red ink stamp */
 .coll .slip .stamp {
   position: absolute !important;
   top: 10px !important;
-  right: 14px !important;
-  border: 2px solid #e5141f !important;
-  color: #e5141f !important;
-  background: rgba(229, 20, 31, 0.06) !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: 14px !important;
-  font-weight: 700 !important;
-  letter-spacing: 1.5px !important;
+  right: 18px !important;
+  color: var(--accent, #e60012) !important;
+  border: 3px solid var(--accent, #e60012) !important;
+  font-family: "Black Ops One", sans-serif !important;
+  font-size: 16px !important;
+  letter-spacing: 2px !important;
   padding: 2px 8px !important;
-  transform: rotate(8deg) !important;
-  text-transform: uppercase !important;
+  opacity: 0.9 !important;
+  pointer-events: none !important;
+  transform: rotate(-10deg) !important;
 }
 
 /* Summary line closed / open state */
