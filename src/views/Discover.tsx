@@ -247,15 +247,17 @@ export function Discover(s: Shared) {
           seed={7}
           behind={<EyeDoodle bare />}
           after={
-            commanders.length > 0 && (
-              // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
-              <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
-                <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
-              </p>
-            )
+            <>
+              {commanders.length > 0 && (
+                // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
+                <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
+                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
+                </p>
+              )}
+              <p className="tagline">Your collection. Real decks. No guesswork.</p>
+            </>
           }
         />
-        <p className="tagline">Your collection. Real decks. No guesswork.</p>
       </section>
 
       {/* One tool bar: search (Enter opens the first match, or any commander by name), ⋮ holds colours and sort. */}

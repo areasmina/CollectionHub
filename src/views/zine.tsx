@@ -14,46 +14,101 @@ export function Ransom({ text, size: wanted, seed, breakWords, swap }: { text: s
   const size = Math.max(18, Math.min(wanted, Math.floor((window.innerWidth - 64) / (longest * 1.02))));
   const words = useMemo(() => {
     const rnd = (n: number) => frac(Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453);
-    // A solid layer that turns transparent toward one edge reveals the halftone dots beneath it.
+    // Halftone dots fading in from one edge of each tile (authentic print artifact)
     const tone = (deg: number, base: string, dot: string) =>
       `linear-gradient(${deg}deg, ${base} 48%, transparent 92%), radial-gradient(${dot} 1.1px, transparent 1.7px) 0 0/4px 4px, ${base}`;
-    const papers = {
-      cream: { fg: '#111111', bg: (d: number) => tone(d, '#F4EFE1', 'rgba(0,0,0,.55)') },
-      black: { fg: '#F1EBDC', bg: (d: number) => tone(d, '#0E0E0E', 'rgba(255,255,255,.35)') },
+    const papers: Record<string, { fg: string; bg: (d: number) => string; boxShadow: string }> = {
+      newsprint: {
+        fg: '#111113',
+        bg: (d: number) => tone(d, '#F4ECD8', 'rgba(0,0,0,.55)'),
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.22), inset 0 -2px 3px rgba(0,0,0,.15)',
+      },
+      white: {
+        fg: '#0a0a0c',
+        bg: (d: number) => `linear-gradient(${d}deg, #FFFFFF 65%, #F0EFEA 100%)`,
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.25), inset 0 -2px 2px rgba(0,0,0,.1)',
+      },
+      yellow: {
+        fg: '#161517',
+        bg: (d: number) => tone(d, '#FFF09E', 'rgba(80,50,0,.45)'),
+        boxShadow: 'inset 0 0 0 1px rgba(110,75,0,.26), inset 0 -2px 3px rgba(0,0,0,.14)',
+      },
+      black: {
+        fg: '#F8F6EE',
+        bg: (d: number) => tone(d, '#101012', 'rgba(255,255,255,.32)'),
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.22), inset 0 -2px 3px rgba(0,0,0,.55)',
+      },
+      kraft: {
+        fg: '#1C150E',
+        bg: (d: number) => tone(d, '#D6B48D', 'rgba(40,20,0,.42)'),
+        boxShadow: 'inset 0 0 0 1px rgba(60,30,0,.26), inset 0 -2px 3px rgba(0,0,0,.16)',
+      },
+      red: {
+        fg: '#FFFFFF',
+        bg: (d: number) => `linear-gradient(${d}deg, #E60012 40%, #B8000E 100%)`,
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.28), inset 0 -2px 3px rgba(0,0,0,.35)',
+      },
     };
-    const fonts: React.CSSProperties[] = [
-      { fontFamily: "'Alfa Slab One', serif" },
-      { fontFamily: "'Alfa Slab One', serif" },
-      { fontFamily: "'Alfa Slab One', serif" },
-      { fontFamily: "'Archivo Black', sans-serif" },
-      { fontFamily: "'Archivo Black', sans-serif" },
-      { fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 900 },
+    const paperKeys = ['newsprint', 'white', 'yellow', 'black', 'kraft', 'red'] as const;
+
+    const fonts: { style: React.CSSProperties; scale?: number }[] = [
+      { style: { fontFamily: "'Alfa Slab One', serif", fontWeight: 400 }, scale: 0.98 },
+      { style: { fontFamily: "'Anton', sans-serif", fontWeight: 900, letterSpacing: '0.02em' }, scale: 1.05 },
+      { style: { fontFamily: "'Archivo Black', sans-serif", fontWeight: 900 }, scale: 0.96 },
+      { style: { fontFamily: "'Black Ops One', sans-serif", fontWeight: 400 }, scale: 0.96 },
+      { style: { fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 900 }, scale: 1.02 },
+      { style: { fontFamily: "'Special Elite', monospace", fontWeight: 400, letterSpacing: '-0.02em' }, scale: 1.08 },
+      { style: { fontFamily: "'Space Mono', monospace", fontWeight: 700 }, scale: 0.94 },
+      { style: { fontFamily: "'Shippori Mincho B1', serif", fontWeight: 800 }, scale: 0.96 },
     ];
-    const clips = ['polygon(1% 2%, 99% 0, 100% 97%, 0 100%)', 'polygon(0 0, 98% 3%, 100% 100%, 2% 97%)', 'polygon(2% 0, 100% 2%, 98% 98%, 0 100%)', 'polygon(0 3%, 100% 0, 99% 100%, 1% 98%)'];
-    let last = 'cream';
+    const clips = [
+      'polygon(1% 2%, 99% 0, 100% 97%, 0 100%)',
+      'polygon(0 0, 98% 3%, 100% 100%, 2% 97%)',
+      'polygon(2% 0, 100% 2%, 98% 98%, 0 100%)',
+      'polygon(0 3%, 100% 0, 99% 100%, 1% 98%)',
+      'polygon(3% 1%, 97% 3%, 100% 96%, 1% 99%)',
+      'polygon(0 2%, 100% 0, 98% 100%, 2% 97%)',
+      'polygon(2% 3%, 99% 1%, 97% 99%, 0 96%)',
+      'polygon(1% 0, 98% 2%, 100% 98%, 3% 100%)',
+    ];
+    let last = '';
     let k = 0;
     return text.split(' ').map((w) =>
       w.split('').map((ch) => {
         k++;
         const r = rnd(k);
-        let pk: keyof typeof papers = r < 0.62 ? 'cream' : 'black';
-        if (pk === 'black' && last === 'black') pk = 'cream';
+        let pk: typeof paperKeys[number];
+        if (r < 0.28) pk = 'newsprint';
+        else if (r < 0.52) pk = 'white';
+        else if (r < 0.72) pk = 'yellow';
+        else if (r < 0.88) pk = 'black';
+        else if (r < 0.94) pk = 'kraft';
+        else pk = 'red';
+
+        // Never two identical papers in a row for maximum movie ransom collage aesthetic
+        if (pk === last) {
+          const others = paperKeys.filter((p) => p !== last);
+          pk = others[Math.floor(rnd(k + 600) * others.length)];
+        }
         last = pk;
         const p = papers[pk];
+        const fontDef = fonts[Math.floor(rnd(k + 400) * fonts.length)];
+        const fontScale = fontDef.scale ?? 1;
+
         const outer: React.CSSProperties = {
-          margin: `0 ${Math.round(size * 0.035)}px`,
-          transform: `rotate(${(rnd(k + 100) * 8 - 4).toFixed(1)}deg) translateY(${Math.round(rnd(k + 150) * 8 - 4)}px)`,
-          filter: 'drop-shadow(2px 4px 0 rgba(0,0,0,.9))',
+          margin: `0 ${Math.max(1, Math.round(size * 0.035))}px`,
+          transform: `rotate(${(rnd(k + 100) * 9 - 4.5).toFixed(1)}deg) translateY(${Math.round(rnd(k + 150) * 7 - 3.5)}px)`,
+          filter: 'drop-shadow(2px 3px 0 rgba(0,0,0,.85))',
         };
         const inner: React.CSSProperties = {
-          ...fonts[Math.floor(rnd(k + 400) * fonts.length)],
+          ...fontDef.style,
           minWidth: Math.round(size * 0.62),
-          fontSize: Math.round(size * (0.9 + rnd(k + 50) * 0.14)),
-          padding: `${Math.round(size * (0.07 + rnd(k + 250) * 0.04))}px ${Math.round(size * (0.12 + rnd(k + 200) * 0.05))}px`,
+          fontSize: Math.round(size * (0.88 + rnd(k + 50) * 0.16) * fontScale),
+          padding: `${Math.round(size * (0.08 + rnd(k + 250) * 0.05))}px ${Math.round(size * (0.13 + rnd(k + 200) * 0.06))}px`,
           background: p.bg(Math.round(rnd(k + 450) * 360)),
           color: p.fg,
           clipPath: clips[Math.floor(rnd(k + 350) * clips.length)],
-          boxShadow: `inset 0 0 0 1px rgba(0,0,0,.18), inset 0 -${Math.round(size * 0.05)}px ${Math.round(size * 0.08)}px rgba(0,0,0,.12)`,
+          boxShadow: p.boxShadow,
           animationDelay: `-${(rnd(k + 300) * 2.4).toFixed(2)}s`,
         };
         return { ch, outer, inner };
