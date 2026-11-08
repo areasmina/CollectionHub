@@ -5021,30 +5021,42 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   justify-content: center !important;
   background: #0d0d0e !important;
   border: 2px solid var(--text, #ffffff) !important;
-  box-shadow: 3px 3px 0 var(--text, #ffffff) !important;
+  box-shadow: 4px 4px 0 var(--text, #ffffff) !important;
   overflow: visible !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.6px) !important;
+  background-size: 6px 6px !important;
 }
 
-.coll .stat b {
-  display: block !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: clamp(28px, 4vw, 38px) !important;
-  line-height: 1 !important;
-  color: #ffffff !important;
-}
-
-.coll .stat span {
-  font-family: var(--se, monospace) !important;
-  font-size: 13px !important;
-  color: #aaaaaa !important;
-  margin-top: 4px !important;
-  letter-spacing: 0.5px !important;
+.coll .stat .spray {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  background: radial-gradient(circle at 80% 20%, rgba(255, 47, 160, 0.18), transparent 45%),
+              radial-gradient(circle at 15% 85%, rgba(25, 211, 230, 0.15), transparent 40%),
+              radial-gradient(circle at 88% 28%, #ff2fa0 0 1px, transparent 1.5px),
+              radial-gradient(circle at 10% 75%, #19d3e6 0 1px, transparent 1.5px) !important;
+  opacity: 0.8 !important;
 }
 
 .coll .stat.red {
   background: var(--accent, #e60012) !important;
   border-color: #000000 !important;
-  box-shadow: 3px 3px 0 #000000 !important;
+  box-shadow: 4px 4px 0 #000000 !important;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.22) 1.5px, transparent 1.9px) !important;
+  background-size: 6px 6px !important;
+}
+
+.coll .stat.red .spray {
+  background: radial-gradient(circle at 75% 25%, rgba(255, 204, 0, 0.28), transparent 45%),
+              radial-gradient(circle at 20% 80%, rgba(0, 0, 0, 0.25), transparent 40%) !important;
+}
+
+.coll .stat .worn {
+  position: absolute !important;
+  inset: 0 !important;
+  border: 2px solid rgba(255, 255, 255, 0.2) !important;
+  filter: url(#worn) !important;
+  pointer-events: none !important;
 }
 
 .coll .stat.red b {
