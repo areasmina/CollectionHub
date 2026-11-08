@@ -608,20 +608,29 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             </span>
           </div>
           <hr />
-          <div className="thanks">thank you for building with what you own</div>
+          <div className="thanks heartfelt">
+            <p className="thanks-lead">THANK YOU FOR BUILDING WITH WHAT YOU OWN</p>
+            <p className="thanks-body">
+              Every card pulled from your collection gives your deck personality and history. Sleeve them up and enjoy every game!
+            </p>
+          </div>
         </>
       ) : (
         <>
       <h2>*** TO BUY ***</h2>
       <hr />
-      <div className="sub">
-        {missing.length} missing{pricesIn && toBuyCost > 0 ? ` · ≈${cad(toBuyCost)} to complete` : ''} · ≈CA$ at your shop
+      <div className="rtop-total">
+        <span>TO BUY ({toBuy.length})</span>
+        <span>{pricesIn && toBuyCost > 0 ? money(toBuyCost) : '≈CA$—'}</span>
       </div>
+      <div className="sub">
+        {missing.length} {missing.length === 1 ? 'card' : 'cards'} to complete · single card prices below
+      </div>
+      <hr />
       {buyGroups(missing, (c) => recInfo.get(norm(c.name))?.incl, (c) => toCad(cardOf(c)?.usd)).map((g) => (
         <div key={g.label} className="rgroup">
           <div className="rgh">
             <span>{g.label}</span>
-            {pricesIn && g.total > 0 && <span>≈{cad(g.total)}</span>}
           </div>
           <ul>
             {g.items.map((c) => {
@@ -653,15 +662,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         </div>
       ))}
       <hr />
-      <div className="total">
-        <span>TO BUY ({toBuy.length})</span>
-        <span>{pricesIn ? money(toBuyCost) : '≈CA$—'}</span>
-      </div>
       <p className="small">
         {rateNote()} {fetchedNote(missing.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}.
       </p>
       <hr />
-      <div className="thanks">thank you for building with what you own</div>
+      <div className="thanks heartfelt">
+        <p className="thanks-lead">THANK YOU FOR BUILDING WITH WHAT YOU OWN</p>
+        <p className="thanks-body">
+          Brewing with the cards already in your binders keeps every deck personal and creative. We know that sometimes picking up key singles, fresh sleeves, or treating yourself to a reward is part of the joy of the game — whatever you choose to sleeve up, play what brings you joy.
+        </p>
+      </div>
     </>
       )}
     </aside>

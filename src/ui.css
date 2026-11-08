@@ -6615,3 +6615,39 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* Receipt top total & heartfelt bottom message */
+.receipt .rtop-total {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: baseline !important;
+  font-family: var(--se, monospace) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  margin: 4px 0 2px !important;
+}
+.receipt .rtop-total span:last-child {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+}
+.receipt .thanks.heartfelt {
+  text-align: center !important;
+  font-family: var(--se, monospace) !important;
+  padding: 4px 0 !important;
+}
+.receipt .thanks.heartfelt .thanks-lead {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  margin: 0 0 6px 0 !important;
+  color: var(--ink, #111) !important;
+}
+.receipt .thanks.heartfelt .thanks-body {
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  color: #3a3a3a !important;
+  margin: 0 !important;
+  font-style: italic !important;
+}
