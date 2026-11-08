@@ -916,7 +916,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   </>
                 }
               >
-                {/* Primary CTA at top: Just build it! */}
+                {/* 1. Primary CTA at top: Just build it! */}
                 {kind === 'average' && binder.length > 0 && (
                   <div className="just-build-banner top-action">
                     <button
@@ -926,16 +926,201 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       disabled={saving}
                       title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)"
                     >
-                      
                       <span className="build-text">
                         <strong>JUST BUILD IT!</strong>
                         <small>Auto-craft 100 cards from your binder</small>
                       </span>
-                      <span className="build-arrow">⚒ BUILD 100 →</span>
+                      <span className="build-arrow">BUILD 100 →</span>
                     </button>
                   </div>
                 )}
-                {/* EDHREC's themes (built around): its top tags, the rest one tap away; the chosen one always shows */}
+
+                {/* 2. Pin and without cards selection */}
+                <form
+                  className="cfilter"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    haptic('select');
+                    const inc = cfDraft.inc.trim();
+                    const exc = cfDraft.exc.trim();
+                    if (inc && !pins.in.includes(inc)) void setPin(inc, 'in');
+                    if (exc && !pins.out.includes(exc)) void setPin(exc, 'out');
+                    setCfFocus(null);
+                    setCf({ inc: inc ? [inc] : [], exc: exc ? [exc] : [] });
+                  }}
+                >
+                  <div className="cf-row">
+                    <div className="cglance-wrap">
+                      <label className="sbox">
+                        <span className="tab">PIN</span>
+                        <input
+                          list="cfnames"
+                          value={cfDraft.inc}
+                          onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })}
+                          onFocus={() => setCfFocus('inc')}
+                          onBlur={() => setTimeout(() => setCfFocus(null), 200)}
+                          placeholder="card in the deck_"
+                          aria-label="Pin card in deck"
+                        />
+                      </label>
+                      {cfFocus === 'inc' && cfDraft.inc.trim().length >= 2 && (
+                        <div className="cglance-popover" role="listbox">
+                          {[...recCard.values(), ...binder]
+                            .filter((c, idx, arr) => arr.findIndex((x) => norm(x.name) === norm(c.name)) === idx)
+                            .filter((c) => norm(c.name).includes(norm(cfDraft.inc)) || (('type' in c && typeof c.type === 'string' ? c.type : cardByName(c.name)?.type) ?? '').toLowerCase().includes(norm(cfDraft.inc)))
+                            .slice(0, 8)
+                            .map((m) => {
+                              const id = 'id' in m ? m.id : undefined;
+                              const img = ('img' in m && m.img) || imgOf(id, 'small');
+                              const isOwned = statusOf(m.name, s.mine) === 'owned';
+                              return (
+                                <div
+                                  key={m.name}
+                                  className="cglance-item"
+                                  role="option"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setCfDraft({ ...cfDraft, inc: m.name });
+                                    setCfFocus(null);
+                                    haptic('select');
+                                  }}
+                                >
+                                  {img && <img src={img} alt="" className="cglance-thumb" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />}
+                                  <div className="cglance-meta">
+                                    <span className="cglance-name">{m.name}</span>
+                                    <span className="cglance-sub">{('type' in m && typeof m.type === 'string' ? m.type : cardByName(m.name)?.type) ?? 'Card'}</span>
+                                  </div>
+                                  {isOwned && <span className="cglance-badge">✓ OWNED</span>}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="cglance-wrap">
+                      <label className="sbox">
+                        <span className="tab">WITHOUT</span>
+                        <input
+                          list="cfnames"
+                          value={cfDraft.exc}
+                          onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })}
+                          onFocus={() => setCfFocus('exc')}
+                          onBlur={() => setTimeout(() => setCfFocus(null), 200)}
+                          placeholder="card left out_"
+                          aria-label="Card left out"
+                        />
+                      </label>
+                      {cfFocus === 'exc' && cfDraft.exc.trim().length >= 2 && (
+                        <div className="cglance-popover" role="listbox">
+                          {[...recCard.values(), ...binder]
+                            .filter((c, idx, arr) => arr.findIndex((x) => norm(x.name) === norm(c.name)) === idx)
+                            .filter((c) => norm(c.name).includes(norm(cfDraft.exc)) || (('type' in c && typeof c.type === 'string' ? c.type : cardByName(c.name)?.type) ?? '').toLowerCase().includes(norm(cfDraft.exc)))
+                            .slice(0, 8)
+                            .map((m) => {
+                              const id = 'id' in m ? m.id : undefined;
+                              const img = ('img' in m && m.img) || imgOf(id, 'small');
+                              const isOwned = statusOf(m.name, s.mine) === 'owned';
+                              return (
+                                <div
+                                  key={m.name}
+                                  className="cglance-item"
+                                  role="option"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setCfDraft({ ...cfDraft, exc: m.name });
+                                    setCfFocus(null);
+                                    haptic('select');
+                                  }}
+                                >
+                                  {img && <img src={img} alt="" className="cglance-thumb" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />}
+                                  <div className="cglance-meta">
+                                    <span className="cglance-name">{m.name}</span>
+                                    <span className="cglance-sub">{('type' in m && typeof m.type === 'string' ? m.type : cardByName(m.name)?.type) ?? 'Card'}</span>
+                                  </div>
+                                  {isOwned && <span className="cglance-badge">✓ OWNED</span>}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                    <button type="submit" className="cf-apply-btn" title="Apply card pins">
+                      APPLY
+                    </button>
+                    {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                      <button
+                        type="button"
+                        className="cf-clear-btn"
+                        onClick={() => {
+                          haptic('undo');
+                          if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
+                          if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
+                          setCf({ inc: [], exc: [] });
+                          setCfDraft({ inc: '', exc: '' });
+                        }}
+                        title="Clear card filters"
+                      >
+                        CLEAR
+                      </button>
+                    )}
+                  </div>
+                  <datalist id="cfnames">
+                    {[...recCard.values()].slice(0, 300).map((c) => (
+                      <option key={c.name} value={c.name} />
+                    ))}
+                  </datalist>
+                  {pins.in.length + pins.out.length > 0 && (
+                    <div className="cf-pins" role="group" aria-label="Pinned and excluded cards">
+                      {pins.in.map((n) => (
+                        <button key={'in' + n} type="button" className="u-chip pinchip in" onClick={() => (haptic('undo'), setPin(n, 'in'))} aria-label={`Unpin ${n}`} title="Tap to unpin">
+                          PIN {n} ×
+                        </button>
+                      ))}
+                      {pins.out.map((n) => (
+                        <button key={'out' + n} type="button" className="u-chip pinchip out" onClick={() => (haptic('undo'), setPin(n, 'out'))} aria-label={`Remove exclusion for ${n}`} title="Tap to remove">
+                          WITHOUT {n} ×
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                    <p className="small cfnote" role="status">
+                      {!filtered
+                        ? 'Asking EDHREC…'
+                        : filtered.applied
+                          ? `Suggestions from ${filtered.page.numDecks?.toLocaleString()} EDHREC decks${cf.inc.length ? ` with ${cf.inc.join(', ')}` : ''}${cf.exc.length ? ` without ${cf.exc.join(', ')}` : ''}.`
+                          : `EDHREC didn't filter this page from the app${cf.inc.length ? `; ${cf.inc.join(', ')} is pinned in your deck` : ''}${cf.exc.length ? `; ${cf.exc.join(', ')} is left out of your suggestions` : ''}.`}{' '}
+                      <a href={filterWebUrl(pagePath('commander', slug, bracket, tag, budget), cf)} target="_blank" rel="noreferrer">
+                        Open filtered on EDHREC ↗
+                      </a>
+                    </p>
+                  )}
+                  {synergyHint && (
+                    <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
+                      <div className="syn-info">
+                        <span className="syn-badge">SYNERGY DETECTED</span>
+                        <p>
+                          <strong>{synergyHint.card}</strong> {synergyHint.explanation}!
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="syn-btn"
+                        onClick={() => {
+                          haptic('success');
+                          if (synergyHint.themeSlug) {
+                            setTag(synergyHint.themeSlug);
+                          }
+                          setToast({ text: `Deck auto-tuned to ${synergyHint.card} synergies!` });
+                        }}
+                      >
+                        TUNE DECK TO THIS SYNERGY
+                      </button>
+                    </div>
+                  )}
+                </form>
+
+                {/* 3. Theme tags */}
                 {tags.length > 0 && (
                   <OptRow label="THEME">
                     <div className="themes" role="group" aria-label="EDHREC themes">
@@ -952,19 +1137,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     </div>
                   </OptRow>
                 )}
-                {pins.in.length + pins.out.length > 0 && (
-                  <OptRow label="PINS">
-                    <div className="themes" role="group" aria-label="Your pins: tap to unpin">
-                      {(['in', 'out'] as const).flatMap((side) =>
-                        pins[side].map((n) => (
-                          <button key={side + n} type="button" className="u-chip pinchip" onClick={() => (haptic('undo'), setPin(n, side))} aria-label={`Unpin ${n}`} title="Tap to unpin">
-                            {side === 'in' ? 'PIN' : 'NEVER'} {n} ×
-                          </button>
-                        )),
-                      )}
-                    </div>
-                  </OptRow>
-                )}
+
+                {/* 4. The rest: Gear, Buy under, Sort / Show / Only */}
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
@@ -978,193 +1152,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} className="show-pick" />
                   <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
                 </div>
-                    {/* EDHREC's With card / Without card: suggestions from decks that do / don't run a card */}
-                    <form
-                      className="cfilter"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        haptic('select');
-                        const inc = cfDraft.inc.trim();
-                        const exc = cfDraft.exc.trim();
-                        if (inc && !pins.in.includes(inc)) void setPin(inc, 'in');
-                        if (exc && !pins.out.includes(exc)) void setPin(exc, 'out');
-                        setCfFocus(null);
-                        setCf({ inc: inc ? [inc] : [], exc: exc ? [exc] : [] });
-                      }}
-                    >
-                      <div className="cglance-wrap">
-                        <label className="sbox">
-                          <span className="tab">WITH</span>
-                          <input
-                            list="cfnames"
-                            value={cfDraft.inc}
-                            onChange={(e) => setCfDraft({ ...cfDraft, inc: e.target.value })}
-                            onFocus={() => setCfFocus('inc')}
-                            onBlur={() => setTimeout(() => setCfFocus(null), 200)}
-                            placeholder="card in the deck_"
-                            aria-label="With card"
-                          />
-                        </label>
-                        {cfFocus === 'inc' && cfDraft.inc.trim().length >= 2 && (
-                          <div className="cglance-popover" role="listbox">
-                            {[...recCard.values(), ...binder]
-                              .filter((c, idx, arr) => arr.findIndex((x) => norm(x.name) === norm(c.name)) === idx)
-                              .filter((c) => norm(c.name).includes(norm(cfDraft.inc)) || (('type' in c && typeof c.type === 'string' ? c.type : cardByName(c.name)?.type) ?? '').toLowerCase().includes(norm(cfDraft.inc)))
-                              .slice(0, 8)
-                              .map((m) => {
-                                const id = 'id' in m ? m.id : undefined;
-                                const img = ('img' in m && m.img) || imgOf(id, 'small');
-                                const isOwned = statusOf(m.name, s.mine) === 'owned';
-                                return (
-                                  <div
-                                    key={m.name}
-                                    className="cglance-item"
-                                    role="option"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      setCfDraft({ ...cfDraft, inc: m.name });
-                                      setCfFocus(null);
-                                      haptic('select');
-                                    }}
-                                  >
-                                    {img && <img src={img} alt="" className="cglance-thumb" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />}
-                                    <div className="cglance-meta">
-                                      <span className="cglance-name">{m.name}</span>
-                                      <span className="cglance-sub">{('type' in m && typeof m.type === 'string' ? m.type : cardByName(m.name)?.type) ?? 'Card'}</span>
-                                    </div>
-                                    {isOwned && <span className="cglance-badge">✓ OWNED</span>}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        )}
-                      </div>
-                      <div className="cglance-wrap">
-                        <label className="sbox">
-                          <span className="tab">WITHOUT</span>
-                          <input
-                            list="cfnames"
-                            value={cfDraft.exc}
-                            onChange={(e) => setCfDraft({ ...cfDraft, exc: e.target.value })}
-                            onFocus={() => setCfFocus('exc')}
-                            onBlur={() => setTimeout(() => setCfFocus(null), 200)}
-                            placeholder="card left out_"
-                            aria-label="Without card"
-                          />
-                        </label>
-                        {cfFocus === 'exc' && cfDraft.exc.trim().length >= 2 && (
-                          <div className="cglance-popover" role="listbox">
-                            {[...recCard.values(), ...binder]
-                              .filter((c, idx, arr) => arr.findIndex((x) => norm(x.name) === norm(c.name)) === idx)
-                              .filter((c) => norm(c.name).includes(norm(cfDraft.exc)) || (('type' in c && typeof c.type === 'string' ? c.type : cardByName(c.name)?.type) ?? '').toLowerCase().includes(norm(cfDraft.exc)))
-                              .slice(0, 8)
-                              .map((m) => {
-                                const id = 'id' in m ? m.id : undefined;
-                                const img = ('img' in m && m.img) || imgOf(id, 'small');
-                                const isOwned = statusOf(m.name, s.mine) === 'owned';
-                                return (
-                                  <div
-                                    key={m.name}
-                                    className="cglance-item"
-                                    role="option"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      setCfDraft({ ...cfDraft, exc: m.name });
-                                      setCfFocus(null);
-                                      haptic('select');
-                                    }}
-                                  >
-                                    {img && <img src={img} alt="" className="cglance-thumb" loading="lazy" onError={(e) => (e.currentTarget.style.display = 'none')} />}
-                                    <div className="cglance-meta">
-                                      <span className="cglance-name">{m.name}</span>
-                                      <span className="cglance-sub">{('type' in m && typeof m.type === 'string' ? m.type : cardByName(m.name)?.type) ?? 'Card'}</span>
-                                    </div>
-                                    {isOwned && <span className="cglance-badge">✓ OWNED</span>}
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        )}
-                      </div>
-                      <datalist id="cfnames">
-                        {[...recCard.values()].slice(0, 300).map((c) => (
-                          <option key={c.name} value={c.name} />
-                        ))}
-                      </datalist>
-                      <div className="cfbtns" onPointerDown={() => setCfFocus(null)}>
-                        <button className="btn">APPLY</button>
-                        {(cf.inc.length > 0 || cf.exc.length > 0) && (
-                          <button
-                            type="button"
-                            className="btn secondary"
-                            onClick={() => {
-                              haptic('undo');
-                              if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
-                              if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
-                              setCf({ inc: [], exc: [] });
-                              setCfDraft({ inc: '', exc: '' });
-                            }}
-                          >
-                            CLEAR
-                          </button>
-                        )}
-                      </div>
-                      {(cf.inc.length > 0 || cf.exc.length > 0) && (
-                        <p className="small cfnote" role="status">
-                          {!filtered
-                            ? 'Asking EDHREC…'
-                            : filtered.applied
-                              ? `Suggestions from ${filtered.page.numDecks?.toLocaleString()} EDHREC decks${cf.inc.length ? ` with ${cf.inc.join(', ')}` : ''}${cf.exc.length ? ` without ${cf.exc.join(', ')}` : ''}.`
-                              : `EDHREC didn't filter this page from the app${cf.inc.length ? `; ${cf.inc.join(', ')} is pinned in your deck` : ''}${cf.exc.length ? `; ${cf.exc.join(', ')} is left out of your suggestions` : ''}.`}{' '}
-                          <a href={filterWebUrl(pagePath('commander', slug, bracket, tag, budget), cf)} target="_blank" rel="noreferrer">
-                            Open filtered on EDHREC ↗
-                          </a>
-                        </p>
-                      )}
-                      {synergyHint && (
-                        <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
-                          <div className="syn-info">
-                            <span className="syn-badge">SYNERGY DETECTED</span>
-                            <p>
-                              <strong>{synergyHint.card}</strong> {synergyHint.explanation}!
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            className="syn-btn"
-                            onClick={() => {
-                              haptic('success');
-                              if (synergyHint.themeSlug) {
-                                setTag(synergyHint.themeSlug);
-                              }
-                              setToast({ text: `Deck auto-tuned to ${synergyHint.card} synergies!` });
-                            }}
-                          >
-                            TUNE DECK TO THIS SYNERGY
-                          </button>
-                        </div>
-                      )}
-                      {!synergyHint && cf.inc.length > 0 && (
-                        <div className="synergy-autotune-card" role="region" aria-label="Synergy recommendation">
-                          <div className="syn-info">
-                            <span className="syn-badge">CARD PINNED</span>
-                            <p>
-                              <strong>{cf.inc[0]}</strong> is pinned in your deck.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            className="syn-btn"
-                            onClick={() => {
-                              haptic('success');
-                              setToast({ text: `Suggestions auto-tuned for ${cf.inc[0]}!` });
-                            }}
-                          >
-                            AUTO-TUNE SUGGESTIONS
-                          </button>
-                        </div>
-                      )}
-                    </form>
               </ToolBar>
               {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}

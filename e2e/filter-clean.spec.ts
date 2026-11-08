@@ -20,9 +20,10 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
     await expect(qviews).toHaveCount(3);
   }
 
-  // Click the gear / filter button in Commander view
+  // Scroll toolbar to top of viewport so entire dropdown is framed inside the window
   const cmdrFilterSummary = page.locator('.dpage .tbmore summary');
   await expect(cmdrFilterSummary).toBeVisible();
+  await page.evaluate(() => document.querySelector('.dtools.tbar')?.scrollIntoView(true));
   await cmdrFilterSummary.click();
 
   const cmdrDropdown = page.locator('.dpage .tbmore[open]');
@@ -31,12 +32,43 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   // Verify VIEW row is absent in Commander view filter dropdown
   await expect(cmdrDropdown.locator('.optrow', { hasText: 'VIEW' })).toHaveCount(0);
 
+  // Verify new hierarchy: JUST BUILD IT! -> PIN & WITHOUT card selection -> THEME -> the rest
+  const fbody = page.locator('.dtools.tbar > .tbmore > .fbody');
+  await expect(fbody).toBeVisible();
+
+  // 1. JUST BUILD IT! button
+  const buildBtn = fbody.locator('.btn-just-build');
+  await expect(buildBtn).toBeVisible();
+
+  // 2. PIN & WITHOUT selection inputs directly below
+  const cfRow = fbody.locator('.cfilter .cf-row');
+  await expect(cfRow).toBeVisible();
+  await expect(cfRow.locator('.tab', { hasText: 'PIN' })).toBeVisible();
+  await expect(cfRow.locator('.tab', { hasText: 'WITHOUT' })).toBeVisible();
+  await expect(cfRow.locator('.cf-apply-btn')).toBeVisible();
+
+  // 3. THEME chips below
+  const themeRow = fbody.locator('.optrow:has(.themes)');
+  await expect(themeRow).toBeVisible();
+
+  // 4. GEAR row below
+  const gearRow = fbody.locator('.optrow', { hasText: 'GEAR' });
+  await expect(gearRow).toBeVisible();
+
+  // 5. Pickgrid (SORT / SHOW / ONLY)
+  const pickgrid = fbody.locator('.pickgrid');
+  await expect(pickgrid).toBeVisible();
+
+  await page.waitForTimeout(300);
+
   // Capture screenshot of clean Commander filter dropdown
   if ((page.viewportSize()?.width ?? 1280) >= 1000) {
-    const fbody = page.locator('.dtools.tbar > .tbmore > .fbody');
-    await fbody.scrollIntoViewIfNeeded();
     await page.screenshot({
-      path: 'C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/filter-menu-no-view.png'
+      path: 'C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/filter-menu-composition-desktop.png'
+    });
+  } else if ((page.viewportSize()?.width ?? 1280) <= 500) {
+    await page.screenshot({
+      path: 'C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/filter-menu-composition-mobile.png'
     });
   }
 

@@ -3658,36 +3658,218 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   margin: 2px 0 0;
 }
 
-/* 2. Theme Pills rounded capsule styling (matching user reference Image 4) */
-@media (min-width: 1024px) {
-  /* Tablet & Desktop: anchor right; Mobile: anchor left */
+/* 2. Commander & Forge Options/Filter Menu: Sleek, single-window composition with no scrolling */
+.dtools.tbar:has(.tbmore[open]),
+.dtools.tbar:has(details[open]) {
+  z-index: 500 !important;
+}
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
     right: 0 !important;
     left: auto !important;
-    max-width: min(440px, calc(100vw - 24px)) !important;
+    width: 520px !important;
+    max-width: min(520px, calc(100vw - 24px)) !important;
+    padding: 10px 12px !important;
+    gap: 7px !important;
+    max-height: calc(100vh - 100px) !important;
+    overflow-y: auto !important;
+    border: 1px solid #32323e !important;
+    border-radius: 8px !important;
+    background: #0f0f12 !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+    z-index: 1000 !important;
+    animation: none !important;
+    opacity: 1 !important;
   }
 }
 @media (max-width: 700px) {
   .dtools.tbar > .tbmore > .fbody {
     left: 0 !important;
     right: auto !important;
-    max-width: min(440px, calc(100vw - 24px)) !important;
+    width: calc(100vw - 20px) !important;
+    max-width: 480px !important;
+    padding: 8px 10px !important;
+    gap: 6px !important;
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+    border: 1px solid #32323e !important;
+    border-radius: 8px !important;
+    background: #0f0f12 !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+    z-index: 1000 !important;
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .tbar .fbody .cf-row {
+    flex-wrap: wrap !important;
+  }
+  .tbar .fbody .cf-row .cglance-wrap {
+    flex: 1 1 100% !important;
   }
 }
+
+/* 1. JUST BUILD IT! top action */
+.just-build-banner.top-action {
+  margin: 0 !important;
 }
-.dtools .fbody .optrow:has(.themes),
-.dtools.tbar > .tbmore .optrow:has(.themes) {
+.btn-just-build {
+  padding: 6px 12px !important;
+  min-height: 38px !important;
+  border-radius: 6px !important;
+  background: linear-gradient(135deg, rgba(230, 0, 18, 0.2) 0%, rgba(22, 22, 26, 0.98) 100%) !important;
+  border: 1px solid var(--u-red, #e60012) !important;
+  border-left: 4px solid var(--u-red, #e60012) !important;
+}
+.btn-just-build .build-text strong {
+  font: 800 13px/1.1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.06em !important;
+}
+.btn-just-build .build-text small {
+  font: 400 10px/1.2 var(--u-mono, monospace) !important;
+  color: #e09999 !important;
+}
+.btn-just-build .build-arrow {
+  font: 800 12px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* 2. PIN & WITHOUT card selection */
+.tbar .fbody .cfilter {
+  display: flex !important;
   flex-direction: column !important;
-  align-items: flex-start !important;
-  gap: 6px !important;
+  gap: 5px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: none !important;
 }
-.dtools .fbody .themes,
-.dpage .themes,
-.themes {
+.tbar .fbody .cf-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+.tbar .fbody .cf-row .cglance-wrap {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+.tbar .fbody .cf-row .sbox {
+  display: flex !important;
+  align-items: center !important;
+  background: #151518 !important;
+  border: 1px solid #33333e !important;
+  border-radius: 6px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  transition: border-color 0.15s ease !important;
+}
+.tbar .fbody .cf-row .sbox:focus-within {
+  border-color: var(--u-red, #e60012) !important;
+}
+.tbar .fbody .cf-row .sbox .tab {
+  background: #202028 !important;
+  color: #b0b0c0 !important;
+  font-family: var(--u-display, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  padding: 0 8px !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  border-right: 1px solid #33333e !important;
+  flex-shrink: 0 !important;
+}
+.tbar .fbody .cf-row .sbox input {
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 12px !important;
+  padding: 0 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  outline: none !important;
+}
+.tbar .fbody .cf-apply-btn {
+  height: 32px !important;
+  padding: 0 12px !important;
+  background: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+  font-family: var(--u-display, sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+}
+.tbar .fbody .cf-apply-btn:hover {
+  background: #ff1a2b !important;
+}
+.tbar .fbody .cf-clear-btn {
+  height: 32px !important;
+  padding: 0 10px !important;
+  background: #22222a !important;
+  color: #9999aa !important;
+  font-family: var(--u-display, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  border: 1px solid #383844 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+.tbar .fbody .cf-clear-btn:hover {
+  background: #2a2a34 !important;
+  color: #ffffff !important;
+}
+.tbar .fbody .cf-pins {
   display: flex !important;
   flex-wrap: wrap !important;
-  gap: 6px !important;
+  gap: 5px !important;
+  margin-top: 2px !important;
+}
+.tbar .fbody .cf-pins .pinchip {
+  height: 24px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.tbar .fbody .cf-pins .pinchip.in {
+  background: rgba(230, 0, 18, 0.16) !important;
+  border: 1px solid var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+}
+.tbar .fbody .cf-pins .pinchip.out {
+  background: #1e1e24 !important;
+  border: 1px solid #484856 !important;
+  color: #b0b0c0 !important;
+}
+
+/* 3. THEME chips */
+.dtools.tbar > .tbmore .optrow:has(.themes) {
+  padding-top: 6px !important;
+  border-top: 1px solid #222228 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+}
+.dtools .fbody .themes,
+.dpage .themes {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
   width: 100% !important;
   border: 0 !important;
   background: transparent !important;
@@ -3697,31 +3879,29 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .dpage .themes button,
 .dtools .fbody .themes .u-chip,
 .dpage .themes .u-chip {
-  width: auto !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: 30px !important;
-  padding: 3px 10px !important;
+  height: 25px !important;
+  padding: 2px 9px !important;
   border-radius: 9999px !important;
-  background: #1e1e22 !important;
-  border: 1px solid #36363f !important;
+  background: #1b1b22 !important;
+  border: 1px solid #333340 !important;
   color: #ffffff !important;
   font-family: var(--u-display, sans-serif) !important;
-  font-size: 13px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 5px !important;
+  gap: 4px !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
   box-shadow: none !important;
   transform: none !important;
   cursor: pointer !important;
+  transition: background 0.12s ease, border-color 0.12s ease !important;
 }
 .dtools .fbody .themes button:hover,
 .dpage .themes button:hover {
-  background: #2a2a32 !important;
-  border-color: #555566 !important;
+  background: #252530 !important;
+  border-color: #505060 !important;
   color: #ffffff !important;
 }
 .dtools .fbody .themes button[aria-pressed='true'],
@@ -3732,12 +3912,69 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 .dtools .fbody .themes button small,
 .dpage .themes button small {
-  color: #888899 !important;
+  color: #7a7a8c !important;
   font-weight: 400 !important;
-  font-size: 11px !important;
-  margin-left: 4px !important;
+  font-size: 10px !important;
+  margin-left: 3px !important;
 }
-/* JUST BUILD IT! top action */
+
+/* 4. The rest: GEAR, BUY UNDER, and pickgrid */
+.dtools.tbar > .tbmore .optrow {
+  padding-top: 6px !important;
+  border-top: 1px solid #222228 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.dtools.tbar > .tbmore .optrow > .lbl {
+  color: #888899 !important;
+  font: 700 11px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  min-width: 68px !important;
+  flex-shrink: 0 !important;
+}
+.tbar .fbody .segs {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  gap: 0 !important;
+}
+.tbar .fbody .segs button {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  padding: 0 4px !important;
+  font-family: var(--u-display, sans-serif) !important;
+  letter-spacing: 0.04em !important;
+}
+.tbar .fbody .pickgrid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  margin-top: 2px !important;
+}
+.tbar .fbody .sbox.pick {
+  height: 30px !important;
+  min-height: 30px !important;
+  border-radius: 5px !important;
+  background: #151518 !important;
+  border: 1px solid #33333e !important;
+}
+.tbar .fbody .sbox.pick .tab {
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  padding: 0 6px !important;
+  background: #202028 !important;
+  color: #a0a0b0 !important;
+}
+.tbar .fbody .sbox.pick select {
+  font-size: 11px !important;
+  padding: 0 4px !important;
+}
 .just-build-banner.top-action {
   margin: 0 0 12px 0;
 }
