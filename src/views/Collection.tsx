@@ -17,7 +17,7 @@ import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { snapshot } from '../lib/pricewatch';
 import { priced, priceSum, Progress } from './shared';
-import { Doodles, Title } from './zine';
+import { Doodles, PageDecor, Title } from './zine';
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 
 export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
@@ -220,7 +220,17 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   // THE OVERHAUL, Collection: the loud frame (ransom title + binder tag) → one ribbon of facts and actions → the cards with
   // their one toolbar. Your decks and the import fold open under the ribbon.
   return (
-    <main className="dpage coll">
+    <>
+      <PageDecor
+        seed={821}
+        rays="18% 18%"
+        sheet={{
+          side: 'right',
+          top: 140,
+          rot: 6,
+        }}
+      />
+      <main className="dpage coll">
       <section className="chead2">
         {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
             control (switch, add, rename, reset, delete, plus sync and haptics). */}
@@ -498,6 +508,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         />
       </section>
     </main>
+    </>
   );
 }
 

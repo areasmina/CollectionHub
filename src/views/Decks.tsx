@@ -34,7 +34,7 @@ import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from '
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
-import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon } from './zine';
+import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { calculateDeckOwnership } from '../lib/ownership';
 import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
@@ -1179,6 +1179,7 @@ export function Decks(s: Shared) {
 
   return (
     <>
+      <PageDecor seed={333} rays="24% 20%" sheet={{ side: 'left', top: 320, rot: -4 }} />
       <main className="dpage dlist">
         {/* THE OVERHAUL, my decks: loud title → one ribbon of facts → flat deck tiles → the add form. */}
         <div className="decksbar">

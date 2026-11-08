@@ -10,7 +10,7 @@ import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '.
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
 import { OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
-import { Pips, Ransom, Title, EyeDoodle, ManaIcon } from './zine';
+import { Pips, Ransom, Title, EyeDoodle, ManaIcon, PageDecor } from './zine';
 import { Meter } from './parts';
 
 export const isCommander = (type: string, text: string) => (/legendary/i.test(type) && /creature/i.test(type)) || /can be your commander/i.test(text);
@@ -237,7 +237,17 @@ export function Discover(s: Shared) {
 
   // THE OVERHAUL, Discover: the loud frame (ransom title, the eye, one tagline) → one tool bar → a flat grid of commanders.
   return (
-    <main className="dpage disc">
+    <>
+      <PageDecor
+        seed={501}
+        rays="46% 30%"
+        sheet={{
+          side: 'right',
+          top: 520,
+          rot: -6,
+        }}
+      />
+      <main className="dpage disc">
       <section className="discohero" aria-label="What can I build?">
         {/* Up to tablets the eye blazes behind the title letters; wide screens give it its own cell. */}
         <Title
@@ -360,5 +370,6 @@ export function Discover(s: Shared) {
         })}
       </ul>
     </main>
+    </>
   );
 }
