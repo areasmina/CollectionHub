@@ -824,7 +824,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <DeckLight deck={deck} />
             </div>
             {/* the quiet monospace line: colours · commander · cards · lands · avg MV · salt · bracket */}
-            <p className="vmeta" onClick={(e) => e.stopPropagation()}>
+            <div className="vmeta" onClick={(e) => e.stopPropagation()}>
               <Pips ci={ci} size={20} />
               {deck.commander && <span>{deck.commander.split(' // ')[0]}</span>}
               <span>{st.total} cards</span>
@@ -832,7 +832,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               {st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
               <SaltStat names={deck.cards.map((c) => c.name)} />
               <BracketStat call={call} cedh={deck.source === 'cedh'} />
-            </p>
+            </div>
             <div className="vmatch" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
               <b className="num">{sum.pct}%</b>
               <span className="vbar">
@@ -1101,6 +1101,12 @@ export function Decks(s: Shared) {
     .filter((b) => b > 0);
   const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce<number>((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
 
+  // Decks Workbench: Search, Sorting, Status and Tag filtering
+  const [dq, setDq] = useState('');
+  const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
+  const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
+  const [dtag, setDtag] = useState<string>('all');
+
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
   // The list page sits under Collection: the pill's back arrow goes there (the deck page sets its own).
@@ -1109,12 +1115,6 @@ export function Decks(s: Shared) {
     return () => void setBack(null);
   }, [!!deck]);
   if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
-
-  // Decks Workbench: Search, Sorting, Status and Tag filtering
-  const [dq, setDq] = useState('');
-  const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
-  const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
-  const [dtag, setDtag] = useState<string>('all');
   const deckThemeNames = (d: Deck) => {
     const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
     return lead ? commanderThemes(lead).map((t) => t.label) : [];
