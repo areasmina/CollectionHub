@@ -4630,3 +4630,229 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
   gap: 10px !important;
   margin-top: 10px !important;
 }
+
+/* ==========================================================================
+   DYNAMIC ISLAND SYNC POPUP: PUNK ZINE COMPOSITION (NO EMOJIS, CLEAN HIERARCHY)
+   ========================================================================== */
+.island-drawer {
+  position: absolute;
+  left: 50%;
+  width: min(480px, calc(100vw - 24px));
+  background: #111114 !important;
+  border: 2px solid #2e2e38 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.96), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  padding: 12px 14px 14px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  max-height: min(520px, calc(85vh - 80px));
+  overflow-y: auto;
+}
+
+.id-sync-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  margin-bottom: 2px !important;
+}
+
+.id-sync-tag-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.id-sync-tag {
+  font: 800 12px/1 var(--u-display, 'Archivo Black', sans-serif) !important;
+  letter-spacing: 0.08em !important;
+  color: #ffffff !important;
+  background: #000000 !important;
+  border: 1px solid #3e3e4a !important;
+  padding: 4px 8px !important;
+  border-radius: 3px !important;
+  text-transform: uppercase !important;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.9) !important;
+}
+
+.id-sync-close {
+  background: transparent !important;
+  border: 1px solid #3e3e4a !important;
+  border-radius: 4px !important;
+  color: #888899 !important;
+  font-size: 13px !important;
+  width: 28px !important;
+  height: 28px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.id-sync-close:hover {
+  background: #22222a !important;
+  border-color: #ffd400 !important;
+  color: #ffd400 !important;
+}
+
+.id-sync-code-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.id-sync-label-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.id-sync-code-label {
+  font: 700 10.5px/1 var(--u-mono, monospace) !important;
+  letter-spacing: 0.08em !important;
+  color: #9999aa !important;
+  text-transform: uppercase !important;
+}
+
+.id-sync-privacy {
+  font: 400 10px/1 var(--u-mono, monospace) !important;
+  color: #666677 !important;
+}
+
+.id-sync-code-chip {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  background: #0d0d10 !important;
+  border: 1.5px solid #2c2c38 !important;
+  border-radius: 6px !important;
+  padding: 10px 14px !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+}
+
+.id-code-mono {
+  font: 700 13.5px/1 var(--u-mono, monospace) !important;
+  color: var(--miku-green, #00f5a0) !important;
+  letter-spacing: 0.09em !important;
+  word-break: break-all !important;
+  text-shadow: 0 0 10px rgba(0, 245, 160, 0.25) !important;
+}
+
+.id-code-copy-btn {
+  background: #24242e !important;
+  border: 1px solid #444455 !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+  font: 800 11px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.05em !important;
+  padding: 6px 12px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 1px 1px 0 #000 !important;
+}
+
+.id-code-copy-btn:hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+
+.id-code-copy-btn.copied {
+  background: var(--miku-green, #00f5a0) !important;
+  color: #000000 !important;
+  border-color: var(--miku-green, #00f5a0) !important;
+  font-weight: 800 !important;
+}
+
+.id-sync-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-top: 4px !important;
+  padding-top: 10px !important;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1) !important;
+}
+
+.id-sync-act-row {
+  display: flex !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.id-sync-act-row > button {
+  flex: 1 1 auto !important;
+}
+
+.id-btn-act {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #18181f !important;
+  border: 1.5px solid #363644 !important;
+  border-radius: 6px !important;
+  color: #dddddd !important;
+  font: 700 11px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.05em !important;
+  padding: 9px 12px !important;
+  cursor: pointer !important;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
+  box-shadow: 2px 2px 0 #000000 !important;
+  text-align: center !important;
+}
+
+.id-btn-act:hover:not(:disabled) {
+  background: #262630 !important;
+  color: #ffffff !important;
+  border-color: #555566 !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 #000000 !important;
+}
+
+.id-btn-act:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 #000000 !important;
+}
+
+.id-btn-act:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+.id-btn-act.warning {
+  border-color: rgba(255, 212, 0, 0.4) !important;
+  color: #ffd400 !important;
+  background: rgba(255, 212, 0, 0.06) !important;
+}
+
+.id-btn-act.warning:hover:not(:disabled) {
+  background: #ffd400 !important;
+  color: #000000 !important;
+  border-color: #ffd400 !important;
+}
+
+.id-sync-danger-row {
+  display: flex !important;
+  width: 100% !important;
+}
+
+.id-sync-danger-row > button {
+  width: 100% !important;
+}
+
+.id-btn-act.danger {
+  color: #ff5566 !important;
+  border-color: rgba(255, 85, 102, 0.35) !important;
+  background: rgba(255, 85, 102, 0.06) !important;
+}
+
+.id-btn-act.danger:hover:not(:disabled) {
+  background: #e60012 !important;
+  color: #ffffff !important;
+  border-color: #e60012 !important;
+}

@@ -71,7 +71,6 @@ export default function App() {
   });
 
   const [islandOpen, setIslandOpen] = useState(false);
-  const [islandTab, setIslandTab] = useState<'decks' | 'sync'>('decks');
   const [pullDist, setPullDist] = useState(0); // rubber-band stretch in pixels
   const [isRepositioning, setIsRepositioning] = useState(false); // dragging across screen
   const [dragX, setDragX] = useState(0);
@@ -174,7 +173,6 @@ export default function App() {
 
       // If dragged enough to open shelf:
       if (didDrag && pulled > 15) {
-        setIslandTab('decks');
         setIslandOpen(true);
         haptic('open');
       }
@@ -194,8 +192,7 @@ export default function App() {
   const handleSyncClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     haptic('open');
-    setIslandTab('sync');
-    setIslandOpen((prev) => !prev || islandTab !== 'sync');
+    setIslandOpen((prev) => !prev);
   };
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
@@ -377,70 +374,8 @@ export default function App() {
         </div>
 
         {islandOpen && (
-          <div className="island-drawer" role="dialog" aria-label="Dynamic Island">
-            <div className="id-tab-switcher" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={islandTab === 'decks'}
-                className={`id-tab-btn ${islandTab === 'decks' ? 'active' : ''}`}
-                onClick={() => {
-                  haptic('select');
-                  setIslandTab('decks');
-                }}
-              >
-                <span>SAVED DECKS</span>
-                {myDecks.length > 0 && <span className="id-tab-badge">{myDecks.length}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={islandTab === 'sync'}
-                className={`id-tab-btn ${islandTab === 'sync' ? 'active' : ''}`}
-                onClick={() => {
-                  haptic('select');
-                  setIslandTab('sync');
-                }}
-              >
-                <span className={`id-miku-dot ${currentCode ? syncSt.status : 'off'}`} aria-hidden="true" />
-                <span>SYNC SETTINGS</span>
-              </button>
-            </div>
-
-            {islandTab === 'decks' ? (
-              myDecks.length > 0 ? (
-                <div className="id-decks" role="group" aria-label="Your saved decks">
-                  {myDecks.map((d) => {
-                    const cCard = d.commander ? cmdrCards.get(norm(d.commander)) : undefined;
-                    const ci = cCard?.ci ?? [];
-                    return (
-                      <button
-                        key={d.id ?? d.name}
-                        type="button"
-                        className="id-deck-card"
-                        onClick={() => {
-                          haptic('select');
-                          setTab('decks');
-                          openDeck(d.name);
-                          setIslandOpen(false);
-                        }}
-                      >
-                        <div className="id-dinfo">
-                          <b className="id-dname">{d.name}</b>
-                          <span className="id-dmeta">{d.commander || 'Commander'} · {d.cards?.length ?? 0} cards</span>
-                        </div>
-                        {ci.length > 0 && <Pips ci={ci} size={18} />}
-                        <span className="id-dtag">OPEN ↗</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="id-empty">No saved decks yet in {nameOf(profile)}.</p>
-              )
-            ) : (
-              <IslandSync onDone={() => setIslandOpen(false)} />
-            )}
+          <div className="island-drawer" role="dialog" aria-label="Dynamic Island Sync">
+            <IslandSync onDone={() => setIslandOpen(false)} />
           </div>
         )}
       </nav>

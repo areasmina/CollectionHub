@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { syncNow } from '../lib/autosync';
 import { changeCode, lastBackup, link, pull, push, turnOff, turnOn, undoPull } from '../lib/sync';
 import { codeLink, prettyCode } from '../lib/synccode';
-import { syncCode, useSyncCode, useSyncState } from '../lib/syncstate';
+import { useSyncCode, useSyncState } from '../lib/syncstate';
 import { haptic } from '../lib/haptics';
 
 type Result = { cards: number; decks: number };
@@ -70,7 +70,26 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
 
   return (
     <div className="id-sync-content" role="region" aria-label="Dynamic Island Sync Settings">
-      {/* Status banner with Hatsune Miku green indicator */}
+      {/* Punk Zine Header */}
+      <div className="id-sync-head">
+        <div className="id-sync-tag-wrap">
+          <span className="id-sync-tag">CLOUD SYNC</span>
+          <span className={`id-miku-dot ${code ? st.status : 'off'}`} aria-hidden="true" />
+        </div>
+        {onDone && (
+          <button
+            type="button"
+            className="id-sync-close"
+            onClick={() => (haptic('tap'), onDone())}
+            aria-label="Close sync menu"
+            title="Close"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Status Card */}
       <div className="id-sync-status-card">
         <div className="id-sync-status-left">
           <span className={`id-miku-dot ${code ? st.status : 'off'}`} aria-hidden="true" />
@@ -89,7 +108,9 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
                 : 'SYNC INACTIVE (DEVICE ONLY)'}
             </b>
             <span className="id-sync-status-sub">
-              {code && st.at ? `Last synced ${new Date(st.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'No cloud sync active'}
+              {code && st.at
+                ? `Last synced ${new Date(st.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                : 'Your cards and decks stay on this device'}
             </span>
           </div>
         </div>
@@ -107,7 +128,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
         )}
       </div>
 
-      {/* Conflict Resolution banner */}
+      {/* Conflict Resolution Banner */}
       {st.status === 'conflict' && (
         <div className="id-sync-conflict-box" role="alert">
           <b>Pick which copy to keep:</b>
@@ -115,7 +136,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
           <div className="id-sync-act-row">
             <button
               type="button"
-              className="id-btn-red"
+              className="id-btn-act danger"
               disabled={busy}
               onClick={() => run(async () => `Kept this device: ${counts(await push({ force: true }))}`)}
             >
@@ -123,10 +144,10 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
             </button>
             <button
               type="button"
-              className="id-btn-white"
+              className="id-btn-act"
               disabled={busy}
               onClick={() =>
-                confirm("Replace binders and decks on this device with the cloud copy? (Undo last pull can restore them)") &&
+                confirm('Replace binders and decks on this device with the cloud copy? (Undo last pull can restore them)') &&
                 run(async () => `Kept cloud copy: ${counts(await pull())}`)
               }
             >
@@ -178,72 +199,84 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
         </div>
       ) : (
         <div className="id-sync-active-box">
-          <label className="id-sync-code-label">YOUR DEVICE SYNC CODE:</label>
-          <div className="id-sync-code-chip" aria-label="Your sync code">
-            <span className="id-code-mono">{prettyCode(code)}</span>
-            <button
-              type="button"
-              className={`id-code-copy-btn ${copied ? 'copied' : ''}`}
-              onClick={copyLink}
-              title="Copy shareable link"
-            >
-              {copied ? '✓ COPIED' : 'COPY LINK'}
-            </button>
+          <div className="id-sync-code-section">
+            <div className="id-sync-label-row">
+              <span className="id-sync-code-label">YOUR DEVICE SYNC CODE</span>
+              <span className="id-sync-privacy">Private · keep safe</span>
+            </div>
+            <div className="id-sync-code-chip" aria-label="Your sync code">
+              <span className="id-code-mono">{prettyCode(code)}</span>
+              <button
+                type="button"
+                className={`id-code-copy-btn ${copied ? 'copied' : ''}`}
+                onClick={copyLink}
+                title="Copy shareable link"
+              >
+                {copied ? 'COPIED' : 'COPY LINK'}
+              </button>
+            </div>
           </div>
 
-          <div className="id-sync-act-grid">
-            {'share' in navigator && (
+          <div className="id-sync-actions">
+            <div className="id-sync-act-row">
               <button
                 type="button"
                 className="id-btn-act"
-                onClick={() => navigator.share({ title: 'DeckMage sync', url: share }).catch(() => {})}
+                disabled={busy}
+                onClick={() =>
+                  confirm('Make a new sync code? The old code stops working on other devices.') &&
+                  run(async () => {
+                    await changeCode();
+                    return 'New code generated. Link other devices with it.';
+                  })
+                }
               >
-                SHARE LINK
+                CHANGE CODE
               </button>
-            )}
-            <button
-              type="button"
-              className="id-btn-act"
-              disabled={busy}
-              onClick={() =>
-                confirm('Make a new sync code? The old code stops working on other devices.') &&
-                run(async () => {
-                  await changeCode();
-                  return 'New code generated. Link other devices with it.';
-                })
-              }
-            >
-              CHANGE CODE
-            </button>
-            <button
-              type="button"
-              className="id-btn-act danger"
-              disabled={busy}
-              onClick={() =>
-                confirm('Turn off sync on this device? Your cards and decks stay here.') &&
-                run(async () => {
-                  turnOff();
-                  return 'Sync is now off on this device.';
-                })
-              }
-            >
-              ✕ TURN OFF SYNC
-            </button>
-          </div>
 
-          {backupAt && (
-            <button
-              type="button"
-              className="id-btn-undo-pull"
-              disabled={busy}
-              onClick={() =>
-                confirm(`Restore binders and decks from before the last pull (${new Date(backupAt).toLocaleString()})?`) &&
-                run(async () => `Restored: ${counts(await undoPull())}`)
-              }
-            >
-              ↶ UNDO LAST PULL ({new Date(backupAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
-            </button>
-          )}
+              {backupAt && (
+                <button
+                  type="button"
+                  className="id-btn-act warning"
+                  disabled={busy}
+                  onClick={() =>
+                    confirm(`Restore binders and decks from before the last pull (${new Date(backupAt).toLocaleString()})?`) &&
+                    run(async () => `Restored: ${counts(await undoPull())}`)
+                  }
+                  title="Restore your data to before the last cloud pull"
+                >
+                  UNDO LAST PULL ({new Date(backupAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                </button>
+              )}
+
+              {'share' in navigator && (
+                <button
+                  type="button"
+                  className="id-btn-act"
+                  onClick={() => navigator.share({ title: 'DeckMage sync', url: share }).catch(() => {})}
+                >
+                  SHARE LINK
+                </button>
+              )}
+            </div>
+
+            <div className="id-sync-danger-row">
+              <button
+                type="button"
+                className="id-btn-act danger"
+                disabled={busy}
+                onClick={() =>
+                  confirm('Turn off sync on this device? Your cards and decks stay here.') &&
+                  run(async () => {
+                    turnOff();
+                    return 'Sync is now off on this device.';
+                  })
+                }
+              >
+                TURN OFF SYNC ON THIS DEVICE
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
