@@ -593,7 +593,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <span className="nm">
                       {c.qty > 1 ? `${c.qty}× ` : ''}
                       {c.name}
-                      {use && <small> · {use.lock ? '🔒 ' : ''}{use.text}</small>}
+                      {use && <small> · {use.lock ? '[LOCKED] ' : ''}{use.text}</small>}
                     </span>
                   </label>
                 </li>
@@ -771,7 +771,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               )}
               {page && kind === 'average' && !forging && (
                 <button type="button" className="u-btn primary forge" onClick={() => (haptic('open'), setManualForge(true))} title="Open The Forge: live role meters and ranked suggestions">
-                  ⚒ FORGE
+                  FORGE
                 </button>
               )}
             </div>

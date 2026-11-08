@@ -330,7 +330,6 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
         <>
           <div className="backdrop menuback" onClick={close} onContextMenu={(e) => (e.preventDefault(), close())} />
           <div ref={ref} className="cardmenu deckmenu" role="menu" aria-label={`${deck.name} options`} style={pos}>
-            <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
             <div className="mh">{deck.name}</div>
             <ul>
               <li>
@@ -345,7 +344,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                     await db.decks.update(deck.id!, { name });
                   })}
                 >
-                  ✎ Rename
+                  <span className="cmenu-main">RENAME</span>
                 </button>
               </li>
               <li>
@@ -359,11 +358,12 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                     scrollTo({ top: 0, behavior: 'smooth' });
                   })}
                 >
-                  ⧉ Duplicate <small>a copy you can change freely</small>
+                  <span className="cmenu-main">DUPLICATE</span>
+                  <small className="cmenu-meta">copy to edit freely</small>
                 </button>
               </li>
               <li className="colourrow">
-                <span className="cl">Deck colour <small>its cards glow in it</small></span>
+                <span className="cl">DECK COLOUR <small>cards glow in it</small></span>
                 <span className="swatches" role="radiogroup" aria-label="Deck colour">
                   {DECK_COLOURS.map(([c, label]) => (
                     <button
@@ -380,23 +380,27 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
               </li>
               <li>
                 <button role="menuitem" onClick={share}>
-                  {copied ? '✓ Copied' : canShare ? '⇪ Share' : '⎘ Copy decklist'} <small>{copied ? 'paste it anywhere' : canShare ? 'send the decklist to a friend' : 'paste into a chat, Moxfield…'}</small>
+                  <span className="cmenu-main">{copied ? 'COPIED TO CLIPBOARD' : canShare ? 'SHARE DECK' : 'COPY DECKLIST'}</span>
+                  <small className="cmenu-meta">{copied ? 'paste anywhere' : canShare ? 'send to friend' : 'Moxfield, chat…'}</small>
                 </button>
               </li>
               <li className="sep" role="separator" />
               <li>
                 <button role="menuitem" onClick={act(() => download(file('txt'), deckText(deck)))}>
-                  ↓ Export for Moxfield <small>.txt · Commander + Deck, foils marked *F*</small>
+                  <span className="cmenu-main">EXPORT FOR MOXFIELD</span>
+                  <small className="cmenu-meta">.txt</small>
                 </button>
               </li>
               <li>
                 <button role="menuitem" onClick={act(() => (navigator.clipboard?.writeText(deckArena(deck)).catch(() => {}), haptic('success')))}>
-                  ⎘ Copy for MTG Arena <small>then Import in Arena's deck builder</small>
+                  <span className="cmenu-main">COPY FOR MTG ARENA</span>
+                  <small className="cmenu-meta">import in Arena</small>
                 </button>
               </li>
               <li>
                 <button role="menuitem" onClick={act(() => download(file('csv'), deckCsv(deck), 'text/csv'))}>
-                  ↓ Export as CSV <small>for spreadsheets</small>
+                  <span className="cmenu-main">EXPORT AS CSV</span>
+                  <small className="cmenu-meta">spreadsheet</small>
                 </button>
               </li>
               <li className="sep" role="separator" />
@@ -411,7 +415,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                     }
                   })}
                 >
-                  ✕ Delete deck
+                  <span className="cmenu-main">DELETE DECK</span>
                 </button>
               </li>
             </ul>
@@ -1037,7 +1041,7 @@ export function Decks(s: Shared) {
               + IMPORT / PASTE
             </button>
             <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-              ⚒ NEW BLANK DECK
+              + NEW BLANK DECK
             </button>
           </div>
         </div>

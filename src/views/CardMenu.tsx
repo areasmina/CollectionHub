@@ -10,7 +10,6 @@ import { openDeck } from '../lib/nav';
 import type { PinSide } from '../lib/pins';
 import { shopUrl } from '../lib/prices';
 import { scryfallUrl } from './shared';
-import { Tape } from './zine';
 
 export type Toast = { text: string; undo?: () => unknown };
 
@@ -106,7 +105,6 @@ export function CardMenu({
     <>
       <div className="backdrop menuback" onClick={onClose} onContextMenu={(e) => (e.preventDefault(), onClose())} />
       <div ref={ref} className="cardmenu" role="menu" aria-label={`${name} options`} style={pos} onContextMenu={(e) => e.preventDefault()} onClick={(e) => e.stopPropagation()}>
-        <Tape style={{ top: -11, left: '42%', width: 70, height: 22, transform: 'rotate(4deg)' }} />
         <div className="mh">{name}</div>
         <ul>
           {onSwap && (

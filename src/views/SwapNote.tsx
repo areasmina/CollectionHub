@@ -57,7 +57,7 @@ function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; mis
           {o.inUse && (
             <span className="inchip" style={o.inUse.colour ? ({ '--dc': o.inUse.colour } as React.CSSProperties) : undefined}>
               <i aria-hidden="true" />
-              {o.inUse.lock && <span aria-label="reserved">🔒</span>}
+              {o.inUse.lock && <span className="lock-tag" aria-label="reserved">[LOCKED] </span>}
               {o.inUse.text}
             </span>
           )}

@@ -392,15 +392,15 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
               </button>
             ))}
           <button role="menuitem" onClick={act(add)}>
-            + New binder
+            + NEW BINDER
           </button>
           <button role="menuitem" onClick={act(rename)}>
-            ✎ Rename
+            RENAME BINDER
           </button>
           <hr />
           {sync && (
             <button role="menuitem" className={sync.alert ? 'alert' : ''} onClick={act(sync.open)}>
-              ⟳ SYNC <small>{sync.label}</small>
+              SYNC <small>{sync.label}</small>
             </button>
           )}
           {hapticsSupported() && (
@@ -415,11 +415,11 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
           )}
           <hr />
           <button role="menuitem" className="danger" disabled={!count} onClick={act(() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile))}>
-            ▲ Reset (empty this binder)
+            RESET (EMPTY BINDER)
           </button>
           {binders.length > 1 && (
             <button role="menuitem" className="danger" onClick={act(remove)}>
-              ✕ Delete this binder
+              DELETE THIS BINDER
             </button>
           )}
         </div>
