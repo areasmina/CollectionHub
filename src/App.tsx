@@ -314,7 +314,9 @@ export default function App() {
           aria-hidden="true"
           style={{
             transform: pullDist > 0
-              ? `scaleY(${1 + pullDist / 38}) scaleX(${1 / Math.sqrt(1 + pullDist / 38)})`
+              ? (dock === 'left' || dock === 'right'
+                  ? `scaleX(${1 + pullDist / 38}) scaleY(${1 / Math.sqrt(1 + pullDist / 38)})`
+                  : `scaleY(${1 + pullDist / 38}) scaleX(${1 / Math.sqrt(1 + pullDist / 38)})`)
               : undefined,
             transformOrigin: dock === 'top' ? 'top center' : dock === 'bottom' ? 'bottom center' : dock === 'left' ? 'left center' : 'right center',
           }}
