@@ -535,14 +535,37 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
   }
   async function remove() {
     const decks = await db.decks.where('profile').equals(profile).count();
-    if (!confirm(`Delete ${name}? Its ${count} card entries${decks ? ` and ${decks} deck${decks === 1 ? '' : 's'}` : ''} go with it. This can't be undone.`)) return;
+    if (!confirm(`Delete ${name}? All ${count} cards will be safely released to Unassigned Cards${decks ? ` and ${decks} deck${decks === 1 ? '' : 's'} will be removed` : ''}.`)) return;
     buzz('warn');
     await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
-      await db.entries.where('profile').equals(profile).delete();
+      // Safely release cards to unassigned rather than deleting physical collection!
+      const binderEntries = await db.entries.where('profile').equals(profile).toArray();
+      const unassignedEntries = await db.entries.where('profile').equals(UNASSIGNED_PROFILE).toArray();
+
+      for (const entry of binderEntries) {
+        const destMatch = unassignedEntries.find((u) => u.cardId === entry.cardId && !!u.foil === !!entry.foil && (u.list ?? '') === (entry.list ?? ''));
+        if (destMatch) {
+          await db.entries.update(destMatch.id!, { qty: destMatch.qty + entry.qty });
+        } else {
+          await db.entries.add({
+            profile: UNASSIGNED_PROFILE,
+            cardId: entry.cardId,
+            name: entry.name,
+            qty: entry.qty,
+            set: entry.set,
+            cn: entry.cn,
+            foil: entry.foil,
+            added: entry.added ?? Date.now(),
+            list: entry.list,
+          });
+        }
+        await db.entries.delete(entry.id!);
+      }
+
       await db.decks.where('profile').equals(profile).delete();
       await db.profiles.delete(profile);
     });
-    onPick?.(binders.find((b) => b.id !== profile)!.id);
+    onPick?.(UNASSIGNED_PROFILE);
   }
   return (
     <div className="bindermenu" ref={box}>

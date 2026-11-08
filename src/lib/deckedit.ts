@@ -33,7 +33,13 @@ export function flipOneCopy(entries: Entry[], name: string, toFoil: boolean): { 
   return { put, del };
 }
 
-const saveDeck = (deck: Deck, cards: Deck['cards']) => db.decks.update(deck.id!, { cards, updated: Date.now() });
+import { saveDeckSnapshot } from './deckhistory';
+
+const saveDeck = (deck: Deck, cards: Deck['cards'], label?: string) => {
+  // Automatically capture snapshot before making modifications
+  saveDeckSnapshot(deck, label);
+  return db.decks.update(deck.id!, { cards, updated: Date.now() });
+};
 
 /** Deck card to foil / non-foil, and one binder copy with it when you own one. */
 export async function setFoil(deck: Deck, profile: number, name: string, foil: boolean) {

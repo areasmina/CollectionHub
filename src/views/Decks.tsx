@@ -36,19 +36,48 @@ import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../
 import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon } from './zine';
 
+import { calculateDeckOwnership } from '../lib/ownership';
+import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
+import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '../lib/drafts';
+
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
   const [tag, setTag] = useState('');
   const tags = deck.tags ?? [];
+  const draftKey = `deck_note_${deck.id}`;
+  const initialNote = getDraftCheckpoint<string>(draftKey) ?? deck.note ?? '';
+  const [noteText, setNoteText] = useState(initialNote);
+
   const addTag = () => {
     const t = tag.trim().toLowerCase().slice(0, 30);
     if (t && !tags.includes(t)) db.decks.update(deck.id!, { tags: [...tags, t] });
     setTag('');
   };
+
+  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNoteText(val);
+    setDraftCheckpoint(draftKey, val);
+  };
+
+  const handleNoteBlur = async () => {
+    if (noteText !== (deck.note ?? '')) {
+      await db.decks.update(deck.id!, { note: noteText });
+    }
+    clearDraftCheckpoint(draftKey);
+  };
+
   return (
     <section className="decknotes" aria-label="Deck note and tags">
       <label className="notebook">
-        <textarea aria-label="Deck note" rows={3} placeholder="game plan, who it's for, what to swap next_" defaultValue={deck.note ?? ''} key={deck.id} onBlur={(e) => e.target.value !== (deck.note ?? '') && db.decks.update(deck.id!, { note: e.target.value })} />
+        <textarea
+          aria-label="Deck note"
+          rows={3}
+          placeholder="game plan, who it's for, what to swap next_"
+          value={noteText}
+          onChange={handleNoteChange}
+          onBlur={handleNoteBlur}
+        />
       </label>
       <div className="tagrow">
         {tags.map((t) => (
@@ -453,6 +482,44 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
               <li>
                 <button
                   role="menuitem"
+                  onClick={act(async () => {
+                    const snap = saveDeckSnapshot(deck, `Manual save (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
+                    if (snap) haptic('success');
+                  })}
+                >
+                  <span className="cmenu-main">CREATE SNAPSHOT</span>
+                  <small className="cmenu-meta">save current deck version</small>
+                </button>
+              </li>
+              {deck.id && getDeckSnapshots(deck.id).length > 0 && (
+                <li>
+                  <button
+                    role="menuitem"
+                    onClick={act(async () => {
+                      const snaps = getDeckSnapshots(deck.id!);
+                      const listStr = snaps
+                        .map((s, i) => `${i + 1}. [${new Date(s.at).toLocaleDateString()} ${new Date(s.at).toLocaleTimeString()}] ${s.label || ''} (${s.cardCount} cards)`)
+                        .slice(0, 8)
+                        .join('\n');
+                      const choice = prompt(`Select snapshot number to restore:\n\n${listStr}\n\nEnter number (1-${Math.min(snaps.length, 8)}):`);
+                      const idx = Number(choice) - 1;
+                      if (!isNaN(idx) && snaps[idx]) {
+                        if (confirm(`Restore "${snaps[idx].label}"? A safety snapshot will be created automatically.`)) {
+                          await restoreDeckSnapshot(deck, snaps[idx]);
+                          haptic('success');
+                        }
+                      }
+                    })}
+                  >
+                    <span className="cmenu-main">RESTORE VERSION...</span>
+                    <small className="cmenu-meta">{getDeckSnapshots(deck.id).length} saved snapshots</small>
+                  </button>
+                </li>
+              )}
+              <li className="sep" role="separator" />
+              <li>
+                <button
+                  role="menuitem"
                   className="danger"
                   onClick={act(async () => {
                     if (confirm(`Delete deck "${deck.name}"?`)) {
@@ -474,6 +541,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
 
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
+  const ownDetails = calculateDeckOwnership(deck.cards, s.mine, new Map([...s.mine, ...s.other]));
   useEffect(() => {
     setBack(onBack);
     return () => void setBack(null);
@@ -779,13 +847,18 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 deck ≈{cad(deckCost)}
               </span>
             )}
-            {sum.missing + sum.other > 0 ? (
+            {ownDetails.missingToBuy > 0 ? (
               <span className="dmiss">
-                {sum.missing + sum.other} missing{pricesIn ? ` ≈${cad(missingCost)}` : ''}
-                {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
+                {ownDetails.missingToBuy} to buy{pricesIn ? ` ≈${cad(missingCost)}` : ''}
+                {ownDetails.ownedElsewhere > 0 ? ` · ${ownDetails.ownedElsewhere} in ${s.otherName}` : ''}
+                {` · ${ownDetails.assignedHere} in this deck`}
+              </span>
+            ) : ownDetails.ownedElsewhere > 0 ? (
+              <span className="dmiss">
+                all owned · {ownDetails.assignedHere} here · {ownDetails.ownedElsewhere} in {s.otherName}
               </span>
             ) : (
-              <span>every card is yours</span>
+              <span>every card is yours ({ownDetails.assignedHere} in this deck)</span>
             )}
           </p>
           <div className="dacts">
