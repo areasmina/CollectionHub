@@ -4,6 +4,7 @@ import { deckColour } from '../lib/deckcolor';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { statusOf } from '../lib/compare';
+import { norm } from '../lib/names';
 import { db, type Card, type Deck } from '../lib/db';
 import { openDeck } from '../lib/nav';
 import { shortText, type Shortfall } from '../lib/copies';
@@ -176,6 +177,34 @@ export function useMenuPress(onMenu?: (x: number, y: number) => void) {
 }
 
 /** A card row: owned normal, missing dimmed with a SWAP button, "in <other binder>" labelled. */
+/** Mana cost rendered as authentic circular MTG mana pips. */
+export function ManaPips({ mana }: { mana?: string }) {
+  if (!mana) return null;
+  const matches = [...mana.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
+  if (!matches.length) return null;
+  return (
+    <span className="manapips" aria-label={`Mana cost: ${mana}`}>
+      {matches.map((p, i) => {
+        const s = p.toLowerCase();
+        let cls = 'generic';
+        if (s === 'w') cls = 'w';
+        else if (s === 'u') cls = 'u';
+        else if (s === 'b') cls = 'b';
+        else if (s === 'r') cls = 'r';
+        else if (s === 'g') cls = 'g';
+        else if (s === 'c') cls = 'c';
+        else if (s.includes('/')) cls = 'hybrid';
+        return (
+          <span key={i} className={`manapip pip-${cls}`} title={p}>
+            {p}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** A card row: owned normal, missing dimmed with a SWAP button, "in <other binder>" labelled. */
 export function CardLine({
   name,
   img,
@@ -209,24 +238,46 @@ export function CardLine({
 }) {
   const st = statusOf(name, s.mine, s.other);
   const press = useMenuPress(onMenu);
+  const ownQty = s.mine.get(norm(name)) ?? 0;
+
   return (
     <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} {...press} {...dragProps(name, drag)}>
       <Thumb src={card?.img ?? img} className={`thumb xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
-        <span className="nm">{name}</span>
-        <span className="note">
-          {card?.mana && `${card.mana} `}
-          {note}
+        <span className="zrow-head">
+          <span className="nm">{name}</span>
+          <ManaPips mana={card?.mana} />
+          {card?.type && <span className="zrow-type">{card.type}</span>}
+        </span>
+        <span className="zrow-sub">
+          {st === 'owned' && (
+            <span className="zrow-owned-badge">
+              <span className="zrow-check">✓</span> OWNED{ownQty > 0 ? <span className="zrow-binder-qty"> · {ownQty} in binder</span> : ''}
+            </span>
+          )}
+          {st === 'missing' && (
+            <span className="zrow-missing-badge">
+              MISSING · NEEDS 1
+            </span>
+          )}
+          {st === 'other' && <span className="tagother">in {s.otherName}</span>}
+          {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
+          {card?.legal === false && <span className="bannedtag" title="Not legal in Commander (Scryfall)">BANNED</span>}
+          {note && <span className="note">{note}</span>}
           {st === 'missing' && <span className="sr">(missing)</span>}
         </span>
-        {(markText ?? marker) && <span className="swapmark">{markText ?? `↔ for ${marker}`}</span>}
-        {st === 'other' && <span className="tagother">in {s.otherName}</span>}
-        {card?.legal === false && <span className="bannedtag" title="Not legal in Commander (Scryfall)">BANNED</span>}
       </span>
       <span className="acts">
+        <PriceLink card={card} tape={name} />
         {onOpen && (
-          <button className={`swapbtn${quiet ? ' quiet' : ''}`} onClick={(e) => (e.stopPropagation(), onOpen())} aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`} title="Swap or pin">
-            {quiet ? '⇄' : '↺ SWAP'}
+          <button
+            className={`swapbtn${quiet ? ' quiet' : ''}`}
+            onClick={(e) => (e.stopPropagation(), onOpen())}
+            aria-label={marker ? `Swap ${name} (in place of ${marker})` : `Swap ${name}`}
+            title="Swap or pin"
+          >
+            <span className="swap-icon">{quiet ? '⇄' : '↺'}</span>
+            <span className="swap-lbl">SWAP</span>
           </button>
         )}
         {onMenu && (
@@ -244,7 +295,6 @@ export function CardLine({
             ⋮
           </button>
         )}
-        <PriceLink card={card} tape={name} />
       </span>
       {children}
     </li>

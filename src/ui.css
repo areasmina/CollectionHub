@@ -5705,3 +5705,319 @@ html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dto
   overflow-x: auto !important;
   scrollbar-width: none !important;
 }
+
+
+/* ==========================================================================
+   Deck Card Detailed List View (.zlist)
+   ========================================================================== */
+ul.zlist:not(.zcompact) {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+ul.zlist:not(.zcompact) > li.zrow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 64px;
+  padding: 8px 14px;
+  background: var(--u-carbon, #121212);
+  border-top: 1px solid var(--u-line, #262626);
+  border-bottom: 1px solid transparent;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+ul.zlist:not(.zcompact) > li.zrow:hover {
+  background: #18181c;
+  border-color: var(--u-line2, #38383e);
+}
+
+ul.zlist:not(.zcompact) > li.zrow.missing {
+  background: rgba(255, 255, 255, 0.015);
+}
+ul.zlist:not(.zcompact) > li.zrow.missing:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Card Thumbnail */
+ul.zlist:not(.zcompact) > li.zrow .thumb {
+  width: 52px;
+  height: 72px;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--u-line2, #3d3d3d);
+  background: #1b1b1e;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.7);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+ul.zlist:not(.zcompact) > li.zrow .thumb:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
+}
+ul.zlist:not(.zcompact) > li.zrow .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Info container */
+ul.zlist:not(.zcompact) > li.zrow .info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* Head row: Name + Mana Pips + Type line */
+ul.zlist:not(.zcompact) > li.zrow .zrow-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+ul.zlist:not(.zcompact) > li.zrow .nm {
+  font: 700 17px/1.1 var(--u-display, 'Anton', sans-serif);
+  color: #ffffff;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mana Pips */
+.manapips {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.manapip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  font: 700 10.5px/1 var(--u-display, 'Anton', sans-serif);
+  letter-spacing: -0.02em;
+  text-align: center;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.manapip.pip-generic {
+  background: #c2bdb4;
+  color: #111;
+  border: 1px solid #75716a;
+}
+.manapip.pip-w {
+  background: #fbf7cb;
+  color: #4b4424;
+  border: 1px solid #bfb77d;
+}
+.manapip.pip-u {
+  background: #0077c8;
+  color: #fff;
+  border: 1px solid #005087;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.manapip.pip-b {
+  background: #232128;
+  color: #d8d2df;
+  border: 1px solid #554e5e;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.manapip.pip-r {
+  background: #d32626;
+  color: #fff;
+  border: 1px solid #8c1414;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.manapip.pip-g {
+  background: #008240;
+  color: #fff;
+  border: 1px solid #004d26;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.manapip.pip-c {
+  background: #9d99a0;
+  color: #111;
+  border: 1px solid #635f66;
+}
+.manapip.pip-hybrid {
+  background: linear-gradient(135deg, #444 50%, #222 50%);
+  color: #fff;
+  border: 1px solid #777;
+  font-size: 8px;
+}
+
+/* Card Type line */
+ul.zlist:not(.zcompact) > li.zrow .zrow-type {
+  font: 400 12px/1 var(--u-mono, monospace);
+  color: var(--u-muted, #9a9a9a);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Subline: Ownership, swapmark, other binder, banned */
+ul.zlist:not(.zcompact) > li.zrow .zrow-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.zrow-owned-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  background: rgba(43, 214, 90, 0.12);
+  border: 1px solid rgba(43, 214, 90, 0.35);
+  color: #2bd65a;
+  font: 600 10.5px var(--u-mono, monospace);
+  letter-spacing: 0.04em;
+}
+.zrow-check {
+  font-weight: 700;
+}
+.zrow-binder-qty {
+  color: #8cebb0;
+  font-weight: 400;
+}
+
+.zrow-missing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  background: rgba(230, 0, 18, 0.12);
+  border: 1px solid rgba(230, 0, 18, 0.4);
+  color: #ff6b77;
+  font: 600 10.5px var(--u-mono, monospace);
+  letter-spacing: 0.04em;
+}
+
+/* Action button cluster (Level horizontal layout) */
+ul.zlist:not(.zcompact) > li.zrow .acts {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  flex-shrink: 0;
+}
+
+/* Price sticker in list */
+ul.zlist:not(.zcompact) > li.zrow .acts .price.tapey {
+  position: static !important;
+  align-self: center !important;
+  transform: none !important;
+  clip-path: none !important;
+  font: 700 12px var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.05em;
+  padding: 4px 8px !important;
+  background: #fff824 !important;
+  color: #0a0a0a !important;
+  border: 1px solid #000 !important;
+  box-shadow: 2px 2px 0 #000 !important;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+ul.zlist:not(.zcompact) > li.zrow .acts .price.tapey:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 #000 !important;
+}
+
+/* Swap button */
+ul.zlist:not(.zcompact) > li.zrow .acts .swapbtn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  font: 700 12px var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--u-line2, #3d3d3d) !important;
+  background: var(--u-carbon, #121212) !important;
+  color: var(--u-text, #f2f2f2) !important;
+  box-shadow: 2px 2px 0 #000 !important;
+  transition: transform 0.1s ease, background 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+ul.zlist:not(.zcompact) > li.zrow .acts .swapbtn:hover {
+  transform: translate(-1px, -1px) !important;
+  border-color: #fff824 !important;
+  color: #fff !important;
+  box-shadow: 3px 3px 0 #000 !important;
+}
+
+/* Missing card swap button: highlighted */
+ul.zlist:not(.zcompact) > li.zrow.missing .acts .swapbtn {
+  background: #fff824 !important;
+  color: #0a0a0a !important;
+  border: 1px solid #000 !important;
+}
+ul.zlist:not(.zcompact) > li.zrow.missing .acts .swapbtn:hover {
+  background: #ffe066 !important;
+}
+
+/* More options button (⋮) */
+ul.zlist:not(.zcompact) > li.zrow .acts .morebtn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  padding: 0 !important;
+  background: var(--u-carbon, #121212) !important;
+  border: 1px solid var(--u-line2, #3d3d3d) !important;
+  color: var(--u-muted, #9a9a9a) !important;
+  font-size: 15px !important;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #000 !important;
+  transition: transform 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
+  transform: translate(-1px, -1px) !important;
+  border-color: #fff !important;
+  color: #fff !important;
+  box-shadow: 3px 3px 0 #000 !important;
+}
+
+@media (max-width: 700px) {
+  ul.zlist:not(.zcompact) > li.zrow {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px 10px;
+  }
+  ul.zlist:not(.zcompact) > li.zrow .thumb {
+    width: 44px;
+    height: 60px;
+  }
+  ul.zlist:not(.zcompact) > li.zrow .acts {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--u-line, #262626);
+  }
+}
