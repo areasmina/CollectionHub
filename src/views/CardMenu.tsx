@@ -97,7 +97,8 @@ export function CardMenu({
   const link = (href: string, text: string) => (
     <li>
       <a href={href} target="_blank" rel="noreferrer" onContextMenu={(e) => e.preventDefault()} onClick={() => (haptic('tap'), onClose())}>
-        {text} ↗
+        <span className="cmenu-main">{text}</span>
+        <span className="cmenu-arr">↗</span>
       </a>
     </li>
   );
@@ -110,26 +111,32 @@ export function CardMenu({
         <ul>
           {onSwap && (
             <li>
-              <button onClick={act(() => (haptic('open'), onSwap()))}>SWAP… <small>· top 3 from your binder, or search</small></button>
+              <button onClick={act(() => (haptic('open'), onSwap()))}>
+                <span className="cmenu-main">SWAP…</span>
+                <small className="cmenu-meta">top 3 or search</small>
+              </button>
             </li>
           )}
           {pin && !isCmdr && (
             <>
               <li>
                 <button disabled={!pin.canIn && pin.side !== 'in'} onClick={act(() => (haptic(pin.side === 'in' ? 'undo' : 'success'), pin.onPin('in')))}>
-                  {pin.side === 'in' ? 'UNPIN (ALWAYS IN)' : 'ALWAYS IN'}
-                  {!pin.canIn && pin.side !== 'in' && <small> · cards you own only</small>}
+                  <span className="cmenu-main">{pin.side === 'in' ? 'UNPIN (ALWAYS IN)' : 'ALWAYS IN'}</span>
+                  {!pin.canIn && pin.side !== 'in' && <small className="cmenu-meta">owned only</small>}
                 </button>
               </li>
               <li>
-                <button onClick={act(() => (haptic(pin.side === 'out' ? 'undo' : 'success'), pin.onPin('out')))}>{pin.side === 'out' ? 'ALLOW CARD (CLEAR NEVER)' : 'NEVER USE'}</button>
+                <button onClick={act(() => (haptic(pin.side === 'out' ? 'undo' : 'success'), pin.onPin('out')))}>
+                  <span className="cmenu-main">{pin.side === 'out' ? 'ALLOW CARD' : 'NEVER USE'}</span>
+                </button>
               </li>
             </>
           )}
           {d && isCmdr && (
             <li>
               <button aria-expanded={picking} onClick={() => (haptic('select'), setPicking(!picking))}>
-                ⇄ Change commander… {picking ? '▲' : '▼'}
+                <span className="cmenu-main">CHANGE COMMANDER…</span>
+                <span className="cmenu-meta">{picking ? '▲' : '▼'}</span>
               </button>
               {picking && (
                 <ul className="sub">
@@ -162,13 +169,17 @@ export function CardMenu({
           )}
           {d && !isCmdr && (
             <li>
-              <button onClick={act(() => (haptic('success'), setCommander(d, name)))}>{d.commander ? `★ Make it the commander (replaces ${d.commander.split(' // ')[0]})` : '★ Set as commander'}</button>
+              <button onClick={act(() => (haptic('success'), setCommander(d, name)))}>
+                <span className="cmenu-main">{d.commander ? 'MAKE COMMANDER' : 'SET AS COMMANDER'}</span>
+                {d.commander && <small className="cmenu-meta">replaces {d.commander.split(' // ')[0]}</small>}
+              </button>
             </li>
           )}
           {others.length > 0 && !isCmdr && (
             <li>
               <button aria-expanded={adding} onClick={() => (haptic('select'), setAdding(!adding))}>
-                ＋ Add to a deck… {adding ? '▲' : '▼'}
+                <span className="cmenu-main">+ ADD TO A DECK…</span>
+                <span className="cmenu-meta">{adding ? '▲' : '▼'}</span>
               </button>
               {adding && (
                 <ul className="sub">
@@ -183,21 +194,21 @@ export function CardMenu({
           )}
           {using.length > 0 && !basic && (
             <li className="using">
-              <small>also in:</small>{' '}
-              {using.map((x, i) => (
-                <span key={x.id}>
-                  {i > 0 && ', '}
-                  <button className="inl" onClick={act(() => (haptic('open'), openDeck(x.name)))}>
+              <span className="using-lead">ALSO IN:</span>
+              <div className="using-pills">
+                {using.map((x) => (
+                  <button key={x.id} className="deck-chip" onClick={act(() => (haptic('open'), openDeck(x.name)))}>
                     {x.name}
                   </button>
-                </span>
-              ))}
+                ))}
+              </div>
             </li>
           )}
           {owned > 0 && (
             <li>
               <button aria-expanded={!!arts} onClick={openArts}>
-                🎨 Change artwork… <small>· the printing you own</small> {arts ? '▲' : '▼'}
+                <span className="cmenu-main">CHANGE ARTWORK…</span>
+                <small className="cmenu-meta">printing {arts ? '▲' : '▼'}</small>
               </button>
               {arts === 'loading' && <p className="small artsload">Loading printings from Scryfall…</p>}
               {arts && arts !== 'loading' && (
@@ -225,8 +236,8 @@ export function CardMenu({
           {d && c && (
             <li>
               <button onClick={act(() => (haptic('success'), setFoil(d, profile, name, !c.foil)))}>
-                {c.foil ? 'Switch to non-foil' : '✦ Switch to foil'}
-                <small>{owned ? ' · your binder copy too' : ' · deck only (not owned)'}</small>
+                <span className="cmenu-main">{c.foil ? 'SWITCH TO NON-FOIL' : 'SWITCH TO FOIL'}</span>
+                <small className="cmenu-meta">{owned ? 'binder copy too' : 'deck only'}</small>
               </button>
             </li>
           )}
@@ -250,7 +261,8 @@ export function CardMenu({
                   .then(() => setTimeout(onClose, 600))
               }
             >
-              {copied ? 'Copied ✓' : 'Copy card name'}
+              <span className="cmenu-main">{copied ? 'COPIED TO CLIPBOARD' : 'COPY CARD NAME'}</span>
+              {copied && <span className="cmenu-meta">✓</span>}
             </button>
           </li>
           {link(shopUrl(name), 'Open in shop')}
@@ -260,7 +272,7 @@ export function CardMenu({
           {d && c && (
             <li>
               <button className="danger" onClick={act(async () => (haptic('warn'), toast({ text: `Removed ${name} from the deck`, undo: await removeFromDeck(d, name) })))}>
-                Remove from deck
+                <span className="cmenu-main">REMOVE FROM DECK</span>
               </button>
             </li>
           )}
@@ -274,7 +286,8 @@ export function CardMenu({
                   toast({ text: `Removed one ${name} from ${binderName}`, undo: await removeOneFromBinder(profile, name, c?.foil) });
                 })}
               >
-                Remove one from binder <small>(you own {owned})</small>
+                <span className="cmenu-main">REMOVE ONE FROM BINDER</span>
+                <small className="cmenu-meta">(you own {owned})</small>
               </button>
             </li>
           )}

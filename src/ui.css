@@ -6651,3 +6651,237 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   margin: 0 !important;
   font-style: italic !important;
 }
+
+/* ==========================================================================
+   ELEVATED CARD CONTEXT MENU (Zine Field Tag Aesthetic, Zero Emojis)
+   ========================================================================== */
+.cardmenu {
+  width: min(340px, calc(100vw - 20px)) !important;
+  padding: 16px 12px 12px !important;
+  background: #faf6ee !important;
+  color: #121216 !important;
+  border: 2px solid #141418 !important;
+  border-radius: 4px !important;
+  box-shadow: 6px 6px 0 var(--u-red, #e60012), 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+  transform: rotate(-0.6deg) !important;
+  animation: drop 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-sizing: border-box !important;
+}
+
+.cardmenu .mh {
+  font-family: var(--u-display, Impact, sans-serif) !important;
+  font-size: 19px !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: #121216 !important;
+  padding: 0 4px 10px !important;
+  border-bottom: 2px dashed rgba(20, 20, 24, 0.3) !important;
+  margin-bottom: 6px !important;
+  word-break: break-word !important;
+}
+
+.cardmenu ul {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.cardmenu li > button,
+.cardmenu li > a {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  min-height: 38px !important;
+  padding: 7px 10px !important;
+  border-radius: 4px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #18181c !important;
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: all 0.12s ease !important;
+}
+
+.cardmenu li > button .cmenu-main,
+.cardmenu li > a .cmenu-main {
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em !important;
+  color: inherit !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.cardmenu li > button .cmenu-meta,
+.cardmenu li > a .cmenu-meta,
+.cardmenu li > button .cmenu-arr,
+.cardmenu li > a .cmenu-arr {
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #6a6a74 !important;
+  margin-left: 8px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.cardmenu li > a .cmenu-arr {
+  font-size: 13px !important;
+  color: var(--u-red, #e60012) !important;
+  font-weight: 800 !important;
+}
+
+/* Hover & Focus state: punchy dark zine inversion with red accent pop */
+.cardmenu li > button:hover,
+.cardmenu li > a:hover,
+.cardmenu li > button:focus-visible,
+.cardmenu li > a:focus-visible {
+  background: #141418 !important;
+  color: #ffffff !important;
+  border-color: #141418 !important;
+  box-shadow: 2px 2px 0 var(--u-red, #e60012) !important;
+  transform: translateX(2px) !important;
+}
+
+.cardmenu li > button:hover .cmenu-meta,
+.cardmenu li > a:hover .cmenu-meta,
+.cardmenu li > button:hover small,
+.cardmenu li > a:hover small {
+  color: #fffa55 !important;
+}
+
+.cardmenu li > a:hover .cmenu-arr {
+  color: #ffffff !important;
+}
+
+/* "also in" deck pills */
+.cardmenu li.using {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding: 8px 10px !important;
+  margin: 4px 0 !important;
+  background: rgba(20, 20, 24, 0.05) !important;
+  border: 1px dashed rgba(20, 20, 24, 0.2) !important;
+  border-radius: 4px !important;
+}
+
+.cardmenu li.using .using-lead {
+  font-family: var(--u-display, Impact, sans-serif) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+  color: #6a6a74 !important;
+}
+
+.cardmenu li.using .using-pills {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
+}
+
+.cardmenu li.using .deck-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  background: #ffffff !important;
+  border: 1px solid #141418 !important;
+  border-radius: 3px !important;
+  color: #141418 !important;
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: 1px 1px 0 #141418 !important;
+  cursor: pointer !important;
+  transition: all 0.12s ease !important;
+}
+
+.cardmenu li.using .deck-chip:hover {
+  background: var(--u-red, #e60012) !important;
+  border-color: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 2px 2px 0 #000000 !important;
+}
+
+/* Submenu / Accordion lists */
+.cardmenu ul.sub {
+  margin: 4px 0 6px 12px !important;
+  padding-left: 8px !important;
+  border-left: 2px dashed rgba(20, 20, 24, 0.25) !important;
+}
+
+.cardmenu .subq {
+  width: 100% !important;
+  height: 32px !important;
+  padding: 4px 8px !important;
+  background: #ffffff !important;
+  border: 1px solid #141418 !important;
+  border-radius: 3px !important;
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 12px !important;
+  margin-bottom: 4px !important;
+}
+
+/* Printings artwork grid */
+.cardmenu .artgrid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+  gap: 6px !important;
+  padding: 6px 0 !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+}
+
+.cardmenu .artgrid button {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 3px !important;
+  background: #ffffff !important;
+  border: 1px solid #141418 !important;
+  border-radius: 3px !important;
+  box-shadow: 1px 1px 0 #141418 !important;
+}
+
+.cardmenu .artgrid button[aria-pressed='true'] {
+  border: 2px solid var(--u-red, #e60012) !important;
+  box-shadow: 2px 2px 0 var(--u-red, #e60012) !important;
+}
+
+/* Danger actions (e.g. Remove from binder/deck) */
+.cardmenu li > button.danger {
+  color: #c90000 !important;
+}
+
+.cardmenu li > button.danger:hover {
+  background: #c90000 !important;
+  color: #ffffff !important;
+  border-color: #c90000 !important;
+  box-shadow: 2px 2px 0 #000000 !important;
+}
+
+.cardmenu li > button.danger:hover .cmenu-meta {
+  color: #ffffff !important;
+}
+
+/* Separator */
+.cardmenu .sep {
+  height: 0 !important;
+  margin: 6px 0 !important;
+  border-top: 1px dashed rgba(20, 20, 24, 0.25) !important;
+}
