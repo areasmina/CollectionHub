@@ -1034,7 +1034,11 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
-  const allTags = [...new Set(decks.flatMap((d) => d.tags ?? []))].filter(Boolean);
+  const deckThemeNames = (d: Deck) => {
+    const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
+    return lead ? commanderThemes(lead).map((t) => t.label) : [];
+  };
+  const allTags = [...new Set(decks.flatMap((d) => [...(d.tags ?? []), ...deckThemeNames(d)]))].filter(Boolean);
 
   const filteredDecks = decks
     .filter((d) => {
@@ -1042,7 +1046,7 @@ export function Decks(s: Shared) {
         const q = dq.toLowerCase().trim();
         const matchName = d.name.toLowerCase().includes(q);
         const matchCmdr = d.commander?.toLowerCase().includes(q);
-        const matchTag = d.tags?.some((t) => t.toLowerCase().includes(q));
+        const matchTag = [...(d.tags ?? []), ...deckThemeNames(d)].some((t) => t.toLowerCase().includes(q));
         if (!matchName && !matchCmdr && !matchTag) return false;
       }
       if (dstatus === 'ready') {
@@ -1055,7 +1059,7 @@ export function Decks(s: Shared) {
         if (d.inactive) return false;
       }
       if (dtag !== 'all') {
-        if (!d.tags?.includes(dtag)) return false;
+        if (!d.tags?.includes(dtag) && !deckThemeNames(d).includes(dtag)) return false;
       }
       return true;
     })
@@ -1204,6 +1208,7 @@ export function Decks(s: Shared) {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
             // No commander set: show the deck's most expensive card instead of a blank tile.
             const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
+            const autoThemes = lead ? commanderThemes(lead) : [];
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
             return (
               <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d) } as React.CSSProperties}>
@@ -1220,9 +1225,23 @@ export function Decks(s: Shared) {
                       <b>{sum.pct}%</b>
                       <Meter pct={sum.pct} label={`${sum.pct}% owned`} />
                     </span>
-                    {d.tags?.length ? (
+                    {(d.tags?.length || autoThemes.length > 0) ? (
                       <span className="dtags" onClick={(e) => e.stopPropagation()}>
-                        {d.tags.map((t) => (
+                        {autoThemes.map((th) => (
+                          <button
+                            key={th.label}
+                            type="button"
+                            className={`themebadge ${dtag === th.label ? 'active' : ''}`}
+                            title={`Theme: ${th.label}. Tap to filter`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDtag(dtag === th.label ? 'all' : th.label);
+                            }}
+                          >
+                            {th.label}
+                          </button>
+                        ))}
+                        {d.tags?.map((t) => (
                           <button
                             key={t}
                             type="button"
