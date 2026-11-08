@@ -767,7 +767,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </small>
               </span>
             </div>
-            <ReadyTiles ready={ready} fit={fit} />
+            <ReadyTiles ready={ready} fit={fit} cardNames={deck.cards.map((c) => c.name)} />
           </div>
         </section>
 

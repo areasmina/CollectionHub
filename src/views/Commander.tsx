@@ -725,7 +725,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 </small>
               </span>
             </div>
-            {ready && <ReadyTiles ready={ready} fit={fit} bracket={bracket} onBracketChange={setBracket} brackets={BRACKETS} />}
+            {ready && <ReadyTiles ready={ready} fit={fit} bracket={bracket} onBracketChange={setBracket} brackets={BRACKETS} cardNames={names} />}
           </div>
         </section>
 

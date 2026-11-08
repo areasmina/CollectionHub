@@ -435,11 +435,14 @@ export function SaltStat({ names }: { names: string[] }) {
   useEffect(() => void saltMap().then(setSalt), []);
   const s = salt && salt.size > 0 ? deckSalt(names, salt) : null;
   if (!s) return null; // unknown salt (loading, or EDHREC's list unreachable): show nothing rather than "…"
+  const level = s.total < 15 ? 'LOW' : s.total < 35 ? 'MED' : s.total < 60 ? 'HIGH' : 'SALTY';
+  const levelClass = s.total < 15 ? 'low' : s.total < 35 ? 'med' : s.total < 60 ? 'high' : 'extreme';
   return (
     <details className="scrap salt">
-      <summary aria-label={`Salt ${s.total.toFixed(1)}: sum of EDHREC salt scores. Show the saltiest cards`}>
+      <summary aria-label={`Salt ${s.total.toFixed(1)} (${level}): sum of EDHREC salt scores. Show the saltiest cards`}>
         <span className="k">SALT</span>
         <span className="amt">{s.total.toFixed(1)}</span>
+        <span className={`salt-badge ${levelClass}`}>{level}</span>
         {s.top.length > 0 && <span className="caret" aria-hidden="true">▾</span>}
       </summary>
       {(

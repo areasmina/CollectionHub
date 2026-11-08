@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BracketFit, Readiness } from '../brain/validate';
 import type { Why } from '../brain/why';
 import { haptic } from '../lib/haptics';
+import { deckSalt, saltMap } from '../lib/edhrec';
 
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
 const VERDICT: Record<Readiness['verdict'], string> = { ready: 'READY', almost: 'ALMOST', 'not ready': 'NOT READY', 'not legal': 'NOT LEGAL' };
@@ -29,15 +30,27 @@ export function ReadyTiles({
   bracket,
   onBracketChange,
   brackets,
+  cardNames,
 }: {
   ready: Readiness;
   fit?: BracketFit;
   bracket?: string;
   onBracketChange?: (b: string) => void;
   brackets?: readonly (readonly [string, string, string?])[] | [string, string, string][];
+  cardNames?: string[];
 }) {
   const r = useOutside();
   const f = useOutside();
+  const sRef = useOutside();
+  const [saltData, setSaltData] = useState<Map<string, number> | null>(null);
+  useEffect(() => {
+    if (cardNames && cardNames.length > 0) void saltMap().then(setSaltData);
+  }, [cardNames?.length]);
+
+  const saltScore = saltData && cardNames && cardNames.length > 0 ? deckSalt(cardNames, saltData) : null;
+  const sTotal = saltScore?.total ?? 0;
+  const sVerdict = sTotal < 15 ? 'LOW SALT' : sTotal < 35 ? 'MODERATE' : sTotal < 60 ? 'HIGH SALT' : 'SUPER SALTY';
+  const sClass = sTotal < 15 ? 's-low' : sTotal < 35 ? 's-med' : sTotal < 60 ? 's-high' : 's-extreme';
   return (
     <div className="vtiles">
       <details className={`vtile ready v-${ready.verdict.replace(' ', '-')}`} ref={r} onToggle={(e) => e.currentTarget.open && haptic('open')}>
@@ -163,6 +176,33 @@ export function ReadyTiles({
                 </ul>
               </div>
             )}
+          </div>
+        </details>
+      )}
+      {saltScore && (
+        <details className={`vtile salt-tile ${sClass}`} ref={sRef} onToggle={(e) => e.currentTarget.open && haptic('open')}>
+          <summary aria-label={`Salt Level: ${sVerdict}, total score ${sTotal.toFixed(1)}`}>
+            <span className="lbl">SALT LEVEL</span>
+            <b>{sVerdict}</b>
+            <small>{sTotal.toFixed(1)} score · {saltScore.top.length} salty</small>
+          </summary>
+          <div className="vpop" role="dialog" aria-label="Salt breakdown">
+            <span className="vsubhead">SALTIEST CARDS:</span>
+            {saltScore.top.length > 0 ? (
+              <ul>
+                {saltScore.top.map((c) => (
+                  <li key={c.name}>
+                    <span>{c.name}</span>
+                    <b>{c.salt.toFixed(2)}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="small" style={{ margin: '6px 0' }}>No cards from EDHREC's salt list.</p>
+            )}
+            <li className="salt-expl">
+              Sum of EDHREC player-voted salt scores (0–4 scale per card). Lower salt means less table groan.
+            </li>
           </div>
         </details>
       )}

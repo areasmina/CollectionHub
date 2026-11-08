@@ -1039,6 +1039,37 @@ main.dpage {
 .vmeta .scrap:is(.salt, .bracket) .amt {
   color: var(--u-text);
 }
+.vmeta .scrap.salt .amt {
+  font-weight: 700;
+  color: #19d3e6 !important;
+  background: rgba(25, 211, 230, 0.12);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.vmeta .scrap.salt .salt-badge {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-left: 4px;
+}
+.vmeta .scrap.salt .salt-badge.low {
+  color: #3ddc5a;
+  background: rgba(61, 220, 90, 0.12);
+}
+.vmeta .scrap.salt .salt-badge.med {
+  color: #ffd400;
+  background: rgba(255, 212, 0, 0.12);
+}
+.vmeta .scrap.salt .salt-badge.high {
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.15);
+}
+.vmeta .scrap.salt .salt-badge.extreme {
+  color: #ff4a4a;
+  background: rgba(255, 74, 74, 0.18);
+}
 .vmeta .scrap:is(.salt, .bracket) .popnote {
   background: var(--u-carbon);
   color: var(--u-text);
@@ -1072,7 +1103,7 @@ main.dpage {
 .vhero .vtiles {
   gap: var(--s2);
   margin: 0;
-  max-width: 420px;
+  max-width: 640px;
 }
 .vhero .vtile > summary {
   min-height: var(--tap);
@@ -1897,8 +1928,8 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 /* Tablet & Desktop: anchor right; Mobile: anchor left */
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
-    right: 0 !important;
-    left: auto !important;
+    left: 0 !important;
+    right: auto !important;
     max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }
@@ -4056,8 +4087,8 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
-    right: 0 !important;
-    left: auto !important;
+    left: 0 !important;
+    right: auto !important;
     width: 520px !important;
     max-width: min(520px, calc(100vw - 24px)) !important;
     padding: 10px 12px !important;
@@ -4891,8 +4922,8 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 /* Tablet & Desktop: anchor right; Mobile: anchor left */
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
-    right: 0 !important;
-    left: auto !important;
+    left: 0 !important;
+    right: auto !important;
     max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }
@@ -8019,3 +8050,46 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   flex: 1;
 }
 
+
+/* Salt Level Tile in ReadyTiles */
+.vtile.salt-tile b {
+  color: #19d3e6;
+}
+.vtile.salt-tile.s-low b {
+  color: #3ddc5a;
+}
+.vtile.salt-tile.s-med b {
+  color: #ffd400;
+}
+.vtile.salt-tile.s-high b {
+  color: #ff9800;
+}
+.vtile.salt-tile.s-extreme b {
+  color: #ff4a4a;
+}
+.vtile.salt-tile .vpop {
+  min-width: 300px;
+}
+.vtile.salt-tile .vpop ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vtile.salt-tile .vpop li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--u-line);
+}
+.vtile.salt-tile .vpop li b {
+  color: #19d3e6;
+  font-family: var(--u-mono);
+}
+.vtile.salt-tile .vpop li.salt-expl {
+  display: block;
+  font-size: 11px;
+  color: var(--u-muted);
+  border-bottom: none;
+  padding-top: 8px;
+}

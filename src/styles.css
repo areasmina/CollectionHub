@@ -6496,9 +6496,9 @@ main {
 .dtools.tbar > .tbmore > .fbody {
   position: absolute;
   z-index: 35;
-  right: -2px;
+  left: 0;
   top: calc(100% + 2px);
-  left: auto;
+  right: auto;
   width: min(420px, calc(100vw - 24px));
   max-height: 70vh;
   overflow: auto;
