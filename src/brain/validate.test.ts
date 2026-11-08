@@ -79,6 +79,26 @@ describe('bracketFit', () => {
     expect(bracketFit(call({ bracket: 2 }), 4).fit).toBe('under');
     expect(bracketFit(call({ bracket: 4 }), 5).fit).toBe('fits');
   });
+  it('handles empty deck (bracket 0) with clear explanation', () => {
+    const empty = bracketFit(call({ bracket: 0 }), 4);
+    expect(empty.est).toBe(0);
+    expect(empty.fit).toBe('under');
+    expect(empty.says).toContain('No bracket yet. Add cards to your deck to calculate its bracket');
+  });
+  it('explains why a deck fits bracket IV or III dynamically', () => {
+    const b4 = bracketFit(call({
+      bracket: 4,
+      gameChangers: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+      combos: [
+        { cards: ['X', 'Y'], early: true, mv: 2, id: '1' },
+        { cards: ['W', 'Z'], early: true, mv: 3, id: '2' },
+      ],
+    }), 4);
+    expect(b4.says).toBe('Fits bracket IV. Driven by 8 Game Changers and 2 early two-card combos.');
+
+    const b3 = bracketFit(call({ bracket: 3, gameChangers: ['Rhystic Study'] }), 3);
+    expect(b3.says).toBe('Fits bracket III. Driven by 1 Game Changer.');
+  });
 });
 
 describe('whyCard', () => {

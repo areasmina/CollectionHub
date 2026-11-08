@@ -29,6 +29,11 @@ describe('roleOf', () => {
 
 describe('bracketOf', () => {
   const gc = new Set(['rhystic study', 'demonic tutor', 'cyclonic rift', 'smothering tithe']);
+  it('returns 0 for empty deck (no cards no bracket)', () => {
+    const empty = bracketOf([], gc);
+    expect(empty.bracket).toBe(0);
+    expect(empty.reasons[0]).toMatch(/empty deck/);
+  });
   it('floors at II and moves up on Game Changers', () => {
     expect(bracketOf([{ name: 'Sol Ring', card: c('Artifact', 'Add {C}{C}') }], gc).bracket).toBe(2);
     expect(bracketOf([{ name: 'Rhystic Study' }], gc).bracket).toBe(3);

@@ -7026,6 +7026,9 @@ main > .chead2 {
 .vtile.f-under b {
   color: #3ddc5a;
 }
+.vtile.f-empty b {
+  color: #888888;
+}
 .vtile.v-almost b {
   color: var(--y, #ffd400);
 }

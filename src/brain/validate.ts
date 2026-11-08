@@ -207,13 +207,47 @@ export function bracketFit(call: BracketCall, aim: number): BracketFit {
     if (call.extraTurns.length >= 3) over.push(`${call.extraTurns.length} extra-turn cards`);
     for (const k of call.combos) if (cap <= 2 || (cap === 3 && k.early)) over.push(`${k.cards.join(' + ')} (${k.early ? 'early ' : ''}two-card combo)`);
   }
-  const fit: BracketFit['fit'] = est > cap ? 'over' : est < cap && aim < 5 ? 'under' : 'fits';
-  const says =
-    fit === 'fits'
-      ? `Fits bracket ${ROMAN[aim]}.`
-      : fit === 'over'
-        ? `Plays like bracket ${ROMAN[est]}, above the ${ROMAN[aim]} you aim for: ${over.slice(0, 4).join(', ')}${over.length > 4 ? '…' : ''}.`
-        : `Fits bracket ${ROMAN[aim]}, and nothing in it goes past ${ROMAN[est]}.`;
+  const fit: BracketFit['fit'] = est === 0 ? 'under' : est > cap ? 'over' : est < cap && aim < 5 ? 'under' : 'fits';
+  let says = '';
+  if (est === 0) {
+    says = 'No bracket yet. Add cards to your deck to calculate its bracket based on Game Changers, two-card combos, and power rules.';
+  } else if (fit === 'over') {
+    const overSummary = over.slice(0, 4).join(', ') + (over.length > 4 ? '…' : '');
+    says = `Plays like bracket ${ROMAN[est]}, above the ${ROMAN[aim]} you aim for: ${overSummary}.`;
+  } else if (fit === 'fits') {
+    if (aim >= 5) {
+      says = `Fits bracket V intent (cards play at bracket ${ROMAN[est] || 'IV'}).`;
+    } else if (est === 4) {
+      const parts = [
+        call.gameChangers.length > 3 ? `${call.gameChangers.length} Game Changers` : call.gameChangers.length ? `${call.gameChangers.length} Game Changer${call.gameChangers.length > 1 ? 's' : ''}` : '',
+        call.combos.some((c) => c.early) ? `${call.combos.filter((c) => c.early).length} early two-card combo${call.combos.filter((c) => c.early).length > 1 ? 's' : ''}` : '',
+        call.mld.length ? 'mass land denial' : '',
+        call.extraTurns.length >= 3 ? 'chained extra turns' : '',
+      ].filter(Boolean);
+      says = `Fits bracket IV.${parts.length ? ` Driven by ${parts.join(' and ')}.` : ''}`;
+    } else if (est === 3) {
+      const parts = [
+        call.gameChangers.length ? `${call.gameChangers.length} Game Changer${call.gameChangers.length > 1 ? 's' : ''}` : '',
+        call.combos.length ? `${call.combos.length} two-card combo${call.combos.length > 1 ? 's' : ''}` : '',
+      ].filter(Boolean);
+      says = `Fits bracket III.${parts.length ? ` Driven by ${parts.join(' and ')}.` : ''}`;
+    } else {
+      says = `Fits bracket ${ROMAN[est] || est}. Core casual power: no Game Changers, mass land denial, or two-card combos.`;
+    }
+  } else {
+    // fit === 'under'
+    if (est === 3) {
+      const parts = [
+        call.gameChangers.length ? `${call.gameChangers.length} Game Changer${call.gameChangers.length > 1 ? 's' : ''}` : '',
+        call.combos.length ? `${call.combos.length} two-card combo${call.combos.length > 1 ? 's' : ''}` : '',
+      ].filter(Boolean);
+      says = `Currently at Bracket III${parts.length ? ` (${parts.join(', ')})` : ''}, below target ${ROMAN[aim]}. Add ${aim >= 4 ? 'more Game Changers or fast combos' : 'upgraded pieces'} to reach ${ROMAN[aim]}.`;
+    } else if (est === 2) {
+      says = `Currently at Bracket II (no Game Changers, mass land denial, or two-card combos). Aiming for ${ROMAN[aim]}.`;
+    } else {
+      says = `Fits bracket ${ROMAN[aim]}, and nothing in it goes past ${ROMAN[est]}.`;
+    }
+  }
   return {
     aim,
     est,

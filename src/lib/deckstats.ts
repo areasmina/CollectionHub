@@ -66,7 +66,7 @@ const EXTRA_TURN = /takes? an extra turn/i;
 export const TARGETS: Record<'lands' | Role, [number, number]> = { lands: [35, 38], ramp: [9, 12], draw: [9, 12], removal: [7, 10], wipes: [2, 4], tutors: [0, 99] };
 
 export interface BracketCall {
-  bracket: 1 | 2 | 3 | 4; // 5 (cEDH) is about intent and is never guessed
+  bracket: 0 | 1 | 2 | 3 | 4; // 0 = empty deck / no bracket; 5 (cEDH) is about intent and is never guessed
   reasons: string[];
   gameChangers: string[];
   mld: string[];
@@ -96,8 +96,21 @@ export function combosIn(names: string[], index: Map<string, Combo[]>): Combo[] 
  * mass land denial, chained extra turns, and two-card combos (from Commander Spellbook): none in brackets I–II, none in
  * the early game in III. Tutors are listed as information only (no longer a bracket rule since Oct 2025).
  * Bracket 1 vs 2 and bracket 5 are about intent, so the floor is 2 and 5 is never given.
+ * An empty deck (0 cards) has no bracket (0).
  */
 export function bracketOf(cards: { name: string; card?: Pick<Card, 'type' | 'text'> }[], gc: Set<string> | null, comboIndex = brainData().combos): BracketCall {
+  if (cards.length === 0) {
+    return {
+      bracket: 0,
+      reasons: ['empty deck: add cards to calculate bracket'],
+      gameChangers: [],
+      mld: [],
+      extraTurns: [],
+      tutors: [],
+      combos: [],
+      combosChecked: !!comboIndex,
+    };
+  }
   const gameChangers = gc ? cards.filter((c) => gc.has(norm(c.name))).map((c) => c.name) : [];
   const mld = cards.filter((c) => c.card && !isLand(c.card.type) && MLD.test(c.card.text)).map((c) => c.name);
   const extraTurns = cards.filter((c) => c.card && EXTRA_TURN.test(c.card.text)).map((c) => c.name);

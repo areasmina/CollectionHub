@@ -65,11 +65,27 @@ export function ReadyTiles({
         </div>
       </details>
       {fit && (
-        <details className={`vtile fit f-${fit.fit}`} ref={f} onToggle={(e) => e.currentTarget.open && haptic('open')}>
+        <details className={`vtile fit f-${fit.fit}${fit.est === 0 ? ' f-empty' : ''}`} ref={f} onToggle={(e) => e.currentTarget.open && haptic('open')}>
           <summary aria-label={`Bracket fit: ${fit.says}`}>
             <span className="lbl">BRACKET FIT</span>
-            <b>{fit.fit === 'over' ? `PLAYS ${ROMAN[fit.est]}` : fit.fit === 'under' ? `FITS ${ROMAN[fit.aim]}` : `FITS ${ROMAN[fit.aim]}`}</b>
-            <small>{fit.fit === 'over' ? `above ${ROMAN[fit.aim]}` : fit.fit === 'under' ? `could play ${ROMAN[fit.est]}` : 'on target'}</small>
+            <b>
+              {fit.est === 0
+                ? 'NO BRACKET'
+                : fit.fit === 'over'
+                  ? `PLAYS ${ROMAN[fit.est]}`
+                  : fit.fit === 'under'
+                    ? `BRACKET ${ROMAN[fit.est]}`
+                    : `FITS ${ROMAN[fit.aim]}`}
+            </b>
+            <small>
+              {fit.est === 0
+                ? 'add cards to calculate'
+                : fit.fit === 'over'
+                  ? `above ${ROMAN[fit.aim]}`
+                  : fit.fit === 'under'
+                    ? `below target (${ROMAN[fit.aim]})`
+                    : 'on target'}
+            </small>
           </summary>
           <div className="vpop" role="dialog" aria-label="Bracket fit">
             {brackets && onBracketChange && (
@@ -113,7 +129,7 @@ export function ReadyTiles({
                 </ul>
               </div>
             )}
-            {fit.reasons && fit.reasons.length > 0 && (
+            {fit.est > 0 && fit.reasons && fit.reasons.length > 0 && (
               <div className="vbracket-sec">
                 <span className="vsubhead">BRACKET {ROMAN[fit.est] || fit.est} SIGNALS:</span>
                 <ul className="vreasons">
@@ -128,13 +144,13 @@ export function ReadyTiles({
                 </ul>
               </div>
             )}
-            {fit.gameChangers && fit.gameChangers.length > 0 && (
+            {fit.est > 0 && fit.gameChangers && fit.gameChangers.length > 0 && (
               <div className="vbracket-sec">
                 <span className="vsubhead">GAME CHANGERS ({fit.gameChangers.length}):</span>
                 <p className="vgc-names">{fit.gameChangers.join(', ')}</p>
               </div>
             )}
-            {fit.combos && fit.combos.length > 0 && (
+            {fit.est > 0 && fit.combos && fit.combos.length > 0 && (
               <div className="vbracket-sec">
                 <span className="vsubhead">TWO-CARD COMBOS ({fit.combos.length}):</span>
                 <ul className="vreasons">

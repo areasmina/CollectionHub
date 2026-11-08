@@ -972,7 +972,7 @@ export function Decks(s: Shared) {
   const bracketsWithScores = decks
     .map((d) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket)
     .filter((b) => b > 0);
-  const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
+  const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce<number>((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
   const [error, setError] = useState('');
 
   const [importOpen, setImportOpen] = useState(false);
