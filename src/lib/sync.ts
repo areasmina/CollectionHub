@@ -140,7 +140,7 @@ export async function pull(code?: string) {
 /** Card and deck fingerprints, the same for this device and the cloud when they hold the same binders and decks. */
 const deckKey = (d: Deck) => `${d.profile}|${d.name}|${d.commander ?? ''}|${d.cards.map((c) => `${c.name}:${c.qty}:${c.foil ? 1 : 0}`).join(',')}`;
 export const fingerprint = (s: Pick<Snapshot, 'entries' | 'decks'>) =>
-  [...s.entries.map((e) => `${e.profile}|${e.cardId}|${e.qty}|${e.foil ? 1 : 0}`)].sort().join('\n') + '\n--\n' + s.decks.map(deckKey).sort().join('\n');
+  [...s.entries.map((e) => `${e.profile}|${e.cardId}|${e.qty}|${e.foil ? 1 : 0}|${e.list ?? ""}`)].sort().join('\n') + '\n--\n' + s.decks.map(deckKey).sort().join('\n');
 export async function sameAsCloud() {
   const [cloud, entries, decks] = await Promise.all([download(), db.entries.toArray(), db.decks.toArray()]);
   const mine = { entries, decks };

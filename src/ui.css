@@ -7848,3 +7848,174 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   font-size: 11px !important;
   color: #88889a !important;
 }
+
+/* =====================================================================================================================
+   COLLECTION: BINDERS, LISTS & SORTING CONTROLS
+   Neo-brutalist raw tape & specimen styling. Zero emojis.
+   ===================================================================================================================== */
+
+.coll-listbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 12px 0 16px;
+  background: #111115;
+  border: 1.5px solid #22222a;
+  border-radius: 4px;
+}
+
+.list-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.list-tab-wrap {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.list-tab {
+  font-family: var(--u-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 5px 10px;
+  background: #18181f;
+  color: #a0a0b0;
+  border: 1px solid #2a2a36;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list-tab:hover {
+  background: #22222c;
+  color: #ffffff;
+  border-color: #3e3e4f;
+}
+
+.list-tab.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.4);
+}
+
+.list-tab .tab-count {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.list-tab.active .tab-count {
+  opacity: 0.85;
+  font-weight: 800;
+}
+
+.list-tab.add-btn {
+  background: transparent;
+  border: 1px dashed #3a3a4c;
+  color: #88889a;
+}
+
+.list-tab.add-btn:hover {
+  background: #181822;
+  border-color: #ff5252;
+  color: #ffffff;
+}
+
+.list-del-btn {
+  margin-left: -2px;
+  padding: 3px 5px;
+  background: transparent;
+  border: none;
+  color: #666677;
+  font-size: 10px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.list-del-btn:hover {
+  background: rgba(230, 0, 18, 0.2);
+  color: #ff5252;
+}
+
+.list-new-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.list-new-inline input {
+  font-family: var(--u-mono, monospace);
+  font-size: 11px;
+  background: #0a0a0d;
+  color: #ffffff;
+  border: 1px solid #3a3a4c;
+  padding: 4px 8px;
+  border-radius: 3px;
+  outline: none;
+  width: 110px;
+}
+
+.list-new-inline input:focus {
+  border-color: #ffffff;
+}
+
+.list-new-inline .u-btn {
+  padding: 3px 8px;
+  font-size: 10px;
+  min-height: 24px;
+}
+
+.coll-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.coll-sort-label {
+  font-family: var(--u-mono, monospace);
+  font-size: 11px;
+  color: #777788;
+  letter-spacing: 0.05em;
+}
+
+.coll-sort-select {
+  font-family: var(--u-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  background: #18181f;
+  color: #ffffff;
+  border: 1px solid #2e2e3d;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+}
+
+.coll-sort-select:focus {
+  border-color: #ffffff;
+}
+
+/* Card Menu Submenus for Move To Binder & Move To List */
+.cardmenu .newlistrow {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 10px !important;
+}
+
+.cardmenu .newlistrow input {
+  flex: 1;
+}
+

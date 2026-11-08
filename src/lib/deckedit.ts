@@ -2,6 +2,18 @@ import { db, type Card, type Deck, type Entry } from './db';
 import { norm } from './names';
 import { noPins, togglePin, type PinSide } from './pins';
 
+/** Profile ID designated for Loose / Unassigned Cards */
+export const UNASSIGNED_PROFILE = 0;
+export const UNASSIGNED_NAME = 'Unassigned Cards';
+
+/** Ensures the Unassigned Cards binder profile exists in IndexedDB */
+export async function ensureUnassignedProfile() {
+  const p = await db.profiles.get(UNASSIGNED_PROFILE);
+  if (!p) {
+    await db.profiles.put({ id: UNASSIGNED_PROFILE, name: UNASSIGNED_NAME });
+  }
+}
+
 /**
  * Moves one owned copy of a card to the other finish (foil <-> non-foil), so the binder matches the deck.
  * Returns the entries to save and the ids to delete; nothing when no copy has the other finish.
@@ -93,4 +105,124 @@ export async function setPrinting(profile: number, name: string, card: Card, set
   await db.cards.put(card);
   await db.entries.bulkPut(rows.map((e) => ({ ...e, cardId: card.id, set, cn })));
   return async () => void (await db.entries.bulkPut(rows));
+}
+
+/** Moves one or all copies of a card to another binder (profile). Returns an undo. */
+export async function moveCardToBinder(fromProfile: number, toProfile: number, name: string, foil?: boolean, all = false) {
+  const k = norm(name);
+  const own = (await db.entries.where('profile').equals(fromProfile).toArray()).filter((e) => norm(e.name) === k);
+  const target = own.find((x) => foil === undefined || !!x.foil === !!foil) ?? own[0];
+  if (!target) return () => Promise.resolve();
+
+  const moveQty = all ? target.qty : 1;
+  const beforeSource = { ...target };
+
+  // Check destination binder
+  const destOwn = (await db.entries.where('profile').equals(toProfile).toArray()).filter((e) => norm(e.name) === k);
+  const destMatch = destOwn.find((x) => x.cardId === target.cardId && !!x.foil === !!target.foil && (x.list ?? '') === (target.list ?? ''));
+  const beforeDest = destMatch ? { ...destMatch } : null;
+
+  await db.transaction('rw', db.entries, async () => {
+    if (target.qty <= moveQty) {
+      await db.entries.delete(target.id!);
+    } else {
+      await db.entries.update(target.id!, { qty: target.qty - moveQty });
+    }
+
+    if (destMatch) {
+      await db.entries.update(destMatch.id!, { qty: destMatch.qty + moveQty });
+    } else {
+      await db.entries.add({
+        profile: toProfile,
+        cardId: target.cardId,
+        name: target.name,
+        qty: moveQty,
+        set: target.set,
+        cn: target.cn,
+        foil: target.foil,
+        added: Date.now(),
+        list: target.list,
+      });
+    }
+  });
+
+  return async () => {
+    await db.transaction('rw', db.entries, async () => {
+      // restore source
+      await db.entries.put(beforeSource);
+      // restore dest
+      if (beforeDest) {
+        await db.entries.put(beforeDest);
+      } else if (destMatch) {
+        await db.entries.delete(destMatch.id!);
+      } else {
+        const addedEntry = (await db.entries.where('profile').equals(toProfile).toArray())
+          .find((x) => x.cardId === target.cardId && !!x.foil === !!target.foil && (x.list ?? '') === (target.list ?? ''));
+        if (addedEntry) await db.entries.delete(addedEntry.id!);
+      }
+    });
+  };
+}
+
+/** Assigns one or all copies of a card in a binder to a sub-list (or null/'none' for unlisted). Returns an undo. */
+export async function assignCardToList(profile: number, name: string, listName: string | null, foil?: boolean) {
+  const k = norm(name);
+  const own = (await db.entries.where('profile').equals(profile).toArray()).filter((e) => norm(e.name) === k);
+  const target = own.find((x) => foil === undefined || !!x.foil === !!foil) ?? own[0];
+  if (!target) return () => Promise.resolve();
+
+  const prevList = target.list ?? null;
+  const targetList = listName ? listName.trim() : undefined;
+  if ((target.list ?? undefined) === targetList) return () => Promise.resolve();
+
+  // Check if an entry with target list already exists
+  const existing = own.find((x) => x.cardId === target.cardId && !!x.foil === !!target.foil && (x.list ?? undefined) === targetList && x.id !== target.id);
+
+  const beforeTarget = { ...target };
+  const beforeExisting = existing ? { ...existing } : null;
+
+  await db.transaction('rw', db.entries, async () => {
+    if (existing) {
+      await db.entries.update(existing.id!, { qty: existing.qty + target.qty });
+      await db.entries.delete(target.id!);
+    } else {
+      await db.entries.update(target.id!, { list: targetList });
+    }
+  });
+
+  return async () => {
+    await db.transaction('rw', db.entries, async () => {
+      await db.entries.put(beforeTarget);
+      if (beforeExisting) {
+        await db.entries.put(beforeExisting);
+      }
+    });
+  };
+}
+
+/** Adds or removes a custom list name in the profile. */
+export async function manageBinderLists(profile: number, action: 'add' | 'remove', listName: string) {
+  const clean = listName.trim();
+  if (!clean) return;
+  const p = await db.profiles.get(profile);
+  if (!p) return;
+  const current = p.lists ?? [];
+  let updated: string[];
+  if (action === 'add') {
+    if (current.includes(clean)) return;
+    updated = [...current, clean];
+  } else {
+    updated = current.filter((l) => l !== clean);
+    // When removing a list, reset cards on that list to unassigned list
+    const entries = await db.entries.where('profile').equals(profile).toArray();
+    const toReset = entries.filter((e) => e.list === clean);
+    if (toReset.length) {
+      await db.transaction('rw', db.entries, async () => {
+        for (const e of toReset) {
+          await db.entries.update(e.id!, { list: undefined });
+        }
+      });
+    }
+  }
+  await db.profiles.update(profile, { lists: updated });
 }

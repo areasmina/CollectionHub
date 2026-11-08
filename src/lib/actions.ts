@@ -11,7 +11,7 @@ export interface ImportResult {
   failed?: Row[]; // not looked up: Scryfall stopped answering (try again later)
 }
 
-const entryKey = (e: { cardId: string; set?: string; cn?: string; foil?: boolean }) => [e.cardId, e.set ?? '', e.cn ?? '', e.foil ? 'f' : ''].join('|');
+const entryKey = (e: { cardId: string; set?: string; cn?: string; foil?: boolean; list?: string }) => [e.cardId, e.set ?? '', e.cn ?? '', e.foil ? 'f' : '', e.list ?? ''].join('|'); const _oldEntryKey = (e: any) => [e.cardId, e.set ?? '', e.cn ?? '', e.foil ? 'f' : ''].join('|');
 
 export async function importCollection(profile: number, text: string, replace: boolean, onProgress: (done: number, total: number) => void): Promise<ImportResult> {
   const parsed = parseImport(text);

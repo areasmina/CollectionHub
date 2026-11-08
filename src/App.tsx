@@ -15,6 +15,7 @@ import { PreviewLayer } from './views/shared';
 import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
+import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
 const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
@@ -284,7 +285,10 @@ export default function App() {
   const counts = (p: number) => ownedMap(entries.filter((e) => e.profile === p && !illegal.has(e.cardId)));
   const mine = useMemo(() => counts(profile), [entries, profile, illegal]);
   const theirs = useMemo(() => counts(other), [entries, other, illegal]);
-  const nameOf = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Binder ${id}`;
+  const nameOf = (id: number) => {
+    if (id === UNASSIGNED_PROFILE) return UNASSIGNED_NAME;
+    return profiles.find((p) => p.id === id)?.name ?? `Binder ${id}`;
+  };
   useEffect(() => void (document.documentElement.dataset.theme = theme), []);
   useEffect(() => store.set('ch:tab', tab), [tab]);
   useEffect(() => onOpenDeck(() => (setTab('decks'), window.scrollTo(0, 0))), []);
@@ -448,7 +452,10 @@ export default function App() {
             profile={profile}
             name={nameOf(profile)}
             s={shared}
-            binders={profiles.map((p) => ({ id: p.id, name: p.name })).sort((a, b) => a.id - b.id)}
+            binders={[
+              ...(!profiles.some((p) => p.id === UNASSIGNED_PROFILE) ? [{ id: UNASSIGNED_PROFILE, name: UNASSIGNED_NAME }] : []),
+              ...profiles.map((p) => ({ id: p.id, name: p.name })),
+            ].sort((a, b) => a.id - b.id)}
             onPick={(id) => (haptic('select'), setProfile(id))}
             sync={{ label: SYNC_LABEL[syncSt.status], alert: syncSt.status === 'conflict', open: () => (haptic('open'), setSync(true)) }}
           />

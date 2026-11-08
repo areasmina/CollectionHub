@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BASICS } from '../lib/compare';
 import { db, type Deck } from '../lib/db';
-import { addToDeck, changeQty, removeFromDeck, removeOneFromBinder, setCommander, setFoil, setPrinting } from '../lib/deckedit';
+import { addToDeck, assignCardToList, changeQty, manageBinderLists, moveCardToBinder, removeFromDeck, removeOneFromBinder, setCommander, setFoil, setPrinting } from '../lib/deckedit';
 import { printingsOf } from '../lib/scryfall';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
@@ -46,15 +46,22 @@ export function CardMenu({
   const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).toArray(), [profile]) ?? [];
   const using = decks.filter((x) => x.id !== d?.id && x.cards.some((y) => norm(y.name) === norm(name)));
   const others = decks.filter((x) => x.id !== d?.id && !x.cards.some((y) => norm(y.name) === norm(name)));
+  const allBinders = useLiveQuery(() => db.profiles.toArray()) ?? [];
+  const currProf = useLiveQuery(() => db.profiles.get(profile), [profile]);
+  const binderLists = currProf?.lists ?? [];
   const ref = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [movingBinder, setMovingBinder] = useState(false);
+  const [movingList, setMovingList] = useState(false);
+  const [newListName, setNewListName] = useState('');
+  const [addingList, setAddingList] = useState(false);
   // Keep the menu on screen: open left / up near the right / bottom edge.
   const [pos, setPos] = useState({ left: at.x, top: at.y });
   useLayoutEffect(() => {
     const r = ref.current!.getBoundingClientRect();
     setPos({ left: Math.max(16, Math.min(at.x, innerWidth - r.width - 16)), top: Math.max(8, Math.min(at.y, innerHeight - r.height - 8)) });
-  }, [at.x, at.y, adding]);
+  }, [at.x, at.y, adding, movingBinder, movingList]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     addEventListener('keydown', key);
@@ -201,6 +208,142 @@ export function CardMenu({
                 ))}
               </div>
             </li>
+          )}
+          {owned > 0 && (
+            <>
+              <li>
+                <button aria-expanded={movingBinder} onClick={() => (haptic('select'), setMovingBinder(!movingBinder))}>
+                  <span className="cmenu-main">MOVE TO BINDER…</span>
+                  <span className="cmenu-meta">{movingBinder ? '▲' : '▼'}</span>
+                </button>
+                {movingBinder && (
+                  <ul className="sub">
+                    {/* Unassigned Cards option if not currently on profile 0 */}
+                    {profile !== 0 && (
+                      <li>
+                        <button
+                          onClick={act(async () => {
+                            haptic('success');
+                            const undo = await moveCardToBinder(profile, 0, name, c?.foil, false);
+                            toast({ text: `Moved one ${name} to Unassigned Cards`, undo });
+                          })}
+                        >
+                          Unassigned Cards <small>· unassigned</small>
+                        </button>
+                      </li>
+                    )}
+                    {allBinders
+                      .filter((b) => b.id !== profile && b.id !== 0)
+                      .map((b) => (
+                        <li key={b.id}>
+                          <button
+                            onClick={act(async () => {
+                              haptic('success');
+                              const undo = await moveCardToBinder(profile, b.id, name, c?.foil, false);
+                              toast({ text: `Moved one ${name} to ${b.name}`, undo });
+                            })}
+                          >
+                            {b.name}
+                          </button>
+                        </li>
+                      ))}
+                    {allBinders.filter((b) => b.id !== profile).length === 0 && profile === 0 && (
+                      <li>
+                        <small>No other binder available.</small>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </li>
+
+              <li>
+                <button aria-expanded={movingList} onClick={() => (haptic('select'), setMovingList(!movingList))}>
+                  <span className="cmenu-main">MOVE TO LIST…</span>
+                  <span className="cmenu-meta">{movingList ? '▲' : '▼'}</span>
+                </button>
+                {movingList && (
+                  <ul className="sub">
+                    <li>
+                      <button
+                        onClick={act(async () => {
+                          haptic('success');
+                          const undo = await assignCardToList(profile, name, null, c?.foil);
+                          toast({ text: `${name}: moved to Unlisted`, undo });
+                        })}
+                      >
+                        NO LIST (UNLISTED)
+                      </button>
+                    </li>
+                    {binderLists.map((l) => (
+                      <li key={l}>
+                        <button
+                          onClick={act(async () => {
+                            haptic('success');
+                            const undo = await assignCardToList(profile, name, l, c?.foil);
+                            toast({ text: `${name}: assigned to ${l}`, undo });
+                          })}
+                        >
+                          {l}
+                        </button>
+                      </li>
+                    ))}
+                    {!addingList ? (
+                      <li>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAddingList(true);
+                          }}
+                        >
+                          + CREATE NEW LIST…
+                        </button>
+                      </li>
+                    ) : (
+                      <li className="newlistrow" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          className="subq"
+                          value={newListName}
+                          onChange={(e) => setNewListName(e.target.value)}
+                          placeholder="List name…"
+                          autoFocus
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter' && newListName.trim()) {
+                              e.preventDefault();
+                              const trimmed = newListName.trim();
+                              await manageBinderLists(profile, 'add', trimmed);
+                              haptic('success');
+                              const undo = await assignCardToList(profile, name, trimmed, c?.foil);
+                              toast({ text: `${name}: moved to new list ${trimmed}`, undo });
+                              onClose();
+                            } else if (e.key === 'Escape') {
+                              setAddingList(false);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="u-btn primary"
+                          style={{ minHeight: '30px', padding: '0 8px', fontSize: '12px' }}
+                          disabled={!newListName.trim()}
+                          onClick={async () => {
+                            const trimmed = newListName.trim();
+                            if (!trimmed) return;
+                            await manageBinderLists(profile, 'add', trimmed);
+                            haptic('success');
+                            const undo = await assignCardToList(profile, name, trimmed, c?.foil);
+                            toast({ text: `${name}: moved to new list ${trimmed}`, undo });
+                            onClose();
+                          }}
+                        >
+                          SAVE
+                        </button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </li>
+            </>
           )}
           {owned > 0 && (
             <li>

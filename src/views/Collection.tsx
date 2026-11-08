@@ -18,6 +18,7 @@ import { cardsByIds } from '../lib/scryfall';
 import { snapshot } from '../lib/pricewatch';
 import { priced, priceSum, Progress } from './shared';
 import { Doodles, Title } from './zine';
+import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 
 export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
   return (
@@ -105,6 +106,13 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [limit, setLimit] = useState(100);
+  const [activeList, setActiveList] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'name-asc' | 'name-desc' | 'price-desc' | 'mv-asc' | 'added-desc'>('name-asc');
+  const [addingListInline, setAddingListInline] = useState(false);
+  const [newListNameInline, setNewListNameInline] = useState('');
+
+  const currentProf = useLiveQuery(() => db.profiles.get(profile), [profile]);
+  const customLists = currentProf?.lists ?? [];
 
   async function run(input: string, replace: boolean) {
     if (replace && entries.length && !confirm(`Replace all ${entries.length} entries in ${name}?`)) return;
@@ -159,8 +167,34 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         .then((m) => snapshot(entries, m))
         .catch(() => {});
   }, [entries.length]);
+  // Filter by active list tab: 'all' = everything, 'unlisted' = no list tag, else specific list name
+  const listFiltered = entries.filter((e) => {
+    if (activeList === 'all') return true;
+    if (activeList === 'unlisted') return !e.list;
+    return e.list === activeList;
+  });
+
+  // Sort according to chosen sortOrder
+  const sorted = [...listFiltered].sort((a, b) => {
+    if (sortOrder === 'name-desc') return b.name.localeCompare(a.name);
+    if (sortOrder === 'price-desc') {
+      const pa = Number(priced(cards.get(a.cardId), a.foil)?.usd ?? 0);
+      const pb = Number(priced(cards.get(b.cardId), b.foil)?.usd ?? 0);
+      return pb - pa || a.name.localeCompare(b.name);
+    }
+    if (sortOrder === 'mv-asc') {
+      const ca = cards.get(a.cardId)?.cmc ?? 0;
+      const cb = cards.get(b.cardId)?.cmc ?? 0;
+      return ca - cb || a.name.localeCompare(b.name);
+    }
+    if (sortOrder === 'added-desc') {
+      return (b.added ?? 0) - (a.added ?? 0) || a.name.localeCompare(b.name);
+    }
+    return a.name.localeCompare(b.name);
+  });
+
   // name or rules text (Oracle + reminder text) or type line
-  const shown = searchByText(entries, q, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
+  const shown = searchByText(sorted, q, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
@@ -314,6 +348,135 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         </p>
       )}
 
+      {/* Binders and Lists Ribbon */}
+      <section className="coll-listbar" aria-label="Binder lists navigation">
+        <div className="list-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeList === 'all'}
+            className={`list-tab${activeList === 'all' ? ' active' : ''}`}
+            onClick={() => (buzz('select'), setActiveList('all'))}
+          >
+            ALL <span className="tab-count">{entries.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeList === 'unlisted'}
+            className={`list-tab${activeList === 'unlisted' ? ' active' : ''}`}
+            onClick={() => (buzz('select'), setActiveList('unlisted'))}
+          >
+            UNLISTED <span className="tab-count">{entries.filter((e) => !e.list).length}</span>
+          </button>
+          {customLists.map((l) => {
+            const count = entries.filter((e) => e.list === l).length;
+            return (
+              <span key={l} className="list-tab-wrap">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeList === l}
+                  className={`list-tab${activeList === l ? ' active' : ''}`}
+                  onClick={() => (buzz('select'), setActiveList(l))}
+                >
+                  {l.toUpperCase()} <span className="tab-count">{count}</span>
+                </button>
+                <button
+                  type="button"
+                  className="list-del-btn"
+                  title={`Delete list ${l}`}
+                  aria-label={`Delete list ${l}`}
+                  onClick={async (ev) => {
+                    ev.stopPropagation();
+                    if (!confirm(`Delete list "${l}"? Cards on this list will become unlisted.`)) return;
+                    buzz('warn');
+                    if (activeList === l) setActiveList('all');
+                    await manageBinderLists(profile, 'remove', l);
+                  }}
+                >
+                  ✕
+                </button>
+              </span>
+            );
+          })}
+          {!addingListInline ? (
+            <button
+              type="button"
+              className="list-tab add-btn"
+              onClick={() => {
+                buzz('open');
+                setAddingListInline(true);
+              }}
+            >
+              + NEW LIST
+            </button>
+          ) : (
+            <span className="list-new-inline">
+              <input
+                type="text"
+                value={newListNameInline}
+                onChange={(e) => setNewListNameInline(e.target.value)}
+                placeholder="New list name…"
+                autoFocus
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter' && newListNameInline.trim()) {
+                    e.preventDefault();
+                    const trimmed = newListNameInline.trim();
+                    await manageBinderLists(profile, 'add', trimmed);
+                    buzz('success');
+                    setActiveList(trimmed);
+                    setNewListNameInline('');
+                    setAddingListInline(false);
+                  } else if (e.key === 'Escape') {
+                    setAddingListInline(false);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="u-btn primary"
+                disabled={!newListNameInline.trim()}
+                onClick={async () => {
+                  const trimmed = newListNameInline.trim();
+                  if (!trimmed) return;
+                  await manageBinderLists(profile, 'add', trimmed);
+                  buzz('success');
+                  setActiveList(trimmed);
+                  setNewListNameInline('');
+                  setAddingListInline(false);
+                }}
+              >
+                ADD
+              </button>
+              <button type="button" className="u-btn ghost" onClick={() => setAddingListInline(false)}>
+                ✕
+              </button>
+            </span>
+          )}
+        </div>
+
+        {/* Sort picker */}
+        <div className="coll-sort-wrap">
+          <label htmlFor="coll-sort-select" className="coll-sort-label">ORDER:</label>
+          <select
+            id="coll-sort-select"
+            className="coll-sort-select"
+            value={sortOrder}
+            onChange={(e) => {
+              buzz('select');
+              setSortOrder(e.target.value as any);
+            }}
+          >
+            <option value="name-asc">NAME (A-Z)</option>
+            <option value="name-desc">NAME (Z-A)</option>
+            <option value="price-desc">PRICE (HIGH-LOW)</option>
+            <option value="mv-asc">MANA VALUE (LOW-HIGH)</option>
+            <option value="added-desc">RECENTLY ADDED</option>
+          </select>
+        </div>
+      </section>
+
       <section>
         <CardsView
           entries={shown}
@@ -392,13 +555,19 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
       </button>
       {open && (
         <div className="bmenu" role="menu" aria-label="Binders">
-          {binders.length > 1 &&
-            binders.map((b) => (
-              <button key={b.id} role="menuitemradio" aria-checked={b.id === profile} onClick={act(() => b.id !== profile && onPick?.(b.id))}>
-                {b.id === profile ? '● ' : '○ '}
-                {b.name}
-              </button>
-            ))}
+          {/* Unassigned Cards option if not already in binders list */}
+          {!binders.some((b) => b.id === UNASSIGNED_PROFILE) && (
+            <button role="menuitemradio" aria-checked={profile === UNASSIGNED_PROFILE} onClick={act(() => profile !== UNASSIGNED_PROFILE && onPick?.(UNASSIGNED_PROFILE))}>
+              {profile === UNASSIGNED_PROFILE ? '● ' : '○ '}
+              {UNASSIGNED_NAME}
+            </button>
+          )}
+          {binders.map((b) => (
+            <button key={b.id} role="menuitemradio" aria-checked={b.id === profile} onClick={act(() => b.id !== profile && onPick?.(b.id))}>
+              {b.id === profile ? '● ' : '○ '}
+              {b.name}
+            </button>
+          ))}
           <button role="menuitem" onClick={act(add)}>
             + NEW BINDER
           </button>
@@ -425,7 +594,7 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
           <button role="menuitem" className="danger" disabled={!count} onClick={act(() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile))}>
             RESET (EMPTY BINDER)
           </button>
-          {binders.length > 1 && (
+          {binders.length > 1 && profile !== UNASSIGNED_PROFILE && (
             <button role="menuitem" className="danger" onClick={act(remove)}>
               DELETE THIS BINDER
             </button>

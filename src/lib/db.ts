@@ -33,6 +33,7 @@ export interface Entry {
   cn?: string;
   foil?: boolean;
   added?: number; // first seen (ManaBox 'Added', else import time), ms
+  list?: string; // custom list tag inside binder (e.g. 'Trade', 'Commanders')
 }
 export interface DeckCard {
   name: string;
@@ -73,6 +74,7 @@ export interface Profile {
     wild?: Record<string, { off?: boolean; roll?: number }>; // per commander: WILDCARD off, reroll count
     taste?: import('../brain/taste').TasteEvent[];
   };
+  lists?: string[]; // user created custom lists inside this binder
 }
 export interface CachedPage {
   path: string;
