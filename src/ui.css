@@ -5202,7 +5202,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 /* Paper appraisal receipt slip */
 .coll .slip {
   position: relative !important;
-  flex: 2 1 300px !important;
+  flex: 2 1 340px !important;
   background: var(--white, #ffffff) !important;
   color: var(--ink, #0a0a0a) !important;
   padding: 12px 22px 10px 18px !important;
@@ -5222,6 +5222,70 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
     margin-top: 14px !important;
     margin-left: 0 !important;
   }
+}
+
+.coll .slip-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+}
+
+.coll .slip-val {
+  flex: 1 1 auto !important;
+  min-width: 180px !important;
+}
+
+.coll .slip-acts {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  z-index: 3 !important;
+}
+
+.coll .slip-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: var(--an, "Anton", sans-serif) !important;
+  font-size: 15px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  padding: 6px 14px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0 #000000 !important;
+  line-height: 1.2 !important;
+}
+
+.coll .slip-btn.deck {
+  background: #ffffff !important;
+  color: #0a0a0a !important;
+}
+
+.coll .slip-btn.deck:hover {
+  background: #f0ede6 !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 #000000 !important;
+}
+
+.coll .slip-btn.import {
+  background: var(--accent, #e60012) !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+.coll .slip-btn.import:hover {
+  background: #ff1a2b !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0 #000000 !important;
+}
+
+.coll .slip-btn:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0 #000000 !important;
 }
 
 .coll .slip b {

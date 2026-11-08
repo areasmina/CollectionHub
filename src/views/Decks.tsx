@@ -306,9 +306,17 @@ function DeckPanel({ deck, st, read, meters }: { deck: Deck; st: DeckStats; read
 function DeckTile({ onClick, onMenu, label, children }: { onClick: () => void; onMenu: (x: number, y: number) => void; label: string; children: ReactNode }) {
   const press = useMenuPress(onMenu);
   return (
-    <button className="dcard ccard hasmenu" onClick={onClick} {...press} aria-label={`${label}: open (right-click or hold for options)`}>
+    <div
+      role="button"
+      tabIndex={0}
+      className="dcard ccard hasmenu"
+      onClick={onClick}
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick())}
+      {...press}
+      aria-label={`${label}: open (right-click or hold for options)`}
+    >
       {children}
-    </button>
+    </div>
   );
 }
 
@@ -1302,32 +1310,48 @@ export function Decks(s: Shared) {
                     {(d.tags?.length || autoThemes.length > 0) ? (
                       <span className="dtags" onClick={(e) => e.stopPropagation()}>
                         {autoThemes.map((th) => (
-                          <button
+                          <span
                             key={th.label}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                             className={`themebadge ${dtag === th.label ? 'active' : ''}`}
                             title={`Theme: ${th.label}. Tap to filter`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setDtag(dtag === th.label ? 'all' : th.label);
                             }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDtag(dtag === th.label ? 'all' : th.label);
+                              }
+                            }}
                           >
                             {th.label}
-                          </button>
+                          </span>
                         ))}
                         {d.tags?.map((t) => (
-                          <button
+                          <span
                             key={t}
-                            type="button"
+                            role="button"
+                            tabIndex={0}
                             className={`tagbadge ${dtag === t ? 'active' : ''}`}
                             title={`Filter by #${t}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setDtag(dtag === t ? 'all' : t);
                             }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDtag(dtag === t ? 'all' : t);
+                              }
+                            }}
                           >
                             #{t}
-                          </button>
+                          </span>
                         ))}
                       </span>
                     ) : null}

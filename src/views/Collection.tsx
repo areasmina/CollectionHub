@@ -237,60 +237,76 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />} />
       </section>
 
-      <details className="dash" open={dashOpen} onToggle={(e) => setDash(e.currentTarget.open)}>
-        <summary aria-label={`Binder overview: ${total} cards, ${commanders} commanders${decks ? `, ${decks} decks` : ''}`}>
-          <span className="dacts2">
-            <span role="button" tabIndex={0} className="u-btn ghost ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
-              + DECK
-            </span>
-            <span role="button" tabIndex={0} className="u-btn primary dimp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), setImportOpen(true))}>
-              IMPORT
-            </span>
-            <span className="chev" aria-hidden="true">
-              ▾
-            </span>
-          </span>
-        </summary>
-
-        {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
-        <section className="stats">
-          <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
-            <span className="worn" aria-hidden="true" />
-            <span className="spray" aria-hidden="true" />
-            <b>{total.toLocaleString()}</b>
-            <span>cards</span>
-            <Doodles n={377} count={1} spots={[[70, -24]]} />
+      {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
+      <section className="stats">
+        <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
+          <span className="worn" aria-hidden="true" />
+          <span className="spray" aria-hidden="true" />
+          <b>{total.toLocaleString()}</b>
+          <span>cards</span>
+          <Doodles n={377} count={1} spots={[[70, -24]]} />
+        </div>
+        <div className="stat" style={{ transform: 'rotate(0.6deg)' }}>
+          <span className="worn" aria-hidden="true" />
+          <span className="spray" aria-hidden="true" />
+          <b>{unique.toLocaleString()}</b>
+          <span>unique cards</span>
+        </div>
+        <div className="stat red gbox" style={{ transform: 'rotate(-1.2deg)' }}>
+          <span className="worn" aria-hidden="true" />
+          <span className="spray" aria-hidden="true" />
+          <b>{commanders.toLocaleString()}</b>
+          <span>commanders</span>
+          <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
+            <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
+            <path d="M5 40 C20 37 42 42 58 38" />
+            <circle cx="30" cy="4" r="2.6" />
+            <circle cx="4" cy="10" r="2.2" />
+            <circle cx="58" cy="8" r="2.2" />
+          </svg>
+        </div>
+        <div className="slip" style={{ transform: 'rotate(-0.5deg)' }}>
+          <span className="warn">warning</span>
+          <div className="slip-top">
+            <div className="slip-val">
+              <span className="se">worth about</span>
+              <b>{value > 0 ? cad(value) : 'CA$—'}</b>
+              <span className="se small" title={PRICE_METHOD}>
+                est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
+              </span>
+            </div>
+            <div className="slip-acts">
+              <button
+                type="button"
+                className="slip-btn deck"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  haptic('open');
+                  openDeckList();
+                }}
+                title="View and build decks in this binder"
+              >
+                + DECK
+              </button>
+              <button
+                type="button"
+                className="slip-btn import"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  haptic('open');
+                  setImportOpen(true);
+                }}
+                title="Import cards into this binder"
+              >
+                IMPORT
+              </button>
+            </div>
           </div>
-          <div className="stat" style={{ transform: 'rotate(0.6deg)' }}>
-            <span className="worn" aria-hidden="true" />
-            <span className="spray" aria-hidden="true" />
-            <b>{unique.toLocaleString()}</b>
-            <span>unique cards</span>
-          </div>
-          <div className="stat red gbox" style={{ transform: 'rotate(-1.2deg)' }}>
-            <span className="worn" aria-hidden="true" />
-            <span className="spray" aria-hidden="true" />
-            <b>{commanders.toLocaleString()}</b>
-            <span>commanders</span>
-            <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
-              <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
-              <path d="M5 40 C20 37 42 42 58 38" />
-              <circle cx="30" cy="4" r="2.6" />
-              <circle cx="4" cy="10" r="2.2" />
-              <circle cx="58" cy="8" r="2.2" />
-            </svg>
-          </div>
-          <div className="slip" style={{ transform: 'rotate(-0.5deg)' }}>
-            <span className="warn">warning</span>
-            <span className="se">worth about</span>
-            <b>{value > 0 ? cad(value) : 'CA$—'}</b>
-            <span className="se small" title={PRICE_METHOD}>
-              est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
-            </span>
-            {value > 0 && <span className="stamp">APPRAISED</span>}
-          </div>
-        </section>
-      </details>
+          {value > 0 && <span className="stamp">APPRAISED</span>}
+        </div>
+      </section>
 
       {/* Pop-up modal for import cards */}
       {importOpen && (
