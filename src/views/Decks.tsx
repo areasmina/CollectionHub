@@ -469,6 +469,36 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     return () => clearTimeout(t);
   }, [toast]);
   useForgeMode(true); // a saved deck opens in the Forge
+  const [anExpanded, setAnExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:an_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [sugExpanded, setSugExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:sug_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const toggleAn = () => {
+    setAnExpanded((v) => {
+      try {
+        localStorage.setItem('ch:forge:an_expanded', String(!v));
+      } catch {}
+      return !v;
+    });
+  };
+  const toggleSug = () => {
+    setSugExpanded((v) => {
+      try {
+        localStorage.setItem('ch:forge:sug_expanded', String(!v));
+      } catch {}
+      return !v;
+    });
+  };
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
@@ -717,8 +747,23 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
-        <div className="deckgrid after-sw" data-zoom={zoom}>
+        <div className={`deckgrid after-sw forge-split${!anExpanded ? ' an-contracted' : ''}${!sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
+          <div className={`dside forge-analysis${!anExpanded ? ' is-contracted' : ''}`}>
+            <DeckPanel
+              deck={deck}
+              st={st}
+              read={read}
+              meters={
+                <ForgeMeters
+                  st={st}
+                  range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])}
+                  expanded={anExpanded}
+                  onToggleExpand={toggleAn}
+                />
+              }
+            />
+          </div>
           <div className="lists" {...drop}>
             {/* How the cards are split and ordered, right above them */}
             <ToolBar
@@ -842,8 +887,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 );
               })}
           </div>
-          <div className="dside">
-            <DeckPanel deck={deck} st={st} read={read} meters={<ForgeMeters st={st} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} />} />
+          <div className={`dside forge-suggestions${!sugExpanded ? ' is-contracted' : ''}`}>
             <ForgeSuggest
               profile={s.profile}
               deck={deck.cards}
@@ -863,6 +907,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               onAdd={(n) => void addCard(n)}
               onCut={(n) => void cutCard(n)}
               loading={!!deck.commander && !recs}
+              expanded={sugExpanded}
+              onToggleExpand={toggleSug}
             />
           </div>
         </div>
@@ -942,6 +988,14 @@ export function Decks(s: Shared) {
   const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
   const [error, setError] = useState('');
 
+  const [importOpen, setImportOpen] = useState(false);
+  useEffect(() => {
+    if (!importOpen) return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setImportOpen(false);
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+  }, [importOpen]);
+
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
   // The list page sits under Collection: the pill's back arrow goes there (the deck page sets its own).
@@ -979,19 +1033,11 @@ export function Decks(s: Shared) {
     scrollTo(0, 0);
   }
 
-  const [importOpen, setImportOpen] = useState(false);
-
   function jumpToAdd() {
     haptic('open');
     setImportOpen(true);
   }
 
-  useEffect(() => {
-    if (!importOpen) return;
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setImportOpen(false);
-    document.addEventListener('keydown', esc);
-    return () => document.removeEventListener('keydown', esc);
-  }, [importOpen]);
 
   return (
     <>

@@ -4868,3 +4868,437 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
   color: #ffffff !important;
   border-color: #e60012 !important;
 }
+
+/* ==========================================================================
+   Expandable & Contractable Analysis & Suggestions (Forge Split View)
+   ========================================================================== */
+
+@media (min-width: 1100px) {
+  html.forging .deckgrid.forge-split {
+    display: grid !important;
+    grid-template-columns: 320px minmax(0, 1fr) 350px !important;
+    gap: 20px !important;
+    align-items: start !important;
+    transition: grid-template-columns 0.25s cubic-bezier(0.2, 0.9, 0.2, 1) !important;
+  }
+  html.forging .deckgrid.forge-split.an-contracted {
+    grid-template-columns: 110px minmax(0, 1fr) 350px !important;
+  }
+  html.forging .deckgrid.forge-split.sug-contracted {
+    grid-template-columns: 320px minmax(0, 1fr) 110px !important;
+  }
+  html.forging .deckgrid.forge-split.an-contracted.sug-contracted {
+    grid-template-columns: 110px minmax(0, 1fr) 110px !important;
+  }
+
+  html.forging .forge-analysis {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: width 0.25s ease, max-width 0.25s ease;
+  }
+  html.forging .forge-suggestions {
+    position: sticky;
+    top: 64px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    transition: width 0.25s ease, max-width 0.25s ease;
+  }
+}
+
+/* Expand / Contract Buttons & Headers */
+.fmeters-header,
+.fsugg-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+.fmeters-header h3,
+.fsugg-header h3 {
+  margin: 0 !important;
+}
+.fsugg-header .fpanes-wrap {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+.fsugg-header .fpanes-wrap .fpanes {
+  margin-bottom: 0 !important;
+}
+
+.fexp-btn {
+  background: #18181b !important;
+  color: #f4efe4 !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  font-family: var(--an, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  padding: 3px 8px !important;
+  border-radius: 2px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7) !important;
+}
+.fexp-btn:hover {
+  background: var(--u-red, #e60012) !important;
+  border-color: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.9) !important;
+}
+
+/* Contracted / Mini Analysis */
+.fmeters.contracted {
+  padding: 10px 8px !important;
+  box-shadow: 3px 3px 0 var(--accent, #e60012) !important;
+}
+.fmeters.contracted .fmeters-header {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px !important;
+}
+.fmeters.contracted .fmeters-header h3 {
+  font-size: 14px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+}
+.fmeters.contracted .fmeters-header .fexp-btn {
+  width: 100% !important;
+  justify-content: center !important;
+  padding: 3px 4px !important;
+}
+.fmeters.contracted .fcurve.mini-curve {
+  height: 44px !important;
+  gap: 2px !important;
+  margin-top: 6px !important;
+  padding: 4px 2px !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 2px !important;
+  border: 1px dashed rgba(255, 255, 255, 0.15) !important;
+}
+.fmeters.contracted .fcurve.mini-curve small {
+  display: none !important;
+}
+.fm-mini-body {
+  margin-top: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+.fm-mini-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+}
+.fm-mini-chip {
+  font-family: var(--se, monospace) !important;
+  font-size: 11px !important;
+  color: #cccccc !important;
+  background: #111114 !important;
+  padding: 2px 5px !important;
+  border-radius: 2px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  white-space: nowrap !important;
+}
+.fm-mini-chip b {
+  color: #ffffff !important;
+  font-family: var(--an, sans-serif) !important;
+}
+.fm-mini-dots {
+  display: flex !important;
+  justify-content: space-around !important;
+  gap: 3px !important;
+  padding: 4px !important;
+  background: #0d0d0f !important;
+  border-radius: 2px !important;
+}
+.fm-dot {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  background: #555555 !important;
+  display: inline-block !important;
+}
+.fm-dot.ok {
+  background: #39ff88 !important;
+  box-shadow: 0 0 6px rgba(57, 255, 136, 0.5) !important;
+}
+.fm-dot.low {
+  background: var(--hazard, #ffcc00) !important;
+  box-shadow: 0 0 6px rgba(255, 204, 0, 0.5) !important;
+}
+.fm-dot.high {
+  background: #ff8a3d !important;
+  box-shadow: 0 0 6px rgba(255, 138, 61, 0.5) !important;
+}
+
+/* Expanded Analysis: Veteran MTG Features */
+.fm-velocity-bar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 5px 8px !important;
+  margin: 6px 0 10px !important;
+  background: #111114 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 2px !important;
+  font-family: var(--se, monospace) !important;
+  font-size: 11px !important;
+  color: var(--u-muted, #999999) !important;
+}
+.fm-velocity-bar b {
+  color: #39ff88 !important;
+  font-family: var(--an, sans-serif) !important;
+  font-size: 13px !important;
+}
+
+.fm-sec-title {
+  font-family: var(--an, sans-serif) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+  color: var(--u-muted, #888888) !important;
+  margin: 10px 0 4px !important;
+  text-transform: uppercase !important;
+}
+.fm-pips-sec {
+  margin-top: 10px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.fm-pips-track {
+  display: flex !important;
+  height: 8px !important;
+  border-radius: 2px !important;
+  overflow: hidden !important;
+  background: #222226 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  margin-bottom: 6px !important;
+}
+.fm-pip-bar {
+  display: block !important;
+  height: 100% !important;
+}
+.fm-pip-bar.col-W, .fm-pip-chip.col-W { background: #fef08a !important; color: #1c1917 !important; }
+.fm-pip-bar.col-U, .fm-pip-chip.col-U { background: #38bdf8 !important; color: #082f49 !important; }
+.fm-pip-bar.col-B, .fm-pip-chip.col-B { background: #71717a !important; color: #ffffff !important; }
+.fm-pip-bar.col-R, .fm-pip-chip.col-R { background: #ef4444 !important; color: #ffffff !important; }
+.fm-pip-bar.col-G, .fm-pip-chip.col-G { background: #22c55e !important; color: #052e16 !important; }
+
+.fm-pips-legend {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+.fm-pip-chip {
+  font-family: var(--se, monospace) !important;
+  font-size: 11px !important;
+  padding: 1px 6px !important;
+  border-radius: 2px !important;
+  font-weight: 700 !important;
+}
+.fm-pip-advice {
+  margin: 6px 0 0 !important;
+  font-family: var(--se, monospace) !important;
+  font-size: 11px !important;
+  line-height: 1.35 !important;
+  color: var(--u-muted, #aaaaaa) !important;
+}
+.fm-pip-advice b {
+  color: #ffffff !important;
+}
+
+.fm-types-sec {
+  margin-top: 10px !important;
+  padding-top: 8px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.fm-type-chips {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+}
+.fm-type-chip {
+  background: #141416 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  padding: 2px 6px !important;
+  border-radius: 2px !important;
+  font-family: var(--se, monospace) !important;
+  font-size: 11px !important;
+  color: #cccccc !important;
+}
+.fm-type-chip b {
+  color: #ffffff !important;
+  font-family: var(--an, sans-serif) !important;
+}
+
+/* Contracted / Mini Suggestions */
+.fsugg.contracted {
+  padding: 10px 8px !important;
+}
+.fsugg.contracted .fsugg-header {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px !important;
+}
+.fsugg.contracted .fsugg-header h3 {
+  font-size: 14px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+}
+.fsugg.contracted .fsugg-header .fexp-btn {
+  width: 100% !important;
+  justify-content: center !important;
+  padding: 3px 4px !important;
+}
+
+.fsugg-mini-body {
+  margin-top: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+.fsugg-mini-label {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  font-family: var(--an, sans-serif) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.08em !important;
+  color: var(--u-muted, #888888) !important;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15) !important;
+  padding-bottom: 4px !important;
+}
+.fsugg-mini-cards {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+.fsugg-mini-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px !important;
+  background: #101013 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 2px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+.fsugg-mini-card:hover {
+  background: #1c1c22 !important;
+  border-color: var(--accent, #e60012) !important;
+  transform: translateX(2px) !important;
+}
+.fsugg-mini-card.owned {
+  border-left: 3px solid #39ff88 !important;
+}
+.fsugg-mini-card.placing {
+  border-color: var(--hazard, #ffcc00) !important;
+  background: rgba(255, 204, 0, 0.1) !important;
+}
+.mini-card-thumb {
+  width: 32px !important;
+  height: 44px !important;
+  object-fit: cover !important;
+  border-radius: 2px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+.mini-card-thumb-fallback {
+  width: 32px !important;
+  height: 44px !important;
+  background: #222226 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: var(--an, sans-serif) !important;
+  font-size: 12px !important;
+  color: #888888 !important;
+  border-radius: 2px !important;
+}
+.mini-card-info {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+.mini-card-name {
+  font-family: var(--se, monospace) !important;
+  font-size: 11px !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.mini-card-lift {
+  font-family: var(--an, sans-serif) !important;
+  font-size: 10px !important;
+  color: #39ff88 !important;
+}
+
+.fsugg-mini-roles {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 3px !important;
+  margin-top: 2px !important;
+}
+.mini-role-pill {
+  flex: 1 1 calc(50% - 3px) !important;
+  background: #141416 !important;
+  color: #bbbbbb !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  padding: 3px 2px !important;
+  font-family: var(--an, sans-serif) !important;
+  font-size: 9px !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  border-radius: 2px !important;
+  transition: all 0.12s ease !important;
+}
+.mini-role-pill:hover, .mini-role-pill.active {
+  background: var(--u-red, #e60012) !important;
+  border-color: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+}
+
+.forge-analysis.is-contracted .dpanel .dfold,
+.forge-analysis.is-contracted .dpanel .dbody {
+  display: none !important;
+}
+
+/* Tablet layout for Forge split: full width lists so toolbar never overflows, side panels side by side below */
+@media (min-width: 701px) and (max-width: 1099px) {
+  html.forging .deckgrid.forge-split {
+    flex-wrap: wrap !important;
+  }
+  html.forging .deckgrid.forge-split > .lists {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  html.forging .deckgrid.forge-split > .dside {
+    flex: 1 1 calc(50% - 10px) !important;
+    max-width: 100% !important;
+    position: static !important;
+  }
+}
+
+/* Prevent toolbar overflow when both Forge split columns are expanded */
+html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar .fnow {
+  display: none !important;
+}
+html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick {
+  max-width: calc(100% - 240px) !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}

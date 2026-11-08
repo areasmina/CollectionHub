@@ -372,6 +372,36 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [manualForge, setManualForge] = useState(false);
   const changes = Object.keys(swapsOk).length;
   const forging = kind === 'average' && (changes > 0 || manualForge);
+  const [anExpanded, setAnExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:an_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [sugExpanded, setSugExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:sug_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const toggleAn = () => {
+    setAnExpanded((v) => {
+      try {
+        localStorage.setItem('ch:forge:an_expanded', String(!v));
+      } catch {}
+      return !v;
+    });
+  };
+  const toggleSug = () => {
+    setSugExpanded((v) => {
+      try {
+        localStorage.setItem('ch:forge:sug_expanded', String(!v));
+      } catch {}
+      return !v;
+    });
+  };
   const [leaving, setLeaving] = useState<((go: boolean) => void) | null>(null);
   const live = useRef({ changes, saveDeck, clearSwaps });
   live.current = { changes, saveDeck, clearSwaps };
@@ -830,11 +860,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {error && <p className="error">{error}</p>}
         {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
-          <div className={`deckgrid after-sw${forging ? ' forge-split' : ''}`} data-zoom={zoom}>
+          <div className={`deckgrid after-sw${forging ? ' forge-split' : ''}${forging && !anExpanded ? ' an-contracted' : ''}${forging && !sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             {forging && (
-              <div className="dside forge-analysis">
-                <ForgeMeters st={forgeSt} range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])} match={sum.pct} />
+              <div className={`dside forge-analysis${!anExpanded ? ' is-contracted' : ''}`}>
+                <ForgeMeters
+                  st={forgeSt}
+                  range={(r) => (r === 'tutors' ? undefined : AGGRESSION[aggression][r])}
+                  match={sum.pct}
+                  expanded={anExpanded}
+                  onToggleExpand={toggleAn}
+                />
               </div>
             )}
             <div className="lists" {...(forging ? drop : {})}>
@@ -1232,7 +1268,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               })}
             </div>
             {forging ? (
-              <div className="dside forge-suggestions">
+              <div className={`dside forge-suggestions${!sugExpanded ? ' is-contracted' : ''}`}>
                 <ForgeSuggest
                   profile={s.profile}
                   deck={deckNow}
@@ -1249,6 +1285,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   onPlace={setPlacing}
                   loading={!recs}
                   buy={receipt || undefined}
+                  expanded={sugExpanded}
+                  onToggleExpand={toggleSug}
                 />
               </div>
             ) : null}

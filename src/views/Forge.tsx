@@ -111,7 +111,41 @@ export function shortOf(st: DeckStats, range: Range) {
  * brain's dial asks for. A meter that moved with the last change tweens and shows +1 / −1; the curve bar that changed
  * lights up; a yellow NEEDS line says what the list below is now chasing.
  */
-export function ForgeMeters({ st, range, match }: { st: DeckStats; range: Range; match?: number }) {
+export function ForgeMeters({
+  st,
+  range,
+  match,
+  expanded: controlledExpanded,
+  onToggleExpand,
+}: {
+  st: DeckStats;
+  range: Range;
+  match?: number;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
+}) {
+  const [localExpanded, setLocalExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:an_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const expanded = controlledExpanded !== undefined ? controlledExpanded : localExpanded;
+  const toggle = () => {
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setLocalExpanded((v) => {
+        try {
+          localStorage.setItem('ch:forge:an_expanded', String(!v));
+        } catch {}
+        return !v;
+      });
+    }
+    haptic('tap');
+  };
+
   const now: Record<string, number> = { lands: st.lands, mv: Math.round(st.avgMv * 100) / 100, ...st.roles };
   const prev = useRef<{ v: Record<string, number>; curve: number[] } | null>(null);
   const [delta, setDelta] = useState<{ v: Record<string, number>; curve: Set<number>; at: number }>({ v: {}, curve: new Set(), at: 0 });
@@ -127,37 +161,75 @@ export function ForgeMeters({ st, range, match }: { st: DeckStats; range: Range;
   }, [sig]); // eslint-disable-line react-hooks/exhaustive-deps
   const needs = shortOf(st, range);
   const top = Math.max(1, ...st.curve);
+
+  // Veteran MTG Player Analytics
+  const earlyPlays = st.curve.slice(0, 4).reduce((a, b) => a + b, 0); // CMC 0, 1, 2, 3
+  const nonLandTotal = Math.max(1, st.total - st.lands);
+  const earlyPct = Math.round((earlyPlays / nonLandTotal) * 100);
+
+  const pipColors = (['W', 'U', 'B', 'R', 'G'] as const).filter((c) => (st.pips?.[c] ?? 0) > 0);
+  const totalPips = pipColors.reduce((sum, c) => sum + (st.pips[c] ?? 0), 0);
+  const dominantColor = useMemo(() => {
+    if (!totalPips || !pipColors.length) return null;
+    let max = pipColors[0];
+    for (const c of pipColors) {
+      if ((st.pips[c] ?? 0) > (st.pips[max] ?? 0)) max = c;
+    }
+    const colorNames: Record<string, string> = {
+      W: 'White',
+      U: 'Blue',
+      B: 'Black',
+      R: 'Red',
+      G: 'Green',
+    };
+    return {
+      symbol: max,
+      name: colorNames[max] ?? max,
+      pct: Math.round(((st.pips[max] ?? 0) / totalPips) * 100),
+      count: st.pips[max] ?? 0,
+    };
+  }, [st.pips, totalPips, pipColors]);
+
+  const typeCounts = [
+    ['Creatures', st.groups?.get('Creatures') ?? 0],
+    ['Instants', st.groups?.get('Instants') ?? 0],
+    ['Sorceries', st.groups?.get('Sorceries') ?? 0],
+    ['Artifacts', st.groups?.get('Artifacts') ?? 0],
+    ['Enchantments', st.groups?.get('Enchantments') ?? 0],
+    ['Planeswalkers', st.groups?.get('Planeswalkers') ?? 0],
+    ['Lands', st.lands],
+  ].filter(([, count]) => (count as number) > 0) as [string, number][];
+
   return (
-    <section className="fmeters" aria-label="Forge analysis">
-      <h3>
-        ANALYSIS
-        {match != null && <span className="fmatch">MATCH {match}%</span>}
-      </h3>
-      <ul>
-        {METERS.map(([k, label]) => {
-          const rg = k === 'lands' ? ([33, 38] as [number, number]) : k === 'mv' ? undefined : range(k);
-          const v = now[k];
-          const d = delta.v[k];
-          const fill = k === 'mv' ? Math.min(1, v / 5) : Math.min(1, v / Math.max(1, (rg?.[1] ?? v) * 1.25));
-          const tone = !rg ? '' : v < rg[0] ? ' low' : v > rg[1] ? ' high' : ' ok';
-          return (
-            <li key={k} className={`fm${tone}`} title={rg ? `${label.toLowerCase()}: ${v} (usual ${rg[0]}–${rg[1]})` : `${label.toLowerCase()}: ${v}`}>
-              <span className="fl">{label}</span>
-              <span className="fbar" aria-hidden="true">
-                <i style={{ width: `${Math.round(fill * 100)}%` }} />
-              </span>
-              <b>{k === 'mv' ? v.toFixed(2) : v}</b>
-              {d ? (
-                <span key={delta.at} className={`fdelta${d > 0 ? ' up' : ' down'}`}>
-                  {d > 0 ? '+' : '−'}
-                  {k === 'mv' ? Math.abs(d).toFixed(2) : Math.abs(d)}
-                </span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-      <div className="fcurve" role="img" aria-label={`Mana curve: ${st.curve.map((n, i) => `${i === 7 ? '7+' : i}: ${n}`).join(', ')}`}>
+    <section className={`fmeters ${expanded ? 'expanded' : 'contracted mini'}`} aria-label="Forge analysis">
+      <div className="fmeters-header">
+        <h3>
+          ANALYSIS
+          {match != null && <span className="fmatch">MATCH {match}%</span>}
+        </h3>
+        <button
+          type="button"
+          className="fexp-btn"
+          title={expanded ? 'Contract analysis (compact animated curve)' : 'Expand analysis (veteran MTG breakdown)'}
+          aria-label={expanded ? 'Contract analysis' : 'Expand analysis'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle();
+          }}
+        >
+          {expanded ? 'CONTRACT ◂' : 'EXPAND ⤢'}
+        </button>
+      </div>
+
+      {/* The Animated Mana Curve Graph (always shown & animated!) */}
+      <div
+        className={`fcurve${!expanded ? ' mini-curve' : ''}`}
+        role="img"
+        aria-label={`Mana curve: ${st.curve.map((n, i) => `${i === 7 ? '7+' : i}: ${n}`).join(', ')}`}
+        onClick={!expanded ? toggle : undefined}
+        style={{ cursor: !expanded ? 'pointer' : undefined }}
+        title={!expanded ? 'Tap to expand full analysis' : undefined}
+      >
         {st.curve.map((n, i) => (
           <span key={i} className={delta.curve.has(i) ? 'lit' : ''} data-at={delta.curve.has(i) ? delta.at : undefined}>
             <i style={{ height: `${Math.round((n / top) * 100)}%` }} />
@@ -165,10 +237,112 @@ export function ForgeMeters({ st, range, match }: { st: DeckStats; range: Range;
           </span>
         ))}
       </div>
-      {needs.length > 0 && (
-        <p className="fneeds" role="status">
-          NEEDS: {needs.map((n) => `${n.short} more ${ROLE_WORD[n.role]}`).join(' · ')}
-        </p>
+
+      {!expanded ? (
+        /* Contracted / Mini View: compact animated dock with curve, lands, avg MV and role health dots */
+        <div className="fm-mini-body" onClick={toggle} title="Tap to expand full analysis" style={{ cursor: 'pointer' }}>
+          <div className="fm-mini-row">
+            <span className="fm-mini-chip"><b>{st.lands}</b> lands</span>
+            <span className="fm-mini-chip"><b>{st.avgMv.toFixed(2)}</b> avg</span>
+          </div>
+          <div className="fm-mini-dots" title="Role health: Lands · Ramp · Draw · Removal · Wipes">
+            {METERS.map(([k, label]) => {
+              const rg = k === 'lands' ? ([33, 38] as [number, number]) : k === 'mv' ? undefined : range(k);
+              const v = now[k];
+              const tone = !rg ? '' : v < rg[0] ? 'low' : v > rg[1] ? 'high' : 'ok';
+              return (
+                <span
+                  key={k}
+                  className={`fm-dot ${tone}`}
+                  title={`${label}: ${v}${rg ? ` (target ${rg[0]}–${rg[1]})` : ''}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Expanded View: Full Veteran MTG Analysis */
+        <>
+          <div className="fm-velocity-bar">
+            <span><b>{st.avgMv.toFixed(2)}</b> non-land MV</span>
+            <span><b>{earlyPlays}</b> early plays (CMC ≤ 3, {earlyPct}%)</span>
+          </div>
+
+          <ul>
+            {METERS.map(([k, label]) => {
+              const rg = k === 'lands' ? ([33, 38] as [number, number]) : k === 'mv' ? undefined : range(k);
+              const v = now[k];
+              const d = delta.v[k];
+              const fill = k === 'mv' ? Math.min(1, v / 5) : Math.min(1, v / Math.max(1, (rg?.[1] ?? v) * 1.25));
+              const tone = !rg ? '' : v < rg[0] ? ' low' : v > rg[1] ? ' high' : ' ok';
+              return (
+                <li key={k} className={`fm${tone}`} title={rg ? `${label.toLowerCase()}: ${v} (usual ${rg[0]}–${rg[1]})` : `${label.toLowerCase()}: ${v}`}>
+                  <span className="fl">{label}</span>
+                  <span className="fbar" aria-hidden="true">
+                    <i style={{ width: `${Math.round(fill * 100)}%` }} />
+                  </span>
+                  <b>{k === 'mv' ? v.toFixed(2) : v}</b>
+                  {d ? (
+                    <span key={delta.at} className={`fdelta${d > 0 ? ' up' : ' down'}`}>
+                      {d > 0 ? '+' : '−'}
+                      {k === 'mv' ? Math.abs(d).toFixed(2) : Math.abs(d)}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+
+          {totalPips > 0 && (
+            <div className="fm-pips-sec">
+              <div className="fm-sec-title">MANA PIP BALANCE</div>
+              <div className="fm-pips-track">
+                {pipColors.map((c) => {
+                  const pct = Math.round(((st.pips[c] ?? 0) / totalPips) * 100);
+                  return (
+                    <span
+                      key={c}
+                      className={`fm-pip-bar col-${c}`}
+                      style={{ width: `${pct}%` }}
+                      title={`${c}: ${st.pips[c]} pips (${pct}%)`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="fm-pips-legend">
+                {pipColors.map((c) => (
+                  <span key={c} className={`fm-pip-chip col-${c}`}>
+                    <b>{c}</b> {Math.round(((st.pips[c] ?? 0) / totalPips) * 100)}% <small>({st.pips[c]})</small>
+                  </span>
+                ))}
+              </div>
+              {dominantColor && (
+                <p className="fm-pip-advice">
+                  <b>{dominantColor.name}</b> is dominant ({dominantColor.pct}% of color symbols).
+                </p>
+              )}
+            </div>
+          )}
+
+          {typeCounts.length > 0 && (
+            <div className="fm-types-sec">
+              <div className="fm-sec-title">TYPE BREAKDOWN</div>
+              <div className="fm-type-chips">
+                {typeCounts.map(([t, n]) => (
+                  <span key={t} className="fm-type-chip">
+                    <b>{n}</b> {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {needs.length > 0 && (
+            <p className="fneeds" role="status">
+              NEEDS: {needs.map((n) => `${n.short} more ${ROLE_WORD[n.role]}`).join(' · ')}
+            </p>
+          )}
+        </>
       )}
     </section>
   );
@@ -220,6 +394,8 @@ export function ForgeSuggest({
   onCut,
   loading,
   aggression: dial,
+  expanded: controlledExpanded,
+  onToggleExpand,
 }: {
   aggression?: Aggression; // the page's dial (the commander page sets it from POWER); else your brain setting
   profile: number;
@@ -241,7 +417,30 @@ export function ForgeSuggest({
   onAdd?: (name: string) => void; // saved decks: a card can be added (the commander page swaps slots only)
   onCut?: (name: string) => void; // a deck card dropped back on the list
   loading?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }) {
+  const [localExpanded, setLocalExpanded] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:sug_expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const expanded = controlledExpanded !== undefined ? controlledExpanded : localExpanded;
+  const toggle = () => {
+    if (onToggleExpand) {
+      onToggleExpand();
+    } else {
+      setLocalExpanded((v) => {
+        try {
+          localStorage.setItem('ch:forge:sug_expanded', String(!v));
+        } catch {}
+        return !v;
+      });
+    }
+    haptic('tap');
+  };
   const brain = useLiveQuery(() => db.profiles.get(profile), [profile])?.brain;
   const aggression = (dial ?? brain?.aggression ?? 'hungry') as Aggression;
   const [sort, setSort] = useState<ForgeSort>('ours');
@@ -323,7 +522,7 @@ export function ForgeSuggest({
 
   return (
     <section
-      className={`fsugg${sheet ? ' up' : ''}`}
+      className={`fsugg${sheet ? ' up' : ''} ${expanded ? 'expanded' : 'contracted mini'}`}
       aria-label="Suggestions"
       onDragOver={(e) => onCut && e.dataTransfer.types.includes(DRAG_TYPE) && fromOf(e) === 'deck' && (e.preventDefault(), lightUp(e.target as Element))}
       onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && lightOff()}
@@ -336,22 +535,92 @@ export function ForgeSuggest({
       <button className="fgrab" aria-expanded={sheet} aria-label={sheet ? 'Lower the suggestions' : 'Show all suggestions'} onClick={() => (haptic('open'), setSheet(!sheet))}>
         <span aria-hidden="true" />
       </button>
-      {buy ? (
-        <div className="fpanes" role="tablist" aria-label="Forge panel">
-          <button role="tab" aria-selected={pane === 'sugg'} onClick={() => (haptic('select'), setPane('sugg'))}>
-            SUGGESTIONS <small>{loading ? '…' : list.length}</small>
-          </button>
-          <button role="tab" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
-            TO BUY
-          </button>
+      <div className="fsugg-header">
+        <div className="fpanes-wrap">
+          {buy ? (
+            <div className="fpanes" role="tablist" aria-label="Forge panel">
+              <button role="tab" aria-selected={pane === 'sugg'} onClick={() => (haptic('select'), setPane('sugg'))}>
+                SUGGESTIONS <small>{loading ? '…' : list.length}</small>
+              </button>
+              <button role="tab" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
+                TO BUY
+              </button>
+            </div>
+          ) : (
+            <h3>
+              SUGGESTIONS
+              <small>{loading ? 'asking EDHREC…' : `${list.length} ${list.length === 1 ? 'card' : 'cards'}`}</small>
+            </h3>
+          )}
         </div>
-      ) : (
-        <h3>
-          SUGGESTIONS
-          <small>{loading ? 'asking EDHREC…' : `${list.length} ${list.length === 1 ? 'card' : 'cards'}`}</small>
-        </h3>
-      )}
-      {pane === 'buy' && buy ? (
+        <button
+          type="button"
+          className="fexp-btn"
+          title={expanded ? 'Contract suggestions (mini suggested cards dock)' : 'Expand suggestions (full list, search & reasons)'}
+          aria-label={expanded ? 'Contract suggestions' : 'Expand suggestions'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggle();
+          }}
+        >
+          {expanded ? 'CONTRACT ▸' : 'EXPAND ⤢'}
+        </button>
+      </div>
+
+      {!expanded ? (
+        /* Contracted / Mini View: compact vertical dock with top suggested cards and quick role filters */
+        <div className="fsugg-mini-body" onClick={toggle} title="Tap to expand suggestions" style={{ cursor: 'pointer' }}>
+          <div className="fsugg-mini-label">
+            <span>TOP PICKS</span>
+            <small>{list.length}</small>
+          </div>
+          <div className="fsugg-mini-cards">
+            {list.slice(0, 4).map((r) => {
+              const img = imgOf(r.c.name);
+              const lift = r.c.lift ? `+${Math.round((r.c.lift - 1) * 100)}%` : r.c.incl ? `in ${Math.round(r.c.incl * 100)}%` : '';
+              return (
+                <div
+                  key={r.c.name}
+                  className={`fsugg-mini-card${r.owned > 0 ? ' owned' : ''}${placing === r.c.name ? ' placing' : ''}`}
+                  title={`${r.c.name}${lift ? ` (${lift})` : ''} · Click to place/swap`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    haptic('select');
+                    onPlace(placing === r.c.name ? null : r.c.name);
+                  }}
+                >
+                  {img ? (
+                    <img src={img} alt={r.c.name} className="mini-card-thumb" loading="lazy" />
+                  ) : (
+                    <div className="mini-card-thumb-fallback">{r.c.name.slice(0, 2)}</div>
+                  )}
+                  <div className="mini-card-info">
+                    <span className="mini-card-name">{r.c.name}</span>
+                    {lift && <span className="mini-card-lift">{lift}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="fsugg-mini-roles" onClick={(e) => e.stopPropagation()}>
+            {(['draw', 'ramp', 'removal', 'wipes'] as Role[]).map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`mini-role-pill${role === r ? ' active' : ''}`}
+                title={`Filter by ${ROLE_WORD[r]}`}
+                onClick={() => {
+                  haptic('select');
+                  setRole(role === r ? '' : r);
+                  if (!expanded) toggle();
+                }}
+              >
+                {ROLE_WORD[r]}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : pane === 'buy' && buy ? (
         <div className="fbuy">{buy}</div>
       ) : (
       <>
