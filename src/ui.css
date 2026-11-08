@@ -1923,13 +1923,14 @@ main.dpage {
 position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar stays in reach while scrolling */
 }
 .dtools.tbar > .tbmore {
-  position: static !important;
+  position: relative !important;
 }
-/* Tablet & Desktop: anchor right; Mobile: anchor left */
+/* Dropdown popup anchors directly underneath the clicked button */
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
     left: 0 !important;
     right: auto !important;
+    top: calc(100% + 4px) !important;
     max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }
@@ -1937,6 +1938,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   .dtools.tbar > .tbmore > .fbody {
     left: 0 !important;
     right: auto !important;
+    top: calc(100% + 4px) !important;
     max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }
@@ -4323,12 +4325,12 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 
 /* 3. THEME chips */
 .dtools.tbar > .tbmore .optrow:has(.themes) {
-  padding-top: 6px !important;
+  padding-top: 8px !important;
   border-top: 1px solid #222228 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
-  gap: 4px !important;
+  gap: 6px !important;
 }
 .dtools .fbody .themes,
 .dpage .themes {
@@ -4343,7 +4345,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   gap: 6px !important;
   width: 100% !important;
   max-width: 100% !important;
-  padding: 2px 2px 6px 2px !important;
+  padding: 2px 2px 8px 2px !important;
   box-sizing: border-box !important;
   border: 0 !important;
   background: transparent !important;
@@ -4353,18 +4355,20 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .dpage .themes button,
 .dtools .fbody .themes .u-chip,
 .dpage .themes .u-chip {
-  height: 25px !important;
-  padding: 2px 9px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
   border-radius: 9999px !important;
-  background: #1b1b22 !important;
-  border: 1px solid #333340 !important;
-  color: #ffffff !important;
+  background: #191920 !important;
+  border: 1px solid #333342 !important;
+  color: #efeff5 !important;
   font-family: var(--u-display, sans-serif) !important;
   font-size: 11px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 6px !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
   box-shadow: none !important;
@@ -4374,22 +4378,32 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 .dtools .fbody .themes button:hover,
 .dpage .themes button:hover {
-  background: #252530 !important;
-  border-color: #505060 !important;
+  background: #252532 !important;
+  border-color: #555568 !important;
   color: #ffffff !important;
 }
 .dtools .fbody .themes button[aria-pressed='true'],
 .dpage .themes button[aria-pressed='true'] {
-  background: var(--u-red, #e60012) !important;
-  border-color: var(--u-red, #e60012) !important;
-  color: #ffffff !important;
+  background: #fff824 !important;
+  border-color: #fff824 !important;
+  color: #000000 !important;
 }
 .dtools .fbody .themes button small,
 .dpage .themes button small {
-  color: #7a7a8c !important;
-  font-weight: 400 !important;
+  color: #8c8ca0 !important;
+  font-family: var(--u-mono, monospace) !important;
+  font-weight: 600 !important;
   font-size: 10px !important;
-  margin-left: 3px !important;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 1px 5px !important;
+  border-radius: 999px !important;
+  line-height: 1 !important;
+}
+.dtools .fbody .themes button[aria-pressed='true'] small,
+.dpage .themes button[aria-pressed='true'] small {
+  color: #000000 !important;
+  background: rgba(0, 0, 0, 0.14) !important;
+  font-weight: 800 !important;
 }
 
 /* 4. The rest: GEAR, BUY UNDER, and pickgrid */
@@ -4948,7 +4962,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 /* Kebab / more options button immediately next to quick pills */
 .dtools.tbar > .tbmore {
   flex: 0 0 auto !important;
-  position: static !important;
+  position: relative !important;
   border-right: 1px solid #3a3a3a !important;
   border-left: 0 !important;
 }
@@ -4962,11 +4976,11 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Options dropdown anchors to the left underneath the options button */
-/* Tablet & Desktop: anchor right; Mobile: anchor left */
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
     left: 0 !important;
     right: auto !important;
+    top: calc(100% + 4px) !important;
     max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }
@@ -4974,6 +4988,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   .dtools.tbar > .tbmore > .fbody {
     left: 0 !important;
     right: auto !important;
+    top: calc(100% + 4px) !important;
     max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }

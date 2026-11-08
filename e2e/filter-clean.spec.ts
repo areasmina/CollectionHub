@@ -32,22 +32,18 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   // Verify VIEW row is absent in Commander view filter dropdown
   await expect(cmdrDropdown.locator('.optrow', { hasText: 'VIEW' })).toHaveCount(0);
 
-  // Verify new hierarchy: JUST BUILD IT! -> PIN & WITHOUT card selection -> THEME -> the rest
+  // Verify new hierarchy: PIN & WITHOUT card selection -> THEME -> the rest
   const fbody = page.locator('.dtools.tbar > .tbmore > .fbody');
   await expect(fbody).toBeVisible();
 
-  // 1. JUST BUILD IT! button
-  const buildBtn = fbody.locator('.btn-just-build');
-  await expect(buildBtn).toBeVisible();
-
-  // 2. PIN & WITHOUT selection inputs directly below
+  // 1. PIN & WITHOUT selection inputs directly below
   const cfRow = fbody.locator('.cfilter .cf-row');
   await expect(cfRow).toBeVisible();
   await expect(cfRow.locator('.tab', { hasText: 'PIN' })).toBeVisible();
   await expect(cfRow.locator('.tab', { hasText: 'WITHOUT' })).toBeVisible();
   await expect(cfRow.locator('.cf-apply-btn')).toBeVisible();
 
-  // 3. THEME chips below
+  // 2. THEME chips below
   const themeRow = fbody.locator('.optrow:has(.themes)');
   await expect(themeRow).toBeVisible();
 

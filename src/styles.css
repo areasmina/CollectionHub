@@ -6448,7 +6448,7 @@ main {
 }
 .dtools.tbar > .tbmore {
   flex: none;
-  position: static;
+  position: relative;
   border-left: 1px solid #3a3a3a;
 }
 .dtools.tbar > .tbmore > summary {
@@ -6497,7 +6497,7 @@ main {
   position: absolute;
   z-index: 35;
   left: 0;
-  top: calc(100% + 2px);
+  top: calc(100% + 4px);
   right: auto;
   width: min(420px, calc(100vw - 24px));
   max-height: 70vh;
