@@ -64,7 +64,7 @@ export function ForgeTop({ label, sub, undo, onLeave, onSave, saving, reserved }
           {label}
           {reserved && (
             <span className="fres" title="This deck holds its copies: other decks can't use them">
-              🔒 RESERVED
+              RESERVED
             </span>
           )}
         </b>
@@ -396,6 +396,8 @@ export function ForgeSuggest({
   aggression: dial,
   expanded: controlledExpanded,
   onToggleExpand,
+  onJustBuild,
+  building,
 }: {
   aggression?: Aggression; // the page's dial (the commander page sets it from POWER); else your brain setting
   profile: number;
@@ -419,6 +421,8 @@ export function ForgeSuggest({
   loading?: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  onJustBuild?: () => void;
+  building?: boolean;
 }) {
   const [localExpanded, setLocalExpanded] = useState(() => {
     try {
@@ -567,6 +571,24 @@ export function ForgeSuggest({
         </button>
       </div>
 
+      {onJustBuild && (
+        <div className="just-build-banner sugg-top-action">
+          <button
+            type="button"
+            className="btn-just-build"
+            onClick={() => void onJustBuild()}
+            disabled={building}
+            title="Build a 100-card deck from your binder using the brain (Karsten mana math + strategy stack)"
+          >
+            <span className="build-text">
+              <strong>JUST BUILD IT!</strong>
+              <small>Auto-craft 100 cards from your binder</small>
+            </span>
+            <span className="build-arrow">BUILD 100 →</span>
+          </button>
+        </div>
+      )}
+
       {!expanded ? (
         /* Contracted / Mini View: compact vertical dock with top suggested cards and quick role filters */
         <div className="fsugg-mini-body" onClick={toggle} title="Tap to expand suggestions" style={{ cursor: 'pointer' }}>
@@ -647,12 +669,23 @@ export function ForgeSuggest({
               {ROLE_WORD[r]}
             </button>
           ))}
-        {themes.slice(0, 6).map((t) => (
-            <button key={t.slug} className="theme" aria-pressed={theme === t.slug} title={`Cards whose rules text fits ${t.value} (EDHREC theme, ${t.count.toLocaleString()} decks)`} onClick={() => (haptic('select'), setTheme(theme === t.slug ? '' : t.slug))}>
+      </div>
+      {themes.length > 0 && (
+        <div className="themes fthemes" role="group" aria-label="EDHREC themes">
+          {themes.map((t) => (
+            <button
+              key={t.slug}
+              type="button"
+              className="u-chip theme"
+              aria-pressed={theme === t.slug}
+              title={`Cards whose rules text fits ${t.value} (EDHREC theme, ${t.count.toLocaleString()} decks)`}
+              onClick={() => (haptic('select'), setTheme(theme === t.slug ? '' : t.slug))}
+            >
               #{t.value.toLowerCase()}
             </button>
           ))}
-      </div>
+        </div>
+      )}
       {onCf && (
         <details className="fcf">
           <summary>WITH / WITHOUT A CARD{cf && (cf.inc.length || cf.exc.length) ? ' ·  on' : ''}</summary>

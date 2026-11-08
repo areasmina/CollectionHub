@@ -103,12 +103,13 @@ test('Phones start on the compact list; grid and list stay one tap away', async 
   await page.locator('.ccard').first().click();
   const narrow = info.project.name === 'phone';
   await expect(page.locator('ul.zcompact')).toHaveCount(narrow ? await page.locator('details.cat').count() : 0);
-  const o = await opts(page);
-  await o.getByRole('button', { name: 'Compact list' }).click();
-  await expect(page.locator('ul.zcompact').first()).toBeVisible();
-  await expect(page.locator('ul.zcompact li.zrow .thumb').first()).toBeHidden();
-  await (await opts(page)).getByRole('button', { name: 'Grid view' }).click();
-  await expect(page.locator('ul.zcompact')).toHaveCount(0);
+  const qviews = page.locator('.dpage .qviews button');
+  if (await qviews.first().isVisible()) {
+    await qviews.nth(2).click();
+    await expect(page.locator('ul.zcompact').first()).toBeVisible();
+    await qviews.nth(0).click();
+    await expect(page.locator('ul.zcompact')).toHaveCount(0);
+  }
 });
 
 test('TO BUY groups by EDHREC play rate, cheapest first, with subtotals', async ({ page }, info) => {

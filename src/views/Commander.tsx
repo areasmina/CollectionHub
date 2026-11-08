@@ -719,6 +719,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
+        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
+
         {/* The one strip: POWER · what the deck needs and costs · short / TO BUY / FORGE. Everything else is behind ⋮.
             It stays while a new power or theme loads (no jump), saying so in its status line. */}
         {!error && (
@@ -802,7 +804,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             )}
           </section>
         )}
-        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
         {leaving && (
           <>
             <div className="backdrop leaveback" onClick={() => leave('stay')} />
@@ -1124,16 +1125,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 {tags.length > 0 && (
                   <OptRow label="THEME">
                     <div className="themes" role="group" aria-label="EDHREC themes">
-                      {tags.slice(0, 24).filter((t, i) => allTags || i < TAGS_SHOWN || tag === t.slug).map((t) => (
+                      {tags.map((t) => (
                         <button key={t.slug} type="button" className="u-chip" aria-pressed={tag === t.slug} onClick={() => (haptic('select'), setTag(tag === t.slug ? '' : t.slug))}>
                           {t.value.toUpperCase()} <small>{t.count.toLocaleString()}</small>
                         </button>
                       ))}
-                      {tags.length > TAGS_SHOWN && (
-                        <button type="button" className="u-chip ghost tagmore" aria-expanded={allTags} onClick={() => (haptic('select'), setAllTags(!allTags))}>
-                          {allTags ? 'LESS' : `+${Math.min(tags.length, 24) - TAGS_SHOWN} MORE`}
-                        </button>
-                      )}
                     </div>
                   </OptRow>
                 )}
@@ -1261,6 +1257,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   buy={receipt || undefined}
                   expanded={sugExpanded}
                   onToggleExpand={toggleSug}
+                  onJustBuild={kind === 'average' && binder.length > 0 ? () => void forgeFromBinder() : undefined}
+                  building={saving}
                 />
               </div>
             ) : null}

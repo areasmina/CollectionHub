@@ -1674,7 +1674,12 @@ main.dpage {
 }
 .dpage .themes {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   gap: var(--s2);
 }
 
@@ -1829,7 +1834,12 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .dtools .fbody .themes,
 .dpage .themes {
   display: flex !important;
-  flex-wrap: wrap !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
   gap: 6px !important;
   border: 0 !important;
   background: transparent !important;
@@ -3868,9 +3878,18 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .dtools .fbody .themes,
 .dpage .themes {
   display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 5px !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
+  gap: 6px !important;
   width: 100% !important;
+  max-width: 100% !important;
+  padding: 2px 2px 6px 2px !important;
+  box-sizing: border-box !important;
   border: 0 !important;
   background: transparent !important;
   height: auto !important;
@@ -6495,4 +6514,104 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
     padding-top: 4px;
     border-top: 1px dashed var(--u-line, #262626);
   }
+}
+
+/* ==========================================================================
+   GLOBAL RULE: THEMES HORIZONTAL SCROLL
+   Themes are scrollable sideways to fit unlimited themes in one compact row
+   across the commander filter menu, suggestions panel, and all other views.
+   ========================================================================== */
+.themes,
+.fthemes,
+.dtools .fbody .themes,
+.dpage .themes,
+.tbar .fbody .themes,
+.optrow .themes,
+.fsugg .fthemes {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 2px 2px 6px 2px !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.themes::-webkit-scrollbar,
+.fthemes::-webkit-scrollbar,
+.dtools .fbody .themes::-webkit-scrollbar {
+  height: 4px !important;
+}
+.themes::-webkit-scrollbar-track,
+.fthemes::-webkit-scrollbar-track,
+.dtools .fbody .themes::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.themes::-webkit-scrollbar-thumb,
+.fthemes::-webkit-scrollbar-thumb,
+.dtools .fbody .themes::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-radius: 4px !important;
+}
+.themes::-webkit-scrollbar-thumb:hover,
+.fthemes::-webkit-scrollbar-thumb:hover,
+.dtools .fbody .themes::-webkit-scrollbar-thumb:hover {
+  background: var(--u-red, #e60012) !important;
+}
+
+.themes button,
+.themes .u-chip,
+.fthemes button,
+.fthemes .u-chip,
+.fchips button.theme {
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Forge Suggestions Panel - Themes bar */
+.fsugg .fthemes {
+  margin-bottom: var(--s3, 12px) !important;
+  padding: 0 0 6px 0 !important;
+}
+.fsugg .fthemes button.theme {
+  border: 1px dashed var(--u-line2, #3d3d3d) !important;
+  background: transparent !important;
+  color: var(--u-muted, #9a9a9a) !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  font: 400 12px/1 var(--u-mono, monospace) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  transition: all 0.12s ease !important;
+}
+.fsugg .fthemes button.theme:hover {
+  border-color: #fff !important;
+  color: #fff !important;
+}
+.fsugg .fthemes button.theme[aria-pressed='true'] {
+  background: var(--u-red, #e60012) !important;
+  border-color: var(--u-red, #e60012) !important;
+  border-style: solid !important;
+  color: #ffffff !important;
+}
+
+/* JUST BUILD IT button on top of suggestions panel */
+.just-build-banner.sugg-top-action {
+  margin: 0 0 var(--s3, 12px) 0 !important;
+  width: 100% !important;
+}
+.just-build-banner.sugg-top-action .btn-just-build {
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
