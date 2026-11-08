@@ -112,24 +112,18 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
 test('Collection (overhaul): one ribbon says the facts once, grid tiles with tally marks', async ({ page }) => {
   await go(page, 'collection');
   await expect(page.locator('details.dash')).not.toHaveAttribute('open', ''); // the collection comes first
-  // one ribbon: cards · unique · commanders · ≈CA$ worth · decks, then + DECK and IMPORT
-  const sum = page.locator('details.dash > summary .dsum');
-  await expect(sum).toContainText('20 cards');
-  await expect(sum).toContainText('8 unique');
-  await expect(sum).toContainText('1 commander');
-  await expect(sum).toContainText(/≈CA\$236/);
-  await expect(sum).toContainText('1 deck');
   // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics
   await dash(page);
   await expect(page.locator('.stats')).toBeVisible();
   await expect(page.locator('.stats .stat')).toHaveCount(3);
   await expect(page.locator('.stats .slip')).toBeVisible();
-  await expect(sum).toContainText('20 cards');
+  await expect(page.locator('.stats .stat b').first()).toHaveText('20');
   // IMPORT opens the import box (and keeps the overview open)
   await page.locator('details.dash > summary .dimp').click();
   await expect(page.locator('details.dash')).toHaveAttribute('open', '');
   await expect(page.locator('.importbox textarea')).toBeVisible();
   await fits(page, ['details.dash', '.importbox']);
+  await page.locator('.importbox-pop .close').click();
   await expect(page.locator('.topwidget')).toHaveCount(0); // decks row replaced the top 3
   await expect(page.locator('.ctile').first()).toBeVisible();
   // no name title outside the card; the copy pips sit on the card and show once it's selected (tap / focus / hover)
@@ -662,7 +656,7 @@ test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', asyn
   const t = await tile.evaluate((e) => getComputedStyle(e).transform);
   expect(t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
   await expect(page.locator('.dlist .stamp, .dlist .doodles, .addpage .holes')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '⚒ NEW BLANK DECK' })).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ NEW BLANK DECK' })).toBeVisible();
   await fits(page, ['.decksbar', '.dribbon', '.dgrid']);
 });
 
@@ -802,7 +796,7 @@ test('Platform space pass: multi-column open deck categories on wide screens, si
   await fits(page, ['.deckgrid', '.lists']);
 });
 
-test('Add a deck with 0 saved decks: + DECK on closed overview and + ADD A DECK in MY DECKS open the Decks page', async ({ page }) => {
+test('Add a deck with 0 saved decks: + DECK on closed overview and + NEW BLANK DECK in MY DECKS open the Decks page', async ({ page }) => {
   await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
     const tx = db.transaction('decks', 'readwrite');
@@ -813,11 +807,12 @@ test('Add a deck with 0 saved decks: + DECK on closed overview and + ADD A DECK 
   // Closed overview fold shows + DECK right next to IMPORT
   await expect(page.locator('details.dash > summary .ddeck')).toHaveText('+ DECK');
   await go(page, 'decks');
-  // Inside Decks, MY DECKS (0) has a + ADD A DECK button even when 0 decks exist
-  const addBtn = page.locator('.shelfhead .adddeckbtn');
+  // Inside Decks, MY DECKS has a NEW BLANK DECK button even when 0 decks exist
+  const addBtn = page.locator('.decksactions button', { hasText: 'NEW BLANK DECK' });
   await expect(addBtn).toBeVisible();
+  page.on('dialog', (dialog) => dialog.accept('Test Brew'));
   await addBtn.click();
-  await expect(page.locator('.addpage h2')).toHaveText('ADD A DECK');
+  await expect(page.locator('.dhero')).toBeVisible();
 });
 
 test('Deck vs Collection separation: MY DECKS never hosts Collection Import, and adding a deck never adds cards to the collection binder', async ({ page }) => {

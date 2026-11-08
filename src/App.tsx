@@ -189,11 +189,51 @@ export default function App() {
   }, [dock, isRepositioning, pullDist]);
 
   const currentCode = useSyncCode();
-  const handleSyncClick = (e: React.MouseEvent) => {
+  const [islandCollapsed, setIslandCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('ch:island:collapsed') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const lightPressTimer = useRef<number | null>(null);
+  const lightDidLongPress = useRef(false);
+
+  const handleLightDown = (e: React.PointerEvent) => {
     e.stopPropagation();
-    haptic('open');
-    setIslandOpen((prev) => !prev);
+    lightDidLongPress.current = false;
+    lightPressTimer.current = window.setTimeout(() => {
+      lightDidLongPress.current = true;
+      haptic('tap');
+      setIslandCollapsed((c) => {
+        const next = !c;
+        try {
+          localStorage.setItem('ch:island:collapsed', next ? '1' : '0');
+        } catch {}
+        return next;
+      });
+    }, 2000);
   };
+
+  const handleLightUp = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (lightPressTimer.current) {
+      clearTimeout(lightPressTimer.current);
+      lightPressTimer.current = null;
+    }
+    if (!lightDidLongPress.current) {
+      if (islandCollapsed) {
+        setIslandCollapsed(false);
+        try {
+          localStorage.setItem('ch:island:collapsed', '0');
+        } catch {}
+      } else {
+        haptic('open');
+        setIslandOpen((prev) => !prev);
+      }
+    }
+  };
+
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   useBrainData(); // card roles + combo files: re-render every view once they arrive
@@ -264,7 +304,7 @@ export default function App() {
         <div className="island-scrim" onClick={() => setIslandOpen(false)} aria-hidden="true" />
       )}
       <nav
-        className={`pillnav notch dock-${dock}${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}`}
+        className={`pillnav notch dock-${dock}${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
         onPointerDown={onIslandDown()}
@@ -349,30 +389,29 @@ export default function App() {
               </button>
             ))}
           </div>
-          {/* Sync indicator + Dynamic Island sync trigger (gear removed, Miku green indicator) */}
+          {/* Sync indicator + Dynamic Island sync trigger: only tapping the light opens sync; holding 2s collapses */}
           <div className={`syncpill ${currentCode ? 'on' : 'off'}`}>
-            <button
-              type="button"
-              className="sync-main"
-              aria-label={`Sync: ${currentCode ? syncSt.status : 'off'}. Tap for Sync Settings`}
-              title={currentCode ? `Sync is ON (${syncSt.status}). Tap for Dynamic Island Sync settings` : 'Sync is OFF. Tap to turn on sync in Dynamic Island'}
-              onClick={handleSyncClick}
-            >
-              <span className={`sdot ${currentCode ? syncSt.status : 'off'}`} aria-hidden="true" />
-              <span>{currentCode ? (syncSt.status === 'syncing' ? 'SYNCING…' : 'SYNC') : 'SYNC'}</span>
-            </button>
+            <span
+              role="button"
+              tabIndex={0}
+              className={`sdot ${currentCode ? syncSt.status : 'off'}`}
+              aria-label={`Sync light: ${currentCode ? syncSt.status : 'off'}. Tap light for sync settings, hold 2s to collapse`}
+              title="Tap light for Sync settings, hold 2s to collapse island"
+              onPointerDown={handleLightDown}
+              onPointerUp={handleLightUp}
+              onPointerCancel={() => {
+                if (lightPressTimer.current) {
+                  clearTimeout(lightPressTimer.current);
+                  lightPressTimer.current = null;
+                }
+              }}
+            />
+            <span className="sync-lbl">{currentCode ? (syncSt.status === 'syncing' ? 'SYNCING…' : 'SYNC') : 'SYNC'}</span>
           </div>
-          {/* Gooey venom pull lip at the inner edge of the notch */}
-          <button
-            type="button"
-            className="island-lip"
-            aria-expanded={islandOpen}
-            aria-label={islandOpen ? "Close Dynamic Island" : "Drag for Dynamic Island decks"}
-            title={islandOpen ? "Close Island" : "Drag or tap for Island decks"}
-            onClick={() => (haptic('tap'), setIslandOpen(!islandOpen))}
-          >
-            <span className="lip-bar" aria-hidden="true" />
-          </button>
+          {/* Visual dock lip/grip handle (does not open menus) */}
+          <div className="island-lip" aria-hidden="true">
+            <span className="lip-bar" />
+          </div>
         </div>
 
         {islandOpen && (

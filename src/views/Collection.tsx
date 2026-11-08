@@ -71,8 +71,19 @@ export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
 export function Collection({ profile, name, s, binders = [], onPick, sync }: { profile: number; name: string; s: Shared; binders?: { id: number; name: string }[]; onPick?: (id: number) => void; sync?: SyncItem }) {
   const list = useLiveQuery(() => db.entries.where('profile').equals(profile).sortBy('name'), [profile]);
   const entries = list ?? [];
-  // Import folds away; it opens by itself for an empty binder (and stays open while an import runs).
-  const [importOpen, setImportOpen] = useState<boolean | null>(null);
+  // Import modal pop-up: opens by itself for an empty binder (and stays open while an import runs).
+  const [importOpen, setImportOpen] = useState<boolean>(false);
+  useEffect(() => {
+    if (list !== undefined && list.length === 0) setImportOpen(true);
+  }, [list?.length]);
+
+  useEffect(() => {
+    if (!importOpen) return;
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setImportOpen(false);
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+  }, [importOpen]);
+
   const [dashPick, setDashPick] = useState<boolean | null>(() => {
     try {
       const v = localStorage.getItem('ch:dash');
@@ -184,19 +195,11 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
 
       <details className="dash" open={dashOpen} onToggle={(e) => setDash(e.currentTarget.open)}>
         <summary aria-label={`Binder overview: ${total} cards, ${commanders} commanders${decks ? `, ${decks} decks` : ''}`}>
-          <span className="dsum">
-            {facts.map(([n, w, tip]) => (
-              <span key={w || 'value'} title={tip}>
-                <b>{n}</b>
-                {w && ` ${w}`}
-              </span>
-            ))}
-          </span>
           <span className="dacts2">
             <span role="button" tabIndex={0} className="u-btn ghost ddeck" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), openDeckList())}>
               + DECK
             </span>
-            <span role="button" tabIndex={0} className="u-btn dimp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), setDash(true), setImportOpen(!importOpen))}>
+            <span role="button" tabIndex={0} className="u-btn primary dimp" onClick={(e) => (e.preventDefault(), e.stopPropagation(), haptic('open'), setImportOpen(true))}>
               IMPORT
             </span>
             <span className="chev" aria-hidden="true">
@@ -243,62 +246,67 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             {value > 0 && <span className="stamp">APPRAISED</span>}
           </div>
         </section>
+      </details>
 
-        {/* Single upload option at the top (no duplicate below MyDecks) */}
-        <details className="importbox" open={!!busy || !!result || (importOpen ?? (list !== undefined && list.length === 0))} onToggle={(e) => setImportOpen(e.currentTarget.open)}>
-          <summary>
-            <b>+ IMPORT CARDS</b>
-            <small>cards you own in {name} (not a deck)</small>
-            <span className="chev" aria-hidden="true">
-              ▾
-            </span>
-          </summary>
-          <section className="importrow">
-            <p className="ihelp">
-              Add cards you own to <b>{name}</b>: ManaBox CSV, a CSV with name/quantity columns, or a card list ("1 Sol Ring"). To add a deck without adding its cards to your collection, use <b>+ DECK</b>.
-            </p>
-            <label className="u-btn file">
-              {upload}
-              CHOOSE A FILE
-              <input
-                type="file"
-                accept=".csv,.txt,text/csv,text/plain"
-                disabled={!!busy}
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = '';
-                  if (f) setText(await f.text());
-                }}
-              />
-            </label>
-            <label className="ipaste">
-              <span>…or paste cards you own</span>
-              <textarea rows={4} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} />
-            </label>
-            {deckLike && (
-              <div className="deckwarn" role="status">
-                <span>
-                  <b>▲ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
-                </span>
-                <button type="button" className="u-btn" disabled={!!busy} onClick={() => void saveAsDeckInstead()}>
-                  SAVE AS A DECK INSTEAD →
+      {/* Pop-up modal for import cards */}
+      {importOpen && (
+        <>
+          <div className="backdrop" onClick={() => setImportOpen(false)} />
+          <div className="importbox-pop note-pop" role="dialog" aria-modal="true" aria-label="Import cards" onClick={(e) => e.stopPropagation()}>
+            <div className="nh">
+              <span>IMPORT <mark>CARDS</mark></span>
+              <button type="button" className="close" onClick={() => setImportOpen(false)} aria-label="Close dialog">✕</button>
+            </div>
+            <section className="importbox importrow">
+              <p className="ihelp">
+                Add cards you own to <b>{name}</b>: ManaBox CSV, a CSV with name/quantity columns, or a card list ("1 Sol Ring"). To add a deck without adding its cards to your collection, use <b>+ DECK</b>.
+              </p>
+              <label className="u-btn file">
+                {upload}
+                CHOOSE A FILE
+                <input
+                  type="file"
+                  accept=".csv,.txt,text/csv,text/plain"
+                  disabled={!!busy}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) setText(await f.text());
+                  }}
+                />
+              </label>
+              <label className="ipaste">
+                <span>…or paste cards you own</span>
+                <textarea rows={6} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+              </label>
+              {deckLike && (
+                <div className="deckwarn" role="status">
+                  <span>
+                    <b>▲ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
+                  </span>
+                  <button type="button" className="u-btn" disabled={!!busy} onClick={() => void saveAsDeckInstead()}>
+                    SAVE AS A DECK INSTEAD →
+                  </button>
+                </div>
+              )}
+              <div className="ibtns">
+                <button className="u-btn primary" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
+                  + ADD
+                </button>
+                <button className="u-btn" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
+                  REPLACE
+                </button>
+                <button type="button" className="u-btn ghost" onClick={() => setImportOpen(false)}>
+                  CANCEL
                 </button>
               </div>
-            )}
-            <div className="ibtns">
-              <button className="u-btn primary" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
-                + ADD
-              </button>
-              <button className="u-btn" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
-                REPLACE
-              </button>
-            </div>
-            {busy && <Progress {...busy} />}
-            {error && <p className="error">{error}</p>}
-            {result && <ImportReport r={result} />}
-          </section>
-        </details>
-      </details>
+              {busy && <Progress {...busy} />}
+              {error && <p className="error">{error}</p>}
+              {result && <ImportReport r={result} />}
+            </section>
+          </div>
+        </>
+      )}
 
       {illegal > 0 && (
         <p className="count">

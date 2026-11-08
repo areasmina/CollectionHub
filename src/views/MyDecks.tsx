@@ -31,12 +31,12 @@ export function MyDecks({ s, onAdd, onSeeAll }: { s: Shared; onAdd?: () => void;
     <section className="shelf" aria-label="My decks">
       <div className="shelfhead">
         <h2>
-          <button type="button" className="shelftitle" onClick={handleSeeAll} title="Open My Decks & add a deck">
+          <button type="button" className="shelftitle" onClick={handleSeeAll} title="Open My Decks">
             MY DECKS ({decks.length}) →
           </button>
         </h2>
         <button type="button" className="u-btn ghost adddeckbtn" onClick={handleAdd}>
-          + ADD A DECK
+          + NEW BLANK DECK
         </button>
       </div>
       {decks.length > 0 && (

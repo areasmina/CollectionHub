@@ -371,6 +371,7 @@ export const EyeDoodle = memo(function EyeDoodle({ bare = false }: { bare?: bool
   const svgRef = useRef<SVGSVGElement>(null);
   const irisRef = useRef<SVGGElement>(null);
   // The iris follows the mouse while it moves; after 3 s without movement (and on touch) it roams on its own.
+  // On mobile/gyroscope devices, the eye tracks device tilt in reverse so it follows the user's face!
   useEffect(() => {
     const svg = svgRef.current;
     const ir = irisRef.current;
@@ -391,7 +392,31 @@ export const EyeDoodle = memo(function EyeDoodle({ bare = false }: { bare?: bool
       idle = window.setTimeout(() => (svg.classList.remove('tracking'), (ir.style.transform = '')), 3000);
     };
     addEventListener('pointermove', move, { passive: true });
-    return () => (removeEventListener('pointermove', move), clearTimeout(idle));
+
+    // Gyroscope tracking for mobile: invert phone tilt so eye looks up towards user
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.gamma === null || e.beta === null) return;
+      const g = Math.max(-45, Math.min(45, e.gamma));
+      const b = Math.max(-45, Math.min(45, e.beta - 45));
+      const tx = (-g / 45) * 16;
+      const ty = (-b / 45) * 7;
+      ir.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+      svg.classList.add('tracking');
+      clearTimeout(idle);
+      idle = window.setTimeout(() => (svg.classList.remove('tracking'), (ir.style.transform = '')), 4000);
+    };
+
+    if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+      window.addEventListener('deviceorientation', onOrient, { passive: true });
+    }
+
+    return () => {
+      removeEventListener('pointermove', move);
+      if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+        window.removeEventListener('deviceorientation', onOrient);
+      }
+      clearTimeout(idle);
+    };
   }, []);
   const front = useRef<SVGGElement>(null);
   const nodes = useRef<(SVGGElement | null)[]>([]);

@@ -3,7 +3,6 @@ import { DECK_COLOURS, deckColour } from '../lib/deckcolor';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { importDeck, type ImportResult } from '../lib/actions';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { addToDeck, removeFromDeck, replaceInDeck, savePin, setCommander } from '../lib/deckedit';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../lib/pins';
@@ -32,11 +31,9 @@ import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
-import { ImportReport } from './Collection';
-import { MyDecks } from './MyDecks';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, Progress, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon } from './zine';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -377,7 +374,56 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                     />
                   ))}
                 </span>
+                <label className="custom-color-label" title="Pick any custom shade for this deck">
+                  <span>CUSTOM SHADE:</span>
+                  <input
+                    type="color"
+                    value={deck.color?.startsWith('#') ? deck.color : '#e60012'}
+                    onChange={(e) => {
+                      haptic('select');
+                      db.decks.update(deck.id!, { color: e.target.value });
+                    }}
+                  />
+                </label>
               </li>
+              <li>
+                <button
+                  role="menuitem"
+                  onClick={act(async () => {
+                    const val = prompt('Add a tag for this deck (e.g. casual, cedh, token, artifact):', '')?.trim().toLowerCase().slice(0, 30);
+                    if (!val) return;
+                    const prev = deck.tags ?? [];
+                    if (!prev.includes(val)) {
+                      haptic('success');
+                      await db.decks.update(deck.id!, { tags: [...prev, val] });
+                    }
+                  })}
+                >
+                  <span className="cmenu-main">+ ADD TAG</span>
+                  <small className="cmenu-meta">{deck.tags?.length ? deck.tags.map((t) => `#${t}`).join(', ') : 'organise your decks'}</small>
+                </button>
+              </li>
+              {deck.tags && deck.tags.length > 0 && (
+                <li className="cmenu-tags-row">
+                  <span className="cl">TAGS <small>tap to remove</small></span>
+                  <div className="cmenu-tags-list">
+                    {deck.tags.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        className="cmenu-tag-item"
+                        title={`Remove tag #${t}`}
+                        onClick={act(async () => {
+                          haptic('tap');
+                          await db.decks.update(deck.id!, { tags: deck.tags!.filter((x) => x !== t) });
+                        })}
+                      >
+                        #{t} ✕
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              )}
               <li>
                 <button role="menuitem" onClick={share}>
                   <span className="cmenu-main">{copied ? 'COPIED TO CLIPBOARD' : canShare ? 'SHARE DECK' : 'COPY DECKLIST'}</span>
@@ -956,10 +1002,6 @@ export function Decks(s: Shared) {
     const d = name && decks.find((x) => x.name === name);
     if (d) (setOpen(d.id!), scrollTo(0, 0));
   }, [decks, navTick]);
-  const [name, setName] = useState('');
-  const [text, setText] = useState('');
-  const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
-  const [result, setResult] = useState<ImportResult | null>(null);
 
   // Deck Arsenal Overview Stats
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
@@ -977,15 +1019,6 @@ export function Decks(s: Shared) {
     .map((d) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket)
     .filter((b) => b > 0);
   const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce<number>((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
-  const [error, setError] = useState('');
-
-  const [importOpen, setImportOpen] = useState(false);
-  useEffect(() => {
-    if (!importOpen) return;
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setImportOpen(false);
-    document.addEventListener('keydown', esc);
-    return () => document.removeEventListener('keydown', esc);
-  }, [importOpen]);
 
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
@@ -996,19 +1029,61 @@ export function Decks(s: Shared) {
   }, [!!deck]);
   if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
 
-  async function add() {
-    setError('');
-    setBusy({ done: 0, total: 0 });
-    try {
-      const r = await importDeck(s.profile, name.trim(), text, (done, total) => setBusy({ done, total }));
-      setResult({ format: 'text', added: r.deck.cards.reduce((n, c) => n + c.qty, 0), unmatched: r.unmatched, errors: r.errors });
-      setName('');
-      setText('');
-    } catch (e) {
-      setError(`Import failed: ${(e as Error).message}`);
-    }
-    setBusy(null);
-  }
+  // Decks Workbench: Search, Sorting, Status and Tag filtering
+  const [dq, setDq] = useState('');
+  const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
+  const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
+  const [dtag, setDtag] = useState<string>('all');
+  const allTags = [...new Set(decks.flatMap((d) => d.tags ?? []))].filter(Boolean);
+
+  const filteredDecks = decks
+    .filter((d) => {
+      if (dq.trim()) {
+        const q = dq.toLowerCase().trim();
+        const matchName = d.name.toLowerCase().includes(q);
+        const matchCmdr = d.commander?.toLowerCase().includes(q);
+        const matchTag = d.tags?.some((t) => t.toLowerCase().includes(q));
+        if (!matchName && !matchCmdr && !matchTag) return false;
+      }
+      if (dstatus === 'ready') {
+        const pct = summarize(d.cards.map((c) => c.name), s.mine, s.other).pct;
+        if (pct !== 100) return false;
+      } else if (dstatus === 'in-progress') {
+        const pct = summarize(d.cards.map((c) => c.name), s.mine, s.other).pct;
+        if (pct === 100) return false;
+      } else if (dstatus === 'active') {
+        if (d.inactive) return false;
+      }
+      if (dtag !== 'all') {
+        if (!d.tags?.includes(dtag)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (dsort === 'name-asc') return a.name.localeCompare(b.name);
+      if (dsort === 'name-desc') return b.name.localeCompare(a.name);
+      if (dsort === 'match-desc') {
+        const pa = summarize(a.cards.map((c) => c.name), s.mine, s.other).pct;
+        const pb = summarize(b.cards.map((c) => c.name), s.mine, s.other).pct;
+        return pb - pa;
+      }
+      if (dsort === 'power-desc') {
+        const ba = bracketOf(a.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        const bb = bracketOf(b.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        return bb - ba;
+      }
+      if (dsort === 'power-asc') {
+        const ba = bracketOf(a.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        const bb = bracketOf(b.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        return ba - bb;
+      }
+      if (dsort === 'cards-desc') {
+        const na = a.cards.reduce((n, c) => n + c.qty, 0);
+        const nb = b.cards.reduce((n, c) => n + c.qty, 0);
+        return nb - na;
+      }
+      return (b.updated ?? 0) - (a.updated ?? 0);
+    });
 
   async function createBlankDeck() {
     const raw = prompt('Name your new deck:', 'New Brew')?.trim();
@@ -1024,11 +1099,6 @@ export function Decks(s: Shared) {
     scrollTo(0, 0);
   }
 
-  function jumpToAdd() {
-    haptic('open');
-    setImportOpen(true);
-  }
-
 
   return (
     <>
@@ -1037,9 +1107,6 @@ export function Decks(s: Shared) {
         <div className="decksbar">
           <Title text="MY DECKS" label="My decks" size={narrow ? 44 : 64} seed={33} />
           <div className="decksactions">
-            <button type="button" className="u-btn ghost" onClick={jumpToAdd}>
-              + IMPORT / PASTE
-            </button>
             <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
               + NEW BLANK DECK
             </button>
@@ -1071,58 +1138,69 @@ export function Decks(s: Shared) {
             </span>
           </p>
         )}
-        <MyDecks s={s} onAdd={jumpToAdd} onSeeAll={() => document.querySelector('.dgrid')?.scrollIntoView({ behavior: 'smooth' })} />
-      {importOpen && (
-        <>
-          <div className="backdrop" onClick={() => setImportOpen(false)} />
-          <div className="addpage-pop note-pop" role="dialog" aria-modal="true" aria-label="Import or paste a deck" onClick={(e) => e.stopPropagation()}>
-            <div className="nh">
-              <span>IMPORT <mark>A DECK</mark></span>
-              <button type="button" className="close" onClick={() => setImportOpen(false)} aria-label="Close dialog">✕</button>
-            </div>
-            <section className="addpage u-panel" aria-label="Add a deck">
-              <h2>ADD A DECK</h2>
-              <p className="small">Decks are virtual lists — saving a deck or adding cards to a deck never adds cards to your collection binder.</p>
-              <label>
-                deck name
-                <input placeholder="e.g. Atraxa superfriends_" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-              </label>
-              <label className="u-btn file">
-                CHOOSE A FILE
-                <input
-                  type="file"
-                  accept=".txt,.csv,text/plain,text/csv"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = '';
-                    if (!f) return;
-                    setText(await f.text());
-                    if (!name) setName(f.name.replace(/\.\w+$/, ''));
-                  }}
-                />
-              </label>
-              <label>
-                …or paste the list
-                <textarea rows={7} placeholder={"Commander\n1 Atraxa, Praetors' Voice\n\nDeck\n1 Sol Ring_"} value={text} onChange={(e) => setText(e.target.value)} />
-              </label>
-              <div className="addpage-actions">
-                <button className="u-btn primary" disabled={!name.trim() || !text.trim() || !!busy} onClick={add}>
-                  SAVE DECK
-                </button>
-                <button type="button" className="u-btn ghost" onClick={() => setImportOpen(false)}>
-                  CANCEL
-                </button>
-              </div>
-              {busy && <Progress {...busy} />}
-              {error && <p className="error">{error}</p>}
-              {result && <ImportReport r={result} deck />}
-            </section>
+        {/* Decks Workbench Toolbar: search, sort, status filters, and tag pills */}
+        <div className="decktoolbar" role="search" aria-label="Deck filters and tools">
+          <div className="dsearchbox">
+            <input
+              type="search"
+              placeholder="Search decks by name, commander, or tag…"
+              value={dq}
+              onChange={(e) => setDq(e.target.value)}
+              aria-label="Search decks"
+            />
           </div>
-        </>
-      )}
+          <div className="dfilters">
+            <label className="dsortpick">
+              <span>SORT:</span>
+              <select value={dsort} onChange={(e) => setDsort(e.target.value as any)}>
+                <option value="updated-desc">RECENTLY UPDATED</option>
+                <option value="name-asc">NAME (A → Z)</option>
+                <option value="name-desc">NAME (Z → A)</option>
+                <option value="match-desc">MATCH % (HIGH → LOW)</option>
+                <option value="power-desc">POWER (HIGH → LOW)</option>
+                <option value="power-asc">POWER (LOW → HIGH)</option>
+                <option value="cards-desc">CARD COUNT</option>
+              </select>
+            </label>
+            <div className="dstatuspick">
+              {(['all', 'ready', 'in-progress', 'active'] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  className={`u-chip ${dstatus === st ? 'active' : ''}`}
+                  onClick={() => setDstatus(st)}
+                >
+                  {st === 'all' ? 'ALL' : st === 'ready' ? 'READY (100%)' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
+                </button>
+              ))}
+            </div>
+          </div>
+          {allTags.length > 0 && (
+            <div className="decktagpills" aria-label="Filter by tag">
+              <span className="tlabel">TAGS:</span>
+              <button
+                type="button"
+                className={`tagpill ${dtag === 'all' ? 'active' : ''}`}
+                onClick={() => setDtag('all')}
+              >
+                ALL
+              </button>
+              {allTags.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  className={`tagpill ${dtag === t ? 'active' : ''}`}
+                  onClick={() => setDtag(dtag === t ? 'all' : t)}
+                >
+                  #{t}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid cgrid">
-          {decks.map((d) => {
+          {filteredDecks.map((d) => {
             const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
             // No commander set: show the deck's most expensive card instead of a blank tile.
             const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
@@ -1142,7 +1220,24 @@ export function Decks(s: Shared) {
                       <b>{sum.pct}%</b>
                       <Meter pct={sum.pct} label={`${sum.pct}% owned`} />
                     </span>
-                    {d.tags?.length ? <span className="dtags">{d.tags.map((t) => `#${t}`).join(' ')}</span> : null}
+                    {d.tags?.length ? (
+                      <span className="dtags" onClick={(e) => e.stopPropagation()}>
+                        {d.tags.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            className={`tagbadge ${dtag === t ? 'active' : ''}`}
+                            title={`Filter by #${t}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDtag(dtag === t ? 'all' : t);
+                            }}
+                          >
+                            #{t}
+                          </button>
+                        ))}
+                      </span>
+                    ) : null}
                     {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
                     <span className="cfoot">
                       <span>

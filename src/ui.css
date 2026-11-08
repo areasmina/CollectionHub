@@ -347,7 +347,90 @@
 .pillnav.floating {
   transition: none !important;
   cursor: grabbing !important;
-  box-shadow: 0 0 35px rgba(230, 0, 18, 0.6), 0 0 70px rgba(0, 0, 0, 0.95);
+  border: none !important;
+  border-radius: 42% 58% 60% 40% / 45% 55% 45% 55% !important;
+  animation: venom-goo-morph 1.8s infinite ease-in-out alternate, venom-simmer 0.4s infinite alternate !important;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.98), 0 0 50px rgba(230, 0, 18, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.15) !important;
+}
+
+.pillnav.floating .island-membrane {
+  border-radius: inherit !important;
+  animation: venom-goo-membrane 2.2s infinite ease-in-out alternate !important;
+}
+
+@keyframes venom-goo-morph {
+  0% {
+    border-radius: 48% 52% 44% 56% / 54% 46% 54% 46%;
+    transform: translate(-50%, -50%) rotate(-1deg) scale(1);
+  }
+  33% {
+    border-radius: 62% 38% 58% 42% / 42% 58% 42% 58%;
+    transform: translate(-50%, -50%) rotate(1.5deg) scale(1.03);
+  }
+  66% {
+    border-radius: 38% 62% 43% 57% / 59% 41% 59% 41%;
+    transform: translate(-50%, -50%) rotate(-2deg) scale(0.98);
+  }
+  100% {
+    border-radius: 55% 45% 65% 35% / 47% 53% 47% 53%;
+    transform: translate(-50%, -50%) rotate(0.8deg) scale(1.02);
+  }
+}
+
+@keyframes venom-simmer {
+  0% {
+    filter: drop-shadow(0 0 4px rgba(230, 0, 18, 0.4));
+  }
+  100% {
+    filter: drop-shadow(0 0 12px rgba(230, 0, 18, 0.8));
+  }
+}
+
+@keyframes venom-goo-membrane {
+  0% {
+    border-radius: 50% 50% 45% 55% / 55% 45% 55% 45%;
+  }
+  100% {
+    border-radius: 40% 60% 60% 40% / 40% 60% 40% 60%;
+  }
+}
+
+/* Minimalist Collapsed Mode: micro glowing dot orb */
+.pillnav.collapsed {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 0 20px rgba(0, 230, 118, 0.4), 0 8px 24px rgba(0, 0, 0, 0.95) !important;
+  border: 1px solid rgba(0, 230, 118, 0.4) !important;
+}
+
+.pillnav.collapsed .pill,
+.pillnav.collapsed .pback,
+.pillnav.collapsed .sync-lbl,
+.pillnav.collapsed .island-lip {
+  display: none !important;
+}
+
+.pillnav.collapsed .syncpill {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  justify-content: center !important;
+}
+
+.pillnav.collapsed .sdot {
+  width: 12px !important;
+  height: 12px !important;
 }
 
 /* Stretching state */
@@ -623,12 +706,24 @@
   transform: rotate(45deg);
 }
 .pillnav .syncpill .sdot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #666666;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  cursor: pointer;
+  display: inline-block;
+  outline: none;
+}
+.pillnav .syncpill .sdot:hover {
+  transform: scale(1.3);
+}
+.pillnav .syncpill .sync-lbl {
+  font: 700 11px var(--u-mono);
+  color: #aaaaaa;
+  padding: 0 6px 0 2px;
+  user-select: none;
 }
 .pillnav .syncpill.on .sdot,
 .pillnav .syncpill .sdot.synced {
@@ -2665,6 +2760,79 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   border-radius: 4px;
   background: var(--u-carbon);
 }
+
+/* Collection Import Modal Pop-up */
+.importbox-pop {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(640px, calc(100vw - 32px)) !important;
+  max-height: calc(100vh - 48px) !important;
+  overflow-y: auto !important;
+  z-index: 1000 !important;
+  background: #141418 !important;
+  border: 1px solid #2e2e38 !important;
+  border-top: 3px solid #e60012 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  padding: 20px !important;
+}
+
+.importbox-pop .nh {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 14px !important;
+  font: 800 18px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.04em !important;
+  color: #ffffff !important;
+}
+
+.importbox-pop .nh mark {
+  background: transparent !important;
+  color: #e60012 !important;
+}
+
+.importbox-pop .nh .close {
+  background: transparent !important;
+  border: 1px solid #3e3e4e !important;
+  border-radius: 4px !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  width: 32px !important;
+  height: 32px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.importbox-pop .nh .close:hover {
+  background: #2a2a32 !important;
+  border-color: #ffd400 !important;
+  color: #ffd400 !important;
+}
+
+.importbox-pop .importbox {
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+.importbox-pop .importrow {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+.importbox-pop .ibtns {
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 6px !important;
+}
 .coll .importbox > summary {
   list-style: none;
   display: flex;
@@ -3360,31 +3528,246 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--s2) var(--s5);
-  margin: 0 0 var(--s5);
-  padding: var(--s3) 0;
-  border-top: 1px solid var(--u-line);
-  border-bottom: 1px solid var(--u-line);
-  font: 400 13px/1.3 var(--u-mono);
+  gap: var(--s2) var(--s4);
+  margin: 0 0 var(--s4);
+  padding: 12px 16px;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  border-top: 3px solid #e60012;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  font: 400 12px/1.3 var(--u-mono);
   color: var(--u-muted);
 }
+.dribbon > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  background: #0d0d10;
+  border: 1px solid #262630;
+  border-radius: 3px;
+}
 .dribbon b {
-  font: 400 20px/1 var(--u-display);
-  color: var(--u-text);
-  letter-spacing: 0.02em;
+  font: 700 16px/1 var(--u-display, sans-serif);
+  color: #ffffff;
+  letter-spacing: 0.03em;
 }
 .dribbon .dcols {
   display: inline-flex;
   gap: var(--s2);
 }
 .dribbon .ov-pip b {
-  font-size: 15px;
+  font-size: 14px;
 }
 .dribbon .pip-w b { color: #e9ddb5; }
 .dribbon .pip-u b { color: #6f9be6; }
 .dribbon .pip-b b { color: #b8a8c8; }
 .dribbon .pip-r b { color: #e86a5c; }
 .dribbon .pip-g b { color: #4fc27a; }
+
+/* Deck Workbench Toolbar */
+.decktoolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 20px;
+  padding: 12px 14px;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  border-left: 3px solid #e60012;
+  border-radius: 4px;
+}
+
+.decktoolbar .dsearchbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.decktoolbar .dsearchbox input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #0d0d10;
+  border: 1px solid #33333e;
+  border-radius: 3px;
+  color: #ffffff;
+  font: 400 13px/1 var(--u-mono);
+}
+
+.decktoolbar .dsearchbox input:focus {
+  outline: none;
+  border-color: #e60012;
+}
+
+.decktoolbar .dfilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.decktoolbar .dsortpick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 11px var(--u-mono);
+  color: var(--u-muted);
+}
+
+.decktoolbar .dsortpick select {
+  padding: 6px 10px;
+  background: #0d0d10;
+  border: 1px solid #33333e;
+  border-radius: 3px;
+  color: #ffffff;
+  font: 700 11px var(--u-mono);
+  cursor: pointer;
+}
+
+.decktoolbar .dstatuspick {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.decktoolbar .dstatuspick .u-chip {
+  padding: 5px 10px;
+  background: #1c1c24;
+  border: 1px solid #333344;
+  border-radius: 3px;
+  color: #bbbbbb;
+  font: 700 11px var(--u-mono);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.decktoolbar .dstatuspick .u-chip.active,
+.decktoolbar .dstatuspick .u-chip:hover {
+  background: #e60012;
+  border-color: #e60012;
+  color: #ffffff;
+}
+
+.decktagpills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid #22222a;
+}
+
+.decktagpills .tlabel {
+  font: 700 11px var(--u-mono);
+  color: var(--u-muted);
+  margin-right: 2px;
+}
+
+.decktagpills .tagpill {
+  padding: 3px 8px;
+  background: #1a1a22;
+  border: 1px solid #333344;
+  border-radius: 3px;
+  color: #cccccc;
+  font: 400 11px var(--u-mono);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.decktagpills .tagpill.active,
+.decktagpills .tagpill:hover {
+  background: #e60012;
+  border-color: #e60012;
+  color: #ffffff;
+}
+
+/* Tag badges on deck cards */
+.dtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tagbadge {
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  color: #00e676;
+  font: 700 10px var(--u-mono);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tagbadge.active,
+.tagbadge:hover {
+  background: #00e676;
+  color: #000000;
+  border-color: #00e676;
+}
+
+/* Custom shade color picker in DeckMenu */
+.custom-color-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font: 700 11px var(--u-mono);
+  color: #aaaaaa;
+  cursor: pointer;
+}
+
+.custom-color-label input[type='color'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #444455;
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+}
+.custom-color-label input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.custom-color-label input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+
+.cmenu-tags-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+}
+.cmenu-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cmenu-tag-item {
+  padding: 2px 6px;
+  background: #242430;
+  border: 1px solid #444455;
+  border-radius: 3px;
+  color: #ffffff;
+  font: 400 11px var(--u-mono);
+  cursor: pointer;
+}
+.cmenu-tag-item:hover {
+  background: #e60012;
+  border-color: #e60012;
+}
 .dgrid > li {
   position: relative;
 }
@@ -5878,67 +6261,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 .vhero .vtile.fit .vpop {
   left: auto !important;
   right: 0 !important;
-}
-
-/* Import deck popup dialog (replaces redundant inline add chart) */
-.addpage-pop {
-  position: fixed !important;
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: min(600px, calc(100vw - 32px)) !important;
-  max-height: calc(100vh - 48px) !important;
-  overflow-y: auto !important;
-  z-index: 1000 !important;
-  background: #141416 !important;
-  border: 2px solid #33333e !important;
-  border-radius: 8px !important;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.98), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-  padding: 16px !important;
-}
-
-.addpage-pop .nh {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  margin-bottom: 12px !important;
-  font: 800 16px/1 var(--u-display, sans-serif) !important;
-  letter-spacing: 0.04em !important;
-}
-
-.addpage-pop .nh .close {
-  background: transparent !important;
-  border: 1px solid #444455 !important;
-  border-radius: 4px !important;
-  color: #ffffff !important;
-  font-size: 14px !important;
-  width: 32px !important;
-  height: 32px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.15s ease !important;
-}
-
-.addpage-pop .nh .close:hover {
-  background: #2a2a32 !important;
-  border-color: #ffd400 !important;
-  color: #ffd400 !important;
-}
-
-.addpage-pop .addpage {
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-.addpage-actions {
-  display: flex !important;
-  gap: 10px !important;
-  margin-top: 10px !important;
 }
 
 /* ==========================================================================
