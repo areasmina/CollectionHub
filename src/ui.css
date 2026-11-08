@@ -681,9 +681,7 @@
   width: 38px;
 }
 
-html.forging .pillnav {
-  display: none;
-}
+/* Dynamic Island stays accessible in the Forge */
 
 /* Phones: compact notch */
 @media (max-width: 700px) {

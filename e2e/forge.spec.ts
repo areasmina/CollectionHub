@@ -17,7 +17,8 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   await openDeck(page);
   const top = page.locator('.forgetop');
   await expect(top).toContainText('Tatyova Lands');
-  await expect(page.locator('.pillnav')).toBeHidden(); // the rest of the app steps back
+  await expect(page.locator('.pillnav')).toBeVisible(); // Dynamic Island stays accessible in the Forge
+  await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/dynamic-island-in-forge-${info.project.name}.png` });
   const sugg = page.locator('.fsugg');
   await expect(sugg.getByRole('radio')).toHaveText(['OUR PICK', 'EDHREC LIFT', 'POPULAR']);
   await expect(page.locator('.fmeters')).toBeVisible();
