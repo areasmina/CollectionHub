@@ -5,7 +5,6 @@ import { searchByText } from '../lib/search';
 import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
 import { comboBreaks, swapEffect } from '../brain/combos';
 import { scryfallUrl, showPreview } from './shared';
-import { Tape } from './zine';
 import { WhyCard } from './Verdict';
 import type { Why } from '../brain/why';
 
@@ -155,27 +154,20 @@ export function SwapNote({
   const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} notes={notesFor(o)} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
   return (
     <div ref={box} tabIndex={-1} className="note-pop swapnote" role="dialog" aria-modal="true" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
-      <Tape
-        style={{
-          top: -12,
-          left: '40%',
-          width: 90,
-          height: 24,
-          transform: 'rotate(4deg)',
-        }}
-      />
       <div className="nh">
-        <span className="swap-title">
-          SWAP <mark>{now.toUpperCase()}</mark> <span className="swap-for">FOR</span>
-          {replaced && <small className="was"> · was {name}</small>}
-        </span>
+        <div className="swap-title-wrap">
+          <span className="swap-title">
+            SWAP <mark>{now.toUpperCase()}</mark> <span className="swap-for">FOR</span>
+          </span>
+          {replaced && <span className="was">was {name}</span>}
+        </div>
         {/* Search sits up top beside the title: any card of yours, by name or rules text */}
         <label className="swapq top">
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search your binder: name or rules text…" aria-label="Search your binder" autoComplete="off" />
         </label>
         <button className="close" aria-label="Close" onClick={onClose}>
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-            <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="3" />
+            <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="2.5" />
           </svg>
         </button>
       </div>
@@ -192,7 +184,7 @@ export function SwapNote({
           }}
         >
           {shown && <img src={shown} alt="" />}
-          <small>{look ? `↔ instead of ${now}` : replaced ? `EDHREC’s card for this slot` : 'why it’s in the deck'}</small>
+          <small className="slot-role-tag">{look ? `↔ instead of ${now}` : replaced ? `EDHREC’s card for this slot` : 'why it’s in the deck'}</small>
           {whyCard && (
             // kept in place while a suggestion is previewed, so the drop target doesn't change size mid-drag
             <div style={look ? { visibility: 'hidden' } : undefined}>
@@ -212,21 +204,20 @@ export function SwapNote({
             </p>
           )}
           <a className="scrylink" href={scryfallUrl(now)} target="_blank" rel="noreferrer">
-            {now} on Scryfall ↗
+            <span>{now} on Scryfall</span> ↗
           </a>
         </div>
         <div className="picks" onMouseLeave={() => setLook(undefined)}>
           {replaced && (
-            <ul>
-              <li>
-                <button className="undo" onClick={onUndo}>
-                  <span>
-                    <b>↺ UNDO</b>
-                    <small>back to {name}</small>
-                  </span>
-                </button>
-              </li>
-            </ul>
+            <div className="undo-row">
+              <button className="undo" onClick={onUndo} title={`Revert swap back to ${name}`}>
+                <span>
+                  <b>↺ UNDO</b>
+                  <small>back to {name}</small>
+                </span>
+                <span className="undo-badge">RESTORE</span>
+              </button>
+            </div>
           )}
           {/* While you search, the results take the top-3 spot */}
           {q.trim().length >= 2 ? (
@@ -244,7 +235,7 @@ export function SwapNote({
           {/* Indicator text placed at the bottom */}
           <small className="hint">
             {q.trim().length >= 2 ? `your cards matching “${q.trim()}”` : 'top 3 from your binder'}
-            {mouse() ? ' · hover to read one, click or drag it onto the card' : ' · hold one to read it'}
+            {mouse() ? ' · hover to preview, click or drag onto card' : ' · hold one to read it'}
           </small>
           {onPin && (
             <div className="pinrow" role="group" aria-label={`Pins for every ${cmdr} deck`}>
@@ -271,7 +262,7 @@ export function SwapNote({
                   <span>NEVER USE</span>
                 </button>
               </div>
-              <small className="pin-hint">Pinned for every <b>{cmdr}</b> deck</small>
+              <small className="pin-hint">Pinned for every <b>{cmdr || 'this commander'}</b> deck</small>
             </div>
           )}
         </div>

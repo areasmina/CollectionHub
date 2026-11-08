@@ -5240,78 +5240,427 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   }
 }
 
-/* Swap Window header composition: SWAP <CARD> FOR [search...] */
+/* ========================================================
+   SWAP WINDOW: Neo-Brutalist Dark Specimen Modal Overhaul
+   ======================================================== */
+.note-pop.swapnote,
+.zgrid .note-pop.swapnote {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(780px, 94vw) !important;
+  max-width: none !important;
+  max-height: 88dvh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: #141418 !important;
+  color: #f0f0f5 !important;
+  border: 1px solid #2c2c38 !important;
+  border-top: 3px solid var(--u-red, #e60012) !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08), 6px 6px 0 #000000 !important;
+  animation: none !important;
+  z-index: 46 !important;
+}
+
+/* Header bar composition */
 .swapnote .nh {
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
-  padding: 10px 14px !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  padding: 12px 18px !important;
+  background: #181820 !important;
+  border-bottom: 1px solid #262632 !important;
+  flex: none !important;
 }
+
+.swapnote .nh .swap-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
 .swapnote .nh .swap-title {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
   font: 800 13px/1 var(--u-display, sans-serif) !important;
   letter-spacing: 0.04em !important;
+  color: #888899 !important;
   white-space: nowrap !important;
 }
+
 .swapnote .nh .swap-title mark {
-  background: #141416 !important;
+  background: #202028 !important;
   color: #ffffff !important;
-  border: 1px solid #444455 !important;
+  border: 1px solid #444458 !important;
   padding: 4px 8px !important;
   border-radius: 4px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
+  font-size: 13px !important;
 }
+
 .swapnote .nh .swap-for {
   color: var(--u-yellow, #ffd400) !important;
   font: 800 13px/1 var(--u-display, sans-serif) !important;
   letter-spacing: 0.06em !important;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8) !important;
 }
+
+.swapnote .nh .was {
+  font: 400 12px/1 var(--u-mono, monospace) !important;
+  color: #88889a !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+}
+
+.swapnote .swapq.top {
+  flex: 1 1 240px !important;
+  max-width: 320px !important;
+  margin: 0 !important;
+}
+
 .swapnote .swapq.top input {
-  background: #18181c !important;
+  background: #121216 !important;
   color: #ffffff !important;
-  border: 2px solid #33333e !important;
+  border: 1.5px solid #333342 !important;
   border-radius: 6px !important;
   font: 400 13px/1 var(--u-mono, monospace) !important;
   padding: 8px 12px !important;
-  min-height: 40px !important;
+  min-height: 38px !important;
+  width: 100% !important;
   transition: all 0.15s ease !important;
 }
+
 .swapnote .swapq.top input:focus {
   border-color: #ffd400 !important;
-  box-shadow: 0 0 10px rgba(255, 212, 0, 0.25) !important;
+  box-shadow: 0 0 12px rgba(255, 212, 0, 0.25) !important;
+  outline: none !important;
 }
 
-/* Indicator text at the bottom */
-.swapnote .picks .hint {
-  display: block !important;
-  margin-top: 12px !important;
-  margin-bottom: 6px !important;
-  font: 400 12px/1.4 var(--u-mono, monospace) !important;
-  color: #888899 !important;
+.swapnote .close {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  border-radius: 6px !important;
+  background: #202028 !important;
+  color: #aaaaaa !important;
+  border: 1px solid #343444 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
 }
 
-/* Fun Pin Buttons & Good Composition */
-.swapnote .pinrow {
-  margin-top: 16px !important;
-  padding-top: 14px !important;
-  border-top: 1px dashed rgba(255, 255, 255, 0.15) !important;
+.swapnote .close:hover {
+  background: #e60012 !important;
+  color: #ffffff !important;
+  border-color: #e60012 !important;
+}
+
+/* Modal Body */
+.swapnote .swapbody {
+  display: flex !important;
+  gap: 20px !important;
+  padding: 18px 20px 20px !important;
+  overflow-y: auto !important;
+  max-height: calc(88dvh - 65px) !important;
+  flex: 1 1 auto !important;
+}
+
+/* Left Column: Viewer */
+.swapnote .viewer {
+  flex: 0 0 230px !important;
+  width: 230px !important;
   display: flex !important;
   flex-direction: column !important;
+  gap: 8px !important;
+}
+
+.swapnote .viewer img {
+  width: 100% !important;
+  aspect-ratio: 63 / 88 !important;
+  object-fit: cover !important;
+  border-radius: 8px !important;
+  border: 2px solid #2c2c3a !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7) !important;
+  background: #18181e !important;
+}
+
+.swapnote .viewer small,
+.swapnote .viewer .slot-role-tag {
+  font: 700 11px/1.3 var(--u-mono, monospace) !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: #88889a !important;
+  margin-top: 2px !important;
+}
+
+.swapnote .scrylink {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 10px !important;
+  border-radius: 4px !important;
+  background: rgba(230, 0, 18, 0.12) !important;
+  border: 1px solid rgba(230, 0, 18, 0.35) !important;
+  color: #ff5566 !important;
+  font: 700 11px/1 var(--u-mono, monospace) !important;
+  text-decoration: none !important;
+  width: fit-content !important;
+  margin-top: 4px !important;
+  transition: all 0.15s ease !important;
+}
+
+.swapnote .scrylink:hover {
+  background: #e60012 !important;
+  color: #ffffff !important;
+  border-color: #e60012 !important;
+}
+
+/* WhyCard in viewer */
+.swapnote .whycard {
+  margin: 4px 0 !important;
+  font: 400 12px/1.4 var(--u-mono, monospace) !important;
+  color: #cfcfe0 !important;
+}
+
+.swapnote .whycard .wh {
+  margin: 0 0 4px !important;
+  font: 700 12px/1.3 var(--u-mono, monospace) !important;
+  color: #ffffff !important;
+}
+
+.swapnote .whycard .wparts {
+  margin: 0 0 4px !important;
+  padding-left: 14px !important;
+  list-style: square !important;
+}
+
+.swapnote .whycard .wparts li {
+  margin-bottom: 2px !important;
+  color: #a0a0b2 !important;
+  font-size: 11px !important;
+}
+
+.swapnote .whycard .wparts li small {
+  color: #6a6a7a !important;
+}
+
+.swapnote .whycard .wcombo {
+  margin: 3px 0 !important;
+  color: #d8b4fe !important;
+  font-size: 11px !important;
+}
+
+.swapnote .whycard .wnote {
+  margin: 3px 0 !important;
+  color: #ff6666 !important;
+  font-size: 11px !important;
+}
+
+/* Right Column: Picks & Suggestions */
+.swapnote .picks {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.swapnote .picks ul {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+/* Elegant Undo Banner */
+.swapnote .undo-row {
+  margin-bottom: 10px !important;
+}
+
+.swapnote .undo {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 14px !important;
+  border-radius: 6px !important;
+  background: linear-gradient(135deg, rgba(255, 212, 0, 0.14), rgba(255, 212, 0, 0.04)) !important;
+  border: 1.5px solid #ffd400 !important;
+  color: #ffd400 !important;
+  box-shadow: 0 4px 12px rgba(255, 212, 0, 0.08) !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.swapnote .undo:hover {
+  background: rgba(255, 212, 0, 0.22) !important;
+  border-color: #ffe033 !important;
+  box-shadow: 0 4px 18px rgba(255, 212, 0, 0.22) !important;
+  transform: translateY(-1px) !important;
+}
+
+.swapnote .undo span {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.swapnote .undo b {
+  font: 800 13px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.04em !important;
+  color: #ffd400 !important;
+}
+
+.swapnote .undo small {
+  font: 400 12px/1 var(--u-mono, monospace) !important;
+  color: #ddddaa !important;
+}
+
+.swapnote .undo .undo-badge {
+  font: 800 10px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.08em !important;
+  padding: 3px 6px !important;
+  background: rgba(255, 212, 0, 0.2) !important;
+  border: 1px solid rgba(255, 212, 0, 0.5) !important;
+  border-radius: 3px !important;
+  color: #ffd400 !important;
+}
+
+/* Suggestion Card Row Button */
+.swapnote li button {
+  background: #18181f !important;
+  border: 1px solid #2c2c3a !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  color: #f0f0f4 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.swapnote li button:hover,
+.swapnote li button:focus-visible {
+  background: #20202a !important;
+  border-color: #ffd400 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 2px 2px 0 #ffd400 !important;
+  transform: translateY(-1px) !important;
+}
+
+.swapnote li button img {
+  width: 54px !important;
+  height: 75px !important;
+  border-radius: 4px !important;
+  border: 1px solid #363646 !important;
+  object-fit: cover !important;
+  flex: none !important;
+}
+
+.swapnote li b {
+  font: 800 13px/1.2 var(--u-display, sans-serif) !important;
+  color: #ffffff !important;
+  letter-spacing: 0.02em !important;
+  margin-bottom: 4px !important;
+  display: block !important;
+}
+
+/* Reason Badges / Whys */
+.swapnote .whys {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 4px !important;
+  margin-top: 4px !important;
+}
+
+.swapnote .whys > span {
+  font: 500 11px/1.3 var(--u-mono, monospace) !important;
+  padding: 2.5px 7px !important;
+  border-radius: 3px !important;
+  background: #23232c !important;
+  color: #cfcfe0 !important;
+  border: 1px solid #363644 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.swapnote .whys > span:first-child {
+  background: rgba(255, 212, 0, 0.14) !important;
+  color: #ffd400 !important;
+  border: 1px solid rgba(255, 212, 0, 0.4) !important;
+  font-weight: 700 !important;
+}
+
+.swapnote .whys > span.cwarn {
+  background: rgba(230, 0, 18, 0.18) !important;
+  color: #ff7777 !important;
+  border: 1px solid rgba(230, 0, 18, 0.45) !important;
+}
+
+.swapnote .whys > span.cgain {
+  background: rgba(180, 100, 255, 0.16) !important;
+  color: #d8b4fe !important;
+  border: 1px solid rgba(180, 100, 255, 0.35) !important;
+}
+
+/* In-use badge */
+.swapnote .inchip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font: 700 10px/1 var(--u-mono, monospace) !important;
+  padding: 3px 6px !important;
+  border-radius: 3px !important;
+  background: #22222e !important;
+  color: #b0b0c2 !important;
+  border: 1px solid #3c3c4e !important;
+  margin-top: 4px !important;
+}
+
+/* Indicator hint text */
+.swapnote .picks .hint {
+  display: block !important;
+  margin: 8px 0 6px !important;
+  font: 400 11px/1.4 var(--u-mono, monospace) !important;
+  color: #77778a !important;
+}
+
+/* Pin Row & Buttons */
+.swapnote .pinrow {
+  margin-top: 10px !important;
+  padding-top: 10px !important;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.swapnote .pin-btns {
+  display: flex !important;
   gap: 10px !important;
   width: 100% !important;
 }
-.swapnote .pin-btns {
-  display: flex !important;
-  gap: 12px !important;
-  width: 100% !important;
-}
+
 .swapnote .pin-btn {
   flex: 1 1 50% !important;
-  height: 44px !important;
-  min-height: 44px !important;
+  height: 38px !important;
+  min-height: 38px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -5319,61 +5668,115 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   font: 800 12px/1 var(--u-display, 'Archivo Black', sans-serif) !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
-  background: #1c1c22 !important;
-  color: #dddddd !important;
-  border: 2px solid #383844 !important;
+  background: #191920 !important;
+  color: #cccccc !important;
+  border: 1.5px solid #333342 !important;
   border-radius: 6px !important;
   cursor: pointer !important;
   transition: all 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
-  box-shadow: 2px 2px 0 #000000 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
 }
+
 .swapnote .pin-btn .pin-tag-mark {
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 900 !important;
 }
+
 .swapnote .pin-btn:hover:not(:disabled) {
-  transform: translate(-1px, -1px) !important;
-  box-shadow: 3px 3px 0 #000000 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
   color: #ffffff !important;
 }
+
 .swapnote .pin-btn.pin-in:hover:not(:disabled) {
   border-color: var(--u-green, #00f5a0) !important;
+  color: #00f5a0 !important;
 }
+
 .swapnote .pin-btn.pin-out:hover:not(:disabled) {
   border-color: var(--u-red, #e60012) !important;
+  color: #ff6666 !important;
 }
+
 .swapnote .pin-btn:active:not(:disabled) {
-  transform: translate(1px, 1px) !important;
-  box-shadow: 1px 1px 0 #000000 !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
+
 .swapnote .pin-btn:disabled {
   opacity: 0.35 !important;
   cursor: not-allowed !important;
 }
 
-/* Stamped Active States */
 .swapnote .pin-btn.pin-in.is-active {
   background: var(--u-green, #00f5a0) !important;
   color: #000000 !important;
-  border-color: #000000 !important;
-  box-shadow: 3px 3px 0 #000000, 0 0 14px rgba(0, 245, 160, 0.4) !important;
-  transform: rotate(-1deg) !important;
+  border-color: #00f5a0 !important;
+  box-shadow: 0 0 14px rgba(0, 245, 160, 0.4) !important;
+  transform: none !important;
 }
+
 .swapnote .pin-btn.pin-out.is-active {
   background: var(--u-red, #e60012) !important;
   color: #ffffff !important;
-  border-color: #000000 !important;
-  box-shadow: 3px 3px 0 #000000, 0 0 14px rgba(230, 0, 18, 0.4) !important;
-  transform: rotate(1deg) !important;
+  border-color: #e60012 !important;
+  box-shadow: 0 0 14px rgba(230, 0, 18, 0.4) !important;
+  transform: none !important;
 }
+
 .swapnote .pin-hint {
-  font: 400 12px/1.3 var(--u-mono, monospace) !important;
-  color: var(--u-muted, #888888) !important;
+  display: block !important;
+  width: 100% !important;
+  font: 400 11px/1.3 var(--u-mono, monospace) !important;
+  color: #77778a !important;
   letter-spacing: 0.02em !important;
+  text-align: center !important;
+  margin: 0 !important;
 }
+
 .swapnote .pin-hint b {
   color: #ffffff !important;
+  font-weight: 700 !important;
 }
+
+/* Responsive Swap Window: Phone & Small Screens */
+@media (max-width: 700px) {
+  .note-pop.swapnote,
+  .zgrid .note-pop.swapnote {
+    width: min(440px, 95vw) !important;
+    max-height: 88dvh !important;
+  }
+  .swapnote .nh {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 10px 14px !important;
+  }
+  .swapnote .nh .swap-title-wrap {
+    max-width: calc(100% - 46px) !important;
+  }
+  .swapnote .swapq.top {
+    order: 3 !important;
+    flex-basis: 100% !important;
+    max-width: 100% !important;
+  }
+  .swapnote .swapbody {
+    flex-direction: column !important;
+    gap: 14px !important;
+    padding: 12px 14px 16px !important;
+  }
+  .swapnote .viewer {
+    flex: none !important;
+    width: 100% !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+  .swapnote .viewer img {
+    width: 68px !important;
+  }
+}
+
 
 /* Deck Grid Card Zoom (Small / Medium / Large) */
 .deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid,

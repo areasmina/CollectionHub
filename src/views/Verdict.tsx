@@ -73,9 +73,7 @@ export function ReadyTiles({
                 ? 'NO BRACKET'
                 : fit.fit === 'over'
                   ? `PLAYS ${ROMAN[fit.est]}`
-                  : fit.fit === 'under'
-                    ? `BRACKET ${ROMAN[fit.est]}`
-                    : `FITS ${ROMAN[fit.aim]}`}
+                  : `FITS ${ROMAN[fit.est]}`}
             </b>
             <small>
               {fit.est === 0
