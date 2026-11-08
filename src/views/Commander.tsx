@@ -973,19 +973,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
                   </OptRow>
                 )}
-                <OptRow label="VIEW">
-                  <div className="viewsw mini" role="group" aria-label="Card view">
-                    <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                      <GridIcon />
-                    </button>
-                    <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                      <ListIcon />
-                    </button>
-                    <button aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list: name · mana · price · owned" onClick={() => (haptic('select'), setView('compact'))}>
-                      <CompactIcon />
-                    </button>
-                  </div>
-                </OptRow>
                 <div className="pickgrid">
                   <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
                   <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} className="show-pick" />

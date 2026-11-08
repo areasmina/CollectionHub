@@ -336,16 +336,6 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
             </>
           }
         >
-          <OptRow label="VIEW">
-            <div className="viewsw icons" role="group" aria-label="Card view">
-              <button aria-pressed={view === 'list'} aria-label="List view" title="List" onClick={() => (haptic('select'), setView('list'))}>
-                <ListIcon />
-              </button>
-              <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid" onClick={() => (haptic('select'), setView('grid'))}>
-                <GridIcon />
-              </button>
-            </div>
-          </OptRow>
 
           <label className="check">
             <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set

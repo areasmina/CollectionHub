@@ -810,19 +810,6 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
-              <OptRow label="VIEW">
-                <div className="viewsw mini" role="group" aria-label="Card view">
-                  <button aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                    <GridIcon />
-                  </button>
-                  <button aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                    <ListIcon />
-                  </button>
-                  <button aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list: name · mana · price · owned" onClick={() => (haptic('select'), setView('compact'))}>
-                    <CompactIcon />
-                  </button>
-                </div>
-              </OptRow>
             </ToolBar>
             <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
             {[...sections]
