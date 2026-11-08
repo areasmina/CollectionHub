@@ -124,7 +124,7 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   await expect(page.locator('.importbox textarea')).toBeVisible();
   await fits(page, ['details.dash', '.importbox']);
   await page.locator('.importbox-pop .close').click();
-  await expect(page.locator('.topwidget')).toHaveCount(0); // decks row replaced the top 3
+  await expect(page.locator('.topwidget')).toBeVisible(); // rotating top 3 highlights
   await expect(page.locator('.ctile').first()).toBeVisible();
   // no name title outside the card; the copy pips sit on the card and show once it's selected (tap / focus / hover)
   await expect(page.locator('.ctile > .tname').first()).toHaveCSS('width', '1px');

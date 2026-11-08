@@ -6,19 +6,98 @@ import { importCollection, importDeck, resetProfile, type ImportResult } from '.
 import { parseImport } from '../lib/importers';
 import { haptic as buzz, HAPTIC_NOTE, hapticsOn, hapticsSupported, setHaptics } from '../lib/haptics';
 import { useRef } from 'react';
-import { db, type Card } from '../lib/db';
+import { db, type Card, type Entry } from '../lib/db';
 import { collectionCsv, collectionText, download } from '../lib/export';
-import { cad } from '../lib/prices';
+import { cad, toCad } from '../lib/prices';
 import { CardsView } from './CardsView';
 import { freeDeckName, openDeck, openDeckList } from '../lib/nav';
 import type { Shared } from './shared';
 import { isCommander } from './Discover';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
-import { snapshot } from '../lib/pricewatch';
-import { priced, priceSum, Progress } from './shared';
+import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
+import { priced, priceSum, Progress, Thumb } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
+
+type Panel = { key: string; title: string; sub: string; rows: { e: Entry; card: Card; label: string; tone?: 'up' | 'down'; why?: string }[]; empty?: string };
+
+/** Rotating "top 3" widget: most valuable, highest total, 3-day risers (biggest gains), 3-day fallers (biggest losers).
+ *  Every 4 s; hover pauses, clicking advances to the next panel. */
+function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
+  const [i, setI] = useState(0);
+  const [hold, setHold] = useState(false);
+  const [past, setPast] = useState<Awaited<ReturnType<typeof snapshotFrom>>>(null);
+  useEffect(() => void snapshotFrom(3).then(setPast), [entries.length, cards.size]);
+  const unit = (e: Entry) => Number(priced(cards.get(e.cardId), e.foil)?.usd ?? 0);
+  const uniq = (xs: Entry[]) => xs.filter((x, j, a) => a.findIndex((y) => cards.get(y.cardId)?.key === cards.get(x.cardId)?.key) === j);
+  const owned = entries.filter((e) => cards.get(e.cardId) && unit(e) > 0);
+  const byUnit = uniq([...owned].sort((a, b) => unit(b) - unit(a))).slice(0, 3);
+  const byTotal = uniq([...owned].sort((a, b) => unit(b) * b.qty - unit(a) * a.qty)).slice(0, 3);
+  const since = past ? new Date(past.day + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
+  const moveRows = (ms: Move[], tone: 'up' | 'down') =>
+    ms.map((m) => ({
+      e: m.entry,
+      card: cards.get(m.entry.cardId)!,
+      tone,
+      label: `${m.diff > 0 ? '▲' : '▼'} ${cad(Math.abs(toCad(String(m.diff)) ?? 0))}`,
+      why: `${m.diff > 0 ? '+' : '−'}${Math.round((Math.abs(m.diff) / m.was) * 100)}%: ${cad(toCad(String(m.was)) ?? 0)} → ${cad(toCad(String(m.now)) ?? 0)}`,
+    }));
+  const panels: Panel[] = [
+    { key: 'unit', title: 'MOST VALUABLE', sub: 'per copy', rows: byUnit.map((e) => ({ e, card: cards.get(e.cardId)!, label: cad(toCad(String(unit(e))) ?? 0) })) },
+    { key: 'total', title: 'BIGGEST HOLDINGS', sub: 'price × copies', rows: byTotal.map((e) => ({ e, card: cards.get(e.cardId)!, label: `${e.qty}× · ${cad(toCad(String(unit(e) * e.qty)) ?? 0)}` })) },
+    { key: 'up', title: 'BIGGEST GAINERS', sub: past ? `since ${since}` : 'last 3 days', rows: past ? moveRows(movers(entries, cards, past.prices, 'up'), 'up') : [], empty: past ? 'No price gains recorded.' : 'Collecting prices: risers show up after a day or two.' },
+    { key: 'down', title: 'BIGGEST LOSERS', sub: past ? `since ${since}` : 'last 3 days', rows: past ? moveRows(movers(entries, cards, past.prices, 'down'), 'down') : [], empty: past ? 'No price drops recorded.' : 'Collecting prices: fallers show up after a day or two.' },
+  ];
+  useEffect(() => {
+    if (hold || (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const t = setInterval(() => setI((x) => (x + 1) % panels.length), 4000);
+    return () => clearInterval(t);
+  }, [hold]);
+  if (!owned.length) return null;
+  const p = panels[i % panels.length];
+  return (
+    <div
+      className="topwidget"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Collection highlights"
+      onMouseEnter={() => setHold(true)}
+      onMouseLeave={() => setHold(false)}
+      onClick={() => {
+        haptic('tap');
+        setI((x) => (x + 1) % panels.length);
+      }}
+    >
+      <span className="pen" aria-hidden="true" />
+      <div className="twhead">
+        <span className={`tlabel ${p.key}`}>
+          TOP 3 · {p.title}
+        </span>
+        <small>{p.sub}</small>
+        <span className="twdots" aria-hidden="true">
+          {panels.map((x, j) => (
+            <i key={x.key} className={j === i % panels.length ? 'on' : ''} />
+          ))}
+        </span>
+      </div>
+      <ul key={p.key} aria-live="polite">
+        {p.rows.length ? (
+          p.rows.map(({ e, card, label, tone, why }, j) => (
+            <li key={e.id} style={{ '--i': j - (p.rows.length - 1) / 2 } as React.CSSProperties} onClick={(ev) => ev.stopPropagation()}>
+              <Thumb src={card.img?.replace('/small/', '/normal/')} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
+              <span className={`tw price tapey y${j} t${j}${tone ? ' ' + tone : ''}`} title={why}>
+                {label}
+              </span>
+            </li>
+          ))
+        ) : (
+          <li className="twempty">{p.empty}</li>
+        )}
+      </ul>
+    </div>
+  );
+}
 
 export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
   return (
@@ -306,6 +385,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           </div>
           {value > 0 && <span className="stamp">APPRAISED</span>}
         </div>
+        <TopWidget entries={entries} cards={cards} />
       </section>
 
       {/* Pop-up modal for import cards */}
