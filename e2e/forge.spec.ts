@@ -21,6 +21,11 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   const sugg = page.locator('.fsugg');
   await expect(sugg.getByRole('radio')).toHaveText(['OUR PICK', 'EDHREC LIFT', 'POPULAR']);
   await expect(page.locator('.fmeters')).toBeVisible();
+
+  // Verify ftabs: strictly title only, no price on NOT OWNED
+  const ftabs = sugg.locator('.ftabs button');
+  await expect(ftabs).toHaveText(['ALL', 'OWNED', 'NOT OWNED']);
+  await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/not-owned-tab-title-${info.project.name}.png` });
   // the suggestion: an owned card EDHREC plays here, with its reasons
   const row = sugg.locator('.frows li', { hasText: 'Arcane Signet' });
   await expect(row).toHaveClass(/own/);

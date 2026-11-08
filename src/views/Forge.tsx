@@ -3,7 +3,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import { db, type Card, type DeckCard } from '../lib/db';
 import { haptic } from '../lib/haptics';
 import { norm } from '../lib/names';
-import { cad } from '../lib/prices';
 import { searchByText } from '../lib/search';
 import { BASICS } from '../lib/compare';
 import { isLand, roleOf, type DeckStats, type Role } from '../lib/deckstats';
@@ -13,7 +12,7 @@ import { themeOf } from '../brain/themes';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from '../brain/score';
 import type { Aggression } from '../brain/win';
 import { dragEnd, dragStart, fromOf, holdToDrag, lightOff, lightUp, DRAG_TYPE, type DropAt } from '../lib/drag';
-import { priceSum, usd } from './shared';
+import { usd } from './shared';
 
 /**
  * The Forge (approved plan, Nov 6): a focus mode for building a deck. The rest of the app steps back (nav, decoration);
@@ -490,7 +489,6 @@ export function ForgeSuggest({
   if (searching) list = searchByText(list.filter((r) => r.owned > 0), q, (r) => ({ name: r.c.name, type: r.card?.type ?? r.c.type, text: r.card?.text }));
   else list = [...list].sort((a, b) => Number(!!a.blocked) - Number(!!b.blocked) || value(b) - value(a) || a.c.name.localeCompare(b.c.name));
   const shown = list.slice(0, more ? 60 : 20);
-  const buyTotal = priceSum(list.filter((r) => !r.owned).slice(0, more ? 60 : 20).map((r) => ({ card: r.card, qty: 1 })));
 
   // Rows that change place slide to it (FLIP) with a green flash, so you see what the last change moved.
   const box = useRef<HTMLOListElement>(null);
@@ -719,7 +717,7 @@ export function ForgeSuggest({
           [
             ['all', 'ALL'],
             ['owned', 'OWNED'],
-            ['missing', `NOT OWNED${buyTotal > 0 ? ` ≈${cad(buyTotal)}` : ''}`],
+            ['missing', 'NOT OWNED'],
           ] as [Tab, string][]
         ).map(([v, t]) => (
           <button key={v} role="tab" aria-selected={tab === v} onClick={() => (haptic('select'), setTab(v))}>
