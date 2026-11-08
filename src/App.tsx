@@ -229,7 +229,9 @@ export default function App() {
         } catch {}
       } else {
         haptic('open');
-        setIslandOpen((prev) => !prev);
+        setIslandOpen(false);
+        setSync((prev) => !prev);
+        scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
   };
@@ -390,7 +392,16 @@ export default function App() {
             ))}
           </div>
           {/* Sync indicator + Dynamic Island sync trigger: only tapping the light opens sync; holding 2s collapses */}
-          <div className={`syncpill ${currentCode ? 'on' : 'off'}`}>
+          <div
+            className={`syncpill ${currentCode ? 'on' : 'off'}`}
+            onClick={(e) => {
+              if ((e.target as HTMLElement).classList.contains('sdot')) return;
+              haptic('open');
+              setIslandOpen(false);
+              setSync((prev) => !prev);
+              scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
             <span
               role="button"
               tabIndex={0}
@@ -403,6 +414,16 @@ export default function App() {
                 if (lightPressTimer.current) {
                   clearTimeout(lightPressTimer.current);
                   lightPressTimer.current = null;
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  haptic('open');
+                  setIslandOpen(false);
+                  setSync((prev) => !prev);
+                  scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
             />
