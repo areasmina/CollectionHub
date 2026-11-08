@@ -47,7 +47,6 @@ export function coverage(slots: SlotNow[], owns: (name: string) => boolean) {
 export function coverageText(c: ReturnType<typeof coverage>) {
   const parts = [`${c.binder} from your binder`];
   if (c.standins) parts.push(`${c.standins} stand-in${c.standins === 1 ? '' : 's'}`);
-  parts.push(c.buy ? `${c.buy} to buy` : 'nothing to buy');
   return parts.join(' · ');
 }
 
