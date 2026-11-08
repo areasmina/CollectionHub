@@ -742,7 +742,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               )}
             </p>
             <div className="dacts">
-              <ShortAlert items={short} inline />
+              <ShortAlert items={short} inline currentDeck={name} />
               {page && receipt && !forging && (
                 <button type="button" className={`u-btn tobuy${missing.length ? ' money' : ''}`} aria-haspopup="dialog" aria-expanded={buyOpen} onClick={() => (haptic('open'), setBuyOpen(true))}>
                   {missing.length > 0 ? (

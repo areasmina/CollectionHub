@@ -721,7 +721,7 @@ export function ForgeSuggest({
                 <span className="fbody">
                   <b>{r.c.name}</b>
                   <span className="whys">
-                    {r.blocked ? <span className="cwarn">⚠ {r.blocked}</span> : reasons(r).map((t) => <span key={t} className={t.startsWith('fills') ? 'cgain' : t.startsWith('fits ') ? 'cfit' : t === 'owned' ? 'cown' : ''}>{t}</span>)}
+                    {r.blocked ? <span className="cwarn">▲ {r.blocked}</span> : reasons(r).map((t) => <span key={t} className={t.startsWith('fills') ? 'cgain' : t.startsWith('fits ') ? 'cfit' : t === 'owned' ? 'cown' : ''}>{t}</span>)}
                   </span>
                 </span>
                 <span className="fprice">{r.owned ? '✓ yours' : usd(r.card)}</span>

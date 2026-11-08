@@ -163,7 +163,7 @@ function PickCommander({ deck, cardOf }: { deck: Deck; cardOf: (name: string) =>
   const guess = guessCommander(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })));
   return (
     <aside className="shortalert pickcmdr" role="status">
-      <b>⚠ NO COMMANDER</b>{' '}
+      <b>▲ NO COMMANDER</b>{' '}
       {guess ? (
         <>
           This deck has no commander yet. It looks like <mark>{guess}</mark>.{' '}
@@ -739,7 +739,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             )}
           </p>
           <div className="dacts">
-            <ShortAlert items={shortHere} inline />
+            <ShortAlert items={shortHere} inline currentDeck={deck.name} />
           </div>
         </section>
 

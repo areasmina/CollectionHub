@@ -148,8 +148,8 @@ export function SwapNote({
     if (!deck) return [];
     const e = swapEffect(now, o.sub.name, deck, bracket);
     return [
-      ...e.lost.map((c) => ({ text: `⚠ breaks ${c.cards.join(' + ')}`, warn: true })),
-      ...e.gained.map((c) => (e.gainedBlocked.includes(c) ? { text: `⚠ completes ${c.cards.join(' + ')}: not allowed in bracket ${bracket}`, warn: true } : { text: `combo: ${c.cards.join(' + ')}` })),
+      ...e.lost.map((c) => ({ text: `▲ breaks ${c.cards.join(' + ')}`, warn: true })),
+      ...e.gained.map((c) => (e.gainedBlocked.includes(c) ? { text: `▲ completes ${c.cards.join(' + ')}: not allowed in bracket ${bracket}`, warn: true } : { text: `combo: ${c.cards.join(' + ')}` })),
     ];
   };
   const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} notes={notesFor(o)} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
@@ -208,7 +208,7 @@ export function SwapNote({
           )}
           {!look && !whyCard && breaks.length > 0 && (
             <p className="combowarn" role="note">
-              ⚠ Part of {breaks.length > 1 ? `${breaks.length} combos` : 'a combo'}: {breaks.slice(0, 3).map((c) => c.cards.join(' + ')).join(' · ')}. Swapping it out breaks {breaks.length > 1 ? 'them' : 'it'}.
+              ▲ Part of {breaks.length > 1 ? `${breaks.length} combos` : 'a combo'}: {breaks.slice(0, 3).map((c) => c.cards.join(' + ')).join(' · ')}. Swapping it out breaks {breaks.length > 1 ? 'them' : 'it'}.
             </p>
           )}
           <a className="scrylink" href={scryfallUrl(now)} target="_blank" rel="noreferrer">

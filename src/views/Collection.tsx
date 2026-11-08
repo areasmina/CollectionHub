@@ -278,7 +278,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             {deckLike && (
               <div className="deckwarn" role="status">
                 <span>
-                  <b>⚠ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
+                  <b>▲ Looks like a deck list.</b> Adding here puts every card into your <b>{name}</b> collection. Decks never add cards to your collection:
                 </span>
                 <button type="button" className="u-btn" disabled={!!busy} onClick={() => void saveAsDeckInstead()}>
                   SAVE AS A DECK INSTEAD →
@@ -415,7 +415,7 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
           )}
           <hr />
           <button role="menuitem" className="danger" disabled={!count} onClick={act(() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile))}>
-            ⚠ Reset (empty this binder)
+            ▲ Reset (empty this binder)
           </button>
           {binders.length > 1 && (
             <button role="menuitem" className="danger" onClick={act(remove)}>
