@@ -229,9 +229,7 @@ export default function App() {
         } catch {}
       } else {
         haptic('open');
-        setIslandOpen(false);
-        setSync((prev) => !prev);
-        scrollTo({ top: 0, behavior: 'smooth' });
+        setIslandOpen((prev) => !prev);
       }
     }
   };
@@ -397,9 +395,7 @@ export default function App() {
             onClick={(e) => {
               if ((e.target as HTMLElement).classList.contains('sdot')) return;
               haptic('open');
-              setIslandOpen(false);
-              setSync((prev) => !prev);
-              scrollTo({ top: 0, behavior: 'smooth' });
+              setIslandOpen((prev) => !prev);
             }}
           >
             <span
@@ -421,9 +417,7 @@ export default function App() {
                   e.preventDefault();
                   e.stopPropagation();
                   haptic('open');
-                  setIslandOpen(false);
-                  setSync((prev) => !prev);
-                  scrollTo({ top: 0, behavior: 'smooth' });
+                  setIslandOpen((prev) => !prev);
                 }
               }}
             />

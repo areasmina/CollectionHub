@@ -84,19 +84,18 @@ test.describe('Collection & Decks Workbench Features', () => {
     const island = page.locator('.pillnav');
     await expect(island).toBeVisible();
 
-    // Tapping the sdot light opens the sync menu we had before (SyncPanel)
+    // Tapping the sdot light opens the Dynamic Island sync drawer
     const light = page.locator('.syncpill .sdot');
     await light.click();
-    const panel = page.locator('.panel[aria-label="Sync"]');
-    await expect(panel).toBeVisible();
-    await expect(panel.locator('h2')).toHaveText('SYNC BETWEEN DEVICES');
+    const drawer = page.locator('.island-drawer');
+    await expect(drawer).toBeVisible();
 
-    // Close by clicking the close button
-    await panel.locator('.close').click();
-    await expect(panel).toHaveCount(0);
+    // Close by clicking scrim
+    await page.locator('.island-scrim').click();
+    await expect(drawer).toHaveCount(0);
 
-    // Island lip is decorative and does not open any sync panel
+    // Island lip is decorative and does not open drawer
     await page.locator('.island-lip').click();
-    await expect(panel).toHaveCount(0);
+    await expect(drawer).toHaveCount(0);
   });
 });
