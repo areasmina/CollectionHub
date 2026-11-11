@@ -41,7 +41,7 @@ import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type 
 // EDHREC's own order first on commander pages.
 const CSORTS: [SortKey, string][] = [['list', 'EDHREC ORDER'], ...SORTS];
 import { SwapNote } from './SwapNote';
-import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
+import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { AGGRESSION } from '../brain/win';
 import { deckStats } from '../lib/deckstats';
 import { CardMenu, type Toast } from './CardMenu';
@@ -228,6 +228,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
   const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
+  const cubeRef = useRef<HTMLDivElement>(null); // the Forge cube on phones (CARDS · ANALYSIS · TO BUY)
 
   // Your binder (the swap window's search, and pinned cards' types).
   const binder = useBinder(s.profile);
@@ -799,10 +800,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <button className="btn btn-swap-in" onClick={() => (haptic('success'), setSwap(wild.slot, wild.name))}>
                     SWAP IN
                   </button>
-                  <button className="btn ink" onClick={() => setWild(s.profile, name, { roll: (wildSet.roll ?? 0) + 1 })} aria-label="Reroll the wildcard">
+                  <button className="btn ink wreroll" onClick={() => (haptic('select'), setWild(s.profile, name, { roll: (wildSet.roll ?? 0) + 1 }))} aria-label="Reroll the wildcard">
                     ↻ REROLL
                   </button>
-                  <button className="btn ink" onClick={() => setWild(s.profile, name, { off: true })}>
+                  <button className="btn ink woff" onClick={() => (haptic('tap'), setWild(s.profile, name, { off: true }))}>
                     OFF
                   </button>
                 </div>
@@ -871,7 +872,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {error && <p className="error">{error}</p>}
         {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
-          <div className={`deckgrid after-sw${forging ? ' forge-split' : ''}${forging && !anExpanded ? ' an-contracted' : ''}${forging && !sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
+          <>
+          {forging && <ForgeCube grid={cubeRef} buyCount={missing.length} />}
+          <div ref={cubeRef} className={`deckgrid after-sw${forging ? ' forge-split' : ''}${forging && !anExpanded ? ' an-contracted' : ''}${forging && !sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
             {forging && (
               <div className={`dside forge-analysis${!anExpanded ? ' is-contracted' : ''}`}>
@@ -1229,6 +1232,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 );
               })}
             </div>
+            {forging && (
+              <div className="dside forge-buy">
+                <BuyList items={missing.map((c) => ({ name: c.name, qty: c.qty ?? 1, cad: toCad(cardOf(c)?.usd) }))} binder={s.binderName} />
+              </div>
+            )}
             {forging ? (
               <div className={`dside forge-suggestions${!sugExpanded ? ' is-contracted' : ''}`}>
                 <ForgeSuggest
@@ -1255,6 +1263,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </div>
             ) : null}
           </div>
+          </>
         )}
         {/* TO BUY / PULL: a 360px drawer on wide screens, a bottom sheet on phones */}
         {buyOpen && receipt && !forging && (

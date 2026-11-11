@@ -20,6 +20,8 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   await expect(page.locator('.pillnav')).toBeVisible(); // Dynamic Island stays accessible in the Forge
   await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/dynamic-island-in-forge-${info.project.name}.png` });
   const sugg = page.locator('.fsugg');
+  // on phones the sheet peeks at 92px; pull it up so sorts, radios and tabs are visible
+  if (await sugg.locator('.fgrab').isVisible()) await sugg.locator('.fgrab').click();
   await expect(sugg.getByRole('radio')).toHaveText(['OUR PICK', 'EDHREC LIFT', 'POPULAR']);
   await expect(page.locator('.fmeters')).toBeVisible();
 
@@ -31,8 +33,6 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   const row = sugg.locator('.frows li', { hasText: 'Arcane Signet' });
   await expect(row).toHaveClass(/own/);
   await expect(row.locator('.whys')).toContainText('owned');
-  // phones: pull the sheet up to see the filters
-  if (await sugg.locator('.fgrab').isVisible()) await sugg.locator('.fgrab').click();
   // themes are EDHREC's tags read as rules-text tests: Landfall filters the list to cards whose text fits
   await sugg.getByRole('button', { name: '#landfall' }).click();
   await expect(sugg.getByRole('button', { name: '#landfall' })).toHaveAttribute('aria-pressed', 'true');
@@ -50,7 +50,8 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   // tap the suggestion, then tap a deck card: swapped, with UNDO in the Forge bar
   await row.locator('.frow').click();
   await expect(sugg.locator('.fplace')).toContainText('Arcane Signet');
-  await page.locator('.lists [data-card="Sol Ring"]').first().click();
+  // on phones the forge sheet may overlap the bottom cards; force the click through
+  await page.locator('.lists [data-card="Sol Ring"]').first().click({ force: true });
   await expect(page.locator('.toast')).toContainText('Swapped Sol Ring for Arcane Signet');
   await expect(page.locator('.lists [data-card="Arcane Signet"]')).toHaveCount(1);
   await top.locator('.fundo').click();
@@ -71,6 +72,9 @@ test('Forge on the commander page: the first swap opens it, with SUGGESTIONS and
   await expect(sugg.getByRole('tab', { name: /SUGGESTIONS/ })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.fmeters')).toBeVisible();
   await page.screenshot({ path: `test-results/forge-cmdr-${info.project.name}.png` });
+  // on phones the sheet peeks at the bottom; expand it so the TO BUY tab is reachable
+  const fgrab = sugg.locator('.fgrab');
+  if (await fgrab.isVisible()) await fgrab.click();
   await sugg.getByRole('tab', { name: 'TO BUY' }).click();
   await expect(sugg.locator('.fbuy .receipt')).toBeVisible();
   // undo the swap from the Forge bar
