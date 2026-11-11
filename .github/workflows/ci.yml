@@ -37,7 +37,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        # The system packages come from Ubuntu's mirror. When the runner cannot reach it,
+        # install the browser alone: the runner image already has what Chromium needs to start.
+        run: npx playwright install --with-deps chromium || npx playwright install chromium
       - name: Browser checks
         run: npx playwright test --trace off
       - name: Keep the report when a check fails
