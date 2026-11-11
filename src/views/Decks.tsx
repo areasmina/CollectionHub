@@ -1249,8 +1249,9 @@ export function Decks(s: Shared) {
         </div>
         <ShortAlert items={short} />
         <div className="dribbonwrap">
-        {decks.length > 0 && (
-          <p className="dribbon" role="region" aria-label="Deck collection overview">
+          <div className="dribbon" role="region" aria-label="Deck collection overview">
+          {decks.length > 0 && (
+            <>
             <span>
               <b>{decks.length}</b> {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
             </span>
@@ -1272,17 +1273,18 @@ export function Decks(s: Shared) {
             <span>
               avg power <b>B{avgBracket}</b>
             </span>
-          </p>
-        )}
-        {/* Start a deck from scratch, or bring one in from a list or file (Arena, MTGO, Moxfield, Archidekt, CSV). */}
-        <div className="decksactions dribbon-acts">
-          <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-            + NEW BLANK DECK
-          </button>
-          <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
-            IMPORT DECK
-          </button>
-        </div>
+            </>
+          )}
+          {/* Start a deck from scratch, or bring one in from a list or file (Arena, MTGO, Moxfield, Archidekt, CSV). */}
+          <span className="dribbon-acts">
+            <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+              + NEW BLANK DECK
+            </button>
+            <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
+              IMPORT DECK
+            </button>
+          </span>
+          </div>
         </div>
         {/* Decks Workbench Toolbar: search, sort, status filters, and tag pills */}
         <div className="decktoolbar" role="search" aria-label="Deck filters and tools">

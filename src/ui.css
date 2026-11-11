@@ -8524,6 +8524,15 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   gap: var(--s2);
   margin: var(--s3) 0 var(--s4);
 }
+/* Inside the info panel: the buttons take their own full-width row, no box of their own. */
+.dribbon > .dribbon-acts {
+  flex: 1 0 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
 .dsizebar {
   display: flex;
   justify-content: flex-end;
