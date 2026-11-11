@@ -1095,11 +1095,14 @@ export function Decks(s: Shared) {
       .catch(() => {});
     return () => void (live = false);
   }, [edhKey]);
+  // Only the themes this deck actively has: at least two of its cards support the theme (a lone card is not a theme).
   const themesOf = (d: Deck): Theme[] => {
     const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
     const fromText = lead ? commanderThemes(lead) : [];
-    if (fromText.length) return fromText;
-    return (edhTop.get(norm(d.commander ?? '')) ?? []).map((v) => themeOf(v));
+    const candidates = fromText.length ? fromText : (edhTop.get(norm(d.commander ?? '')) ?? []).map((v) => themeOf(v));
+    if (!candidates.length) return [];
+    const cardsInDeck = [lead, ...d.cards.map((c) => priced.get(norm(c.name)))].filter((c): c is Card => !!c);
+    return candidates.filter((t) => cardsInDeck.filter((c) => t.test(c)).length >= 2);
   };
   // Deck prices from cards already cached here (a deck opened once has them all).
   const allNames = decks.flatMap((d) => d.cards.map((c) => norm(c.name)));
