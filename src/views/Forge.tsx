@@ -462,8 +462,9 @@ export function ForgeSuggest({
 
   const ctx: DeckContext = { deck, cardOf, commander, bracket, aggression, taste: brain?.taste, focus };
   const deckKey = deck.map((c) => `${c.name}×${c.qty}`).join('|');
-  // recount when the deck, its card data (it loads after the names), the dial or your taste change
-  const sigNeeds = [deckKey, deck.filter((c) => cardOf(c.name)).length, aggression, bracket, brain?.taste?.length ?? 0].join('#');
+  // recount when the deck, its card data (it loads after the names), the dial, your taste or the picked theme change
+  // (the theme sets the enabler / payoff balance, so a stale count would nudge the wrong half of the engine)
+  const sigNeeds = [deckKey, deck.filter((c) => cardOf(c.name)).length, aggression, bracket, brain?.taste?.length ?? 0, brain?.taste?.at(-1)?.at ?? 0, tagOf?.value ?? ''].join('#');
   const needs = useMemo(() => deckNeeds(ctx), [sigNeeds]); // eslint-disable-line react-hooks/exhaustive-deps
   const rows: Row[] = useMemo(() => {
     const seen = new Set<string>();

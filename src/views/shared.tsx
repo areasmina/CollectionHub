@@ -539,7 +539,8 @@ export function ShortAlert({ items, inline, currentDeck }: { items: Shortfall[];
     if (!currentDeck) return false;
     const cleanD = cleanDeckName(d).toLowerCase();
     const cleanC = currentDeck.toLowerCase();
-    return cleanD === cleanC || d.toLowerCase() === cleanC || cleanD.includes(cleanC) || cleanC.includes(cleanD);
+    // exact names only: "Tatyova Lands" is not this deck when you're in "Tatyova Lands (copy)"
+    return cleanD === cleanC || d.toLowerCase() === cleanC;
   };
 
   const portalContent = open && typeof document !== 'undefined'

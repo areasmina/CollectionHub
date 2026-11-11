@@ -16,6 +16,7 @@ import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
 import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
+import { savedProfile } from './lib/ownership';
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
 const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
@@ -57,7 +58,7 @@ const systemDark = () => typeof matchMedia === 'function' && matchMedia('(prefer
 
 export default function App() {
   const [tab, setTab] = useState<Tab>((store.get('ch:tab') as Tab) || 'discover');
-  const [profile, setProfile] = useState(Number(store.get('ch:profile')) || 1);
+  const [profile, setProfile] = useState(() => savedProfile(store.get('ch:profile')));
   const theme = 'dark'; // dark only for now (owner's call, Nov 6); light mode comes back later
   type IslandDock = 'top' | 'bottom' | 'left' | 'right';
   // Island Dock: default to 'bottom' on phones/mobile (<= 700px), 'top' on desktop. Allows 4-way edge docking.
@@ -278,7 +279,7 @@ export default function App() {
   const ids = profiles.map((p) => p.id).sort((a, b) => a - b);
   const other = ids.find((i) => i !== profile) ?? 0;
   useEffect(() => {
-    if (ids.length && !ids.includes(profile)) setProfile(ids[0]); // the binder you were on was deleted
+    if (ids.length && profile !== UNASSIGNED_PROFILE && !ids.includes(profile)) setProfile(ids[0]); // the binder you were on was deleted
   }, [ids.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
   // Ownership for Commander: cards Scryfall marks not legal in Commander (tokens, Un-cards, banned) don't count.
   const illegal = useLiveQuery(async () => new Set(await db.cards.filter((c) => !c.legal).primaryKeys()), []) ?? new Set<string>();

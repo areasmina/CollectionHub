@@ -15,14 +15,10 @@ test.describe('Collection & Decks Workbench Features', () => {
   test('Collection: no duplicate numbers bar, big squared cards visible, and import pop-up modal opens cleanly', async ({ page }) => {
     await go(page, 'collection');
 
-    // Duplicate dsum text bar is removed
-    await expect(page.locator('details.dash > summary .dsum')).toHaveCount(0);
+    // Duplicate dsum text bar is removed (and with it the fold it sat on)
+    await expect(page.locator('.dsum, details.dash')).toHaveCount(0);
 
     // Squared stat cards are visible
-    const dash = page.locator('details.dash');
-    if (!(await dash.evaluate((e) => (e as HTMLDetailsElement).open))) {
-      await dash.locator('summary').click();
-    }
     await expect(page.locator('.stats .stat')).toHaveCount(3);
     await expect(page.locator('.stats .slip')).toBeVisible();
 
@@ -30,7 +26,7 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(page.locator('details.importbox')).toHaveCount(0);
 
     // Clicking IMPORT button opens the modal pop-up window
-    await page.locator('details.dash > summary .dimp').click();
+    await page.locator('.slip-btn.import').click();
     const modal = page.locator('.importbox-pop');
     await expect(modal).toBeVisible();
     await expect(modal.locator('h2, .nh')).toContainText('IMPORT CARDS');

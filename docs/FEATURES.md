@@ -20,7 +20,10 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | BANNED tape for cards not legal in Commander | Live | #11 | manual, no test yet |
 | Filters: colour, type, rarity, MV, price, foil, in deck / not in deck | Partial | – | some live via the toolbar; full set not done |
 | Per-entry language, condition, other finishes | Planned | – | – |
-| Custom lists (trade, wishlist, sell…) | Planned | – | – |
+| Custom lists inside a binder (trade, wishlist, sell…): list tabs, MOVE TO LIST… in the card menu | Partial | 61c46e7 (pushed to main) | no test yet |
+| More binders + the Unassigned Cards binder: deleting a binder releases its cards there; the binder stays open after a reload; DELETE shows only with two real binders | Live | 61c46e7, 97f0ab5, review fixes Nov 11 | `lib/ownership.test.ts` "Saved binder" |
+| Deck page ownership line (N to buy · N in the other binder · N in this deck): copies from both binders add up; basic lands are never "to buy" | Live | 97f0ab5, review fixes Nov 11 | `lib/ownership.test.ts`, e2e "Saved deck (overhaul)" |
+| Deck history: a snapshot before every change (30 per deck, this device only, not synced), restore from the deck menu | Partial | 97f0ab5 | `lib/ownership.test.ts` "Deck Snapshot History" |
 
 ## Discover and commander page
 

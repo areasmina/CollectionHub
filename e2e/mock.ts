@@ -99,8 +99,11 @@ export const opts = async (page: Page, scope = '') => {
   return d;
 };
 
-/** Opens the Collection dashboard fold (counts, worth, decks, import), closed by default. */
-export const dash = async (page: Page) => {
-  const d = page.locator('details.dash');
-  if (!(await d.evaluate((e) => (e as HTMLDetailsElement).open))) await d.locator('> summary').click();
+/** Opens Collection's import pop-up (IMPORT on the appraisal slip; it opens by itself on an empty binder) and returns it. */
+export const openImport = async (page: Page) => {
+  const pop = page.locator('.importbox-pop');
+  await page.locator('.slip-btn.import').waitFor();
+  if (!(await pop.isVisible())) await page.locator('.slip-btn.import').click();
+  await pop.waitFor();
+  return pop;
 };
