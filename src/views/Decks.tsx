@@ -35,6 +35,7 @@ import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '.
 import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
+import { importDeck } from '../lib/actions';
 import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
@@ -1149,6 +1150,21 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
+  // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
+  const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
+    try {
+      const v = localStorage.getItem('ch:deckzoom');
+      if (v === 's' || v === 'm' || v === 'l') return v;
+    } catch {}
+    return narrow ? 's' : 'm';
+  });
+  const setDzoom = (v: 's' | 'm' | 'l') => {
+    setDzoomState(v);
+    try {
+      localStorage.setItem('ch:deckzoom', v);
+    } catch {}
+  };
+  const [importing, setImporting] = useState(false);
 
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
@@ -1230,15 +1246,12 @@ export function Decks(s: Shared) {
         {/* THE OVERHAUL, my decks: loud title → one ribbon of facts → flat deck tiles → the add form. */}
         <div className="decksbar">
           <Title text="MY DECKS" label="My decks" size={narrow ? 44 : 64} seed={33} />
-          <div className="decksactions">
-            <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-              + NEW BLANK DECK
-            </button>
-          </div>
         </div>
         <ShortAlert items={short} />
-        {decks.length > 0 && (
-          <p className="dribbon" role="region" aria-label="Deck collection overview">
+        <div className="dribbonwrap">
+          <div className="dribbon" role="region" aria-label="Deck collection overview">
+          {decks.length > 0 && (
+            <>
             <span>
               <b>{decks.length}</b> {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
             </span>
@@ -1260,8 +1273,19 @@ export function Decks(s: Shared) {
             <span>
               avg power <b>B{avgBracket}</b>
             </span>
-          </p>
-        )}
+            </>
+          )}
+          {/* Start a deck from scratch, or bring one in from a list or file (Arena, MTGO, Moxfield, Archidekt, CSV). */}
+          <span className="decksactions dribbon-acts">
+            <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+              + NEW BLANK DECK
+            </button>
+            <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
+              IMPORT DECK
+            </button>
+          </span>
+          </div>
+        </div>
         {/* Decks Workbench Toolbar: search, sort, status filters, and tag pills */}
         <div className="decktoolbar" role="search" aria-label="Deck filters and tools">
           <div className="dsearchbox">
@@ -1323,7 +1347,20 @@ export function Decks(s: Shared) {
           )}
         </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
-        <ul className="dgrid cgrid">
+        {decks.length > 0 && (
+          <div className="dsizebar">
+            <button
+              type="button"
+              className="u-btn ghost qzoom-btn"
+              title={dzoom === 's' ? 'Size: Small (3 across on phones). Tap for Medium' : dzoom === 'm' ? 'Size: Medium. Tap for Large' : 'Size: Large. Tap for Small'}
+              aria-label={`Deck size ${dzoom.toUpperCase()}: tap to cycle size`}
+              onClick={() => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's'))}
+            >
+              SIZE {dzoom.toUpperCase()}
+            </button>
+          </div>
+        )}
+        <ul className="dgrid cgrid" data-zoom={dzoom}>
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
             // No commander set: show the deck's most expensive card instead of a blank tile.
@@ -1409,9 +1446,102 @@ export function Decks(s: Shared) {
           })}
           {decks.length === 0 && <li className="dempty">No decks yet. Save one from a commander page, or paste a list below.</li>}
         </ul>
+        {importing && <ImportDeckPop profile={s.profile} onClose={() => setImporting(false)} onDone={(id) => (setImporting(false), setOpen(id))} />}
 
 
       </main>
+    </>
+  );
+}
+
+/** IMPORT DECK: paste a list (Arena, MTGO, Moxfield, Archidekt, plain text) or choose a CSV / text file. Saves a new deck; the
+ *  Collection binder is never changed. Cards Scryfall can't find are left out and named, then the deck opens. */
+function ImportDeckPop({ profile, onClose, onDone }: { profile: number; onClose: () => void; onDone: (id: number) => void }) {
+  const [name, setName] = useState('Imported deck');
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
+  const [error, setError] = useState('');
+  const [made, setMade] = useState<{ id: number; left: string[] } | null>(null);
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', esc);
+    return () => document.removeEventListener('keydown', esc);
+  }, [onClose]);
+
+  async function pickFile(f: File) {
+    setText(await f.text());
+    setName(f.name.replace(/\.[^.]+$/, '').slice(0, 40) || 'Imported deck');
+  }
+
+  async function go() {
+    if (!text.trim()) return setError('Paste a list or choose a file first.');
+    setError('');
+    setBusy({ done: 0, total: 0 });
+    try {
+      const deckName = await freeDeckName(profile, name.trim() || 'Imported deck');
+      const r = await importDeck(profile, deckName, text, (done, total) => setBusy({ done, total }));
+      setBusy(null);
+      if (!r.deck.cards.length) return setError('No cards found in that list. Check the format and try again.');
+      haptic('success');
+      const left = r.unmatched.map((u) => u.name);
+      if (left.length) setMade({ id: r.deck.id!, left });
+      else onDone(r.deck.id!);
+    } catch (e) {
+      setBusy(null);
+      setError(`Import failed: ${(e as Error).message}. Nothing was saved.`);
+    }
+  }
+
+  return (
+    <>
+      <div className="backdrop" onClick={onClose} />
+      <div className="importbox-pop note-pop dimport" role="dialog" aria-modal="true" aria-label="Import a deck" onClick={(e) => e.stopPropagation()}>
+        <div className="nh">
+          <span>
+            IMPORT <mark>DECK</mark>
+          </span>
+          <button type="button" className="close" onClick={onClose} aria-label="Close dialog">
+            ✕
+          </button>
+        </div>
+        <label className="dimport-field">
+          <span>Deck name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
+        </label>
+        <textarea
+          aria-label="Deck list"
+          rows={8}
+          placeholder="Paste a list: Arena, MTGO, Moxfield, Archidekt, or plain text (4 Sol Ring)"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <label className="u-btn ghost dimport-file">
+          CHOOSE A FILE (CSV or TXT)
+          <input type="file" accept=".csv,.txt,text/csv,text/plain" hidden onChange={(e) => e.target.files?.[0] && pickFile(e.target.files[0])} />
+        </label>
+        {error && (
+          <p role="alert" className="dimport-err">
+            {error}
+          </p>
+        )}
+        {made && (
+          <p className="dimport-note" role="status">
+            Imported. {made.left.length} {made.left.length === 1 ? 'card was' : 'cards were'} not found and left out: {made.left.slice(0, 6).join(', ')}
+            {made.left.length > 6 ? '…' : ''}
+          </p>
+        )}
+        <div className="dimport-acts">
+          {made ? (
+            <button type="button" className="u-btn primary" onClick={() => onDone(made.id)}>
+              OPEN DECK
+            </button>
+          ) : (
+            <button type="button" className="u-btn primary" disabled={!!busy} onClick={go}>
+              {busy ? `IMPORTING ${busy.done}/${busy.total || '…'}` : 'IMPORT'}
+            </button>
+          )}
+        </div>
+      </div>
     </>
   );
 }

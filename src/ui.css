@@ -8509,3 +8509,131 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   align-items: center;
   gap: var(--s2);
 }
+
+/* ==========================================================================
+   Deck section on phones (Guillermo, Nov 11, round 2): the new-deck buttons sit in
+   the ribbon section, a size button, three cards across at small size, the deck
+   page starts higher, and nothing runs off the phone screen.
+   ========================================================================== */
+.dribbonwrap {
+  display: block;
+}
+.dribbon-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: var(--s3) 0 var(--s4);
+}
+/* Inside the info panel: the buttons take their own full-width row, no box of their own. */
+.dribbon > .dribbon-acts {
+  flex: 1 0 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.dsizebar {
+  display: flex;
+  justify-content: flex-end;
+  margin: var(--s2) 0;
+}
+.dimport {
+  width: min(94vw, 520px);
+  display: grid;
+  gap: var(--s3);
+  padding: var(--s4);
+  box-sizing: border-box;
+}
+.dimport-field {
+  display: grid;
+  gap: var(--s1);
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.dimport-field input,
+.dimport textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0f0f13;
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  padding: var(--s2);
+  font: 400 14px var(--u-mono);
+}
+.dimport textarea {
+  resize: vertical;
+  min-height: 160px;
+}
+.dimport-file {
+  justify-self: start;
+  cursor: pointer;
+}
+.dimport-err {
+  color: #ff6b6b;
+  font: 400 13px var(--u-mono);
+  margin: 0;
+}
+.dimport-note {
+  color: var(--u-text);
+  font: 400 13px var(--u-mono);
+  margin: 0;
+}
+.dimport-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--s2);
+}
+
+@media (max-width: 700px) {
+  /* Small cards: three across, less text on each tile. */
+  .dgrid.cgrid[data-zoom='s'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s2);
+  }
+  .dgrid.cgrid[data-zoom='s'] .dtile .cinfo {
+    padding: var(--s1) var(--s2);
+  }
+  .dgrid.cgrid[data-zoom='s'] .dtile .nm b {
+    font-size: 12px;
+  }
+  .dgrid.cgrid[data-zoom='s'] .dtags,
+  .dgrid.cgrid[data-zoom='s'] .nocmdr {
+    display: none;
+  }
+
+  /* The deck page starts right under the header: no big gap above the card and title. */
+  main.dpage .vhero {
+    padding-top: var(--s2);
+  }
+  /* The status row wraps instead of running off the screen. */
+  .dstrip,
+  .dstrip > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .dacts {
+    flex-wrap: wrap;
+  }
+  .vhero .vname h1 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* Pictures and icons never wider than the phone. */
+  main img,
+  main svg {
+    max-width: 100%;
+  }
+}
+
+
+/* Collection on phones: the SIZE button stays on the bar (the view pills still go to the ⋮ menu). */
+@media (max-width: 700px) {
+  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) {
+    display: inline-flex !important;
+  }
+  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs {
+    display: none !important;
+  }
+}
