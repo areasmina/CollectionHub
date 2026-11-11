@@ -183,7 +183,14 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   const vw = page.viewportSize()!.width;
   expect(menu!.x).toBeGreaterThanOrEqual(0);
   expect(menu!.x + menu!.width).toBeLessThanOrEqual(vw);
-  await fits(page, ['.dhero', '.dtools', '.dpanel']);
+  // on phones .dpanel lives in the cube's ANALYSIS face (off-screen by default); navigate there first
+  if (info.project.name === 'phone') {
+    await page.getByRole('tab', { name: 'ANALYSIS' }).click();
+    await page.waitForTimeout(400); // wait for the smooth scroll animation
+    await fits(page, ['.dhero', '.dpanel']);
+  } else {
+    await fits(page, ['.dhero', '.dtools', '.dpanel']);
+  }
 });
 
 // The deck menu opens from the deck header: right-click with a mouse, press and hold on touch.
@@ -645,7 +652,13 @@ test('Saved deck (overhaul): same hero and strip as the commander page, each fac
   await expect(page.locator('.dhero .stamp, .dhero .tape, .dpanel .tape')).toHaveCount(0);
   const shadow = await page.locator('.dpanel').evaluate((e) => getComputedStyle(e).boxShadow);
   expect(shadow).toBe('none');
-  await fits(page, ['.dhero', '.dstrip', '.dpanel']);
+  // on phones .dpanel lives in the cube's ANALYSIS face; navigate there before the bounds check
+  if (page.viewportSize()!.width <= 500) {
+    await page.getByRole('tab', { name: 'ANALYSIS' }).click();
+    await fits(page, ['.dhero', '.dstrip', '.dpanel']);
+  } else {
+    await fits(page, ['.dhero', '.dstrip', '.dpanel']);
+  }
 });
 
 test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', async ({ page }) => {

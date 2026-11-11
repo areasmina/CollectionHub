@@ -64,6 +64,9 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
   // 4. Verify JUST BUILD IT button is on top of suggestions right panel
   const sugg = page.locator('.fsugg');
   await expect(sugg).toBeVisible();
+  // on phones the sheet peeks; pull it up so the banner and sorts are visible
+  const fgrab2 = sugg.locator('.fgrab');
+  if (await fgrab2.isVisible()) await fgrab2.click();
 
   const justBuild = sugg.locator('.just-build-banner.sugg-top-action .btn-just-build');
   await expect(justBuild).toBeVisible();

@@ -32,7 +32,7 @@ import { cad, fetchedNote, PRICE_METHOD, shopUrl, toCad } from '../lib/prices';
 import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
-import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
+import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
@@ -583,6 +583,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
   const deckCost = priceSum(deck.cards.map((c) => ({ card: cardFor(c), qty: c.qty })));
+  // the Forge cube's TO BUY face: every card this deck still lacks, with its price
+  const buyItems = deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ name: c.name, qty: c.qty, cad: toCad(cardFor(c)?.usd) }));
+  const cubeRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
@@ -883,7 +886,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
 
-        <div className={`deckgrid after-sw forge-split${!anExpanded ? ' an-contracted' : ''}${!sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
+        <ForgeCube grid={cubeRef} buyCount={buyItems.reduce((n, c) => n + c.qty, 0)} />
+        <div ref={cubeRef} className={`deckgrid after-sw forge-split${!anExpanded ? ' an-contracted' : ''}${!sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
           {swapFor && <div className="backdrop" onClick={() => setSwapFor(null)} />}
           <div className={`dside forge-analysis${!anExpanded ? ' is-contracted' : ''}`}>
             <DeckPanel
@@ -1010,6 +1014,10 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                   </details>
                 );
               })}
+          </div>
+          {/* phones: the cube's third face (polish.css hides it on wider screens, where TO BUY sits in the strip) */}
+          <div className="dside forge-buy">
+            <BuyList items={buyItems} binder={s.binderName} />
           </div>
           <div className={`dside forge-suggestions${!sugExpanded ? ' is-contracted' : ''}`}>
             <ForgeSuggest
@@ -1150,6 +1158,7 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
+  const [dstats, setDstats] = useStored<'show' | 'hide'>('ch:deckstats', 'show', ['show', 'hide']);
   // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
   const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
     try {
@@ -1249,30 +1258,52 @@ export function Decks(s: Shared) {
         </div>
         <ShortAlert items={short} />
         <div className="dribbonwrap">
-          <div className="dribbon" role="region" aria-label="Deck collection overview">
+          {/* The same tiles as the Collection header (Guillermo, Nov 11): one look, one feel. HIDE folds them away. */}
+          <div className={`dribbon${dstats === 'hide' ? ' folded' : ''}`} role="region" aria-label="Deck collection overview">
           {decks.length > 0 && (
             <>
-            <span>
-              <b>{decks.length}</b> {decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}
-            </span>
-            <span>
-              <b>{readyDecks}</b> ready to play
-            </span>
-            <span>
-              <b>{uniqueCardsInDecks}</b> cards in play
-            </span>
-            <span className="dcols" title="How many decks use each colour">
-              {(['W', 'U', 'B', 'R', 'G'] as const)
-                .filter((c) => colorCounts[c])
-                .map((c) => (
-                  <span key={c} className={`ov-pip pip-${c.toLowerCase()}`} title={`${colorCounts[c]} decks include ${c}`}>
-                    {c} <b>{colorCounts[c]}</b>
-                  </span>
-                ))}
-            </span>
-            <span>
-              avg power <b>B{avgBracket}</b>
-            </span>
+            <button
+              type="button"
+              className="dfold"
+              aria-expanded={dstats !== 'hide'}
+              onClick={() => (haptic('select'), setDstats(dstats === 'hide' ? 'show' : 'hide'))}
+              title={dstats === 'hide' ? 'Show the deck stats' : 'Hide the deck stats'}
+            >
+              {dstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
+            </button>
+            <section className="stats dstats" hidden={dstats === 'hide'}>
+              <div className="stat">
+                <span className="spray" aria-hidden="true" />
+                <b>{decks.length}</b>{' '}
+                <span>{decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}</span>
+              </div>
+              <div className="stat">
+                <span className="spray" aria-hidden="true" />
+                <b>{readyDecks}</b>{' '}
+                <span>ready to play</span>
+              </div>
+              <div className="stat">
+                <span className="spray" aria-hidden="true" />
+                <b>{uniqueCardsInDecks}</b>{' '}
+                <span>cards in play</span>
+              </div>
+              <div className="stat red">
+                <span className="spray" aria-hidden="true" />
+                <b>B{avgBracket}</b>{' '}
+                <span>avg power</span>
+              </div>
+              {(['W', 'U', 'B', 'R', 'G'] as const).some((c) => colorCounts[c]) && (
+                <div className="stat dcols" title="How many decks use each colour">
+                  {(['W', 'U', 'B', 'R', 'G'] as const)
+                    .filter((c) => colorCounts[c])
+                    .map((c) => (
+                      <span key={c} className={`ov-pip pip-${c.toLowerCase()}`} title={`${colorCounts[c]} decks include ${c}`}>
+                        {c} <b>{colorCounts[c]}</b>
+                      </span>
+                    ))}
+                </div>
+              )}
+            </section>
             </>
           )}
           {/* Start a deck from scratch, or bring one in from a list or file (Arena, MTGO, Moxfield, Archidekt, CSV). */}

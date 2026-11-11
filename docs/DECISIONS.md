@@ -6,6 +6,10 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 | Date | Decision | Status | Notes |
 |---|---|---|---|
+| 2026-11-11 | Forge on phones: deck area is a horizontal swipe cube — CARDS / ANALYSIS / TO BUY — driven by a sticky tablist (`.fcube`); no visual difference on tablet/desktop where both panels stay side by side | decided | claude/spacing-composition-nov11 |
+| 2026-11-11 | Decks overview uses Collection-style zine stat tiles (same card shape, tilts, shadow) with a HIDE / SHOW STATS toggle; My decks no longer uses a flat ribbon for the stats area | decided | claude/spacing-composition-nov11 |
+| 2026-11-11 | WILDCARD buttons: REROLL is green, OFF is red — coloured so they read without reading | decided | claude/spacing-composition-nov11 |
+| 2026-11-11 | Swap window pin buttons: ALWAYS IN is green, NEVER USE is red | decided | claude/spacing-composition-nov11 |
 | 2026-11-11 | Collection header: the Nov 8 look stays (tilted stat tiles, appraisal slip, tape). This replaces the Nov 7 "flat ribbon" choice for the Collection page only; My decks keeps the flat ribbon | decided | decision card, Nov 11 14:38 |
 | 2026-11-07 | Collection and My decks headers: the flat overhaul ribbon wins over the boxed coloured chips and "arsenal console" pushed to main the same day; the sync panel and Discover eye from that push stay | decided | decision card, Nov 7 20:07 |
 | 2026-11-07 | THE OVERHAUL (`docs/THE_OVERHAUL.md`) is the UI design system: frame loud, content quiet; screens move one at a time, old CSS deleted as each moves | decided | Phase 1 + 2 in the overhaul PR |

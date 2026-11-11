@@ -1,0 +1,768 @@
+/* ==========================================================================
+   SPACING & COMPOSITION PASS (Guillermo's annotated screenshots, Nov 11, round 3)
+   Loaded after ui.css, so these win. Same Midnight Override language, less air:
+   - page titles sit right under the top of the screen
+   - My decks: Collection-style stat tiles that fold away (HIDE STATS)
+   - deck filters on tidy single rows
+   - Forge: one swipeable deck panel (CARDS · ANALYSIS · TO BUY), 3 cards across
+   - green ALWAYS IN / red NEVER USE, punk suggestion buttons
+   ========================================================================== */
+
+/* ---------- 1. Headers: no empty band above the title ---------- */
+.dlist .decksbar,
+.coll .chead2,
+.discohero {
+  padding-top: var(--s3) !important;
+  padding-bottom: var(--s3) !important;
+}
+@media (max-width: 700px) {
+  /* Phones with the nav pill at the bottom: nothing sits at the top, so the page starts at the top. */
+  .stage:has(> .pillnav.dock-bottom) {
+    padding-top: 8px !important;
+  }
+  .dlist .decksbar,
+  .coll .chead2,
+  .discohero {
+    padding-top: var(--s1) !important;
+    padding-bottom: var(--s2) !important;
+  }
+  .dlist .decksbar .titlewrap,
+  .coll .chead2 .titlewrap {
+    padding-top: 18px !important;
+    padding-bottom: 16px !important;
+  }
+  .discohero .titlewrap {
+    padding-top: 14px !important;
+  }
+  /* Commander / deck page: the hero starts close to the top as well. */
+  main.dpage .vhero {
+    padding-top: 0 !important;
+  }
+}
+
+/* ---------- 2. My decks: the Collection's stat tiles, foldable ---------- */
+.dlist .dribbon {
+  display: block !important;
+  position: relative;
+  padding: 0 !important;
+  margin: 0 0 var(--s3) !important;
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.dlist .dribbon .dfold {
+  display: block;
+  position: relative;
+  z-index: 1;
+  /* ui.css sets pointer-events:none on .dfold for desktop (the DeckPanel DETAILS button is static there);
+     the overview's HIDE STATS button is always interactive so we restore it here. */
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  margin: 0 0 var(--s2) auto;
+  padding: 4px 10px;
+  min-height: 32px;
+  background: #0a0a0a;
+  border: 1px solid #3a3a3a;
+  color: #b5b5b5;
+  font: 400 12px var(--u-display, 'Anton', sans-serif);
+  letter-spacing: 0.1em;
+  transform: rotate(-1deg);
+}
+.dlist .dribbon .dfold:hover,
+.dlist .dribbon .dfold:focus-visible {
+  color: #fff;
+  border-color: #e60012;
+}
+.dlist .dstats {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px !important;
+  margin: 0 0 var(--s3) !important;
+}
+.dlist .dstats[hidden] {
+  display: none !important;
+}
+.dlist .dstats > .stat {
+  min-width: 0 !important;
+  min-height: 72px !important;
+  padding: 10px 14px !important;
+  border: 2px solid #fff !important;
+  box-shadow: 3px 3px 0 #fff !important;
+  transform: rotate(-0.6deg) !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px) !important;
+}
+.dlist .dstats > .stat:nth-child(even) {
+  transform: rotate(0.6deg) !important;
+}
+.dlist .dstats > .stat.red {
+  border-color: #e60012 !important;
+  box-shadow: 3px 3px 0 #000 !important;
+  background: #e60012 !important;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.3) 1.5px, transparent 1.9px) !important;
+  background-size: 5px 5px !important;
+}
+.dlist .dstats > .stat b {
+  font-size: clamp(28px, 4vw, 40px) !important;
+}
+.dlist .dstats > .stat > span:not(.spray) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* colour count: one full-width strip of pips under the tiles */
+.dlist .dstats > .stat.dcols {
+  grid-column: 1 / -1;
+  min-height: 0 !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  align-items: baseline !important;
+  flex-wrap: wrap;
+  gap: 6px 18px !important;
+  padding: 8px 14px !important;
+  transform: rotate(0.3deg) !important;
+}
+.dlist .dstats > .stat.dcols > .ov-pip {
+  display: inline-flex !important;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0 !important;
+  font: 700 13px var(--se, 'Special Elite', monospace) !important;
+}
+.dlist .dstats > .stat.dcols > .ov-pip b {
+  display: inline !important;
+  font-size: 24px !important;
+}
+.dlist .dstats .pip-w,
+.dlist .dstats .pip-w b { color: #fff2c4 !important; }
+.dlist .dstats .pip-u,
+.dlist .dstats .pip-u b { color: #6fa4ff !important; }
+.dlist .dstats .pip-b,
+.dlist .dstats .pip-b b { color: #d4b8e8 !important; }
+.dlist .dstats .pip-r,
+.dlist .dstats .pip-r b { color: #ff5240 !important; }
+.dlist .dstats .pip-g,
+.dlist .dstats .pip-g b { color: #40d478 !important; }
+.dlist .dribbon > .dribbon-acts {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s2) !important;
+  margin: 0 !important;
+}
+.dlist .dribbon > .dribbon-acts > .u-btn {
+  justify-content: center;
+  width: 100%;
+}
+@media (min-width: 701px) {
+  .dlist .dribbon > .dribbon-acts {
+    display: flex !important;
+    justify-content: flex-start;
+  }
+  .dlist .dribbon > .dribbon-acts > .u-btn {
+    width: auto;
+  }
+}
+@media (max-width: 700px) {
+  .dlist .dstats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px !important;
+  }
+  .dlist .dstats > .stat {
+    min-height: 64px !important;
+    padding: 8px 12px !important;
+  }
+}
+
+/* ---------- 3. Deck filters: tidy rows, even spacing ---------- */
+.dlist .decktoolbar {
+  display: grid !important;
+  gap: var(--s2) !important;
+  padding: var(--s3) !important;
+  margin: 0 0 var(--s3) !important;
+}
+.dlist .decktoolbar > *,
+.dlist .decktoolbar .dfilters {
+  margin: 0 !important;
+}
+.dlist .decktoolbar .dfilters {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s2) !important;
+}
+.dlist .decktoolbar .dsortpick {
+  display: flex !important;
+  align-items: center;
+  gap: var(--s2);
+  margin: 0 !important;
+}
+.dlist .decktoolbar .dstatuspick {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 !important;
+}
+.dlist .decktoolbar .dstatuspick::-webkit-scrollbar {
+  display: none;
+}
+.dlist .decktoolbar .dstatuspick > .u-chip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+}
+.dlist .decktoolbar .decktagpills {
+  margin: 0 !important;
+  padding: var(--s2) 0 0 !important;
+  border-top: 1px solid #262626;
+}
+@media (max-width: 700px) {
+  .dlist .decktoolbar .dfilters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dlist .decktoolbar .dsortpick > select {
+    flex: 1;
+    min-width: 0;
+  }
+}
+/* the size button sits on the grid's top-right without its own tall row */
+.dlist .dsizebar {
+  margin: 0 0 var(--s2) !important;
+}
+.dlist .dsizebar .u-btn {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+/* ---------- 4. Forge on phones: the deck cube (CARDS · ANALYSIS · TO BUY) ---------- */
+.fcube,
+.dside.forge-buy {
+  display: none;
+}
+@media (max-width: 700px) {
+  html.forging .fcube {
+    position: sticky;
+    top: var(--forgetop-h, 56px);
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    margin: var(--s2) 0 var(--s3);
+    background: #0a0a0a;
+    border: 2px solid #f4efe4;
+    box-shadow: 3px 3px 0 #e60012;
+    transform: rotate(-0.4deg);
+  }
+  html.forging .fcube > button {
+    position: relative;
+    min-height: 40px;
+    padding: 0 6px;
+    background: transparent;
+    border: 0;
+    border-left: 2px dashed #3a3a3a;
+    color: #9a9a9a;
+    font: 400 16px/1 var(--u-display, 'Anton', sans-serif);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  html.forging .fcube > button:first-child {
+    border-left: 0;
+  }
+  html.forging .fcube > button[aria-selected='true'] {
+    background: #e60012;
+    color: #fff;
+  }
+  html.forging .fcube > button small {
+    margin-left: 4px;
+    padding: 1px 4px;
+    background: #fff824;
+    color: #0a0a0a;
+    font: 700 11px var(--u-mono, monospace);
+    vertical-align: 2px;
+  }
+  html.forging .fcube .fcube-dots {
+    position: absolute;
+    left: 50%;
+    bottom: -9px;
+    display: flex;
+    gap: 5px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  html.forging .fcube .fcube-dots i {
+    width: 6px;
+    height: 6px;
+    background: #3a3a3a;
+    transform: rotate(45deg);
+  }
+  html.forging .fcube .fcube-dots i.on {
+    background: #fff824;
+  }
+
+  /* the cube itself: three full-width faces side by side, snapping */
+  html.forging .deckgrid.forge-split {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+    gap: 0 !important;
+    position: relative;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin: 0 calc(-1 * var(--gutter, 16px));
+    transition: height 0.2s ease;
+  }
+  html.forging .deckgrid.forge-split::-webkit-scrollbar {
+    display: none;
+  }
+  html.forging .deckgrid.forge-split > .lists,
+  html.forging .deckgrid.forge-split > .forge-analysis,
+  html.forging .deckgrid.forge-split > .forge-buy {
+    display: block !important;
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 var(--gutter, 16px) var(--s4) !important;
+    box-sizing: border-box;
+    position: relative !important;
+    top: auto !important;
+    overflow: visible !important;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  html.forging .deckgrid.forge-split > .lists { order: 1 !important; }
+  html.forging .deckgrid.forge-split > .forge-analysis { order: 2 !important; }
+  html.forging .deckgrid.forge-split > .forge-buy { order: 3 !important; }
+  /* the suggestions stay the bottom sheet: out of the cube's flow */
+  html.forging .deckgrid.forge-split > .forge-suggestions {
+    order: 4 !important;
+    flex: 0 0 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+  /* on its own face the analysis is always open (the contract toggle is for wide screens) */
+  html.forging .forge-analysis .fexp-btn,
+  html.forging .fsugg .fexp-btn {
+    display: none !important;
+  }
+  html.forging .forge-analysis.is-contracted .dpanel .dfold,
+  html.forging .forge-analysis.is-contracted .dpanel .dbody {
+    display: revert !important;
+  }
+
+  html.forging .deckgrid.forge-split .fmeters {
+    position: static !important;
+  }
+  html.forging .deckgrid.forge-split > .forge-analysis > .dpanel {
+    margin: 0 !important;
+    padding-top: var(--s3) !important;
+  }
+  /* the bottom sheet's peek: just its tabs, no extra rows sticking up over the cards */
+  html.forging .fsugg {
+    max-height: 92px !important;
+  }
+  html.forging .fsugg.up {
+    max-height: 82vh !important;
+  }
+  html.forging .fsugg:not(.up) .just-build-banner,
+  html.forging .fsugg:not(.up) .fsorts {
+    display: none !important;
+  }
+  html.forging main {
+    padding-bottom: 108px !important;
+  }
+  html.forging .forgehint {
+    margin: var(--s1) 0 var(--s2) !important;
+    font-size: 11px !important;
+  }
+}
+
+/* the TO BUY face */
+.fbuylist h3 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+  margin: 0 0 var(--s3);
+  font: 400 22px/1 var(--u-display, 'Anton', sans-serif);
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+.fbuylist h3 small {
+  font: 400 12px var(--u-mono, monospace);
+  color: #b5b5b5;
+  letter-spacing: 0;
+}
+.fbuylist ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid #262626;
+}
+.fbuylist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-height: 44px;
+  border-bottom: 1px solid #262626;
+  font: 400 14px var(--u-mono, monospace);
+  color: #f4efe4;
+}
+.fbuylist li .nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fbuylist li a {
+  flex: none;
+  text-decoration: none;
+}
+.fbuylist .fbuy-find {
+  color: #fff824;
+  font: 400 13px var(--u-display, 'Anton', sans-serif);
+  letter-spacing: 0.06em;
+}
+.fbuylist .fbuy-none {
+  margin: 0;
+  padding: var(--s3);
+  border: 2px solid #2bd65a;
+  color: #2bd65a;
+  font: 400 14px var(--se, 'Special Elite', monospace);
+}
+
+/* ---------- 5. Card grid in the deck / Forge: rows that fill the width, evenly ---------- */
+.deckgrid > .lists > details.cat > ul.zgrid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+  gap: 14px 12px !important;
+}
+.deckgrid > .lists > details.cat > ul.zgrid > li,
+.deckgrid[data-zoom] > .lists > details.cat > ul.zgrid > li,
+.deckgrid[data-zoom] > .lists > details.cat > ul.zgrid[data-zoom] > li {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  flex-basis: auto !important;
+  justify-self: stretch !important;
+  min-width: 0 !important;
+  flex: none !important;
+}
+.deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid {
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)) !important;
+  gap: 10px 8px !important;
+}
+.deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+  gap: 18px 16px !important;
+}
+@media (max-width: 700px) {
+  /* phones: S = 4 across, M = 3 across (the default), L = 2 across; always the full width, same gaps */
+  .deckgrid > .lists > details.cat > ul.zgrid,
+  .deckgrid[data-zoom='m'] > .lists > details.cat > ul.zgrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 10px 8px !important;
+  }
+  .deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px 6px !important;
+  }
+  .deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px 10px !important;
+  }
+  /* the price / swap tapes under a card never push the grid wider */
+  .deckgrid > .lists > details.cat > ul.zgrid > li > * {
+    max-width: 100%;
+  }
+}
+
+/* ---------- 6. The one tool bar on phones: SIZE stays, the ⋮ label never clips ---------- */
+@media (max-width: 700px) {
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) {
+    display: inline-flex !important;
+    padding: 0 6px !important;
+  }
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs {
+    display: none !important;
+  }
+  .dpage .lists > .dtools.tbar > .tquick > .qzoom-btn,
+  .coll .dtools.tbar > .tquick > .qzoom-btn {
+    min-height: 36px;
+    padding: 0 10px;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+  .dtools.tbar > .tbmore > summary {
+    flex: none;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    padding: 0 8px 0 12px !important;
+    overflow: hidden;
+  }
+  .dtools.tbar > .tbmore > summary .fnow {
+    max-width: 11ch !important;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+}
+
+/* ---------- 7. Deck status strip: one compact row ---------- */
+/* tablet/desktop keep the original 56px fixed height; phones wrap to two rows */
+.dstrip {
+  flex-wrap: wrap;
+  gap: 6px var(--s3) !important;
+}
+.dstrip > .dstatus {
+  flex: 1 1 220px;
+  min-width: 0;
+  margin: 0 !important;
+}
+.dstrip > .dacts {
+  flex: 0 0 auto;
+  margin: 0 0 0 auto !important;
+}
+@media (max-width: 700px) {
+  .dstrip {
+    height: auto !important;
+    min-height: 44px;
+    padding: 4px 0 !important;
+  }
+  .dstrip > .dstatus {
+    flex-basis: 100%;
+    order: 2;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .dstrip > .dacts {
+    order: 1;
+    margin: 0 !important;
+  }
+  html.forging .dstrip {
+    position: relative !important;
+    top: auto !important;
+  }
+  .dstrip > .dacts:empty {
+    display: none;
+  }
+  /* commander hero: your decks wrap instead of running off the screen; less air between its rows */
+  .vhero .vmeta {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    margin-bottom: var(--s2) !important;
+  }
+  .vhero .vmeta .mydecks {
+    flex-basis: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .vhero .vmatch {
+    margin: var(--s1) 0 var(--s2) !important;
+  }
+}
+
+/* ---------- 8. Forge bar: always above the hero it scrolls over; on phones nothing cut off ---------- */
+html.forging .vhero {
+  z-index: 39 !important;
+}
+@media (max-width: 700px) {
+  .forgetop {
+    gap: 6px !important;
+  }
+  .forgetop .ftitle {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .forgetop .ftitle b {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .forgetop .ftitle small,
+  .forgetop .fundo small {
+    display: none !important;
+  }
+  .forgetop .fundo,
+  .forgetop .forge,
+  .forgetop .fleave {
+    flex: none !important;
+    min-width: 0;
+    padding: 0 10px !important;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- 9. Swap window pins: green ALWAYS IN, red NEVER USE (punk slabs) ---------- */
+.swapnote .pin-btn {
+  height: 44px !important;
+  min-height: 44px !important;
+  border-width: 2px !important;
+  border-radius: 0 !important;
+  font: 400 15px/1 var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.08em !important;
+}
+.swapnote .pin-btn.pin-in {
+  background: #0d1f13 !important;
+  color: #2bd65a !important;
+  border-color: #2bd65a !important;
+  box-shadow: 3px 3px 0 #2bd65a !important;
+  transform: rotate(-1deg) !important;
+}
+.swapnote .pin-btn.pin-out {
+  background: #220407 !important;
+  color: #ff4d5a !important;
+  border-color: #e60012 !important;
+  box-shadow: 3px 3px 0 #e60012 !important;
+  transform: rotate(1deg) !important;
+}
+.swapnote .pin-btn.pin-in:hover:not(:disabled),
+.swapnote .pin-btn.pin-in.is-active {
+  background: #2bd65a !important;
+  color: #0a0a0a !important;
+  border-color: #2bd65a !important;
+  box-shadow: 3px 3px 0 #f4efe4 !important;
+}
+.swapnote .pin-btn.pin-out:hover:not(:disabled),
+.swapnote .pin-btn.pin-out.is-active {
+  background: #e60012 !important;
+  color: #fff !important;
+  border-color: #e60012 !important;
+  box-shadow: 3px 3px 0 #f4efe4 !important;
+}
+.swapnote .pin-btn:active:not(:disabled) {
+  box-shadow: 1px 1px 0 currentColor !important;
+}
+
+/* ---------- 10. HIDDEN GEM card: a real card thumbnail, loud buttons ---------- */
+.dpage .wildcard .wthumb {
+  width: 72px !important;
+  height: auto !important;
+  aspect-ratio: 488 / 680;
+  object-fit: cover;
+  border-radius: 4px !important;
+  border: 2px solid #fff824 !important;
+  box-shadow: 3px 3px 0 #0a0a0a;
+  transform: rotate(-2deg);
+}
+.dpage .wildcard .wacts {
+  flex-wrap: wrap;
+  gap: 10px !important;
+}
+.dpage .wildcard .wacts .btn {
+  min-height: 40px;
+  border-radius: 0 !important;
+}
+.dpage .wildcard .wacts .btn-swap-in {
+  border-radius: 0 !important;
+  border: 2px solid #e60012 !important;
+  box-shadow: 3px 3px 0 #f4efe4 !important;
+}
+.dpage .wildcard .wacts .wreroll {
+  background: #2bd65a !important;
+  color: #0a0a0a !important;
+  border: 2px solid #2bd65a !important;
+  box-shadow: 3px 3px 0 #0a0a0a !important;
+  transform: rotate(-1.5deg);
+  font-family: var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.06em;
+}
+.dpage .wildcard .wacts .woff {
+  background: #0a0a0a !important;
+  color: #ff4d5a !important;
+  border: 2px solid #e60012 !important;
+  box-shadow: 3px 3px 0 #e60012 !important;
+  transform: rotate(1.5deg);
+  font-family: var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.06em;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.dpage .wildcard .wacts .wreroll:hover,
+.dpage .wildcard .wacts .woff:hover {
+  transform: rotate(0) translateY(-1px);
+}
+
+/* ---------- 11. Collection: the lists + order panel sits snug, every row lined up ---------- */
+.coll .stats {
+  margin-bottom: var(--s3) !important;
+}
+.coll-listbar {
+  margin: 0 0 var(--s2) !important;
+  padding: var(--s2) var(--s3) !important;
+  gap: var(--s2) !important;
+}
+@media (max-width: 700px) {
+  .coll-listbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .coll-listbar .list-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .coll-listbar .list-tabs > * {
+    flex: 0 0 auto;
+  }
+  .coll-sort-wrap {
+    margin: 0 !important;
+    width: 100%;
+  }
+  .coll-sort-wrap .coll-sort-select {
+    flex: 1;
+    min-width: 0;
+    min-height: 36px;
+  }
+}
+
+/* ---------- 12. My decks: fold button stays small; wide screens get one row of tiles and one filter row ---------- */
+.dlist .dribbon > .dfold {
+  width: auto !important;
+  max-width: max-content;
+  flex: none !important;
+}
+@media (min-width: 701px) {
+  .dlist .dstats {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  }
+  .dlist .dstats > .stat {
+    border-top: 2px solid #fff !important;
+    border-bottom: 2px solid #fff !important;
+    border-left: 2px solid #fff !important;
+    border-right: 2px solid #fff !important;
+  }
+  .dlist .dstats > .stat.red {
+    border-color: #e60012 !important;
+  }
+  .dlist .dstats > .stat.dcols {
+    grid-column: auto;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 4px 12px !important;
+    max-width: 220px;
+    padding: 8px 14px !important;
+  }
+  .dlist .decktoolbar {
+    grid-template-columns: minmax(220px, 1fr) auto;
+    align-items: center;
+  }
+  .dlist .decktoolbar .dsearchbox input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .dlist .decktoolbar .decktagpills {
+    grid-column: 1 / -1;
+  }
+}

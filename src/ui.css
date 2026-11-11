@@ -5026,7 +5026,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 /* ==========================================================================
    COLLECTION DASHBOARD STATS: AUTHENTIC DECKWIZARD ZINE COMPOSITION
    ========================================================================== */
-.coll .stats {
+:is(.coll, .dlist) .stats {
   position: relative !important;
   display: flex !important;
   flex-wrap: wrap !important;
@@ -5036,14 +5036,14 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 @media (min-width: 701px) {
-  .coll .stats {
+  :is(.coll, .dlist) .stats {
     flex-wrap: nowrap !important;
     gap: 0 !important;
     align-items: stretch !important;
   }
 }
 
-.coll .stat {
+:is(.coll, .dlist) .stat {
   position: relative !important;
   flex: 1 1 140px !important;
   min-width: 120px !important;
@@ -5060,7 +5060,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   background-size: 5px 5px !important;
 }
 
-.coll .stat b {
+:is(.coll, .dlist) .stat b {
   display: block !important;
   font-family: var(--an, "Anton", sans-serif) !important;
   font-size: clamp(34px, 4.5vw, 48px) !important;
@@ -5071,7 +5071,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   z-index: 2 !important;
 }
 
-.coll .stat span {
+:is(.coll, .dlist) .stat span {
   display: block !important;
   font-family: var(--se, "Special Elite", monospace) !important;
   font-size: 13px !important;
@@ -5082,23 +5082,23 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   z-index: 2 !important;
 }
 
-.coll .stat.red {
+:is(.coll, .dlist) .stat.red {
   background: var(--accent, #e60012) !important;
   background-image: radial-gradient(rgba(0, 0, 0, 0.3) 1.5px, transparent 1.9px) !important;
   background-size: 5px 5px !important;
 }
 
-.coll .stat.red b {
+:is(.coll, .dlist) .stat.red b {
   color: #ffffff !important;
 }
 
-.coll .stat.red span {
+:is(.coll, .dlist) .stat.red span {
   color: rgba(255, 255, 255, 0.95) !important;
 }
 
 /* Authentic DeckWizard borders & perforated ticket notches between joined boxes */
 @media (min-width: 701px) {
-  .coll .stats .stat {
+  :is(.coll, .dlist) .stats .stat {
     flex: 0 0 auto !important;
     min-width: 0 !important;
     padding: 12px 26px !important;
@@ -5110,12 +5110,12 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
     box-shadow: none !important;
   }
 
-  .coll .stats .stat:first-child {
+  :is(.coll, .dlist) .stats .stat:first-child {
     border-left: 3px solid var(--text, #ffffff) !important;
   }
 
   /* Perforated ticket punch notches between joined stat tiles */
-  .coll .stats .stat + .stat {
+  :is(.coll, .dlist) .stats .stat + .stat {
     background-image: radial-gradient(circle at 0 0, var(--bg, #0a0a0a) 6px, transparent 6.5px),
                       radial-gradient(circle at 0 100%, var(--bg, #0a0a0a) 6px, transparent 6.5px),
                       radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px) !important;
@@ -5124,28 +5124,28 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
     border-left: 2px dashed var(--muted, #b5b5b5) !important;
   }
 
-  .coll .stats .stat.red {
+  :is(.coll, .dlist) .stats .stat.red {
     border-color: var(--accent, #e60012) !important;
   }
 
-  .coll .stats .stat.red + .stat {
+  :is(.coll, .dlist) .stats .stat.red + .stat {
     border-left-color: var(--accent, #e60012) !important;
   }
 }
 
 @media (max-width: 700px) {
-  .coll .stat {
+  :is(.coll, .dlist) .stat {
     border: 2px solid var(--text, #ffffff) !important;
     box-shadow: 3px 3px 0 var(--text, #ffffff) !important;
   }
-  .coll .stat.red {
+  :is(.coll, .dlist) .stat.red {
     border-color: var(--accent, #e60012) !important;
     box-shadow: 3px 3px 0 #000000 !important;
   }
 }
 
 /* Jinx spray paint overspray flecks */
-.coll .stat .spray {
+:is(.coll, .dlist) .stat .spray {
   position: absolute !important;
   z-index: 1 !important;
   top: 4px !important;
@@ -5165,11 +5165,11 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   opacity: 0.85 !important;
 }
 
-.coll .stat:nth-child(2) .spray {
+:is(.coll, .dlist) .stat:nth-child(2) .spray {
   transform: scaleX(-1) rotate(8deg) !important;
 }
 
-.coll .stat.red .spray {
+:is(.coll, .dlist) .stat.red .spray {
   background: radial-gradient(circle at 40% 50%, rgba(255, 204, 0, 0.32), transparent 46%),
               radial-gradient(circle at 75% 35%, rgba(10, 10, 10, 0.3), transparent 38%),
               radial-gradient(circle at 15% 25%, #ffcc00 0 1.4px, transparent 2px),
@@ -5179,7 +5179,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   transform: rotate(-6deg) !important;
 }
 
-.coll .stat .worn {
+:is(.coll, .dlist) .stat .worn {
   position: absolute !important;
   top: 0 !important;
   right: 0 !important;
@@ -5192,7 +5192,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Graffiti crown on commanders box */
-.coll .stat .crown {
+:is(.coll, .dlist) .stat .crown {
   position: absolute !important;
   z-index: 4 !important;
   top: -22px !important;
@@ -5209,13 +5209,13 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   pointer-events: none !important;
 }
 
-.coll .stat .crown circle {
+:is(.coll, .dlist) .stat .crown circle {
   fill: var(--hazard, #ffcc00) !important;
   stroke: none !important;
 }
 
 @media (max-width: 700px) {
-  .coll .stat .crown {
+  :is(.coll, .dlist) .stat .crown {
     top: -16px !important;
     right: -6px !important;
     width: 36px !important;
@@ -8437,7 +8437,7 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 /* Collection header: no tilt on phones (the tilts made the tiles look misaligned),
    and nothing wider than the screen. Inline transforms need !important to lose. */
 @media (max-width: 700px) {
-  .coll .stat,
+  :is(.coll, .dlist) .stat,
   .coll .slip {
     transform: none !important;
   }

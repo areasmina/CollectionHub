@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { mockWorld, seed } from './mock';
+import { addSignet, mockWorld, seed } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -72,6 +72,51 @@ test.describe('Collection & Decks Workbench Features', () => {
 
     // Add tag action is available
     await expect(menu.getByRole('menuitem', { name: '+ ADD TAG' })).toBeVisible();
+  });
+
+  test('Decks overview: HIDE STATS button toggles the stats tiles section', async ({ page }) => {
+    await go(page, 'decks');
+
+    // stats are visible by default
+    const stats = page.locator('.dstats');
+    await expect(stats).toBeVisible();
+
+    // clicking HIDE STATS hides the section — force through any rotated tile overlap
+    const foldBtn = page.locator('.dfold');
+    await expect(foldBtn).toBeVisible();
+    await foldBtn.click({ force: true });
+    await expect(stats).toBeHidden();
+    await expect(foldBtn).toContainText(/SHOW STATS/i);
+
+    // clicking again restores them
+    await foldBtn.click({ force: true });
+    await expect(stats).toBeVisible();
+    await expect(foldBtn).toContainText(/HIDE STATS/i);
+  });
+
+  test('Forge cube on phones: CARDS · ANALYSIS · TO BUY tabs and face switching', async ({ page }, info) => {
+    if (info.project.name !== 'phone') return; // cube tabs are phone-only
+    await addSignet(page); // Arcane Signet must be owned so it appears in .picks
+    await page.locator('.ccard').first().click();
+    // enter forge mode via a swap
+    await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
+
+    // cube tablist should be present
+    const cube = page.locator('.fcube[role="tablist"]');
+    await expect(cube).toBeVisible();
+    await expect(cube.getByRole('tab')).toHaveText(['CARDS', 'ANALYSIS', 'TO BUY']);
+    await expect(cube.getByRole('tab', { name: 'CARDS' })).toHaveAttribute('aria-selected', 'true');
+
+    // switch to ANALYSIS: fmeters should scroll into view
+    await cube.getByRole('tab', { name: 'ANALYSIS' }).click();
+    await page.waitForTimeout(400);
+    await expect(page.locator('.fmeters')).toBeInViewport();
+
+    // switch to TO BUY: fbuylist should appear
+    await cube.getByRole('tab', { name: 'TO BUY' }).click();
+    await page.waitForTimeout(400);
+    await expect(page.locator('.fbuylist')).toBeInViewport();
   });
 
   test('Dynamic Island: only the light opens sync, lip does not toggle menus, and undocked floating has venom goo styling', async ({ page }) => {
