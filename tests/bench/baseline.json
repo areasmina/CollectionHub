@@ -3,73 +3,73 @@
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doom Prevails - Marvel Super Heroes",
-   "overlap": 0.869,
-   "spells": 0.839,
+   "overlap": 0.857,
+   "spells": 0.823,
    "lands": 0.955,
-   "noise": 18,
+   "noise": 19,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Discarding for Profit With Doctor Doom, King of Latveria - Doctor Doom, King of Latveria",
-   "overlap": 0.561,
-   "spells": 0.475,
-   "lands": 0.783,
-   "noise": 45,
+   "overlap": 0.756,
+   "spells": 0.763,
+   "lands": 0.739,
+   "noise": 29,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doom, Grixis Looting",
-   "overlap": 0.696,
+   "overlap": 0.707,
    "spells": 0.672,
-   "lands": 0.742,
-   "noise": 27,
+   "lands": 0.774,
+   "noise": 26,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "The Doctor Will Ping You Now",
-   "overlap": 0.775,
-   "spells": 0.763,
+   "overlap": 0.831,
+   "spells": 0.847,
    "lands": 0.8,
-   "noise": 22,
+   "noise": 17,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doctor Doom!!",
-   "overlap": 0.893,
-   "spells": 0.855,
+   "overlap": 0.869,
+   "spells": 0.823,
    "lands": 1,
-   "noise": 16,
+   "noise": 18,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doctor Doom, King of Latveria",
-   "overlap": 0.833,
-   "spells": 0.903,
+   "overlap": 0.798,
+   "spells": 0.855,
    "lands": 0.636,
-   "noise": 21,
+   "noise": 24,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doctor Doom, King of Latavia",
-   "overlap": 0.57,
-   "spells": 0.551,
-   "lands": 0.625,
-   "noise": 38,
+   "overlap": 0.688,
+   "spells": 0.696,
+   "lands": 0.667,
+   "noise": 27,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "The Dooms Day Scenario",
-   "overlap": 0.537,
-   "spells": 0.481,
+   "overlap": 0.653,
+   "spells": 0.685,
    "lands": 0.61,
-   "noise": 40,
+   "noise": 29,
    "rules": 0
   },
   {
@@ -84,136 +84,136 @@
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Dr Doom",
-   "overlap": 0.711,
-   "spells": 0.721,
+   "overlap": 0.767,
+   "spells": 0.803,
    "lands": 0.69,
-   "noise": 27,
+   "noise": 22,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doom Prevails (ULTIMATE)",
-   "overlap": 0.83,
+   "overlap": 0.818,
    "spells": 0.823,
-   "lands": 0.846,
-   "noise": 18,
+   "lands": 0.808,
+   "noise": 19,
    "rules": 0
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "deck": "Doom Prevails Marvel Only Upgrade",
-   "overlap": 0.878,
-   "spells": 0.85,
+   "overlap": 0.902,
+   "spells": 0.883,
    "lands": 0.955,
-   "noise": 19,
+   "noise": 17,
    "rules": 0
   },
   {
    "cmdr": "Kinnan, Bonder Prodigy",
    "deck": "funny big flip",
-   "overlap": 0.755,
-   "spells": 0.72,
+   "overlap": 0.723,
+   "spells": 0.68,
    "lands": 0.895,
-   "noise": 16,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "Kinnan \"Toolbox\" High Power EDH",
-   "overlap": 0.818,
-   "spells": 0.806,
-   "lands": 0.857,
-   "noise": 15,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "Kinnan, ma in realtà sei nella cieca eternità - The Brothers Wars",
-   "overlap": 0.553,
-   "spells": 0.5,
-   "lands": 0.8,
-   "noise": 39,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "KinGnan",
-   "overlap": 0.758,
-   "spells": 0.747,
-   "lands": 0.8,
-   "noise": 15,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "12-Kinnan's cheap friends",
-   "overlap": 0.636,
-   "spells": 0.594,
-   "lands": 1,
-   "noise": 38,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "Kinnan, Bonder Prodigy (cEDH)",
-   "overlap": 0.739,
-   "spells": 0.746,
-   "lands": 0.706,
-   "noise": 22,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "LET'S GO GAMBLING!!",
-   "overlap": 0.794,
-   "spells": 0.824,
-   "lands": 0.696,
-   "noise": 10,
-   "rules": 0
-  },
-  {
-   "cmdr": "Kinnan, Bonder Prodigy",
-   "deck": "Kinnan cedh control",
-   "overlap": 0.8,
-   "spells": 0.786,
-   "lands": 0.867,
    "noise": 19,
    "rules": 0
   },
   {
    "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "Kinnan \"Toolbox\" High Power EDH",
+   "overlap": 0.807,
+   "spells": 0.791,
+   "lands": 0.857,
+   "noise": 16,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "Kinnan, ma in realtà sei nella cieca eternità - The Brothers Wars",
+   "overlap": 0.588,
+   "spells": 0.543,
+   "lands": 0.8,
+   "noise": 36,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "KinGnan",
+   "overlap": 0.716,
+   "spells": 0.693,
+   "lands": 0.8,
+   "noise": 19,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "12-Kinnan's cheap friends",
+   "overlap": 0.558,
+   "spells": 0.507,
+   "lands": 1,
+   "noise": 44,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "Kinnan, Bonder Prodigy (cEDH)",
+   "overlap": 0.705,
+   "spells": 0.704,
+   "lands": 0.706,
+   "noise": 25,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "LET'S GO GAMBLING!!",
+   "overlap": 0.773,
+   "spells": 0.811,
+   "lands": 0.652,
+   "noise": 12,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
+   "deck": "Kinnan cedh control",
+   "overlap": 0.776,
+   "spells": 0.757,
+   "lands": 0.867,
+   "noise": 21,
+   "rules": 0
+  },
+  {
+   "cmdr": "Kinnan, Bonder Prodigy",
    "deck": "cEDH Primer",
-   "overlap": 0.802,
+   "overlap": 0.813,
    "spells": 0.767,
-   "lands": 0.944,
-   "noise": 14,
+   "lands": 1,
+   "noise": 13,
    "rules": 0
   },
   {
    "cmdr": "Kinnan, Bonder Prodigy",
    "deck": "Kinnan Flips",
    "overlap": 0.735,
-   "spells": 0.743,
-   "lands": 0.708,
+   "spells": 0.757,
+   "lands": 0.667,
    "noise": 15,
    "rules": 0
   },
   {
    "cmdr": "Kinnan, Bonder Prodigy",
    "deck": "Fat Boy Slim - Kinnan, Bonder Prodigy",
-   "overlap": 0.532,
-   "spells": 0.439,
+   "overlap": 0.519,
+   "spells": 0.424,
    "lands": 1,
-   "noise": 45,
+   "noise": 46,
    "rules": 0
   },
   {
    "cmdr": "Kinnan, Bonder Prodigy",
    "deck": "Kinnan, Bonder Prodigy",
-   "overlap": 0.711,
-   "spells": 0.662,
+   "overlap": 0.632,
+   "spells": 0.569,
    "lands": 1,
-   "noise": 33,
+   "noise": 39,
    "rules": 0
   },
   {
@@ -237,19 +237,19 @@
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "Trostani, Selesnya’s Voice",
-   "overlap": 0.744,
-   "spells": 0.688,
+   "overlap": 0.756,
+   "spells": 0.703,
    "lands": 0.944,
-   "noise": 26,
+   "noise": 25,
    "rules": 0
   },
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "🎞️ Trostani, Selesnya's Voice (6)",
-   "overlap": 0.694,
-   "spells": 0.656,
+   "overlap": 0.764,
+   "spells": 0.738,
    "lands": 0.909,
-   "noise": 35,
+   "noise": 30,
    "rules": 0
   },
   {
@@ -264,28 +264,28 @@
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "Hatsune Miku GW",
-   "overlap": 0.859,
-   "spells": 0.862,
+   "overlap": 0.847,
+   "spells": 0.846,
    "lands": 0.85,
-   "noise": 14,
+   "noise": 15,
    "rules": 0
   },
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "Lifegain for Power Hatsune Miku Trostani Deck with special guest Aerith",
-   "overlap": 0.77,
-   "spells": 0.762,
+   "overlap": 0.793,
+   "spells": 0.794,
    "lands": 0.792,
-   "noise": 20,
+   "noise": 18,
    "rules": 0
   },
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "HATSUNE WEEDKU",
-   "overlap": 0.741,
-   "spells": 0.706,
+   "overlap": 0.765,
+   "spells": 0.735,
    "lands": 0.882,
-   "noise": 24,
+   "noise": 22,
    "rules": 0
   },
   {
@@ -300,55 +300,55 @@
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "Miku, Song of the People",
-   "overlap": 0.847,
+   "overlap": 0.835,
    "spells": 0.846,
-   "lands": 0.85,
-   "noise": 15,
+   "lands": 0.8,
+   "noise": 16,
    "rules": 0
   },
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "Trostani's Growing Influence",
-   "overlap": 0.706,
-   "spells": 0.667,
+   "overlap": 0.753,
+   "spells": 0.73,
    "lands": 0.818,
-   "noise": 27,
+   "noise": 23,
    "rules": 0
   },
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "deck": "Trostani, Selesnya's Voice",
-   "overlap": 0.741,
-   "spells": 0.73,
+   "overlap": 0.79,
+   "spells": 0.794,
    "lands": 0.778,
-   "noise": 27,
+   "noise": 23,
    "rules": 0
   },
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "Yuriko, the Tiger's Shadow",
-   "overlap": 0.705,
-   "spells": 0.667,
+   "overlap": 0.682,
+   "spells": 0.639,
    "lands": 0.875,
-   "noise": 25,
+   "noise": 27,
    "rules": 0
   },
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "Yuriko, the Tiger's Shadow ($25 Budget)",
-   "overlap": 0.685,
-   "spells": 0.635,
+   "overlap": 0.671,
+   "spells": 0.619,
    "lands": 1,
-   "noise": 37,
+   "noise": 38,
    "rules": 0
   },
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "Yuriko EDH (165€ Budget - Bracket 3)",
-   "overlap": 0.81,
-   "spells": 0.783,
+   "overlap": 0.759,
+   "spells": 0.725,
    "lands": 1,
-   "noise": 19,
+   "noise": 23,
    "rules": 0
   },
   {
@@ -372,19 +372,19 @@
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "Yuriko: Turn and Burn Tempo Deck",
-   "overlap": 0.701,
-   "spells": 0.726,
+   "overlap": 0.711,
+   "spells": 0.74,
    "lands": 0.625,
-   "noise": 19,
+   "noise": 18,
    "rules": 0
   },
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "NINJA!",
-   "overlap": 0.758,
-   "spells": 0.726,
+   "overlap": 0.737,
+   "spells": 0.699,
    "lands": 0.864,
-   "noise": 15,
+   "noise": 17,
    "rules": 0
   },
   {
@@ -399,10 +399,10 @@
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "Yuriko - cEDH Stax/Control",
-   "overlap": 0.779,
-   "spells": 0.766,
+   "overlap": 0.758,
+   "spells": 0.74,
    "lands": 0.833,
-   "noise": 13,
+   "noise": 15,
    "rules": 0
   },
   {
@@ -417,19 +417,19 @@
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "Yuriko, the Tiger's Shadow EDH",
-   "overlap": 0.753,
-   "spells": 0.719,
+   "overlap": 0.805,
+   "spells": 0.781,
    "lands": 0.923,
-   "noise": 29,
+   "noise": 25,
    "rules": 0
   },
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "deck": "YUFFIE, NINJA'S SHADOW",
-   "overlap": 0.722,
-   "spells": 0.779,
+   "overlap": 0.711,
+   "spells": 0.765,
    "lands": 0.586,
-   "noise": 17,
+   "noise": 18,
    "rules": 0
   }
  ],
@@ -437,34 +437,34 @@
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "label": "Villains",
-   "changed": 20,
-   "fitBase": 22,
-   "fitThemed": 42,
-   "surfaced": 20
+   "changed": 21,
+   "fitBase": 25,
+   "fitThemed": 46,
+   "surfaced": 21
   },
   {
    "cmdr": "Doctor Doom, King of Latveria",
    "label": "Discard",
-   "changed": 19,
-   "fitBase": 41,
-   "fitThemed": 60,
-   "surfaced": 19
+   "changed": 12,
+   "fitBase": 55,
+   "fitThemed": 67,
+   "surfaced": 12
   },
   {
    "cmdr": "Trostani, Selesnya's Voice",
    "label": "Lifegain",
-   "changed": 20,
-   "fitBase": 10,
-   "fitThemed": 30,
-   "surfaced": 20
+   "changed": 16,
+   "fitBase": 13,
+   "fitThemed": 28,
+   "surfaced": 15
   },
   {
    "cmdr": "Yuriko, the Tiger's Shadow",
    "label": "Ninjas",
-   "changed": 9,
-   "fitBase": 12,
-   "fitThemed": 21,
-   "surfaced": 9
+   "changed": 16,
+   "fitBase": 19,
+   "fitThemed": 35,
+   "surfaced": 16
   }
  ]
 }
