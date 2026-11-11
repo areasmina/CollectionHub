@@ -87,6 +87,20 @@ describe('suggestions follow the deck (proof the brain is personal and live)', (
     { name: 'Craterhoof Behemoth', incl: 0.3 },
     { name: 'Grizzly Bears', incl: 0.52 },
   ];
+  it('a full deck short of lands values a land; a deck with enough lands does not; a half-built deck is not all lands', () => {
+    const land = { name: 'Forest', incl: 0.3 };
+    const fill = (spells: number, lands: number) => [...Array.from({ length: spells }, (_, i) => `Spell ${i}`), ...Array.from({ length: lands }, (_, i) => `Land ${i}`)];
+    const of = (n: string) => (n.startsWith('Land') ? CARDS.Forest : n.startsWith('Spell') ? CARDS['Grizzly Bears'] : CARDS[n]);
+    const short = scoreCard(land, base(fill(72, 27), { cardOf: of, bracket: 3 }));
+    expect(short.parts.find((p) => /^fills lands/.test(p.label))?.label).toBe('fills lands (deck has 27, usual is 35–38)');
+    const enough = scoreCard(land, base(fill(62, 38), { cardOf: of, bracket: 3 }));
+    expect(enough.parts.some((p) => /^fills lands/.test(p.label))).toBe(false);
+    expect(enough.parts.find((p) => /already has 38 lands/.test(p.label))?.value).toBeLessThan(0);
+    // 40 cards with 14 lands is on pace for 35: no push yet
+    expect(scoreCard(land, base(fill(26, 14), { cardOf: of, bracket: 3 })).parts.some((p) => /lands/.test(p.label))).toBe(false);
+    // cEDH runs fewer lands: 27 is inside its range
+    expect(scoreCard(land, base(fill(72, 27), { cardOf: of, bracket: 5 })).parts.some((p) => /^fills lands/.test(p.label))).toBe(false);
+  });
   it('a deck short of ramp is offered ramp; once the ramp is in, the same list changes', () => {
     const thin = suggestCards(candidates, base(['Grizzly Bears', 'Forest']));
     expect(thin[0].parts.map((p) => p.source)).toContain('card text');
