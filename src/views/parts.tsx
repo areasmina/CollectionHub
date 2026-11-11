@@ -64,13 +64,19 @@ export function Menu({ label, summary, className = '', children }: { label: stri
   );
 }
 
-/** Meter: slanted green bars for a match %. */
-export function Meter({ pct, label }: { pct: number; label: string }) {
+/**
+ * Meter: slanted bars for a match %. Default: green. `tone` colours the lit bars along a gradient by position:
+ * 'discover' runs red (0%) to green (100%); 'deck' runs blue to purple as the deck fills.
+ */
+export function Meter({ pct, label, tone }: { pct: number; label: string; tone?: 'discover' | 'deck' }) {
+  const cells = meterCells(pct);
   return (
     <span className="u-meter" role="img" aria-label={label}>
-      {meterCells(pct).map((on, i) => (
-        <i key={i} className={on ? 'on' : ''} />
-      ))}
+      {cells.map((on, i) => {
+        const f = (i + 0.5) / cells.length;
+        const hue = tone === 'discover' ? 120 * f : tone === 'deck' ? 215 + 65 * f : undefined;
+        return <i key={i} className={on ? 'on' : ''} style={on && hue !== undefined ? { background: `hsl(${hue.toFixed(0)} 85% 55%)` } : undefined} />;
+      })}
     </span>
   );
 }

@@ -8427,3 +8427,85 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
     top: calc(100% + 4px) !important;
   }
 }
+
+/* ==========================================================================
+   Phone polish, Nov 11 (Guillermo's screenshots): the Collection header
+   spaces evenly on every device, the sort and tag rows scroll sideways, and
+   deck tiles get the punk look (tape labels, Anton names).
+   ========================================================================== */
+
+/* Collection header: no tilt on phones (the tilts made the tiles look misaligned),
+   and nothing wider than the screen. Inline transforms need !important to lose. */
+@media (max-width: 700px) {
+  .coll .stat,
+  .coll .slip {
+    transform: none !important;
+  }
+  .coll .slip {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .coll .slip .se.small {
+    display: block;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .coll .slip .stamp {
+    max-width: 42%;
+    right: 8px;
+    top: 8px;
+    white-space: nowrap;
+  }
+}
+
+/* Sort row (Discover) and tag row (Decks): one line that scrolls side to side. */
+.disc .sorts,
+.decktagpills {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  padding-bottom: 6px;
+}
+.disc .sorts > *,
+.decktagpills > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+/* Deck tiles: a clear grid, Anton names, tape labels for the state. */
+.dgrid.cgrid {
+  gap: var(--s4);
+}
+.dgrid .dtile .cinfo {
+  padding: var(--s3);
+  gap: var(--s2);
+}
+.dgrid .dtile .nm b {
+  font-family: var(--u-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+}
+.dgrid .dtile .cfoot .cstate {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #0a0a0a;
+  border: 1px solid #ffcc00;
+  color: #ffcc00;
+  transform: rotate(-1.5deg);
+  font: 400 11px var(--u-display);
+  letter-spacing: 0.08em;
+}
+.dgrid .dtile .cfoot .cstate.ready {
+  background: #ffcc00;
+  border-color: #ffcc00;
+  color: #0a0a0a;
+  transform: rotate(1deg);
+}
+.dgrid .dtile .cfoot {
+  align-items: center;
+  gap: var(--s2);
+}

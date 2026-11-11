@@ -4,6 +4,7 @@ import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BASICS, statusOf, summarize } from '../lib/compare';
+import { deckShareOf, deckShares } from '../lib/deckshare';
 import { addToDeck, removeFromDeck, replaceInDeck, savePin, setCommander } from '../lib/deckedit';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
@@ -12,10 +13,11 @@ import { offIdentity } from '../brain/identity';
 import { AGGRESSION, killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
-import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
+import { BRACKETS, cachedPages, fetchFiltered, fetchPage, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
 import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
 import { whyCard } from '../brain/why';
-import { commanderThemes } from '../brain/themes';
+import { commanderThemes, themeOf, type Theme } from '../brain/themes';
+
 import { ReadyTiles } from './Verdict';
 import { Meter } from './parts';
 import { allocate } from '../lib/allocation';
@@ -548,7 +550,9 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
 }
 
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
-  const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
+  // Owned copies are shared out oldest deck first, so the share matches the list (a shared card counts for one deck only).
+  const siblings = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [deck];
+  const sum = { ...summarize(deck.cards.map((c) => c.name), s.mine, s.other), ...deckShareOf(siblings, deck.id, s.mine) };
   const ownDetails = calculateDeckOwnership(deck.cards, s.mine, addCounts(s.mine, s.other));
   useEffect(() => {
     setBack(onBack);
@@ -1064,6 +1068,39 @@ export function Decks(s: Shared) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
   const cmdrs =
     useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? '')).filter(Boolean)).toArray()).map((c) => [c.key, c])), [decks]) ?? new Map<string, Card>();
+  // A deck's themes: the commander's rules text first; when that names none, EDHREC's top tags for the commander (from pages already cached here).
+  const edhNames = [...new Set(decks.map((d) => d.commander ?? '').filter(Boolean))];
+  const edhKey = edhNames.join('|');
+  const [edhTop, setEdhTop] = useState<Map<string, string[]>>(new Map());
+  useEffect(() => {
+    let live = true;
+    const names = edhKey ? edhKey.split('|') : [];
+    if (!names.length) return;
+    const paths = names.map((n) => pagePath('commander', slug(n)));
+    const put = (pages: Map<string, EdhPage>) => {
+      if (live) setEdhTop(new Map(names.map((n, i) => [norm(n), (pages.get(paths[i])?.tags ?? []).slice(0, 2).map((t) => t.value)])));
+    };
+    cachedPages(paths)
+      .then(async (hits) => {
+        const known = new Map([...hits].map(([k, v]) => [k, v.page] as const));
+        put(known);
+        // Commanders not seen yet: fetch their EDHREC page once (a day's cache, like Discover).
+        for (const p of paths.filter((p) => !known.has(p))) {
+          if (!live) return;
+          const page = await fetchPage(p).catch(() => undefined);
+          if (page) known.set(p, page);
+          put(known);
+        }
+      })
+      .catch(() => {});
+    return () => void (live = false);
+  }, [edhKey]);
+  const themesOf = (d: Deck): Theme[] => {
+    const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
+    const fromText = lead ? commanderThemes(lead) : [];
+    if (fromText.length) return fromText;
+    return (edhTop.get(norm(d.commander ?? '')) ?? []).map((v) => themeOf(v));
+  };
   // Deck prices from cards already cached here (a deck opened once has them all).
   const allNames = decks.flatMap((d) => d.cards.map((c) => norm(c.name)));
   const priced =
@@ -1087,7 +1124,9 @@ export function Decks(s: Shared) {
 
   // Deck Arsenal Overview Stats
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
-  const readyDecks = decks.filter((d) => summarize(d.cards.map((c) => c.name), s.mine, s.other).pct === 100).length;
+  const shares = deckShares(decks, s.mine);
+  const shareById = new Map(decks.map((d, i) => [d.id, shares[i]]));
+  const readyDecks = shares.filter((x) => x.pct === 100).length;
   const uniqueCardsInDecks = new Set(decks.flatMap((d) => d.cards.map((c) => norm(c.name)))).size;
   const colorCounts: Record<string, number> = { W: 0, U: 0, B: 0, R: 0, G: 0 };
   for (const d of decks) {
@@ -1116,10 +1155,7 @@ export function Decks(s: Shared) {
     return () => void setBack(null);
   }, [!!deck]);
   if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
-  const deckThemeNames = (d: Deck) => {
-    const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
-    return lead ? commanderThemes(lead).map((t) => t.label) : [];
-  };
+  const deckThemeNames = (d: Deck) => themesOf(d).map((t) => t.label);
   const allTags = [...new Set(decks.flatMap((d) => [...(d.tags ?? []), ...deckThemeNames(d)]))].filter(Boolean);
 
   const filteredDecks = decks
@@ -1132,11 +1168,9 @@ export function Decks(s: Shared) {
         if (!matchName && !matchCmdr && !matchTag) return false;
       }
       if (dstatus === 'ready') {
-        const pct = summarize(d.cards.map((c) => c.name), s.mine, s.other).pct;
-        if (pct !== 100) return false;
+        if (shareById.get(d.id)?.pct !== 100) return false;
       } else if (dstatus === 'in-progress') {
-        const pct = summarize(d.cards.map((c) => c.name), s.mine, s.other).pct;
-        if (pct === 100) return false;
+        if (shareById.get(d.id)?.pct === 100) return false;
       } else if (dstatus === 'active') {
         if (d.inactive) return false;
       }
@@ -1288,10 +1322,10 @@ export function Decks(s: Shared) {
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         <ul className="dgrid cgrid">
           {filteredDecks.map((d) => {
-            const sum = summarize(d.cards.map((c) => c.name), s.mine, s.other);
+            const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
             // No commander set: show the deck's most expensive card instead of a blank tile.
             const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
-            const autoThemes = lead ? commanderThemes(lead) : [];
+            const autoThemes = themesOf(d);
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
             return (
               <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d) } as React.CSSProperties}>
@@ -1306,7 +1340,7 @@ export function Decks(s: Shared) {
                     </span>
                     <span className="cmatch">
                       <b>{sum.pct}%</b>
-                      <Meter pct={sum.pct} label={`${sum.pct}% owned`} />
+                      <Meter pct={sum.pct} label={`${sum.pct}% owned`} tone="deck" />
                     </span>
                     {(d.tags?.length || autoThemes.length > 0) ? (
                       <span className="dtags" onClick={(e) => e.stopPropagation()}>
@@ -1362,7 +1396,7 @@ export function Decks(s: Shared) {
                         {d.cards.reduce((n, x) => n + x.qty, 0)} cards
                         {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
                       </span>
-                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.pct === 100 ? 'READY' : `${sum.total - sum.owned} MISSING`}</span>
+                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.pct === 100 ? 'READY' : `${sum.missing} MISSING`}</span>
                     </span>
                   </span>
                 </DeckTile>
