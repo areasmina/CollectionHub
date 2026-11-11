@@ -1,10 +1,25 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, edhJson, fits, mockWorld, seed, opts, dash } from './mock';
+import { addSignet, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
   await seed(page);
 });
+
+/** Grid / list: the quick pills on the bar from tablet width up; on phones (pills hidden) the VIEW row inside ⋮. */
+const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
+  if (page.viewportSize()!.width > 700) {
+    const sw = page.locator('.qviews').first();
+    await expect(sw).toBeVisible();
+    await fits(page, ['.qviews']);
+    await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
+  } else {
+    await expect(page.locator('.qviews').first()).toBeHidden();
+    const row = (await opts(page)).locator('.phoneview');
+    await expect(row).toBeVisible();
+    await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
+  }
+};
 
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
   await page.evaluate((t) => localStorage.setItem('ch:tab', t), tab);
@@ -83,11 +98,9 @@ test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes
   await fitTile.getByRole('radiogroup', { name: 'Target Bracket' }).getByRole('radio', { name: /MAX/ }).click();
   await expect(fitTile.locator('.vbpill.sel')).toContainText('MAX');
   await page.keyboard.press('Escape');
-  // themes (EDHREC's top 6, the rest behind +N MORE) live behind ⋮
+  // themes live behind ⋮: all of EDHREC's tags in one row that scrolls sideways (no +N MORE since Nov 7)
   const o = await opts(page);
-  const themes = o.locator('.themes[aria-label="EDHREC themes"] button:not(.tagmore)');
-  await expect(themes).toHaveCount(6);
-  await o.locator('.tagmore').click();
+  const themes = o.locator('.themes[aria-label="EDHREC themes"] button');
   await expect(themes).toHaveCount(10);
   const landfall = page.waitForResponse((r) => r.url().includes('/landfall'));
   await themes.first().click();
@@ -103,7 +116,8 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
   await page.setViewportSize({ width: 2000, height: 1100 });
   await page.locator('.ccard').first().click();
   const o = await opts(page);
-  await expect(o.locator('.tagmore')).toHaveText('+4 MORE');
+  await expect(o.locator('.tagmore')).toHaveCount(0); // every tag is in the row (it scrolls sideways)
+  await expect(o.locator('.themes button')).toHaveCount(10);
   const ys = await o.locator('.themes button').evaluateAll((bs) => bs.map((b) => Math.round(b.getBoundingClientRect().top)));
   expect(new Set(ys).size).toBeLessThanOrEqual(3); // rows (the ⋮ menu is capped at 440px since Nov 7)
   await page.screenshot({ path: 'test-results/commander-tags-wide.png', clip: { x: 0, y: 0, width: 2000, height: 1000 } });
@@ -111,18 +125,16 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
 
 test('Collection (overhaul): one ribbon says the facts once, grid tiles with tally marks', async ({ page }) => {
   await go(page, 'collection');
-  await expect(page.locator('details.dash')).not.toHaveAttribute('open', ''); // the collection comes first
-  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics
-  await dash(page);
+  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics (always shown since Nov 8)
+  await expect(page.locator('.importbox-pop')).toHaveCount(0); // the import pop-up stays shut on a binder with cards
   await expect(page.locator('.stats')).toBeVisible();
   await expect(page.locator('.stats .stat')).toHaveCount(3);
   await expect(page.locator('.stats .slip')).toBeVisible();
   await expect(page.locator('.stats .stat b').first()).toHaveText('20');
-  // IMPORT opens the import box (and keeps the overview open)
-  await page.locator('details.dash > summary .dimp').click();
-  await expect(page.locator('details.dash')).toHaveAttribute('open', '');
+  // IMPORT (on the appraisal slip) opens the import pop-up
+  await openImport(page);
   await expect(page.locator('.importbox textarea')).toBeVisible();
-  await fits(page, ['details.dash', '.importbox']);
+  await fits(page, ['.importbox-pop']);
   await page.locator('.importbox-pop .close').click();
   await expect(page.locator('.topwidget')).toBeVisible(); // rotating top 3 highlights
   await expect(page.locator('.ctile').first()).toBeVisible();
@@ -138,7 +150,7 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   const n = Number(await t.locator('.tstep b').innerText());
   await t.locator('.tstep button').last().click();
   await expect(t.locator('.tstep b')).toHaveText(String(n + 1));
-  await fits(page, ['.ctile', 'details.dash']);
+  await fits(page, ['.ctile']);
 });
 
 test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, info) => {
@@ -147,12 +159,9 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await expect(page.locator('.dpanel')).toBeVisible();
   // grid / list sits in the toolbar above the cards (the commander's section is gone: its big card is the menu)
   await expect(page.locator('details.cat > summary .h', { hasText: 'COMMANDER' })).toHaveCount(0);
-  const sw = (await opts(page)).locator('.viewsw.mini');
-  await expect(sw).toBeVisible();
-  await fits(page, ['.viewsw.mini']);
-  await sw.getByRole('button', { name: 'List view' }).click();
+  await viewTo(page, 'list');
   await expect(page.locator('ul.zlist').first()).toBeVisible();
-  await sw.getByRole('button', { name: 'Grid view' }).click();
+  await viewTo(page, 'grid');
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.keyboard.press('Escape');
   const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
@@ -272,15 +281,15 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
   // the warning leads the Forge line, which turns yellow; tapping ⚠ N SHORT opens its list
   await expect(page.locator('.dstrip .shortin')).toBeVisible();
-  await page.locator('.shortin summary').first().click();
-  const other = page.locator('.shortin .decklink', { hasText: /^Tatyova Lands$/ }).first();
+  await page.locator('.shortin .shortin-btn').first().click();
+  const other = page.locator('.shortpop .decklink', { hasText: /^Tatyova Lands$/ }).first();
   await other.scrollIntoViewIfNeeded();
   await other.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands');
   // …and from the Decks list's warning
   await page.locator('.forgetop .fleave').click();
-  await page.locator('.shortalert summary').first().click();
-  const copy = page.locator('.shortalert .decklink', { hasText: 'Tatyova Lands (copy)' }).first();
+  await page.locator('.shortalert .shortchip-btn').first().click();
+  const copy = page.locator('.shortpop .decklink', { hasText: 'Tatyova Lands (copy)' }).first();
   await copy.scrollIntoViewIfNeeded();
   await copy.click();
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
@@ -329,7 +338,7 @@ test('Decks list: right-click / hold a deck opens the deck menu (duplicate, shar
   }
   const menu = page.getByRole('menu', { name: 'Tatyova Lands options' });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: /Share|Copy decklist/ })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: /share deck|copy decklist/i })).toBeVisible();
   await page.waitForTimeout(250);
   await fits(page, ['.deckmenu']);
   await menu.getByRole('menuitem', { name: 'Duplicate' }).click();
@@ -369,12 +378,9 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   // two filter boxes above the cards, grid / list in the first section
   await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(6); // search first, then the filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
-  const sw = (await opts(page)).locator('.viewsw.mini');
-  await expect(sw).toBeVisible();
-  await fits(page, ['.viewsw.mini']);
-  await sw.getByRole('button', { name: 'List view' }).click();
+  await viewTo(page, 'list');
   await expect(page.locator('ul.zlist').first()).toBeVisible();
-  await sw.getByRole('button', { name: 'Grid view' }).click();
+  await viewTo(page, 'grid');
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   // the big commander card is its menu
   await page.getByRole('button', { name: /commander options/ }).click();
@@ -470,10 +476,9 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
   await note.getByRole('button', { name: 'Close' }).click();
   // My decks sit on the Collection page and open the deck too
   await go(page, 'decks');
-  await expect(page.locator('.shelf li:not(.seeall)')).toHaveCount(2);
-  await expect(page.locator('.shelf li.seeall')).toHaveCount(1);
-  await fits(page, ['.shelf']);
-  await page.locator('.shelf li button').first().click();
+  await expect(page.locator('.dgrid .dtile')).toHaveCount(2);
+  await fits(page, ['.dgrid']);
+  await page.locator('.dgrid .dcard').first().click();
   await expect(page.locator('.forgehint')).toBeVisible();
 });
 
@@ -491,8 +496,8 @@ test('One card menu: ⋯ / right-click on commander page and Collection cards, s
   await go(page, 'collection');
   await page.locator('li', { hasText: 'Sol Ring' }).first().click({ button: 'right' });
   const c = page.getByRole('menu', { name: 'Sol Ring options' });
-  await expect(c.getByRole('button', { name: /Remove one from binder/ })).toBeVisible();
-  await expect(c.getByRole('button', { name: /Swap…/ })).toHaveCount(0);
+  await expect(c.getByRole('button', { name: /remove one from binder/i })).toBeVisible();
+  await expect(c.getByRole('button', { name: /swap…/i })).toHaveCount(0);
 });
 
 test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ page }, info) => {
@@ -520,13 +525,13 @@ test('Deck light: active decks mark their cards in use in Collection; off frees 
   await expect(sol.locator('.inuse i')).toHaveCount(1); // one dot, in the deck's colour
   await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
   await go(page, 'decks');
-  await page.locator('.shelf .dlight').first().click();
-  await expect(page.locator('.shelf .dlight').first()).toHaveText(/OFF/);
+  await page.locator('.dtile .dlight').first().click();
+  await expect(page.locator('.dtile .dlight').first()).toHaveText(/OFF/);
   await go(page, 'collection');
   await expect(sol.locator('.inuse')).toHaveCount(0);
   await go(page, 'decks');
-  await page.locator('.shelf .dlight').first().click();
-  await expect(page.locator('.shelf .dlight').first()).toHaveText(/ACTIVE/); // saved before we reload
+  await page.locator('.dtile .dlight').first().click();
+  await expect(page.locator('.dtile .dlight').first()).toHaveText(/ACTIVE/); // saved before we reload
   await go(page, 'collection');
   await expect(sol.locator('.inuse')).toHaveCount(1);
 });
@@ -563,7 +568,7 @@ test('Forging zone: first swap starts it, leaving asks to save (no / keep / yes)
   await ask.getByRole('button', { name: 'SAVE', exact: true }).click();
   await expect(page.locator('.ccard').first()).toBeVisible();
   await go(page, 'decks');
-  await expect(page.locator('.shelf li', { hasText: 'forged' })).toHaveCount(1);
+  await expect(page.locator('.dgrid .dtile', { hasText: 'forged' })).toHaveCount(1);
 });
 
 test('Pill menu: back arrow only where there is somewhere to go back to', async ({ page }, info) => {
@@ -616,7 +621,7 @@ test('Forge: the big commander card is its menu; Change commander picks a legend
   await page.locator('.dcard').first().click();
   await page.getByRole('button', { name: /commander options/ }).click();
   const menu = page.locator('.cardmenu');
-  await menu.getByRole('button', { name: /Change commander/ }).click();
+  await menu.getByRole('button', { name: /change commander/i }).click();
   await menu.getByRole('button', { name: /Kinnan, Bonder Prodigy/ }).click();
   await expect(page.locator('.toast')).toContainText('Kinnan, Bonder Prodigy leads the deck now');
   await expect(page.getByRole('button', { name: 'Kinnan, Bonder Prodigy: commander options' })).toBeVisible();
@@ -669,9 +674,8 @@ test('My decks shelf: a long deck name never makes its tile bigger', async ({ pa
   });
   await page.reload();
   await go(page, 'decks');
-  await expect(page.locator('.shelf li:not(.seeall)')).toHaveCount(2);
-  await expect(page.locator('.shelf li.seeall')).toHaveCount(1);
-  const ws = await page.locator('.shelf li:not(.seeall)').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
+  await expect(page.locator('.dgrid .dtile')).toHaveCount(2);
+  const ws = await page.locator('.dgrid .dtile').evaluateAll((ls) => ls.map((l) => Math.round(l.getBoundingClientRect().width)));
   expect(new Set(ws).size).toBe(1);
 });
 
@@ -679,14 +683,14 @@ test('EDHREC With / Without card: self-testing filter, honest fallback', async (
   await page.locator('.ccard').first().click();
   await page.locator('.fsheet > summary').click();
   // 1) EDHREC ignores the filter (same deck count): we say so and leave the card out locally
-  await page.getByLabel('Without card').fill('Sol Ring');
+  await page.getByLabel('Card left out').fill('Sol Ring');
   await page.getByRole('button', { name: 'APPLY' }).click();
   await expect(page.locator('.cfnote')).toContainText("EDHREC didn't filter");
   await expect(page.locator('.cfnote a')).toHaveAttribute('href', /edhrec\.com\/commanders\/.*\?f=out%3DSol%20Ring/);
   // 2) EDHREC filters (deck count changes): suggestions come from those decks
   await page.route(/json\.edhrec\.com\/pages\/commanders\/.*\?f=/, (r) => r.fulfill({ json: edhJson(529) }));
   await page.getByRole('button', { name: 'CLEAR' }).click();
-  await page.getByLabel('With card').fill('Rhystic Study');
+  await page.getByLabel('Pin card in deck').fill('Rhystic Study');
   await page.getByRole('button', { name: 'APPLY' }).click();
   await expect(page.locator('.cfnote')).toContainText('Suggestions from 529 EDHREC decks with Rhystic Study');
 });
@@ -805,7 +809,7 @@ test('Add a deck with 0 saved decks: + DECK on closed overview and + NEW BLANK D
   });
   await go(page, 'collection');
   // Closed overview fold shows + DECK right next to IMPORT
-  await expect(page.locator('details.dash > summary .ddeck')).toHaveText('+ DECK');
+  await expect(page.locator('.slip-btn.deck')).toHaveText('+ DECK');
   await go(page, 'decks');
   // Inside Decks, MY DECKS has a NEW BLANK DECK button even when 0 decks exist
   const addBtn = page.locator('.decksactions button', { hasText: 'NEW BLANK DECK' });
@@ -817,7 +821,6 @@ test('Add a deck with 0 saved decks: + DECK on closed overview and + NEW BLANK D
 
 test('Deck vs Collection separation: MY DECKS never hosts Collection Import, and adding a deck never adds cards to the collection binder', async ({ page }) => {
   await go(page, 'collection');
-  await dash(page);
   // Collection never hosts MY DECKS shelf (moved to Decks page)
   await expect(page.locator('.shelf')).toHaveCount(0);
   const beforeEntries = await page.evaluate(async () => {
@@ -825,8 +828,7 @@ test('Deck vs Collection separation: MY DECKS never hosts Collection Import, and
     return new Promise<number>((ok) => (db.transaction('entries').objectStore('entries').count().onsuccess = (e: any) => ok(e.target.result)));
   });
   // Pasting a deck list into Collection Import warns and offers to save as a deck instead without touching entries
-  const box = page.locator('.importbox');
-  if (!(await box.evaluate((e) => (e as HTMLDetailsElement).open))) await box.locator('summary').click();
+  const box = await openImport(page);
   await box.locator('textarea').fill('Commander\n1 Tatyova, Benthic Druid\n\nDeck\n1 Counterspell');
   await expect(box.locator('.deckwarn')).toBeVisible();
   await box.locator('.deckwarn button', { hasText: 'SAVE AS A DECK INSTEAD' }).click();

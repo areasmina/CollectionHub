@@ -33,10 +33,10 @@ import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '.
 import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
-import { calculateDeckOwnership } from '../lib/ownership';
+import { addCounts, calculateDeckOwnership } from '../lib/ownership';
 import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
 import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '../lib/drafts';
 
@@ -549,7 +549,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
 
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
   const sum = summarize(deck.cards.map((c) => c.name), s.mine, s.other);
-  const ownDetails = calculateDeckOwnership(deck.cards, s.mine, new Map([...s.mine, ...s.other]));
+  const ownDetails = calculateDeckOwnership(deck.cards, s.mine, addCounts(s.mine, s.other));
   useEffect(() => {
     setBack(onBack);
     return () => void setBack(null);
@@ -938,6 +938,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </>
               }
             >
+              <PhoneView view={view} onChange={setView} />
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />

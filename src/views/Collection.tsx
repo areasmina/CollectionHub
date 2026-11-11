@@ -724,7 +724,7 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
           <button role="menuitem" className="danger" disabled={!count} onClick={act(() => confirm(`Delete all cards in ${name}? Decks stay.`) && resetProfile(profile))}>
             RESET (EMPTY BINDER)
           </button>
-          {binders.length > 1 && profile !== UNASSIGNED_PROFILE && (
+          {binders.filter((b) => b.id !== UNASSIGNED_PROFILE).length > 1 && profile !== UNASSIGNED_PROFILE && (
             <button role="menuitem" className="danger" onClick={act(remove)}>
               DELETE THIS BINDER
             </button>

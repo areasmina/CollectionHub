@@ -12,7 +12,7 @@ test('Dynamic island sync console screenshot with active code', async ({ page })
   await page.waitForTimeout(500);
 
   // Click on the sync indicator in the island
-  const syncBtn = page.locator('.syncpill button');
+  const syncBtn = page.locator('.syncpill .sdot');
   await expect(syncBtn).toBeVisible();
   await syncBtn.click();
   await page.waitForTimeout(400);
