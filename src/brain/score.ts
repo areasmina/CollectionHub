@@ -1,5 +1,5 @@
 import { edhSignal, type SubCard } from '../lib/subs';
-import { roleOf, deckStats, type Role } from '../lib/deckstats';
+import { roleOf, deckStats, isLand, LANDS_BY_BRACKET, TARGETS, type Role } from '../lib/deckstats';
 import { norm } from '../lib/names';
 import type { Card, DeckCard } from '../lib/db';
 import { brainData } from './data';
@@ -84,6 +84,17 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
       short++;
       parts.push({ label: `fills ${ROLE_LABEL[r]} (deck has ${have}, ${needs.dial.label} wants ${rg[0]}–${rg[1]})`, value: NEED, source: src });
     } else if (have > rg[1]) parts.push({ label: `deck already has ${have} ${ROLE_LABEL[r]}`, value: SURPLUS, source: 'deck needs' });
+  }
+
+  // Lands are a need too: a deck short of lands for its size values a land, a deck at the top of the range doesn't.
+  // The range is the bracket's (cEDH runs fewer), scaled to how full the deck is so a half-built list isn't all lands.
+  const type = card?.type ?? c.type;
+  if (type && isLand(type)) {
+    const [lo, hi] = LANDS_BY_BRACKET[ctx.bracket] ?? TARGETS.lands;
+    const have = needs.stats.lands;
+    const wantNow = Math.round(lo * Math.min(1, needs.stats.total / 100));
+    if (have < wantNow) parts.push({ label: `fills lands (deck has ${have}, usual is ${lo}–${hi})`, value: NEED, source: 'deck needs' });
+    else if (have >= hi) parts.push({ label: `deck already has ${have} lands`, value: SURPLUS, source: 'deck needs' });
   }
 
   if (card && finisherPlans(card).length && needs.kill.count < needs.dial.finishers[0])

@@ -40,7 +40,7 @@ let memo: { profile: number; sig: string; map: Map<string, SavedStat> } | null =
 /** First run (or a binder with no legends yet): three numbered steps instead of an empty page. */
 function Welcome({ empty }: { empty: boolean }) {
   const steps: [string, string][] = [
-    ['IMPORT YOUR CARDS', 'ManaBox CSV, Moxfield / Archidekt text or a plain list. Nothing leaves this device.'],
+    ['IMPORT YOUR CARDS', 'ManaBox CSV, Moxfield / Archidekt text or a plain list. No list yet? Try the sample collection there. Nothing leaves this device.'],
     ['SEE WHAT YOU CAN BUILD', 'Every commander you own, ranked by how much of its deck is already in your binder.'],
     ['OPEN ONE, SWAP FROM YOUR BINDER', 'Missing cards get stand-ins you own. Buy only what\'s worth it.'],
   ];

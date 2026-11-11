@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useState } from 'react';
 import { importCollection, importDeck, resetProfile, type ImportResult } from '../lib/actions';
 import { parseImport } from '../lib/importers';
+import { SAMPLE_COLLECTION } from '../lib/sample';
 import { haptic as buzz, HAPTIC_NOTE, hapticsOn, hapticsSupported, setHaptics } from '../lib/haptics';
 import { useRef } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
@@ -440,6 +441,15 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
                   CANCEL
                 </button>
               </div>
+              {entries.length === 0 && !text.trim() && !busy && !result && (
+                <p className="ihelp isample">
+                  No list at hand?{' '}
+                  <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), setText(SAMPLE_COLLECTION))}>
+                    TRY A SAMPLE COLLECTION
+                  </button>{' '}
+                  60 common cards around three commanders. Nothing is saved until you press + ADD; RESET empties the binder again.
+                </p>
+              )}
               {busy && <Progress {...busy} />}
               {error && <p className="error">{error}</p>}
               {result && <ImportReport r={result} />}

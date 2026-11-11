@@ -11,6 +11,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
 | Import: ManaBox CSV, any CSV, Moxfield / Archidekt / Arena text, plain lists; auto-detect | Live | v1 | `lib/importers.test.ts`, e2e "Import: when Scryfall stops answering" |
+| First visit: an empty binder's import box offers a sample collection (60 common cards, three commanders); it only fills the box | Live | newcomer PR, Nov 11 | e2e "First visit: an empty binder offers a sample collection" |
 | Name-only imports get the cheapest paper printing with a price | Live | #11 | manual, no test yet |
 | Two binders (profiles), each with its own cards and decks | Live | v1 | `lib/compare.test.ts` |
 | Collection grid / list, by set, quantity edit, tiles with copy pips and price sticker | Live | #6, #8 | e2e "Collection: counters, widget, grid tiles" |
@@ -64,6 +65,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Combo warnings in the swap window | Live | #7 | `brain/round2.test.ts` |
 | Forge: first swap starts it, leaving asks to save, change commander with undo | Live | #6, #8 | e2e "Forging zone", "Forge: the big commander card is its menu" |
 | Full Forge: focus mode + top bar (undo, save, leave, RESERVED), ANALYSIS meters, live suggestions (OUR PICK / EDHREC LIFT / POPULAR, needs + theme chips, own-card search), tap-tap and drag incl. touch, phone bottom sheet, TO BUY pane | Live | #20 | `brain/brain.test.ts` (theme part), `e2e/forge.spec.ts` |
+| Suggestions count lands as a need: a deck short of lands for its size and bracket values a land ("fills lands"), a deck at the top of the range doesn't | Live | newcomer PR, Nov 11 | `brain/brain.test.ts` "a full deck short of lands values a land" |
 | Overhaul phase 6, Forge: flat top bar (SAVE primary, LEAVE / UNDO ghost), suggestions panel on carbon with the overhaul tokens (segmented sorts and tabs, flat chips and rows), same phone bottom sheet | Live | #27 | e2e "Forging zone", `e2e/forge.spec.ts` |
 | Swap window "in <deck>" chip | Live | #17 | `brain/modes.test.ts` |
 | ONLY filter: Game Changers, CA$ price bands (both deck pages) | Live | #20 | `lib/arrange.test.ts`, e2e "ONLY" |
