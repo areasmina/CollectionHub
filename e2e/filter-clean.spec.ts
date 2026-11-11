@@ -29,8 +29,9 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   const cmdrDropdown = page.locator('.dpage .tbmore[open]');
   await expect(cmdrDropdown).toBeVisible();
 
-  // Verify VIEW row is absent in Commander view filter dropdown
-  await expect(cmdrDropdown.locator('.optrow', { hasText: 'VIEW' })).toHaveCount(0);
+  // No VIEW row in the dropdown where the bar already has the view pills; on phones (pills hidden) it is the only view switch
+  const wide = (page.viewportSize()?.width ?? 1280) > 700;
+  await expect(cmdrDropdown.locator('.optrow:visible', { hasText: 'VIEW' })).toHaveCount(wide ? 0 : 1);
 
   // Verify new hierarchy: PIN & WITHOUT card selection -> THEME -> the rest
   const fbody = page.locator('.dtools.tbar > .tbmore > .fbody');
@@ -87,5 +88,5 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
 
   const deckDropdown = page.locator('.dpage .tbmore[open]');
   await expect(deckDropdown).toBeVisible();
-  await expect(deckDropdown.locator('.optrow', { hasText: 'VIEW' })).toHaveCount(0);
+  await expect(deckDropdown.locator('.optrow:visible', { hasText: 'VIEW' })).toHaveCount(wide ? 0 : 1);
 });
