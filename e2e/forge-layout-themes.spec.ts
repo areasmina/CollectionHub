@@ -66,7 +66,10 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
   await expect(sugg).toBeVisible();
   // on phones the sheet peeks; pull it up so the banner and sorts are visible
   const fgrab2 = sugg.locator('.fgrab');
-  if (await fgrab2.isVisible()) await fgrab2.click();
+  if (await fgrab2.isVisible()) {
+    await fgrab2.click();
+    await page.waitForTimeout(300); // allow sheet expand animation to settle
+  }
 
   const justBuild = sugg.locator('.just-build-banner.sugg-top-action .btn-just-build');
   await expect(justBuild).toBeVisible();

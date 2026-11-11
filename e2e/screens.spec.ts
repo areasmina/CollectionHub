@@ -655,6 +655,7 @@ test('Saved deck (overhaul): same hero and strip as the commander page, each fac
   // on phones .dpanel lives in the cube's ANALYSIS face; navigate there before the bounds check
   if (page.viewportSize()!.width <= 500) {
     await page.getByRole('tab', { name: 'ANALYSIS' }).click();
+    await page.waitForTimeout(400); // smooth scroll to the face takes ~400ms
     await fits(page, ['.dhero', '.dstrip', '.dpanel']);
   } else {
     await fits(page, ['.dhero', '.dstrip', '.dpanel']);
