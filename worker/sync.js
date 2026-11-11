@@ -7,19 +7,26 @@
 //   PUT    /v1/<id>          -> save; header X-Base-Version = the version this save replaces (0 = first save).
 //                               {v} on success, 409 {v} when another device saved first, 413 when too big
 //   DELETE /v1/<id>          -> retire the code (used by "Change code"): data removed, later saves refused with 410
+//
+// Limits (429 + Retry-After when passed), so nobody can use the service as free storage or hammer it:
+//   per address: READS / WRITES rate-limit bindings (wrangler.toml), counted by Cloudflare at the edge;
+//   per sync code: SAVES_PER_WINDOW saves in WINDOW_MS, counted inside the code's own Durable Object.
 
 const MAX_BYTES = 10 * 1024 * 1024; // one snapshot (encrypted, gzipped); a 10,000-card binder is well under 1 MB
 const CHUNK = 1024 * 1024; // Durable Object values are limited to 2 MB each
+const WINDOW_MS = 10 * 60 * 1000;
+const SAVES_PER_WINDOW = 120; // the app saves a few seconds after an edit: a long editing session stays far below this
 const ID_RE = /^[0-9a-f]{64}$/;
 const CORS = {
   'Access-Control-Allow-Origin': '*', // the data is encrypted; any origin may hold a copy of the app
   'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, X-Base-Version',
-  'Access-Control-Expose-Headers': 'X-Version',
+  'Access-Control-Expose-Headers': 'X-Version, Retry-After',
   'Access-Control-Max-Age': '86400',
 };
 const NC = { ...CORS, 'Cache-Control': 'no-store' };
-const json = (body, status = 200) => Response.json(body, { status, headers: NC });
+const json = (body, status = 200, extra = {}) => Response.json(body, { status, headers: { ...NC, ...extra } });
+const slow = (seconds) => json({ error: 'slow down', retry: seconds }, 429, { 'Retry-After': String(seconds) });
 
 /** Splits bytes into chunk records: {c0: Uint8Array, c1: …}. */
 function chunk(prefix, bytes) {
@@ -37,6 +44,7 @@ const join = (parts) => {
 // (Workers allow only handlers and Durable Object classes as named exports, so the limit is shared as SyncBox.MAX_BYTES.)
 export class SyncBox {
   static MAX_BYTES = MAX_BYTES;
+  static SAVES_PER_WINDOW = SAVES_PER_WINDOW;
   constructor(ctx) {
     this.storage = ctx.storage;
   }
@@ -65,6 +73,12 @@ export class SyncBox {
       if (base !== v) return json({ error: 'changed', v }, 409);
       const bytes = new Uint8Array(await req.arrayBuffer());
       if (!bytes.length) return json({ error: 'empty' }, 400);
+      // Saves per sync code: a fixed window, kept beside the data (cleared with it when the code is retired).
+      const now = Date.now();
+      const seen = await this.storage.get('rate');
+      const rate = seen && now - seen.t < WINDOW_MS ? seen : { t: now, n: 0 };
+      if (rate.n >= SAVES_PER_WINDOW) return slow(Math.max(1, Math.ceil((rate.t + WINDOW_MS - now) / 1000)));
+      await this.storage.put('rate', { t: rate.t, n: rate.n + 1 });
       if (bytes.length > MAX_BYTES) return json({ error: 'too big', max: MAX_BYTES }, 413);
       const next = { v: v + 1, n: Math.max(1, Math.ceil(bytes.length / CHUNK)), size: bytes.length, at: Date.now() };
       await this.storage.transaction(async (tx) => {
@@ -99,6 +113,14 @@ export default {
     if (part && req.method !== 'GET') return json({ error: 'method not allowed' }, 405);
     const len = Number(req.headers.get('Content-Length') || 0);
     if (len > MAX_BYTES) return json({ error: 'too big', max: MAX_BYTES }, 413);
+    // Per address, counted at the edge. The bindings are optional: without them (tests, a deploy that lacks them)
+    // the per-code limit above still applies.
+    const limiter = req.method === 'GET' ? env.READS : env.WRITES;
+    if (limiter) {
+      const who = req.headers.get('CF-Connecting-IP') || 'unknown';
+      const { success } = await limiter.limit({ key: who });
+      if (!success) return slow(60);
+    }
     return env.BOX.get(env.BOX.idFromName(id)).fetch(req);
   },
 };
