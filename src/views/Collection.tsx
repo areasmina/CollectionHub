@@ -165,20 +165,6 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
     return () => document.removeEventListener('keydown', esc);
   }, [importOpen]);
 
-  const [dashPick, setDashPick] = useState<boolean | null>(() => {
-    try {
-      const v = localStorage.getItem('ch:dash');
-      return v === null ? null : v === '1';
-    } catch {
-      return null;
-    }
-  });
-  const setDash = (o: boolean) => {
-    setDashPick(o);
-    try {
-      localStorage.setItem('ch:dash', o ? '1' : '0');
-    } catch {}
-  };
   const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).count(), [profile]) ?? 0;
   const [text, setText] = useState('');
   const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
@@ -280,8 +266,6 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
   const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
-  // opens by itself for an empty binder and while an import runs or reports
-  const dashOpen = !!busy || !!result || (dashPick ?? (list !== undefined && list.length === 0));
   const upload = (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
       <path d="M3 12 V15 H15 V12 M9 3 V11 M5 7 L9 3 L13 7" fill="none" stroke="currentColor" strokeWidth="2" />

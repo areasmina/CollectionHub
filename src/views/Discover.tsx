@@ -354,7 +354,7 @@ export function Discover(s: Shared) {
                   {st ? (
                     <span className="cmatch">
                       <b>{st.pct}%</b>
-                      <Meter pct={st.pct} label={`${st.pct}% owned`} />
+                      <Meter pct={st.pct} label={`${st.pct}% owned`} tone="discover" />
                     </span>
                   ) : (
                     <span className="own">{st === null ? 'No EDHREC deck yet' : 'Checking EDHREC…'}</span>
