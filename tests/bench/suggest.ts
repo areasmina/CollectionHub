@@ -65,3 +65,44 @@ export function runSuggest(evidence: Evidence) {
   const rows = commanders.flatMap((c) => decksOf(c).map((d) => nextCards(c, d, evidence)));
   return { rows, at10: mean(rows.map((r) => r.at10)), at20: mean(rows.map((r) => r.at20)), first: mean(rows.map((r) => r.first)) };
 }
+
+// --- Cuts: does the brain spot the cards that don't belong? ---
+// Swap 10 spells of a real deck for 10 random in-colour spells (the impostors) and ask the deck session for its 10
+// weakest cards. The hidden originals sit in the binder, so the upgrades it offers can be counted too.
+import { readDeck } from '../../src/brain/session';
+
+export interface CutRun {
+  cmdr: string;
+  deck: string;
+  /** Share of the impostors among the 10 suggested cuts. */
+  found: number;
+  /** Suggested cuts that were real cards of the deck. */
+  wrong: number;
+  /** Upgrades offered that bring an original card back. */
+  restored: number;
+  upgrades: number;
+  ms: number;
+}
+export function impostors(cmdr: string, d: { id: number; name: string; bracket: number | null; cards: [string, number][] }, evidence: Evidence, swapN = 10): CutRun {
+  const t0 = Date.now();
+  const identity = cardOf(cmdr)!.ci;
+  const r = rng(d.id * 13 + 5);
+  const spell = (n: string) => { const m = cardOf(n); return !!m && m.legal && !isLand(m.type) && inIdentity(m.ci, identity); };
+  const spells = d.cards.map(([n]) => n).filter((n) => !BASICS.has(norm(n)) && norm(n) !== norm(cmdr) && spell(n)).sort();
+  const hidden = shuffled(spells, r).slice(0, swapN);
+  const hiddenKeys = new Set(hidden.map(norm));
+  const inDeck = new Set(d.cards.map(([n]) => norm(n)));
+  const others = [...new Set(commanders.filter((c) => c !== cmdr).flatMap((c) => decksOf(c).flatMap((x) => x.cards.map(([n]) => n))))].filter((n) => !inDeck.has(norm(n)) && spell(n)).sort();
+  const fake = shuffled(others, r).slice(0, hidden.length);
+  const fakeKeys = new Set(fake.map(norm));
+  const deck = [{ name: cmdr, qty: 1 }, ...d.cards.filter(([n]) => !hiddenKeys.has(norm(n)) && norm(n) !== norm(cmdr)).map(([name, qty]) => ({ name, qty })), ...fake.map((name) => ({ name, qty: 1 }))];
+  const pop = popularity(cmdr, d.id);
+  const rec = (name: string) => ({ name, incl: evidence === 'edhrec' ? pop(name) || undefined : undefined });
+  const read = readDeck({ ctx: { deck, cardOf, commander: cmdr, bracket: d.bracket ?? 4, aggression: 'hungry' }, candidates: hidden.map((n) => ({ ...rec(n), type: cardOf(n)!.type, cmc: cardOf(n)!.cmc })), recOf: rec, cuts: fake.length });
+  const hit = read.cuts.filter((c) => fakeKeys.has(norm(c.name))).length;
+  return { cmdr, deck: d.name, found: hit / Math.max(1, fake.length), wrong: read.cuts.length - hit, restored: read.upgrades.filter((u) => hiddenKeys.has(norm(u.in)) && fakeKeys.has(norm(u.out))).length, upgrades: read.upgrades.length, ms: Date.now() - t0 };
+}
+export function runCuts(evidence: Evidence) {
+  const rows = commanders.flatMap((c) => decksOf(c).map((d) => impostors(c, d, evidence)));
+  return { rows, found: mean(rows.map((r) => r.found)), restored: mean(rows.map((r) => r.restored)), ms: mean(rows.map((r) => r.ms)) };
+}
