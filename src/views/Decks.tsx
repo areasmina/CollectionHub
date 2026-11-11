@@ -1276,7 +1276,7 @@ export function Decks(s: Shared) {
             </>
           )}
           {/* Start a deck from scratch, or bring one in from a list or file (Arena, MTGO, Moxfield, Archidekt, CSV). */}
-          <span className="dribbon-acts">
+          <span className="decksactions dribbon-acts">
             <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
               + NEW BLANK DECK
             </button>
