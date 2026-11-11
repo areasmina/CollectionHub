@@ -33,7 +33,7 @@ import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '.
 import { ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { shortfalls } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -938,6 +938,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </>
               }
             >
+              <PhoneView view={view} onChange={setView} />
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />

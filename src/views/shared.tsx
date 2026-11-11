@@ -370,6 +370,20 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
   );
 }
 
+/**
+ * Phones only: grid / list / compact inside the ⋮ menu. The quick view pills on the bar are hidden at phone width, and
+ * the menu's VIEW row was removed as redundant on Nov 7, which left phones with no way to change the view.
+ */
+export function PhoneView({ view, onChange }: { view: string; onChange: (v: 'grid' | 'list' | 'compact') => void }) {
+  return (
+    <div className="phoneview">
+      <OptRow label="VIEW">
+        <Segs label="View" value={view} options={[['grid', 'GRID', 'Grid view'], ['list', 'LIST', 'List view'], ['compact', 'COMPACT', 'Compact list']]} onChange={(v) => onChange(v as 'grid' | 'list' | 'compact')} />
+      </OptRow>
+    </div>
+  );
+}
+
 /** onScroll for sideways chip rows: a light tick each time the row moves past another chip (scroll-snap step). */
 export function snapTick(e: React.UIEvent<HTMLElement>) {
   const el = e.currentTarget;
@@ -602,7 +616,8 @@ export function ShortAlert({ items, inline, currentDeck }: { items: Shortfall[];
               </div>
             )}
 
-            <ul className="shortpop-list">
+            {/* a deck name opens that deck: the report steps aside (it used to stay open over the deck, backdrop and all) */}
+            <ul className="shortpop-list" onClickCapture={(e) => (e.target as HTMLElement).closest('.decklink') && setTimeout(() => setOpen(false), 0)}>
               {list.map((s) => (
                 <li key={s.name} className="shortitem">
                   <div className="shortitem-badge" title={`${s.short} more ${s.short === 1 ? 'copy' : 'copies'} needed`}>

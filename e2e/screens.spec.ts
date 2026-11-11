@@ -6,6 +6,21 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
+/** Grid / list: the quick pills on the bar from tablet width up; on phones (pills hidden) the VIEW row inside ⋮. */
+const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
+  if (page.viewportSize()!.width > 700) {
+    const sw = page.locator('.qviews').first();
+    await expect(sw).toBeVisible();
+    await fits(page, ['.qviews']);
+    await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
+  } else {
+    await expect(page.locator('.qviews').first()).toBeHidden();
+    const row = (await opts(page)).locator('.phoneview');
+    await expect(row).toBeVisible();
+    await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
+  }
+};
+
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
   await page.evaluate((t) => localStorage.setItem('ch:tab', t), tab);
   await page.reload();
@@ -144,13 +159,9 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   await expect(page.locator('.dpanel')).toBeVisible();
   // grid / list sits in the toolbar above the cards (the commander's section is gone: its big card is the menu)
   await expect(page.locator('details.cat > summary .h', { hasText: 'COMMANDER' })).toHaveCount(0);
-  // grid / list / compact sit on the bar itself (the VIEW row left the ⋮ menu on Nov 7)
-  const sw = page.locator('.qviews').first();
-  await expect(sw).toBeVisible();
-  await fits(page, ['.qviews']);
-  await sw.getByRole('button', { name: 'List view' }).click();
+  await viewTo(page, 'list');
   await expect(page.locator('ul.zlist').first()).toBeVisible();
-  await sw.getByRole('button', { name: 'Grid view' }).click();
+  await viewTo(page, 'grid');
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.keyboard.press('Escape');
   const tile = page.locator('.ztile', { hasText: 'Sol Ring' }).first();
@@ -367,13 +378,9 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   // two filter boxes above the cards, grid / list in the first section
   await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(6); // search first, then the filters (in the ⋮ options)
   await fits(page, ['.lists > .dtools']);
-  // grid / list / compact sit on the bar itself (the VIEW row left the ⋮ menu on Nov 7)
-  const sw = page.locator('.qviews').first();
-  await expect(sw).toBeVisible();
-  await fits(page, ['.qviews']);
-  await sw.getByRole('button', { name: 'List view' }).click();
+  await viewTo(page, 'list');
   await expect(page.locator('ul.zlist').first()).toBeVisible();
-  await sw.getByRole('button', { name: 'Grid view' }).click();
+  await viewTo(page, 'grid');
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   // the big commander card is its menu
   await page.getByRole('button', { name: /commander options/ }).click();

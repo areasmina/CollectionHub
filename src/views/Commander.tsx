@@ -34,7 +34,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, PhoneView, useBinder, useStored, type Shared } from './shared';
 import { shortfalls } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -1126,6 +1126,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 )}
 
                 {/* 4. The rest: Gear, Buy under, Sort / Show / Only */}
+                <PhoneView view={view} onChange={setView} />
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
