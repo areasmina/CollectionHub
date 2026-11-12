@@ -1,6 +1,13 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import vercel from './vercel.json';
+
+// `vite preview` (and so the browser checks in e2e/) serves the same security headers as the live site (vercel.json),
+// so a change the Content-Security-Policy would block fails a check before it ships. HSTS is left out: preview is plain http.
+const siteHeaders = Object.fromEntries(
+  (vercel.headers.find((h) => h.source === '/(.*)')?.headers ?? []).filter((h) => h.key !== 'Strict-Transport-Security').map((h) => [h.key, h.value]),
+);
 
 export default defineConfig({
   plugins: [
@@ -25,6 +32,7 @@ export default defineConfig({
       },
     }),
   ],
+  preview: { headers: siteHeaders },
   build: {
     rollupOptions: {
       output: {

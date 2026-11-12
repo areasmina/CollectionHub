@@ -89,4 +89,30 @@ describe('sync worker', () => {
     expect((await call(e, 'GET')).status).toBe(410);
     expect((await call(e, 'PUT', '', { body: new Uint8Array([1]), base: 0 })).status).toBe(410);
   });
+  it('limits saves per sync code and says when to try again', async () => {
+    const e = env();
+    for (let v = 0; v < SyncBox.SAVES_PER_WINDOW; v++) expect((await call(e, 'PUT', '', { body: new Uint8Array([1]), base: v })).status).toBe(200);
+    const r = await call(e, 'PUT', '', { body: new Uint8Array([1]), base: SyncBox.SAVES_PER_WINDOW });
+    expect(r.status).toBe(429);
+    expect(Number(r.headers.get('Retry-After'))).toBeGreaterThan(0);
+    expect((await call(e, 'GET')).status).toBe(200); // reading still works
+  });
+  it('limits requests per address when the rate-limit bindings are there', async () => {
+    const seen: string[] = [];
+    const limiter = (max: number) => {
+      let n = 0;
+      return { limit: async ({ key }: { key: string }) => (seen.push(key), { success: ++n <= max }) };
+    };
+    const e = { ...env(), READS: limiter(2), WRITES: limiter(1) };
+    const from = (method: string, init: RequestInit = {}) =>
+      worker.fetch(new Request(`https://x/v1/${ID}${method === 'GET' ? '/version' : ''}`, { method, ...init, headers: { 'CF-Connecting-IP': '203.0.113.7', 'X-Base-Version': '0' } }), e);
+    expect((await from('GET')).status).toBe(200);
+    expect((await from('GET')).status).toBe(200);
+    expect((await from('GET')).status).toBe(429);
+    expect((await from('PUT', { body: new Uint8Array([1]) })).status).toBe(200);
+    const r = await from('PUT', { body: new Uint8Array([1]) });
+    expect(r.status).toBe(429);
+    expect(r.headers.get('Retry-After')).toBe('60');
+    expect(new Set(seen)).toEqual(new Set(['203.0.113.7']));
+  });
 });

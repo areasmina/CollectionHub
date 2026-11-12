@@ -42,7 +42,14 @@ async function call(id: string, path = '', init: RequestInit = {}) {
   if (r.status === 410) throw new CodeGone();
   return r;
 }
-const failed = async (r: Response) => new Error(r.status === 413 ? 'Your binders and decks are too big to sync (over 10 MB).' : `Sync service answered ${r.status}.`);
+const failed = async (r: Response) =>
+  new Error(
+    r.status === 413
+      ? 'Your binders and decks are too big to sync (over 10 MB).'
+      : r.status === 429
+        ? 'Sync is busy: too many saves in a short time. It will try again by itself in a minute.'
+        : `Sync service answered ${r.status}.`,
+  );
 
 /** The cloud copy's version: 0 when nothing was saved under this code yet. */
 export async function cloudVersion(code?: string) {

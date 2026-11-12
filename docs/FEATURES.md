@@ -97,5 +97,6 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Pill nav, back arrow only where there's somewhere to go | Live | #6 | e2e "Pill menu" |
 | Overhaul nav: 48px top bar on tablet and desktop (logo · DISCOVER DECKS COLLECTION · ⚙ sync), 40px bottom pill on phones | Replaced | #21 | Replaced on main (Nov 7, commits 4c2b784 and 76145d2, not a Claude thread) by a "Dynamic Island" notch at the top on every width; e2e "Pill menu", "Cohesive UI overhaul" |
 | Overhaul phase 1: tokens (one colour one meaning, 4·8·12·16·24·32·48 scale) and the 7 parts in `src/ui.css` + `views/parts.tsx` | Live | #21 | `lib/parts.test.ts` |
-| Security headers (frame-ancestors) | Planned | #2 open | – |
+| Security headers: Content-Security-Policy (only our own code and the named data sources load), no framing, no MIME sniffing, strict referrer, HSTS; `vite preview` serves the same headers so every browser check runs under the live policy | Live | security-first PR, Nov 11 (replaces #2) | `e2e/security.spec.ts` |
+| Sync server limits: 120 saves per sync code per 10 minutes, and per-address limits at Cloudflare's edge (240 reads, 60 writes a minute); the app says sync is busy and retries | Live after the Worker is redeployed (`npx wrangler deploy` in `worker/`) | security-first PR, Nov 11 | `worker/sync.test.ts` |
 | Card scanning | Parked | – | likely needs a paid service |
