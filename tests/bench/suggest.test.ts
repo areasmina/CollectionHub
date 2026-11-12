@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import baseline from './suggest-baseline.json';
-import { runSuggest } from './suggest';
+import { runCuts, runSuggest } from './suggest';
 
 /**
  * Suggestion benchmark (overhaul phase 2) on 48 real public decks: hide 10 spells of each deck in a binder of ~300 random
@@ -12,6 +12,7 @@ import { runSuggest } from './suggest';
 const SLACK = 0.02;
 const round = (x: number) => Math.round(x * 1000) / 1000;
 const runs = { edhrec: runSuggest('edhrec'), none: runSuggest('none') };
+const cuts = { edhrec: runCuts('edhrec'), none: runCuts('none') };
 
 describe('suggestions: find the cards a real deck is missing', () => {
   it('with popularity evidence (the normal case)', () => {
@@ -22,8 +23,13 @@ describe('suggestions: find the cards a real deck is missing', () => {
     expect(runs.none.at10).toBeGreaterThanOrEqual(baseline.none.at10 - SLACK);
     expect(runs.none.at20).toBeGreaterThanOrEqual(baseline.none.at20 - SLACK);
   });
+  it('cuts: 10 spells of each deck swapped for random ones are found among the 10 weakest cards', () => {
+    expect(cuts.edhrec.found).toBeGreaterThanOrEqual(baseline.cuts.edhrec.found - SLACK);
+    expect(cuts.none.found).toBeGreaterThanOrEqual(baseline.cuts.none.found - SLACK);
+  });
   it.skipIf(!process.env.BENCH)('prints the numbers and writes the baseline', () => {
-    const out = Object.fromEntries(Object.entries(runs).map(([k, r]) => [k, { at10: round(r.at10), at20: round(r.at20), first: round(r.first) }]));
+    const out: Record<string, unknown> = Object.fromEntries(Object.entries(runs).map(([k, r]) => [k, { at10: round(r.at10), at20: round(r.at20), first: round(r.first) }]));
+    out.cuts = Object.fromEntries(Object.entries(cuts).map(([k, r]) => [k, { found: round(r.found), restored: round(r.restored) }]));
     console.log(out);
     writeFileSync('tests/bench/suggest-baseline.json', JSON.stringify(out, null, 1) + '\n');
   });

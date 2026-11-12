@@ -592,6 +592,9 @@ export function ForgeSuggest({
   // (the theme sets the enabler / payoff balance, so a stale count would nudge the wrong half of the engine)
   const sigNeeds = [deckKey, deck.filter((c) => cardOf(c.name)).length, aggression, bracket, brain?.taste?.length ?? 0, brain?.taste?.at(-1)?.at ?? 0, tagOf?.value ?? ''].join('#');
   const needs = useMemo(() => deckNeeds(ctx), [sigNeeds]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The list is rebuilt when the candidates themselves change, not only their number (a swap of one owned card for
+  // another kept the old rows before), and when a card's EDHREC numbers arrive.
+  const candKey = candidates.map((c) => `${c.name}:${c.incl ?? ''}:${c.lift ?? ''}`).join('|');
   const rows: Row[] = useMemo(() => {
     const seen = new Set<string>();
     const out: Row[] = [];
@@ -606,7 +609,7 @@ export function ForgeSuggest({
       out.push({ c, owned, card, total: sc.total + (owned ? OWN_W : 0), parts, blocked: sc.blocked, roles: card && !isLand(card.type) ? roleOf({ ...card, name: c.name }) : [], fits: !!(focus && card && focus.test(card)) });
     }
     return out;
-  }, [needs, focus, candidates.length, candidates[0]?.name, candidates.filter((c) => cardOf(c.name)).length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [needs, focus, candKey, candidates.filter((c) => cardOf(c.name)).length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const short = shortOf(needs.stats, needs.range);
   const searching = q.trim().length >= 2;
