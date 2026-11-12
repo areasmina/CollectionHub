@@ -14,7 +14,7 @@ test('Collection: a search with no match shows a note and one button that brings
   await expect(rows.first()).toBeVisible();
   await page.getByLabel('Search cards by name or rules text').fill('zzzz no such card');
   const note = page.locator('.estate');
-  await expect(note).toContainText('No cards match');
+  await expect(note).toHaveAttribute('aria-label', 'No cards match');
   await expect(note).toContainText('zzzz no such card');
   await fits(page, ['.estate']);
   await note.getByRole('button', { name: 'CLEAR SEARCH AND FILTERS' }).click();
@@ -31,7 +31,7 @@ test('Discover: a colour no commander has shows a note and a reset', async ({ pa
   await bar.getByRole('button', { name: 'Red' }).click();
   await page.keyboard.press('Escape');
   const note = page.locator('.estate');
-  await expect(note).toContainText('No commander matches');
+  await expect(note).toHaveAttribute('aria-label', 'No commander matches');
   await fits(page, ['.estate']);
   await note.getByRole('button', { name: 'CLEAR SEARCH AND COLOURS' }).click();
   await expect(note).toHaveCount(0);
@@ -51,7 +51,7 @@ test('Collection: when the set list cannot be loaded, group by set says so and o
     await page.keyboard.press('Escape');
   }
   const note = page.locator('.setgroups .estate');
-  await expect(note).toContainText("Couldn't load the set list");
+  await expect(note).toHaveAttribute('aria-label', "Couldn't load the set list");
   await fits(page, ['.setgroups .estate']);
   down = false;
   await note.getByRole('button', { name: 'TRY AGAIN' }).click();

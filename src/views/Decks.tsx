@@ -13,6 +13,7 @@ import { offIdentity } from '../brain/identity';
 import { AGGRESSION, killCheck } from '../brain/win';
 import { recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
+import { JumpRail, jumpId } from './JumpRail';
 import { BRACKETS, cachedPages, fetchFiltered, fetchPage, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
 import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
 import { whyCard } from '../brain/why';
@@ -964,13 +965,14 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
             </ToolBar>
+            <JumpRail headers={[...sections].filter(([, cs]) => cs.length).map(([h]) => h)} />
             <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {
                 const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
                 return (
-                  <details key={h} className="cat" open>
+                  <details key={h} id={jumpId(h)} className="cat" open>
                     <summary>
                       <span className="pm" aria-hidden="true" />
                       <span className="h">
