@@ -11,6 +11,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
 | Import: ManaBox CSV, any CSV, Moxfield / Archidekt / Arena text, plain lists; auto-detect | Live | v1 | `lib/importers.test.ts`, e2e "Import: when Scryfall stops answering" |
+| Big collection import: Scryfall is asked at its own pace (2 heavy requests a second, one queue for the whole app); a refusal (429) or a dropped connection is waited out and retried by itself for minutes, with a note on screen, instead of ending the import; exact printings are kept after an outage; a big file is held aside from the text box | Live | import fix, Nov 12 | `lib/scrynet.test.ts`, `lib/importers.test.ts` (100,000 rows), e2e "Import: a big collection file goes in in one go", "Import: when Scryfall stops answering" |
 | First visit: an empty binder's import box offers a sample collection (60 common cards, three commanders); it only fills the box | Live | newcomer PR, Nov 11 | e2e "First visit: an empty binder offers a sample collection" |
 | Name-only imports get the cheapest paper printing with a price | Live | #11 | manual, no test yet |
 | Two binders (profiles), each with its own cards and decks | Live | v1 | `lib/compare.test.ts` |

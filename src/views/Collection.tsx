@@ -1,7 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { importCollection, importDeck, resetProfile, type ImportResult } from '../lib/actions';
 import { parseImport } from '../lib/importers';
 import { SAMPLE_COLLECTION } from '../lib/sample';
@@ -100,6 +100,9 @@ function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Ca
   );
 }
 
+/** Files larger than this (about 5,000 lines) are held aside instead of being shown in the text box. */
+const BIG_FILE = 200_000;
+
 export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
   return (
     <div className="report" role="status">
@@ -110,14 +113,14 @@ export function ImportReport({ r, deck }: { r: ImportResult; deck?: boolean }) {
           </>
         ) : (
           <>
-            Read as <b>{r.format === 'manabox' ? 'ManaBox CSV' : r.format === 'csv' ? 'CSV' : 'text list'}</b>: {r.added} cards added.
+            Read as <b>{r.format === 'manabox' ? 'ManaBox CSV' : r.format === 'csv' ? 'CSV' : 'text list'}</b>: {r.added.toLocaleString()} cards added.
           </>
         )}
       </p>
       {!!r.failed?.length && (
         <p className="error">
-          Scryfall stopped answering, so {r.failed.length} {r.failed.length === 1 ? 'card was' : 'cards were'} not looked up yet. The rest are saved. The box now holds
-          just those cards: add them again in a minute.
+          Scryfall kept refusing for several minutes, so {r.failed.length.toLocaleString()} {r.failed.length === 1 ? 'card was' : 'cards were'} not looked up yet. The rest are saved. The box now holds
+          just those cards: press + ADD again in a few minutes and it picks up where it stopped.
         </p>
       )}
       {r.unmatched.length > 0 && (
@@ -167,7 +170,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
 
   const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).count(), [profile]) ?? 0;
   const [text, setText] = useState('');
-  const [busy, setBusy] = useState<{ done: number; total: number } | null>(null);
+  // A big file (a whole collection) stays out of the text box: tens of thousands of lines there freeze a phone.
+  const [big, setBig] = useState<{ name: string; text: string; lines: number } | null>(null);
+  const [busy, setBusy] = useState<{ done: number; total: number; wait?: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
@@ -186,8 +191,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
     setResult(null);
     setBusy({ done: 0, total: 0 });
     try {
-      const r = await importCollection(profile, input, replace, (done, total) => setBusy({ done, total }));
+      const r = await importCollection(profile, input, replace, (done, total, wait) => setBusy({ done, total, wait }));
       setResult(r);
+      setBig(null);
       // only the cards Scryfall never answered for stay in the box, so adding again doesn't count the saved ones twice
       setText((r.failed ?? []).map((f) => `${f.qty} ${f.name}${f.set && f.cn ? ` (${f.set.toUpperCase()}) ${f.cn}` : ''}${f.foil ? ' *F*' : ''}`).join('\n'));
     } catch (e) {
@@ -197,11 +203,12 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   }
 
   // Detect when a pasted list has deck sections (Commander / Deck / Sideboard) so the user doesn't accidentally dump a deck into their collection binder.
-  const deckLike = (() => {
+  const deckLike = useMemo(() => {
     if (!text.trim()) return false;
     const p = parseImport(text);
     return p.format === 'text' && p.rows.some((r) => /^(commanders?|companion|deck|main|mainboard|maindeck|sideboard|side|maybe|maybeboard|considering)$/i.test(r.section ?? ''));
-  })();
+  }, [text]);
+  const input = big?.text ?? text;
 
   async function saveAsDeckInstead() {
     setError('');
@@ -396,14 +403,27 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
                   onChange={async (e) => {
                     const f = e.target.files?.[0];
                     e.target.value = '';
-                    if (f) setText(await f.text());
+                    if (!f) return;
+                    const t = await f.text();
+                    setResult(null);
+                    if (t.length > BIG_FILE) (setBig({ name: f.name, text: t, lines: t.split('\n').filter((l) => l.trim()).length }), setText(''));
+                    else (setBig(null), setText(t));
                   }}
                 />
               </label>
-              <label className="ipaste">
-                <span>…or paste cards you own</span>
-                <textarea rows={6} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
-              </label>
+              {big ? (
+                <p className="ibig" role="status">
+                  <b>{big.name}</b> is ready: {big.lines.toLocaleString()} lines. Press + ADD.{' '}
+                  <button type="button" className="u-btn ghost" disabled={!!busy} onClick={() => setBig(null)}>
+                    REMOVE FILE
+                  </button>
+                </p>
+              ) : (
+                <label className="ipaste">
+                  <span>…or paste cards you own</span>
+                  <textarea rows={6} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+                </label>
+              )}
               {deckLike && (
                 <div className="deckwarn" role="status">
                   <span>
@@ -415,10 +435,10 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
                 </div>
               )}
               <div className="ibtns">
-                <button className="u-btn primary" disabled={!text.trim() || !!busy} onClick={() => run(text, false)}>
+                <button className="u-btn primary" disabled={!input.trim() || !!busy} onClick={() => run(input, false)}>
                   + ADD
                 </button>
-                <button className="u-btn" disabled={!text.trim() || !!busy} onClick={() => run(text, true)} title={`Replace every card in ${name} with this list`}>
+                <button className="u-btn" disabled={!input.trim() || !!busy} onClick={() => run(input, true)} title={`Replace every card in ${name} with this list`}>
                   REPLACE
                 </button>
                 <button type="button" className="u-btn ghost" onClick={() => setImportOpen(false)}>

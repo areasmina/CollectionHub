@@ -1,33 +1,15 @@
 import { db, type Card, type Cheap } from './db';
 import type { Row } from './importers';
 import { norm } from './names';
+import { scryfallClient } from './scrynet';
 
 const API = 'https://api.scryfall.com';
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-let nextSlot = 0;
-
-/** Reserves a strictly sequential 120ms time slot (~8.3 req/s) so concurrent callers never burst Scryfall. */
-async function takeSlot() {
-  const now = Date.now();
-  const target = Math.max(now, nextSlot);
-  nextSlot = target + 120;
-  if (target > now) await sleep(target - now);
-}
-
-// Scryfall's official rate limit is 10 requests a second; we pace sequentially at 120ms.
-// Browsers don't let pages set User-Agent; Scryfall accepts the browser's own one with an Accept header.
-async function req(url: string, init: RequestInit, tries = 2): Promise<any> {
-  await takeSlot();
-  const sig = typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(10000) : undefined;
-  const r = await fetch(url, { ...init, signal: sig, headers: { ...init.headers, Accept: 'application/json' } }).catch(() => null);
-  if ((!r || r.status === 429 || r.status >= 500) && tries > 1) return sleep(1500 * (3 - tries)).then(() => req(url, init, tries - 1));
-  if (!r) throw new Error('Could not reach Scryfall (offline, or rate-limited: wait a minute)');
-  if (r.status === 404) return { data: [] }; // search with no results
-  if (r.status === 400 || r.status === 422) return { data: [], badBatch: true };
-  if (!r.ok) throw new Error(`Scryfall answered ${r.status}`);
-  return r.json();
-}
-const post = (path: string, body: unknown, tries = 2) => req(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, tries);
+/** How patient an import is: with the waits in scrynet.ts this outlasts about four minutes of Scryfall refusing. */
+const IMPORT_TRIES = 8;
+const net = scryfallClient({ fetch: (url, init) => fetch(url, init), sleep: (ms) => new Promise((r) => setTimeout(r, ms)), now: () => Date.now() });
+const req = (url: string, init: RequestInit, tries = 2, onWait?: (ms: number) => void): Promise<any> => net.req(url, init, { tries, onWait });
+const post = (path: string, body: unknown, tries = 2, onWait?: (ms: number) => void) =>
+  req(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, tries, onWait);
 
 /** Cheapest paper printing (USD, non-foil first) per card name, cached a week. */
 export async function cheapest(names: string[], onProgress?: (cheap: Map<string, Cheap>) => void): Promise<Map<string, Cheap>> {
@@ -131,7 +113,7 @@ const identOf = (r: Row): Ident =>
       : { name: cleanName(r.name) };
 
 /** Finds Scryfall data for each row (bulk cache lookup first, then /cards/collection in batches of 75). */
-export async function resolveRows(rows: Row[], onProgress: (done: number, total: number) => void) {
+export async function resolveRows(rows: Row[], onProgress: (done: number, total: number, waitMs?: number) => void) {
   const found = new Map<string, Card>();
   const need: Ident[] = [];
   const needSeen = new Set<string>();
@@ -213,15 +195,23 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
     for (let i = 0; i < idents.length; i += 75) {
       const batch = idents.slice(i, i + 75);
       let lastErr = '';
-      let res = await post('/cards/collection', { identifiers: batch }, 1).catch((e: Error) => ((lastErr = e.message), null));
-      // If a batch with set/cn or id fails (e.g. a bad collector_number triggers a CORS-less 400 on Scryfall),
-      // immediately fall back to looking up that batch by card name so one bad row never kills 75+ cards!
-      if (!res || res.badBatch) {
+      const done = base + i;
+      const onWait = (ms: number) => onProgress(done, total, ms);
+      let status: number | undefined;
+      const ask = (identifiers: Ident[], tries: number) =>
+        post('/cards/collection', { identifiers }, tries, onWait).catch((e: Error & { status?: number }) => ((lastErr = e.message), (status = e.status), null));
+      // Two quick tries first.
+      let res = await ask(batch, 2);
+      if (res?.badBatch || (!res && status === undefined)) {
+        // Rejected outright, or no answer at all. A batch Scryfall rejects (a bad collector number) can reach the browser
+        // as a bare network error, so look the batch up by name, patiently: one bad row never costs 75 cards, and an
+        // outage is waited out (minutes if needed) rather than ending the import.
         const byName = [...new Set(batch.map((b) => ('name' in b ? b.name : nameOfIdent.get(identKey(b)) ?? '')).filter(Boolean))].map((name) => ({ name }));
-        if (byName.length) {
-          res = await post('/cards/collection', { identifiers: byName }, 2).catch((e: Error) => ((lastErr = e.message), null));
-        }
-      }
+        const named = byName.length ? await ask(byName, IMPORT_TRIES) : null;
+        // It was only an outage if the exact batch answers now: then keep the exact printings.
+        const again = named && !res && batch.some((b) => !('name' in b)) ? await ask(batch, 1) : null;
+        res = again && !again.badBatch ? again : named;
+      } else if (!res) res = await ask(batch, IMPORT_TRIES); // refused for going too fast, or Scryfall is having trouble: wait it out
       if (!res) {
         down = lastErr || 'Could not reach Scryfall';
         break;
