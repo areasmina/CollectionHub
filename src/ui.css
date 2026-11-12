@@ -8652,3 +8652,81 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
     display: none !important;
   }
 }
+
+/* Jump rail (ManaBox idea, Interface precision): a slim column of section tags beside a long card list. Content, not
+   frame: flat carbon, hairline outline, condensed mono tags, no tape or tilt. The lit tag is inverse (not red: red is
+   the one primary action). It rides beside the list (sticky) so it never covers a card row. */
+.lists:has(> .jrail-wrap) {
+  position: relative;
+  padding-right: 40px;
+}
+.lists > .jrail-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 32px;
+  pointer-events: none;
+}
+.jrail {
+  position: sticky;
+  top: max(112px, calc(50vh - 220px));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  pointer-events: auto;
+  background: var(--u-carbon);
+  border: 1px solid var(--u-line2);
+}
+.jrail > button {
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--u-line);
+  background: transparent;
+  color: var(--u-muted);
+  font: 700 10px/1 'Space Mono', monospace;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.jrail > button:first-child {
+  border-top: 0;
+}
+.jrail > button:hover,
+.jrail > button:focus-visible {
+  color: var(--u-text);
+}
+.jrail > button[aria-current='true'] {
+  background: var(--u-text);
+  color: var(--u-ink);
+}
+/* Many sections (mana value groups) on a short phone: tighter rows so the whole rail stays on screen. */
+@media (max-height: 760px) {
+  .jrail > button {
+    min-height: 36px;
+  }
+}
+/* Phones: the deck list lives in the swipe cube, which is its own scroller, so sticky can't hold the rail there. It is
+   pinned to the screen's right edge instead and shows only while the CARDS face is on screen. */
+@media (max-width: 700px) {
+  .deckgrid > .lists:has(> .jrail-wrap),
+  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) {
+    padding-right: 44px !important; /* the cube's own phone padding is !important (polish.css); the rail needs its lane */
+  }
+  .lists > .jrail-wrap {
+    position: fixed;
+    top: 50%;
+    right: 4px;
+    bottom: auto;
+    transform: translateY(-50%);
+    z-index: 5;
+    display: none;
+  }
+  .lists > .jrail-wrap.on {
+    display: block;
+  }
+  .lists > .jrail-wrap > .jrail {
+    position: static;
+  }
+}
