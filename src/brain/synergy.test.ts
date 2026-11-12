@@ -64,3 +64,23 @@ describe('bracket rules beyond combos', () => {
     expect(scoreCard({ name: 'Time Walk 3' }, ctxOf('Discard Lord', ['Time Warp', 'Time Walk 2'], 4)).blocked).toBeUndefined();
   });
 });
+
+describe('copies: a card whose every copy sits in another deck', () => {
+  const taken = (own: number, used: number, by = ['Atraxa']) => (n: string) => (n === 'Mind Rot' ? { own, used, by } : undefined);
+  const base = scoreCard({ name: 'Mind Rot' }, ctxOf('Discard Lord'));
+  it('is marked down, and the reason names the deck', () => {
+    const s = scoreCard({ name: 'Mind Rot' }, { ...ctxOf('Discard Lord'), taken: taken(1, 1) });
+    expect(s.parts.map((p) => p.label)).toContain('all 1 copy is in Atraxa');
+    expect(s.total).toBeLessThan(base.total);
+    expect(scoreCard({ name: 'Mind Rot' }, { ...ctxOf('Discard Lord'), taken: taken(2, 3, ['Atraxa', 'Kinnan']) }).parts.map((p) => p.label)).toContain('all 2 copies are in Atraxa +1');
+  });
+  it('is left alone while a copy is spare, and when no other deck uses it', () => {
+    expect(scoreCard({ name: 'Mind Rot' }, { ...ctxOf('Discard Lord'), taken: taken(2, 1) }).total).toBe(base.total);
+    expect(scoreCard({ name: 'Mind Rot' }, { ...ctxOf('Discard Lord'), taken: () => undefined }).total).toBe(base.total);
+  });
+  it('a card with a spare copy now outranks one with none, all else equal', () => {
+    const ctx: DeckContext = { ...ctxOf('Discard Lord'), taken: (n) => (n === 'Mind Rot' ? { own: 1, used: 1, by: ['Atraxa'] } : undefined) };
+    const order = suggestCards([{ name: 'Mind Rot' }, { name: 'Vanilla Bear' }], ctx).map((s) => s.name);
+    expect(order[0]).toBe('Vanilla Bear');
+  });
+});

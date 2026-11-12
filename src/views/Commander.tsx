@@ -35,7 +35,7 @@ import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
 import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, PhoneView, useBinder, useStored, type Shared } from './shared';
-import { shortfalls } from '../lib/copies';
+import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
 // EDHREC's own order first on commander pages.
@@ -431,6 +431,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   // Copies your other decks use, for the swap window's "in <deck>" chip (saved decks of this commander are this deck).
   const alloc = allocate(decks, s.mine);
   const sameCmdr = new Set(mine.map((d) => d.name));
+  // Copies the decks of OTHER commanders already use, so suggestions know a card has none to spare.
+  const takenOthers = takenBy(decks.filter((d) => d.commander !== name), s.mine);
   const deckCol = new Map(decks.map((d) => [d.name, deckColour(d)]));
   const short = page
     ? shortfalls([...decks.filter((d) => d.commander !== name), { name: thisDeck, cards: all.map((c) => ({ name: nameIn(c), qty: c.qty ?? 1 })) }], s.mine).filter((x) => x.decks.includes(thisDeck))
@@ -467,7 +469,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const aggression = AGGRESSION_OF[bracket] ?? 'hungry';
   const ready = page && kind === 'average' ? readiness({ deck: deckNow, cardOf: cardByName, commander: name, identity: ci, bracket: bracketNum, aggression }) : undefined;
   const fit = page && kind === 'average' ? bracketFit(bracketOf(deckNow.map((c) => ({ name: c.name, card: cardByName(c.name) })), gc), bracketNum) : undefined;
-  const brainCtx = { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression, taste: profile?.brain?.taste, focus: focusStack[0] };
+  const brainCtx = { deck: deckNow, cardOf: cardByName, commander: name, bracket: bracketNum, aggression, taste: profile?.brain?.taste, focus: focusStack[0], taken: takenOthers };
   const whyOf = (slot: string) => {
     const sl = eff.get(slot);
     const now = sl?.name ?? slot;
@@ -1248,6 +1250,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   candidates={[...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never))}
                   cardOf={cardByName}
                   ownedOf={(n) => s.mine.get(norm(n)) ?? 0}
+                  taken={takenOthers}
                   imgOf={(n) => optionOf({ name: n }).img}
                   themes={tags}
                   theme={tag}
