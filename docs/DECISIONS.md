@@ -41,3 +41,7 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 | 2026-11-04 | Keep the existing visual identity (Midnight Override, zine × punk look) | decided | – |
 | 2026-10-12 | Decks are virtual and may share cards; warn when decks together need more copies than owned | decided | `lib/copies.ts`; physical reservations may come later only as an option |
 | 2026-10-12 | Moxfield import = pasted text only (no API); prices are USD converted to CA$ | decided | – |
+
+## 2026-11-12: Foil and card integrity
+- Foil cards must look like real foil and move (sweep, drifting rainbow, glare follows the pointer). The shine goes on the picture and the frame border only; the name, mana cost, type line, rules text and set line are never covered (Guillermo's "sacred card rule").
+- Fonts and red were audited on every main screen and match the Midnight Override spec: 4 text fonts plus the ransom-letter kit, red only on the frame, the main button and the active tab. No font or red cleanup is wanted.
