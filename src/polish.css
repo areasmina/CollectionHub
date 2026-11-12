@@ -826,3 +826,9 @@ html.forging .vhero {
   .sortsel select { width: 100%; min-width: 0; }
 }
 .fbackdrop { z-index: 1009; }
+
+/* ── The one "nothing to show" note ── */
+.estate { display: grid; justify-items: start; gap: 8px; margin: var(--sp3, 12px) 0; padding: 16px; border: 2px dashed var(--text); background: var(--bg); }
+.estate b { font-size: 18px; letter-spacing: 0.04em; text-transform: uppercase; }
+.estate p { margin: 0; opacity: 0.85; }
+.estate .u-btn { min-height: 44px; }

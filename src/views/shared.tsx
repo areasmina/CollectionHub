@@ -820,3 +820,14 @@ export function OptRow({ label, children }: { label: string; children: ReactNode
     </div>
   );
 }
+
+/** The one "nothing to show" note (lists, searches, filters): what happened in plain words and the way out. */
+export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="estate" role="status">
+      <b>{title}</b>
+      {children && <p>{children}</p>}
+      {action}
+    </div>
+  );
+}
