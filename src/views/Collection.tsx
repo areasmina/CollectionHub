@@ -14,6 +14,10 @@ import { CardsView } from './CardsView';
 import { freeDeckName, openDeck, openDeckList } from '../lib/nav';
 import type { Shared } from './shared';
 import { isCommander } from './Discover';
+import { FilterButton, ActiveChips } from './FilterSheet';
+import { applyFilter, noFilter, type CollFilter } from '../lib/collfilter';
+import { inUse } from '../lib/copies';
+import { norm } from '../lib/names';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
@@ -168,7 +172,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
     return () => document.removeEventListener('keydown', esc);
   }, [importOpen]);
 
-  const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).count(), [profile]) ?? 0;
+  const deckRows = useLiveQuery(() => db.decks.where('profile').equals(profile).toArray(), [profile]) ?? [];
+  const decks = deckRows.length;
+  const [filter, setFilter] = useState<CollFilter>(noFilter);
   const [text, setText] = useState('');
   // A big file (a whole collection) stays out of the text box: tens of thousands of lines there freeze a phone.
   const [big, setBig] = useState<{ name: string; text: string; lines: number } | null>(null);
@@ -241,11 +247,13 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         .catch(() => {});
   }, [entries.length]);
   // Filter by active list tab: 'all' = everything, 'unlisted' = no list tag, else specific list name
-  const listFiltered = entries.filter((e) => {
+  const inTab = entries.filter((e) => {
     if (activeList === 'all') return true;
     if (activeList === 'unlisted') return !e.list;
     return e.list === activeList;
   });
+  const usedIn = inUse(deckRows);
+  const listFiltered = applyFilter(inTab, filter, { cardOf: (e) => cards.get(e.cardId), inDeck: (n) => usedIn.has(norm(n)), isCommander: (c) => !!c.legal && isCommander(c.type, c.text) });
 
   // Sort according to chosen sortOrder
   const sorted = [...listFiltered].sort((a, b) => {
@@ -575,26 +583,6 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             </span>
           )}
         </div>
-
-        {/* Sort picker */}
-        <div className="coll-sort-wrap">
-          <label htmlFor="coll-sort-select" className="coll-sort-label">ORDER:</label>
-          <select
-            id="coll-sort-select"
-            className="coll-sort-select"
-            value={sortOrder}
-            onChange={(e) => {
-              buzz('select');
-              setSortOrder(e.target.value as any);
-            }}
-          >
-            <option value="name-asc">NAME (A-Z)</option>
-            <option value="name-desc">NAME (Z-A)</option>
-            <option value="price-desc">PRICE (HIGH-LOW)</option>
-            <option value="mv-asc">MANA VALUE (LOW-HIGH)</option>
-            <option value="added-desc">RECENTLY ADDED</option>
-          </select>
-        </div>
       </section>
 
       <section>
@@ -605,6 +593,29 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           binderName={name}
           q={q}
           setQ={setQ}
+          strip={
+            <>
+              <FilterButton filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />
+              <label className="sortsel">
+                <select
+                  id="coll-sort-select"
+                  aria-label="Sort cards"
+                  value={sortOrder}
+                  onChange={(e) => {
+                    buzz('select');
+                    setSortOrder(e.target.value as typeof sortOrder);
+                  }}
+                >
+                  <option value="name-asc">Name A–Z</option>
+                  <option value="name-desc">Name Z–A</option>
+                  <option value="price-desc">Price, high first</option>
+                  <option value="mv-asc">Mana value, low first</option>
+                  <option value="added-desc">Recently added</option>
+                </select>
+              </label>
+            </>
+          }
+          chips={<ActiveChips filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />}
           more={
             <>
               <button className="u-chip" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>

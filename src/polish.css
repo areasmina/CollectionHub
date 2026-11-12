@@ -766,3 +766,63 @@ html.forging .vhero {
     grid-column: 1 / -1;
   }
 }
+
+/* ── Control strip (Collection): Search | Filter | Sort in the one bar, active filters as chips underneath ── */
+.dtools.tbar > .fbtn,
+.dtools.tbar > .sortsel {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  height: 44px;
+  border: 0;
+  border-left: 2px solid var(--text);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.dtools.tbar > .fbtn.on { background: var(--accent); color: #000; }
+.fbtn .fcount { background: #000; color: #fff; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 12px; text-align: center; }
+.sortsel select { background: transparent; color: inherit; border: 0; font: inherit; font-weight: 800; width: 64px; text-overflow: ellipsis; cursor: pointer; }
+.sortsel select option { color: #000; }
+@media (max-width: 520px) { .fbtn .flabel { display: none; } .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { padding: 0 8px; } .sortsel select { width: 54px; } }
+@media (max-width: 360px) { .sortsel select { width: 44px; } }
+
+.fchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 var(--sp3, 12px); }
+.fchip, .fclear { min-height: 36px; padding: 0 10px; border: 2px solid var(--text); background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
+.fchip { background: var(--accent); color: #000; }
+.fclear { border-style: dashed; }
+.fcounts { margin-left: auto; opacity: 0.75; font-size: 13px; }
+
+.fsheet2 {
+  position: fixed; z-index: 1010; left: 0; right: 0; bottom: 0; max-height: 85dvh; display: flex; flex-direction: column;
+  background: var(--bg); border: 2px solid var(--text); border-bottom: 0; box-shadow: 0 -4px 0 var(--accent);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.fsheet2 .nh { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; font-weight: 900; }
+.fsheet2 .close { min-width: 44px; min-height: 44px; background: none; border: 0; color: inherit; font-size: 18px; }
+.fs-body { overflow: auto; padding: 0 14px 8px; display: grid; gap: 14px; }
+.fs-group .lbl { display: block; font-weight: 800; margin-bottom: 6px; }
+.fs-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.fs-row .u-chip { min-height: 44px; }
+.fs-row .u-chip[aria-pressed='true'] { background: var(--accent); color: #000; }
+.fs-row .pip { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--text); background: var(--bg); color: var(--text); font-weight: 900; cursor: pointer; }
+.fs-row .pip[aria-pressed='true'] { background: var(--accent); color: #000; outline: 3px solid var(--text); }
+.fs-foot { display: flex; gap: 8px; justify-content: space-between; padding: 10px 14px; border-top: 2px solid var(--text); }
+.fs-foot .primary { flex: 1; min-height: 44px; }
+@media (min-width: 700px) { .fsheet2 { left: 50%; right: auto; bottom: auto; top: 18vh; width: 460px; transform: translateX(-50%); border-bottom: 2px solid var(--text); } }
+/* Small phones: search gets its own full row (it was squeezed to two letters at 320px); view, options, filter and sort share the row under it */
+@media (max-width: 430px) {
+  .dtools.tbar:has(> .fbtn) { flex-wrap: wrap; }
+  .dtools.tbar:has(> .fbtn) > .tsearch { order: -1; flex: 1 1 100%; border-bottom: 2px solid var(--text) !important; }
+  .dtools.tbar:has(> .fbtn) > .tquick { flex: 0 0 auto; border-left: 0; }
+  .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { border-left: 2px solid var(--text); }
+  .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
+  .sortsel select { width: 100%; min-width: 0; }
+}
+.fbackdrop { z-index: 1009; }
