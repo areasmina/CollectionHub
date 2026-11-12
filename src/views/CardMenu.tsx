@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BASICS } from '../lib/compare';
 import { db, type Deck } from '../lib/db';
-import { addToDeck, assignCardToList, changeQty, manageBinderLists, moveCardToBinder, removeFromDeck, removeOneFromBinder, setCommander, setFoil, setPrinting } from '../lib/deckedit';
+import { addToDeck, assignCardToList, changeQty, manageBinderLists, moveCardToBinder, removeFromDeck, removeOneFromBinder, setBinderFoil, setCommander, setFoil, setPrinting } from '../lib/deckedit';
 import { printingsOf } from '../lib/scryfall';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
@@ -43,6 +43,10 @@ export function CardMenu({
   const live = useLiveQuery(() => (deck ? db.decks.get(deck.id!) : undefined), [deck?.id]);
   const d = live ?? deck;
   const c = d?.cards.find((x) => x.name === name);
+  // binder copies of this card, foil and non-foil (for the collection's foil switch)
+  const mineRows = useLiveQuery(() => db.entries.where('profile').equals(profile).filter((e) => norm(e.name) === norm(name)).toArray(), [profile, name]) ?? [];
+  const foilCopies = mineRows.filter((e) => e.foil).reduce((n, e) => n + e.qty, 0);
+  const plainCopies = mineRows.filter((e) => !e.foil).reduce((n, e) => n + e.qty, 0);
   const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).toArray(), [profile]) ?? [];
   const using = decks.filter((x) => x.id !== d?.id && x.cards.some((y) => norm(y.name) === norm(name)));
   const others = decks.filter((x) => x.id !== d?.id && !x.cards.some((y) => norm(y.name) === norm(name)));
@@ -379,6 +383,22 @@ export function CardMenu({
               <button onClick={act(() => (haptic('success'), setFoil(d, profile, name, !c.foil)))}>
                 <span className="cmenu-main">{c.foil ? 'SWITCH TO NON-FOIL' : 'SWITCH TO FOIL'}</span>
                 <small className="cmenu-meta">{owned ? 'binder copy too' : 'deck only'}</small>
+              </button>
+            </li>
+          )}
+          {!d && plainCopies > 0 && (
+            <li>
+              <button onClick={act(async () => (haptic('success'), toast({ text: `${name}: one copy is foil now`, undo: await setBinderFoil(profile, name, true) })))}>
+                <span className="cmenu-main">{foilCopies + plainCopies > 1 ? 'MAKE ONE COPY FOIL' : 'MARK AS FOIL'}</span>
+                <small className="cmenu-meta">✦ foil</small>
+              </button>
+            </li>
+          )}
+          {!d && foilCopies > 0 && (
+            <li>
+              <button onClick={act(async () => (haptic('success'), toast({ text: `${name}: one copy is non-foil now`, undo: await setBinderFoil(profile, name, false) })))}>
+                <span className="cmenu-main">{foilCopies + plainCopies > 1 ? 'MAKE ONE COPY NON-FOIL' : 'MARK AS NON-FOIL'}</span>
+                <small className="cmenu-meta">{foilCopies} foil</small>
               </button>
             </li>
           )}
