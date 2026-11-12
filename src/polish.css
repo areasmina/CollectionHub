@@ -919,24 +919,30 @@ html.forging .vhero {
 .foil::after {
   background:
     radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 245, 0.9) 0%, rgba(255, 240, 200, 0.55) 8%, rgba(255, 255, 255, 0) 34%),
+    linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.75) 48%, rgba(255, 245, 220, 0.9) 50%, rgba(255, 255, 255, 0.75) 52%, transparent 62%),
     repeating-linear-gradient(115deg, transparent 0 6%, rgba(255, 255, 255, 0.35) 7.5%, transparent 9%, transparent 13%, rgba(255, 255, 255, 0.18) 14%, transparent 15.5%),
     repeating-linear-gradient(125deg, #ff4fb8 0%, #ffcf3a 6%, #4dff9a 12%, #36c2ff 18%, #8b5cff 24%, #ff4fb8 30%) !important;
-  background-size: 100% 100%, 240% 240%, 200% 200% !important;
-  background-blend-mode: screen, screen, normal;
+  background-size: 100% 100%, 320% 100%, 240% 240%, 200% 200% !important;
+  background-repeat: no-repeat, no-repeat, repeat, repeat !important;
+  background-blend-mode: screen, screen, screen, normal;
   mix-blend-mode: overlay !important;
-  opacity: 0.9 !important;
-  animation: glare 20s ease-in-out infinite alternate, foilwash 14s ease-in-out infinite alternate !important;
+  opacity: 0.92 !important;
+  /* like light moving over a real foil: a bright band sweeps across every few seconds, the rainbow drifts, and the
+     hot spot wanders (or follows your finger / mouse) */
+  background-position: 0 0, var(--sw) 0, var(--wx) var(--wx), var(--wx) var(--wx) !important;
+  animation: foilglare 12s ease-in-out infinite alternate, foilsweep 5.5s cubic-bezier(0.45, 0.05, 0.35, 1) infinite, foilwash 9s ease-in-out infinite alternate !important;
 }
-:is(.timg, .thand).foil::after {
+:is(.timg, .thand, .thumb).foil::after {
   /* the art box of a modern card frame: below the name bar, above the type line */
   clip-path: inset(10.5% 7.5% 44.5% 7.5%);
 }
+.thumb.foil::after { clip-path: none; }
 .foil::before {
   background: repeating-linear-gradient(125deg, #ff4fb8 0%, #ffcf3a 8%, #4dff9a 16%, #36c2ff 24%, #8b5cff 32%, #ff4fb8 40%) !important;
   background-size: 220% 220% !important;
   mix-blend-mode: overlay !important;
-  opacity: 0.75 !important;
-  animation: holoshift 14s ease-in-out infinite alternate !important;
+  opacity: 0.8 !important;
+  animation: holoshift 8s ease-in-out infinite alternate !important;
 }
 :is(.timg, .thand).foil::before {
   /* only the outer border of the frame */
@@ -944,9 +950,24 @@ html.forging .vhero {
   mask: linear-gradient(90deg, #000 0 6%, transparent 6% 94%, #000 94%), linear-gradient(180deg, #000 0 4%, transparent 4% 96.5%, #000 96.5%);
 }
 .thumb.foil::before { display: none; }
+/* while a finger or mouse is on the card the hot spot follows it (the wandering stops), the sweep and rainbow keep going */
+.foil.tracking::after {
+  animation: foilsweep 5.5s cubic-bezier(0.45, 0.05, 0.35, 1) infinite, foilwash 9s ease-in-out infinite alternate !important;
+}
+@property --sw { syntax: '<percentage>'; inherits: false; initial-value: 130%; }
+@property --wx { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+@keyframes foilsweep {
+  0% { --sw: 130%; }
+  55%, 100% { --sw: -30%; }
+}
 @keyframes foilwash {
-  from { background-position: 0 0, 0% 0%, 0% 0%; }
-  to { background-position: 0 0, 100% 100%, 100% 100%; }
+  from { --wx: 0%; }
+  to { --wx: 100%; }
+}
+@keyframes foilglare {
+  0% { --gx: 22%; --gy: 18%; }
+  50% { --gx: 70%; --gy: 45%; }
+  100% { --gx: 40%; --gy: 80%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .foil::before, .foil::after { animation: none !important; }
