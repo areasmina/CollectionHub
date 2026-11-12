@@ -110,4 +110,9 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Overhaul phase 1: tokens (one colour one meaning, 4·8·12·16·24·32·48 scale) and the 7 parts in `src/ui.css` + `views/parts.tsx` | Live | #21 | `lib/parts.test.ts` |
 | Security headers: Content-Security-Policy (only our own code and the named data sources load), no framing, no MIME sniffing, strict referrer, HSTS; `vite preview` serves the same headers so every browser check runs under the live policy | Live | security-first PR, Nov 11 (replaces #2) | `e2e/security.spec.ts` |
 | Sync server limits: 120 saves per sync code per 10 minutes, and per-address limits at Cloudflare's edge (240 reads, 60 writes a minute); the app says sync is busy and retries | Live after the Worker is redeployed (`npx wrangler deploy` in `worker/`) | security-first PR, Nov 11 | `worker/sync.test.ts` |
+| Foil cards look and move like real foil: prismatic shine on the picture and frame, a light band sweeping across, glare that follows a finger or mouse; name, mana and rules text stay crisp; still when motion is reduced | Live | #52, #53 | `e2e/card-integrity.spec.ts` |
+| Collection card menu: MARK AS FOIL / MARK AS NON-FOIL (one copy moves between the foil and non-foil rows; copies never change) | Live | #53 | `e2e/foil-toggle.spec.ts` |
+| Commander card stays whole: the OPTIONS tag hangs under it, nothing on the mana cost or rules text | Live | #51 | `e2e/card-integrity.spec.ts` |
+| Discover sort box shows the whole sort name; phones keep one slim bar with sort behind ⋮ | Live | #50 | `e2e/strip-decks-discover.spec.ts` |
+| One-line compact rows on phones; jump rail stays off the deck header | Live | #47, #49 | `e2e/oneline-rows.spec.ts`, `e2e/jump-rail.spec.ts` |
 | Card scanning | Parked | – | likely needs a paid service |
