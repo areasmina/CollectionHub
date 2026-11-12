@@ -9,7 +9,7 @@ import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edh
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
-import { OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
+import { EmptyState, OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
 import { Pips, Ransom, Title, EyeDoodle, ManaIcon, PageDecor } from './zine';
 import { Meter } from './parts';
 
@@ -358,6 +358,18 @@ export function Discover(s: Shared) {
       )}
       {/* The commander count is the title's answer ("335 DECKS"), so no count line here */}
       {!commanders.length && data && <Welcome empty={s.mine.size === 0} />}
+      {!empty && shown.length === 0 && (
+        <EmptyState
+          title="No commander matches"
+          action={
+            <button type="button" className="u-btn" onClick={() => (haptic('select'), setQ(''), setColours([]))}>
+              CLEAR SEARCH AND COLOURS
+            </button>
+          }
+        >
+          {q.trim() ? `None of your ${commanders.length} commanders matches “${q.trim()}”. Press Enter to open any commander by name.` : 'None of your commanders has all of these colours.'}
+        </EmptyState>
+      )}
       <ul className="cgrid" data-zoom={zoom} ref={gridRef}>
         {shown.map((c, i) => {
           const st = stats.get(c.key);

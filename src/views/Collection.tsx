@@ -15,13 +15,13 @@ import { freeDeckName, openDeck, openDeckList } from '../lib/nav';
 import type { Shared } from './shared';
 import { isCommander } from './Discover';
 import { FilterButton, ActiveChips } from './FilterSheet';
-import { applyFilter, noFilter, type CollFilter } from '../lib/collfilter';
+import { applyFilter, filterCount, noFilter, type CollFilter } from '../lib/collfilter';
 import { inUse } from '../lib/copies';
 import { norm } from '../lib/names';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
-import { priced, priceSum, Progress, Thumb } from './shared';
+import { EmptyState, priced, priceSum, Progress, Thumb } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 
@@ -616,6 +616,28 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             </>
           }
           chips={<ActiveChips filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />}
+          empty={
+            entries.length > 0 ? (
+              <EmptyState
+                title="No cards match"
+                action={
+                  <button
+                    type="button"
+                    className="u-btn"
+                    onClick={() => {
+                      haptic('select');
+                      setQ('');
+                      setFilter(noFilter());
+                    }}
+                  >
+                    CLEAR SEARCH AND FILTERS
+                  </button>
+                }
+              >
+                {q.trim() ? `Nothing in ${activeList === 'all' ? name : 'this list'} matches “${q.trim()}”${filterCount(filter) ? ' with these filters' : ''}.` : filterCount(filter) ? 'No card passes these filters.' : 'This list has no cards yet.'}
+              </EmptyState>
+            ) : undefined
+          }
           more={
             <>
               <button className="u-chip" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>

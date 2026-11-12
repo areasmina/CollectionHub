@@ -827,6 +827,11 @@ html.forging .vhero {
 }
 .fbackdrop { z-index: 1009; }
 
+/* ── The one "nothing to show" note ── */
+.estate { display: grid; justify-items: start; gap: 8px; margin: var(--sp3, 12px) 0; padding: 16px; border: 2px dashed var(--text); background: var(--bg); }
+.estate b { font-size: 18px; letter-spacing: 0.04em; text-transform: uppercase; }
+.estate p { margin: 0; opacity: 0.85; }
+.estate .u-btn { min-height: 44px; }
 /* Deck page on phones keeps its own slim bar (search + ⋮); sort stays in ⋮ there */
 @media (max-width: 700px) { .lists > .dtools.tbar > .sortsel { display: none; } }
 /* In the wrapped (small phone) bar the ⋮ sits mid-row: its menu hangs from the whole bar, so it can never run off the side */

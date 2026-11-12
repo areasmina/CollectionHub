@@ -2,7 +2,7 @@ import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { OptRow, PriceLink, priced, Thumb, ToolBar, useMenuPress } from './shared';
+import { EmptyState, OptRow, PriceLink, priced, Thumb, ToolBar, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
 import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
@@ -67,15 +67,19 @@ const SKIP_TYPES = ['token', 'memorabilia', 'minigame', 'alchemy', 'treasure_che
 /** Paper Magic sets from Scryfall (one request, cached a week). */
 function useSets(enabled: boolean) {
   const [sets, setSets] = useState<SetInfo[]>([]);
+  const [failed, setFailed] = useState(false);
+  const [again, setAgain] = useState(0);
   useEffect(() => {
     if (!enabled || sets.length) return;
+    setFailed(false);
     (async () => {
       const hit = await db.edhrec.get('scryfall:sets:v2'); // v2: with set icons
       if (hit && Date.now() - hit.at < 7 * 864e5) return setSets(hit.data as SetInfo[]);
       const j = await fetch('https://api.scryfall.com/sets', { headers: { Accept: 'application/json' } })
         .then((r) => r.json())
         .catch(() => null);
-      if (!j?.data) return;
+      // offline or refused: an older saved list is better than none; with nothing saved, say so (never "loading" forever)
+      if (!j?.data) return hit ? setSets(hit.data as SetInfo[]) : setFailed(true);
       const list: SetInfo[] = j.data
         .filter((x: any) => !x.digital && !SKIP_TYPES.includes(x.set_type))
         .map((x: any) => ({ code: x.code, name: x.name, released: x.released_at ?? '', icon: x.icon_svg_uri }))
@@ -83,8 +87,8 @@ function useSets(enabled: boolean) {
       await db.edhrec.put({ path: 'scryfall:sets:v2', data: list, at: Date.now() });
       setSets(list);
     })();
-  }, [enabled]);
-  return sets;
+  }, [enabled, again]);
+  return { sets, failed, retry: () => setAgain((n) => n + 1) };
 }
 
 /** − n + quantity editor; saves to the binder (synced on the next Push). */
@@ -248,7 +252,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
 /** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
-export function CardsView({ entries, cards, profile, binderName, q = '', setQ, more, title, strip, chips }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; more?: ReactNode; title?: ReactNode; strip?: ReactNode; chips?: ReactNode }) {
+export function CardsView({ entries, cards, profile, binderName, q = '', setQ, more, title, strip, chips, empty }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; more?: ReactNode; title?: ReactNode; strip?: ReactNode; chips?: ReactNode; empty?: ReactNode }) {
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -269,7 +273,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
   const [hideEmpty, setHideEmpty] = usePref<'on' | 'off'>('ch:collempty', 'on');
   const [limit, setLimit] = useState(100);
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const sets = useSets(group === 'on');
+  const { sets, failed: setsFailed, retry: retrySets } = useSets(group === 'on');
 
   const bySet = new Map<string, Entry[]>();
   for (const e of entries) {
@@ -353,7 +357,21 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
 
       {group === 'on' ? (
         <div className="setgroups">
-          {group === 'on' && !sets.length && <p className="count">Loading Magic sets from Scryfall…</p>}
+          {!sets.length &&
+            (setsFailed ? (
+              <EmptyState
+                title="Couldn't load the set list"
+                action={
+                  <button type="button" className="u-btn" onClick={() => (haptic('select'), retrySets())}>
+                    TRY AGAIN
+                  </button>
+                }
+              >
+                Scryfall didn't answer, so the cards can't be grouped by set right now. Your cards are safe; turn off "Group by set" in ⋮ to see them.
+              </EmptyState>
+            ) : (
+              <p className="count">Loading Magic sets from Scryfall…</p>
+            ))}
           {groups.map((g) => {
             const n = g.list.reduce((s, e) => s + e.qty, 0);
             return (
@@ -371,6 +389,8 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
             );
           })}
         </div>
+      ) : !entries.length && empty ? (
+        empty
       ) : (
         <>
           <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} />
