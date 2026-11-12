@@ -45,6 +45,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { AGGRESSION } from '../brain/win';
 import { deckStats } from '../lib/deckstats';
 import { CardMenu, type Toast } from './CardMenu';
+import { JumpRail, jumpId } from './JumpRail';
 import { CompactIcon, Pips, Ransom, RiseBars, GridIcon, ListIcon } from './zine';
 import { Menu, Meter, Sheet } from './parts';
 
@@ -1148,91 +1149,102 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </ToolBar>
               {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
-              {listed.map((l) => {
+              {(() => {
                 // A swapped-in card is one of yours, so it counts as owned for SHOW.
                 const own = (c: EdhCard) => statusOf(nameIn(c), s.mine) === 'owned';
-                const cs = sortBy(
-                  searchByText(l.cards.filter((c) => shows(show, own(c)) && onlyOk(only, { gc: !!gc?.has(norm(nameIn(c))), cad: toCad(cardByName(nameIn(c))?.usd) })), q, (c) => ({ name: nameIn(c), type: cardOf(c)?.type, text: cardOf(c)?.text })),
-                  sort,
-                  (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
-                );
-                if (!cs.length) return null;
-                const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
+                const groups = listed
+                  .map((l) => ({
+                    l,
+                    cs: sortBy(
+                      searchByText(l.cards.filter((c) => shows(show, own(c)) && onlyOk(only, { gc: !!gc?.has(norm(nameIn(c))), cad: toCad(cardByName(nameIn(c))?.usd) })), q, (c) => ({ name: nameIn(c), type: cardOf(c)?.type, text: cardOf(c)?.text })),
+                      sort,
+                      (c) => ({ name: c.name, usd: cardOf(c)?.usd ? Number(cardOf(c)!.usd) : undefined, mv: cardOf(c)?.cmc, owned: own(c) }),
+                    ),
+                  }))
+                  .filter((g) => g.cs.length);
                 return (
-                  <details key={l.header} className="cat" open>
-                    <summary>
-                      <span className="pm" aria-hidden="true" />
-                      <span className="h">
-                        {l.header} ({cs.reduce((n, c) => n + (c.qty ?? 1), 0)})
-                      </span>
-                      {pricesIn && (
-                        <span className="gval" title="What this group's cards are worth (cheapest printings)">
-                          ≈{cad(priceSum(cs.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 }))))}
-                        </span>
-                      )}
-                      <span className="dots" aria-hidden="true" />
-                      <span className="n">
-                        {ls.owned}/{ls.total} owned
-                      </span>
-                    </summary>
-                    
-                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'} data-zoom={view === 'grid' ? zoom : undefined}>
-                      {cs.map((c) => {
-                        // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.
-                        const swappable = kind === 'average' && norm(c.name) !== norm(name);
-                        const slot = eff.get(c.name);
-                        const repl = slot && slot.name !== c.name ? slot.name : undefined;
-                        const rc = repl ? recCard.get(norm(repl)) : undefined;
-                        const bc = repl && !rc ? binderCard.get(norm(repl)) : undefined;
-                        const now = repl ?? c.name;
-                        const pin = pinOf(pins, now);
-                        const mark = repl ? `${slot!.why === 'pin' ? 'PIN' : slot!.why === 'never' ? 'NEVER' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? 'always in' : pin === 'out' ? 'no card fits' : undefined;
-                        const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
-                        return (
-                          <Item
-                            key={c.name}
-                            name={now}
-                            img={bc?.img ?? imgOf(rc?.id ?? c.id)}
-                            card={rc ? cardOf(rc) : bc ?? (repl ? undefined : cardOf(c))}
-                            s={s}
-                            note={stat}
-                            marker={repl ? c.name : undefined}
-                            markText={mark}
-                            quiet={statusOf(now, s.mine) === 'owned'}
-                            onOpen={swappable ? () => (placing ? swapInto(now, placing) : setMenuFor(c.name)) : undefined}
-                            onMenu={(x, y) => setCtx({ slot: c.name, name: now, x, y })}
-                            onClose={swappable ? () => setMenuFor(null) : undefined}
-                          >
-                            {menuFor === c.name && (
-                              <SwapNote
-                                name={c.name}
-                                missing={slotInfo(c)}
-                                big={imgOf(c.id, 'normal')}
-                                replaced={repl}
-                                loading={!recs}
-                                options={suggest(c, brainCtx).map(optionOf)}
-                                pool={binder
-                                  .filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key) && b.key !== norm(name))
-                                  .map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }))}
-                                pin={pin}
-                                canPinIn={statusOf(now, s.mine) === 'owned'}
-                                cmdr={label}
-                                onPick={(sub) => (haptic('success'), setSwap(c.name, sub))}
-                                onUndo={() => (haptic('undo'), setSwap(c.name, null))}
-                                onPin={(side) => setPin(now, side)}
-                                onClose={() => setMenuFor(null)}
-                                deck={[name, ...[...eff.values()].map((x) => x.name)]}
-                                bracket={bracketNum}
-                                whyCard={whyOf(c.name)}
-                              />
+                  <>
+                    <JumpRail headers={groups.map((g) => g.l.header)} />
+                    {groups.map(({ l, cs }) => {
+                      const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
+                      return (
+                        <details key={l.header} id={jumpId(l.header)} className="cat" open>
+                          <summary>
+                            <span className="pm" aria-hidden="true" />
+                            <span className="h">
+                              {l.header} ({cs.reduce((n, c) => n + (c.qty ?? 1), 0)})
+                            </span>
+                            {pricesIn && (
+                              <span className="gval" title="What this group's cards are worth (cheapest printings)">
+                                ≈{cad(priceSum(cs.map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 }))))}
+                              </span>
                             )}
-                          </Item>
-                        );
-                      })}
-                    </ul>
-                  </details>
+                            <span className="dots" aria-hidden="true" />
+                            <span className="n">
+                              {ls.owned}/{ls.total} owned
+                            </span>
+                          </summary>
+                    
+                          <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'} data-zoom={view === 'grid' ? zoom : undefined}>
+                            {cs.map((c) => {
+                              // Every card can be swapped (the commander can't): missing ones for yours, yours for better fits.
+                              const swappable = kind === 'average' && norm(c.name) !== norm(name);
+                              const slot = eff.get(c.name);
+                              const repl = slot && slot.name !== c.name ? slot.name : undefined;
+                              const rc = repl ? recCard.get(norm(repl)) : undefined;
+                              const bc = repl && !rc ? binderCard.get(norm(repl)) : undefined;
+                              const now = repl ?? c.name;
+                              const pin = pinOf(pins, now);
+                              const mark = repl ? `${slot!.why === 'pin' ? 'PIN' : slot!.why === 'never' ? 'NEVER' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? 'always in' : pin === 'out' ? 'no card fits' : undefined;
+                              const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
+                              return (
+                                <Item
+                                  key={c.name}
+                                  name={now}
+                                  img={bc?.img ?? imgOf(rc?.id ?? c.id)}
+                                  card={rc ? cardOf(rc) : bc ?? (repl ? undefined : cardOf(c))}
+                                  s={s}
+                                  note={stat}
+                                  marker={repl ? c.name : undefined}
+                                  markText={mark}
+                                  quiet={statusOf(now, s.mine) === 'owned'}
+                                  onOpen={swappable ? () => (placing ? swapInto(now, placing) : setMenuFor(c.name)) : undefined}
+                                  onMenu={(x, y) => setCtx({ slot: c.name, name: now, x, y })}
+                                  onClose={swappable ? () => setMenuFor(null) : undefined}
+                                >
+                                  {menuFor === c.name && (
+                                    <SwapNote
+                                      name={c.name}
+                                      missing={slotInfo(c)}
+                                      big={imgOf(c.id, 'normal')}
+                                      replaced={repl}
+                                      loading={!recs}
+                                      options={suggest(c, brainCtx).map(optionOf)}
+                                      pool={binder
+                                        .filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key) && b.key !== norm(name))
+                                        .map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }))}
+                                      pin={pin}
+                                      canPinIn={statusOf(now, s.mine) === 'owned'}
+                                      cmdr={label}
+                                      onPick={(sub) => (haptic('success'), setSwap(c.name, sub))}
+                                      onUndo={() => (haptic('undo'), setSwap(c.name, null))}
+                                      onPin={(side) => setPin(now, side)}
+                                      onClose={() => setMenuFor(null)}
+                                      deck={[name, ...[...eff.values()].map((x) => x.name)]}
+                                      bracket={bracketNum}
+                                      whyCard={whyOf(c.name)}
+                                    />
+                                  )}
+                                </Item>
+                              );
+                            })}
+                          </ul>
+                        </details>
+                      );
+                    })}
+                  </>
                 );
-              })}
+              })()}
             </div>
             {forging && (
               <div className="dside forge-buy">
