@@ -10,6 +10,7 @@ import type { SubCard } from '../lib/subs';
 import type { CardFilter } from '../lib/edhrec';
 import { themeOf } from '../brain/themes';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from '../brain/score';
+import type { Taken } from '../lib/copies';
 import type { Aggression } from '../brain/win';
 import { dragEnd, dragStart, fromOf, holdToDrag, lightOff, lightUp, DRAG_TYPE, type DropAt } from '../lib/drag';
 import { usd } from './shared';
@@ -506,6 +507,7 @@ export function ForgeSuggest({
   candidates,
   cardOf,
   ownedOf,
+  taken,
   imgOf,
   themes = [],
   theme: pageTheme = '',
@@ -532,6 +534,7 @@ export function ForgeSuggest({
   candidates: SubCard[];
   cardOf: (name: string) => Card | undefined;
   ownedOf: (name: string) => number;
+  taken?: (name: string) => Taken | undefined; // copies your other decks already use
   imgOf: (name: string) => string | undefined;
   themes?: { slug: string; value: string; count: number }[];
   theme?: string; // the theme picked on the page (EDHREC tag slug): suggestions start filtered to it
@@ -586,7 +589,9 @@ export function ForgeSuggest({
   const focus = useMemo(() => (tagOf ? themeOf(tagOf.value) : undefined), [tagOf?.value]); // eslint-disable-line react-hooks/exhaustive-deps
   const [cfDraft, setCfDraft] = useState({ inc: cf?.inc[0] ?? '', exc: cf?.exc[0] ?? '' });
 
-  const ctx: DeckContext = { deck, cardOf, commander, bracket, aggression, taste: brain?.taste, focus };
+  const ctx: DeckContext = { deck, cardOf, commander, bracket, aggression, taste: brain?.taste, focus, taken };
+  // which candidates have no copy to spare changes with the other decks, not with this one
+  const takenKey = taken ? candidates.map((c) => taken(c.name)).filter(Boolean).map((t) => `${t!.used}/${t!.own}`).join(',') : '';
   const deckKey = deck.map((c) => `${c.name}×${c.qty}`).join('|');
   // recount when the deck, its card data (it loads after the names), the dial, your taste or the picked theme change
   // (the theme sets the enabler / payoff balance, so a stale count would nudge the wrong half of the engine)
@@ -594,7 +599,7 @@ export function ForgeSuggest({
   const needs = useMemo(() => deckNeeds(ctx), [sigNeeds]); // eslint-disable-line react-hooks/exhaustive-deps
   // The list is rebuilt when the candidates themselves change, not only their number (a swap of one owned card for
   // another kept the old rows before), and when a card's EDHREC numbers arrive.
-  const candKey = candidates.map((c) => `${c.name}:${c.incl ?? ''}:${c.lift ?? ''}`).join('|');
+  const candKey = candidates.map((c) => `${c.name}:${c.incl ?? ''}:${c.lift ?? ''}`).join('|') + '#' + takenKey;
   const rows: Row[] = useMemo(() => {
     const seen = new Set<string>();
     const out: Row[] = [];

@@ -34,6 +34,33 @@ export function shortfalls(decks: { name: string; cards: DeckCard[]; inactive?: 
   return out.sort((a, b) => b.short - a.short || a.name.localeCompare(b.name));
 }
 
+/** What other decks already use of a card you own: `used` copies in `by` decks, out of `own`. */
+export interface Taken {
+  own: number;
+  used: number;
+  by: string[];
+}
+
+/**
+ * Copies of each card that the given (other) decks use, for suggestions: adding a card whose every copy sits in another
+ * active deck would put two decks in competition for one card (the shortfall alert), so the brain says so. Cards you
+ * don't own are left out (that is "missing", not "taken"); basic lands are never counted.
+ */
+export function takenBy(others: { name: string; cards: DeckCard[]; inactive?: boolean }[], owned: Map<string, number>): (name: string) => Taken | undefined {
+  const use = new Map<string, Taken>();
+  for (const d of others.filter((x) => !x.inactive))
+    for (const c of d.cards) {
+      const k = norm(c.name);
+      const own = owned.get(k) ?? 0;
+      if (BASICS.has(k) || own < 1) continue;
+      const u = use.get(k) ?? { own, used: 0, by: [] };
+      u.used += c.qty;
+      if (!u.by.includes(d.name)) u.by.push(d.name);
+      use.set(k, u);
+    }
+  return (name) => use.get(norm(name));
+}
+
 /** Active decks using each card (key = norm(name)), for "in 2 decks" marks in the binder. */
 export function inUse(decks: { name: string; cards: DeckCard[]; inactive?: boolean }[]): Map<string, string[]> {
   const out = new Map<string, string[]>();
