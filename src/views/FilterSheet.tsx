@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
 import { COLOURS, COLOUR_NAME, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Show } from '../lib/collfilter';
 
@@ -23,9 +24,11 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
         <span className="flabel">FILTER</span>
         {n > 0 && <b className="fcount">{n}</b>}
       </button>
-      {open && (
+      {open &&
+        // in the page body, not inside the sticky bar: the bar's own layer would put the sheet under the bottom nav
+        createPortal(
         <>
-          <div className="backdrop" onClick={() => setOpen(false)} />
+          <div className="backdrop fbackdrop" onClick={() => setOpen(false)} />
           <div className="fsheet2" role="dialog" aria-modal="true" aria-label="Filter cards">
             <div className="nh">
               <span>FILTER <mark>CARDS</mark></span>
@@ -73,7 +76,8 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
               </button>
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </>
   );

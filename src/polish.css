@@ -800,7 +800,7 @@ html.forging .vhero {
 .fcounts { margin-left: auto; opacity: 0.75; font-size: 13px; }
 
 .fsheet2 {
-  position: fixed; z-index: 46; left: 0; right: 0; bottom: 0; max-height: 85dvh; display: flex; flex-direction: column;
+  position: fixed; z-index: 1010; left: 0; right: 0; bottom: 0; max-height: 85dvh; display: flex; flex-direction: column;
   background: var(--bg); border: 2px solid var(--text); border-bottom: 0; box-shadow: 0 -4px 0 var(--accent);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -825,3 +825,4 @@ html.forging .vhero {
   .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
   .sortsel select { width: 100%; min-width: 0; }
 }
+.fbackdrop { z-index: 1009; }
