@@ -734,11 +734,10 @@ export function ShortAlert({ items, inline, currentDeck }: { items: Shortfall[];
   );
 }
 
-/** The commander's big card is its menu button (it replaces the old one-card "Commander" section): a lift and a
- *  ⋯ OPTIONS corner on hover, a faint corner on touch screens, and a one-time "tap for options" tape. */
+/** The commander's big card is its menu button (it replaces the old one-card "Commander" section). The ⋯ OPTIONS tag
+ *  sits under the card, never on it: nothing may cover the card's name, mana cost, rules text or collector line. */
 export function CmdrCard({ src, name, onMenu, children }: { src: string; name: string; onMenu: (x: number, y: number) => void; children?: ReactNode }) {
-  const [seen, setSeen] = useStored<'0' | '1'>('cmdrhint', '0', ['0', '1']);
-  const open = (x: number, y: number) => (haptic('open'), setSeen('1'), onMenu(x, y));
+  const open = (x: number, y: number) => (haptic('open'), onMenu(x, y));
   return (
     <button
       type="button"
@@ -757,11 +756,6 @@ export function CmdrCard({ src, name, onMenu, children }: { src: string; name: s
       <span className="cmdrmore" aria-hidden="true">
         ⋯ <b>OPTIONS</b>
       </span>
-      {seen === '0' && (
-        <span className="cmdrhint" aria-hidden="true">
-          tap for options
-        </span>
-      )}
     </button>
   );
 }

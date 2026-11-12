@@ -889,3 +889,22 @@ html.forging .vhero {
   .dfind > .dtools.tbar > .tbmore { position: relative !important; }
   .dfind > .dtools.tbar > .tbmore > summary > .fnow { display: inline !important; }
 }
+
+/* Sacred card rule: the commander card stays whole. Its ⋯ OPTIONS tag hangs under the card like a tape label (it used
+   to sit on the mana cost, and the one-time "tap for options" tape covered the rules text and collector line). */
+.cmdrbtn .cmdrmore {
+  position: static !important;
+  display: flex !important;
+  width: fit-content;
+  margin: 8px auto 0;
+  height: 28px;
+  border-radius: 0;
+  background: var(--hazard, #ffd400);
+  color: var(--ink, #0a0a0a);
+  border: 0;
+  box-shadow: 2px 2px 0 var(--ink, #0a0a0a);
+  transform: rotate(-2deg);
+  opacity: 1;
+  font-size: 15px;
+}
+.cmdrbtn .cmdrmore b { max-width: 80px !important; font-size: 13px; }
