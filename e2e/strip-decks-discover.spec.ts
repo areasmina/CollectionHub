@@ -7,14 +7,29 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-test('Discover: sort in the bar; a colour filter shows as a chip and Clear all brings the commanders back', async ({ page }) => {
+test('Discover: sort in the bar; a colour filter shows as a chip and Clear all brings the commanders back', async ({ page }, info) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'discover'));
   await page.reload();
   await expect(page.locator('.ccard').first()).toBeVisible();
-  await fits(page, ['.dfind .tbar', '.dfind .sortsel']);
-  await expect(page.getByLabel('Sort commanders')).toHaveValue('match');
-  await page.getByLabel('Sort commanders').selectOption('name');
   const bar = page.locator('.dfind .tbar');
+  if (info.project.name === 'phone') {
+    // phones keep one slim bar: the sort sits behind ⋮ and the ⋮ names it
+    await fits(page, ['.dfind .tbar']);
+    await expect(page.getByLabel('Sort commanders')).toBeHidden();
+    await expect(bar.locator('.fnow')).toHaveText(/% OWNED/);
+    await bar.locator('summary').click();
+    await bar.getByRole('radio', { name: 'NAME A→Z' }).click();
+    await expect(bar.locator('.fnow')).toHaveText(/NAME A→Z/);
+    await expect(page.getByLabel('Sort commanders')).toHaveValue('name'); // the ⋮ options and the (hidden) sort box agree
+    await page.keyboard.press('Escape');
+  } else {
+    await fits(page, ['.dfind .tbar', '.dfind .sortsel']);
+    await expect(page.getByLabel('Sort commanders')).toHaveValue('match');
+    // the chosen sort reads in full ("% OWNED: MOST FIRST", it was cut to "%…") and the ⋮ doesn't say it a second time
+    expect(await page.getByLabel('Sort commanders').evaluate((s) => s.clientWidth)).toBeGreaterThanOrEqual(180);
+    await expect(bar.locator('.fnow')).toBeHidden();
+    await page.getByLabel('Sort commanders').selectOption('name');
+  }
   await bar.locator('summary').click();
   await expect(bar.getByRole('radio', { name: 'NAME A→Z' })).toHaveAttribute('aria-checked', 'true'); // the bar and the ⋮ options agree
   await bar.getByRole('button', { name: 'Red' }).click();

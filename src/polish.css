@@ -819,7 +819,7 @@ html.forging .vhero {
 /* Small phones: search gets its own full row (it was squeezed to two letters at 320px); view, options, filter and sort share the row under it */
 @media (max-width: 430px) {
   .dtools.tbar:not(.lists > *):has(> .sortsel) { flex-wrap: wrap; }
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100%; border-bottom: 2px solid var(--text) !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100% !important; border-bottom: 2px solid var(--text) !important; }
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tquick { flex: 0 0 auto; border-left: 0; }
   .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { border-left: 2px solid var(--text); }
   .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
@@ -871,3 +871,21 @@ html.forging .vhero {
 .fs-row.colours .mana-filter-btn { min-width: 48px; min-height: 48px; display: inline-grid; place-items: center; }
 .fs-row.colours .cless { font-size: 20px; line-height: 1; }
 .colours button[data-c='C'][aria-pressed='true'] { border-color: #cfcfcf !important; color: #cfcfcf !important; box-shadow: 0 0 14px rgba(207, 207, 207, 0.7), inset 0 0 6px rgba(207, 207, 207, 0.3) !important; }
+
+/* Say it once: when the bar has its own sort box (Discover, Collection), the ⋮ button doesn't repeat the sort name; the
+   sort box shows it in full and active colours show as chips under the bar. The deck page keeps its label (phones hide
+   its sort box). */
+.dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > summary > .fnow { display: none !important; }
+/* Wider screens: the sort box is as wide as its words, so the chosen sort reads in full (it was cut to "%…"). */
+@media (min-width: 431px) {
+  .sortsel select { width: auto !important; max-width: 240px; }
+}
+/* Discover on phones keeps its one slim bar (search + "% OWNED ⋮"), like the deck page: the sort sits behind ⋮ there,
+   because a sort box squeezed into that row could only show "%…". */
+@media (max-width: 430px) {
+  .dfind > .dtools.tbar { flex-wrap: nowrap !important; }
+  .dfind > .dtools.tbar > .sortsel { display: none !important; }
+  .dfind > .dtools.tbar > .tsearch { order: 0 !important; flex: 1 1 auto !important; border-bottom: 0 !important; }
+  .dfind > .dtools.tbar > .tbmore { position: relative !important; }
+  .dfind > .dtools.tbar > .tbmore > summary > .fnow { display: inline !important; }
+}
