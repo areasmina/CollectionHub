@@ -786,7 +786,7 @@ html.forging .vhero {
   padding: 0 10px;
   cursor: pointer;
 }
-.dtools.tbar > .fbtn.on { background: var(--accent); color: #000; }
+.dtools.tbar > .fbtn.on { background: var(--text); color: #000; }
 .fbtn .fcount { background: #000; color: #fff; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 12px; text-align: center; }
 .sortsel select { background: transparent; color: inherit; border: 0; font: inherit; font-weight: 800; width: 64px; text-overflow: ellipsis; cursor: pointer; }
 .sortsel select option { color: #000; }
@@ -795,7 +795,7 @@ html.forging .vhero {
 
 .fchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 var(--sp3, 12px); }
 .fchip, .fclear { min-height: 36px; padding: 0 10px; border: 2px solid var(--text); background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
-.fchip { background: var(--accent); color: #000; }
+.fchip { background: var(--text); color: #000; }
 .fclear { border-style: dashed; }
 .fcounts { margin-left: auto; opacity: 0.75; font-size: 13px; }
 
@@ -810,9 +810,9 @@ html.forging .vhero {
 .fs-group .lbl { display: block; font-weight: 800; margin-bottom: 6px; }
 .fs-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .fs-row .u-chip { min-height: 44px; }
-.fs-row .u-chip[aria-pressed='true'] { background: var(--accent); color: #000; }
+.fs-row .u-chip[aria-pressed='true'] { background: var(--text); color: #000; }
 .fs-row .pip { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--text); background: var(--bg); color: var(--text); font-weight: 900; cursor: pointer; }
-.fs-row .pip[aria-pressed='true'] { background: var(--accent); color: #000; outline: 3px solid var(--text); }
+.fs-row .pip[aria-pressed='true'] { background: var(--text); color: #000; outline: 3px solid var(--text); outline-offset: 2px; }
 .fs-foot { display: flex; gap: 8px; justify-content: space-between; padding: 10px 14px; border-top: 2px solid var(--text); }
 .fs-foot .primary { flex: 1; min-height: 44px; }
 @media (min-width: 700px) { .fsheet2 { left: 50%; right: auto; bottom: auto; top: 18vh; width: 460px; transform: translateX(-50%); border-bottom: 2px solid var(--text); } }
@@ -828,8 +828,8 @@ html.forging .vhero {
 .fbackdrop { z-index: 1009; }
 
 /* ── The one "nothing to show" note ── */
-.estate { display: grid; justify-items: start; gap: 8px; margin: var(--sp3, 12px) 0; padding: 16px; border: 2px dashed var(--text); background: var(--bg); }
-.estate b { font-size: 18px; letter-spacing: 0.04em; text-transform: uppercase; }
+.estate { position: relative; display: grid; justify-items: start; gap: 8px; margin: var(--sp3, 12px) 0; padding: 16px; border: 2px dashed var(--text); background: var(--bg); }
+.estate .etitle { display: block; margin-top: 4px; }
 .estate p { margin: 0; opacity: 0.85; }
 .estate .u-btn { min-height: 44px; }
 /* Deck page on phones keeps its own slim bar (search + ⋮); sort stays in ⋮ there */
@@ -839,3 +839,6 @@ html.forging .vhero {
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { position: static !important; }
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > .fbody { left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important; top: calc(100% + 4px) !important; }
 }
+.fs-row.colours .mana-filter-btn { min-width: 48px; min-height: 48px; display: inline-grid; place-items: center; }
+.fs-row.colours .cless { font-size: 20px; line-height: 1; }
+.colours button[data-c='C'][aria-pressed='true'] { border-color: #cfcfcf !important; color: #cfcfcf !important; box-shadow: 0 0 14px rgba(207, 207, 207, 0.7), inset 0 0 6px rgba(207, 207, 207, 0.3) !important; }

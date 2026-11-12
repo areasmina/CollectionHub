@@ -11,6 +11,7 @@ import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
 import { dragEnd, dragStart } from '../lib/drag';
+import { Ransom } from './zine';
 
 /** Every legal card in a binder, one per name (live). */
 export function useBinder(profile: number) {
@@ -824,8 +825,12 @@ export function OptRow({ label, children }: { label: string; children: ReactNode
 /** The one "nothing to show" note (lists, searches, filters): what happened in plain words and the way out. */
 export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="estate" role="status">
-      <b>{title}</b>
+    <div className="estate" role="status" aria-label={title}>
+      {/* the note is empty frame space, so it may carry the zine (Overhaul rule 1): a tape strip and ransom letters */}
+      <span aria-hidden="true" className="tape" style={{ width: 70, height: 18, top: -9, left: 18, transform: 'rotate(-4deg)' }} />
+      <span className="etitle" aria-hidden="true">
+        <Ransom text={title.toUpperCase()} size={22} seed={title.length * 7 + 3} />
+      </span>
       {children && <p>{children}</p>}
       {action}
     </div>
