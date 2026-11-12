@@ -829,3 +829,8 @@ html.forging .vhero {
 
 /* Deck page on phones keeps its own slim bar (search + ⋮); sort stays in ⋮ there */
 @media (max-width: 700px) { .lists > .dtools.tbar > .sortsel { display: none; } }
+/* In the wrapped (small phone) bar the ⋮ sits mid-row: its menu hangs from the whole bar, so it can never run off the side */
+@media (max-width: 430px) {
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { position: static !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > .fbody { left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important; top: calc(100% + 4px) !important; }
+}
