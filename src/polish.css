@@ -839,6 +839,35 @@ html.forging .vhero {
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { position: static !important; }
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > .fbody { left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important; top: calc(100% + 4px) !important; }
 }
+
+/* ── Compact list on phones = one line per card (ManaBox idea): art chip · ✓ name · pips · price · ⋮ ──
+   The type line, binder count and SWAP label hide; tapping the row still opens the swap note, the ⋮ still opens the menu. */
+@media (max-width: 700px) {
+  ul.zcompact > li.zrow {
+    display: grid !important;
+    grid-template-columns: 30px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 48px !important;
+    padding: 4px 8px !important;
+  }
+  ul.zcompact > li.zrow .thumb { display: block !important; width: 30px !important; height: 30px !important; border-radius: 3px !important; overflow: hidden; }
+  ul.zcompact > li.zrow .thumb img { width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: 50% 22% !important; }
+  ul.zcompact > li.zrow .info { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; }
+  ul.zcompact > li.zrow .zrow-head { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
+  ul.zcompact > li.zrow .nm { min-width: 0 !important; white-space: normal !important; overflow: hidden !important; display: -webkit-box !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; line-height: 1.1 !important; font-size: 15px !important; }
+  ul.zcompact > li.zrow .manapips .manapip { width: 14px !important; height: 14px !important; font-size: 9px !important; }
+  ul.zcompact > li.zrow .manapips { flex: none !important; }
+  ul.zcompact > li.zrow .zrow-type,
+  ul.zcompact > li.zrow .zrow-owned-badge,
+  ul.zcompact > li.zrow .zrow-missing-badge,
+  ul.zcompact > li.zrow .swap-lbl { display: none !important; }
+  ul.zcompact > li.zrow .zrow-sub:not(:has(.swapmark, .bannedtag, .tagother, .note)) { display: none !important; }
+  ul.zcompact > li.zrow .acts { display: flex !important; align-items: center !important; gap: 4px !important; }
+  ul.zcompact > li.zrow .acts .swapbtn,
+  ul.zcompact > li.zrow .acts .morebtn { width: 34px !important; min-width: 34px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; }
+  ul.zcompact > li.zrow .price.tapey { font-size: 12px !important; padding: 2px 4px !important; }
+}
 .fs-row.colours .mana-filter-btn { min-width: 48px; min-height: 48px; display: inline-grid; place-items: center; }
 .fs-row.colours .cless { font-size: 20px; line-height: 1; }
 .colours button[data-c='C'][aria-pressed='true'] { border-color: #cfcfcf !important; color: #cfcfcf !important; box-shadow: 0 0 14px rgba(207, 207, 207, 0.7), inset 0 0 6px rgba(207, 207, 207, 0.3) !important; }
