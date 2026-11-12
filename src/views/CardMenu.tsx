@@ -390,7 +390,7 @@ export function CardMenu({
             <li>
               <button onClick={act(async () => (haptic('success'), toast({ text: `${name}: one copy is foil now`, undo: await setBinderFoil(profile, name, true) })))}>
                 <span className="cmenu-main">{foilCopies + plainCopies > 1 ? 'MAKE ONE COPY FOIL' : 'MARK AS FOIL'}</span>
-                <small className="cmenu-meta">✦ foil</small>
+                <small className="cmenu-meta">to foil</small>
               </button>
             </li>
           )}

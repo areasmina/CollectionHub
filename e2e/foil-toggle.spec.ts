@@ -16,6 +16,9 @@ test('Collection card menu: MARK AS FOIL turns the card foil, MARK AS NON-FOIL t
   const art = tile.locator('.timg');
   await expect(art).not.toHaveClass(/\bfoil\b/);
   await tile.click({ button: 'right' });
+  // house rule: no emoji or dingbat symbols in the card menu
+  const menuText = await page.locator('.cardmenu').innerText();
+  expect(menuText.match(/[\u{1F300}-\u{1F9FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu) ?? []).toEqual([]);
   await page.locator('.cardmenu').getByRole('button', { name: /MARK AS FOIL/ }).click();
   await expect(art).toHaveClass(/\bfoil\b/);
   await tile.click({ button: 'right' });
