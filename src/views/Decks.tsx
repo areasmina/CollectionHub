@@ -911,6 +911,17 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               q={q}
               setQ={setQ}
               now={[GROUPINGS.find(([v]) => v === grouping)?.[1], SORTS.find(([v]) => v === sort)?.[1], only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+              extra={
+                <label className="sortsel">
+                  <select aria-label="Sort cards" value={sort} onChange={(e) => (haptic('select'), setSort(e.target.value as SortKey))}>
+                    {SORTS.map(([v, t]) => (
+                      <option key={v} value={v}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              }
               quick={
                 <>
                   <div className="qsegs" role="group" aria-label="Ownership filter">
