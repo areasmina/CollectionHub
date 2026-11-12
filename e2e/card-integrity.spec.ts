@@ -23,3 +23,17 @@ test('Commander and deck pages: the ⋯ OPTIONS tag hangs under the commander ca
   await page.locator('.dcard', { hasText: 'Tatyova Lands' }).click();
   await check();
 });
+
+test('Collection: a foil card shines on its picture and frame, never over its name, type line or rules text', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  const foil = page.locator('.timg.foil').first();
+  await expect(foil).toBeVisible();
+  const look = await foil.evaluate((e) => {
+    const a = getComputedStyle(e, '::after');
+    const b = getComputedStyle(e, '::before');
+    return { clip: a.clipPath, mask: b.maskImage || (b as unknown as Record<string, string>).webkitMaskImage };
+  });
+  expect(look.clip).toContain('inset'); // the strong shine is held to the art box
+  expect(look.mask).toContain('gradient'); // the frame sheen is masked to the outer border
+});
