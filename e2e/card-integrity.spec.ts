@@ -37,3 +37,19 @@ test('Collection: a foil card shines on its picture and frame, never over its na
   expect(look.clip).toContain('inset'); // the strong shine is held to the art box
   expect(look.mask).toContain('gradient'); // the frame sheen is masked to the outer border
 });
+
+test('Foil shine is animated (sweep + drifting rainbow) and stands still when motion is reduced', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  const foil = page.locator('.timg.foil').first();
+  await expect(foil).toBeVisible();
+  const names = () => foil.evaluate((e) => getComputedStyle(e, '::after').animationName);
+  expect(await names()).toContain('foilsweep');
+  expect(await names()).toContain('foilwash');
+  // the light really moves: the sweep position changes over time
+  const pos = () => foil.evaluate((e) => getComputedStyle(e, '::after').getPropertyValue('--sw'));
+  const first = await pos();
+  await expect.poll(pos, { timeout: 4000 }).not.toBe(first);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(names).toBe('none');
+});
