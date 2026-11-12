@@ -248,7 +248,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
 /** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
-export function CardsView({ entries, cards, profile, binderName, q = '', setQ, more, title }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; more?: ReactNode; title?: ReactNode }) {
+export function CardsView({ entries, cards, profile, binderName, q = '', setQ, more, title, strip, chips }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; more?: ReactNode; title?: ReactNode; strip?: ReactNode; chips?: ReactNode }) {
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -308,6 +308,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
         <ToolBar
           q={q}
           setQ={setQ ?? (() => {})}
+          extra={strip}
           now={[view === 'list' ? 'LIST' : '', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}
           quick={
             <>
@@ -348,6 +349,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
           {more && <div className="optmore">{more}</div>}
         </ToolBar>
       </div>
+      {chips}
 
       {group === 'on' ? (
         <div className="setgroups">
