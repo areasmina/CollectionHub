@@ -908,3 +908,46 @@ html.forging .vhero {
   font-size: 15px;
 }
 .cmdrbtn .cmdrmore b { max-width: 80px !important; font-size: 13px; }
+
+/* ── Foil (Guillermo, Nov 12: "should look like a real foil card"). Like a real foil, the shine sits in the picture and
+   on the card's frame, never on the printed text: name, mana cost, type line, rules text and the set line stay crisp
+   (sacred card rule).
+   ::after = the picture: prismatic rainbow bands + fine light streaks + the bright glare that follows your finger or
+             mouse (--gx/--gy from Thumb), clipped to the art box.
+   ::before = the frame: a softer rainbow sweep on the outer border only.
+   Small list chips show only art, so they get the picture shine over the whole chip. */
+.foil::after {
+  background:
+    radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 245, 0.9) 0%, rgba(255, 240, 200, 0.55) 8%, rgba(255, 255, 255, 0) 34%),
+    repeating-linear-gradient(115deg, transparent 0 6%, rgba(255, 255, 255, 0.35) 7.5%, transparent 9%, transparent 13%, rgba(255, 255, 255, 0.18) 14%, transparent 15.5%),
+    repeating-linear-gradient(125deg, #ff4fb8 0%, #ffcf3a 6%, #4dff9a 12%, #36c2ff 18%, #8b5cff 24%, #ff4fb8 30%) !important;
+  background-size: 100% 100%, 240% 240%, 200% 200% !important;
+  background-blend-mode: screen, screen, normal;
+  mix-blend-mode: overlay !important;
+  opacity: 0.9 !important;
+  animation: glare 20s ease-in-out infinite alternate, foilwash 14s ease-in-out infinite alternate !important;
+}
+:is(.timg, .thand).foil::after {
+  /* the art box of a modern card frame: below the name bar, above the type line */
+  clip-path: inset(10.5% 7.5% 44.5% 7.5%);
+}
+.foil::before {
+  background: repeating-linear-gradient(125deg, #ff4fb8 0%, #ffcf3a 8%, #4dff9a 16%, #36c2ff 24%, #8b5cff 32%, #ff4fb8 40%) !important;
+  background-size: 220% 220% !important;
+  mix-blend-mode: overlay !important;
+  opacity: 0.75 !important;
+  animation: holoshift 14s ease-in-out infinite alternate !important;
+}
+:is(.timg, .thand).foil::before {
+  /* only the outer border of the frame */
+  -webkit-mask: linear-gradient(90deg, #000 0 6%, transparent 6% 94%, #000 94%), linear-gradient(180deg, #000 0 4%, transparent 4% 96.5%, #000 96.5%);
+  mask: linear-gradient(90deg, #000 0 6%, transparent 6% 94%, #000 94%), linear-gradient(180deg, #000 0 4%, transparent 4% 96.5%, #000 96.5%);
+}
+.thumb.foil::before { display: none; }
+@keyframes foilwash {
+  from { background-position: 0 0, 0% 0%, 0% 0%; }
+  to { background-position: 0 0, 100% 100%, 100% 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foil::before, .foil::after { animation: none !important; }
+}
