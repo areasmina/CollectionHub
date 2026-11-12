@@ -59,8 +59,8 @@ export function roleOf(c: Pick<Card, 'type' | 'text'> & { name?: string }): Role
   });
 }
 
-const MLD = /(destroy|exile) all lands|each player sacrifices (all|\w+) lands|lands don't untap|players can't untap more than one land|nonbasic lands are mountains|each land is a/i;
-const EXTRA_TURN = /takes? an extra turn/i;
+export const MLD = /(destroy|exile) all lands|each player sacrifices (all|\w+) lands|lands don't untap|players can't untap more than one land|nonbasic lands are mountains|each land is a/i;
+export const EXTRA_TURN = /takes? an extra turn/i;
 
 /** Typical ranges for a 100-card Commander deck (EDHREC / Command Zone template). */
 export const TARGETS: Record<'lands' | Role, [number, number]> = { lands: [35, 38], ramp: [9, 12], draw: [9, 12], removal: [7, 10], wipes: [2, 4], tutors: [0, 99] };

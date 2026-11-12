@@ -1,11 +1,12 @@
 import { edhSignal, type SubCard } from '../lib/subs';
-import { roleOf, deckStats, isLand, LANDS_BY_BRACKET, TARGETS, type Role } from '../lib/deckstats';
+import { roleOf, deckStats, isLand, EXTRA_TURN, LANDS_BY_BRACKET, MLD, TARGETS, type Role } from '../lib/deckstats';
 import { norm } from '../lib/names';
 import type { Card, DeckCard } from '../lib/db';
 import { brainData } from './data';
 import { AGGRESSION, comboAllowed, finisherPlans, killCheck, type Aggression } from './win';
 import { tasteFor, type TasteEvent } from './taste';
 import { themeRoleOf, type Theme } from './themes';
+import { deckSynergy, synergyParts } from './synergy';
 
 /**
  * scoreCard / suggestCards: one needs-aware score for "what should go in this slot", shared by every view.
@@ -62,7 +63,9 @@ export function deckNeeds(ctx: DeckContext) {
       else if (tr === 'payoff') themeBalance.payoffs += c.qty;
     }
   }
-  return { stats, dial, kill, range, themeBalance, names: new Set(ctx.deck.map((c) => norm(c.name))) };
+  const synergy = deckSynergy(ctx.deck, ctx.cardOf, ctx.commander);
+  const extraTurns = ctx.deck.filter((c) => EXTRA_TURN.test(ctx.cardOf(c.name)?.text ?? '')).length;
+  return { stats, dial, kill, range, themeBalance, synergy, extraTurns, names: new Set(ctx.deck.map((c) => norm(c.name))) };
 }
 export type Needs = ReturnType<typeof deckNeeds>;
 
@@ -101,6 +104,12 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
     parts.push({ label: `a way to win (deck has ${needs.kill.count}, ${needs.dial.label} wants ${needs.dial.finishers[0]}+)`, value: WIN_NEED, source: 'card text' });
 
   let blocked: string | undefined;
+  // Bracket rules that aren't combos (Wizards' brackets): below IV, no mass land denial and no chained extra turns
+  // (the bracket estimate reads three extra-turn cards as chaining, lib/deckstats.ts bracketOf).
+  if (card && ctx.bracket < 4) {
+    if (!isLand(card.type) && MLD.test(card.text)) blocked = `mass land denial, which bracket ${ctx.bracket} doesn't allow`;
+    else if (EXTRA_TURN.test(card.text) && needs.extraTurns >= 2) blocked = `a third extra-turn card: chaining turns is bracket IV`;
+  }
   for (const k of brainData().combos?.get(norm(c.name)) ?? []) {
     const other = k.cards.find((n) => norm(n) !== norm(c.name))!;
     if (!needs.names.has(norm(other))) continue;
@@ -125,6 +134,10 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
       parts.push({ label: `payoff for ${lbl} (deck has ${enablers} enablers, ${payoffs} payoffs)`, value: BALANCE, source: 'deck needs' });
     }
   }
+
+  // What the card does with the commander and the deck's own engines (brain/synergy.ts): works with no EDHREC numbers.
+  if (card && !(type && isLand(type)))
+    for (const sp of synergyParts(card, needs.synergy, ctx.commander?.split(',')[0] ?? 'your commander')) parts.push({ label: sp.label, value: sp.value, source: 'card text' });
 
   const t = ctx.taste ? tasteFor(ctx.taste, norm(c.name), c.name) : null;
   if (t) parts.push({ label: t.why, value: t.delta, source: 'your taste' });
