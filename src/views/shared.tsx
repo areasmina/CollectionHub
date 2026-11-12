@@ -437,9 +437,14 @@ export function useStored<T extends string>(key: string, fallback: T, allowed: r
   ];
 }
 
-export const Progress = ({ done, total, what = 'Looking up cards on Scryfall' }: { done: number; total: number; what?: string }) => (
-  <div className="progress">
-    <progress value={done} max={total || 1} /> <span>{total ? `${what}: ${done} / ${total}` : 'Reading…'}</span>
+/** `wait` (ms): Scryfall asked us to slow down; the work goes on by itself after the pause. */
+export const Progress = ({ done, total, what = 'Looking up cards on Scryfall', wait }: { done: number; total: number; what?: string; wait?: number }) => (
+  <div className="progress" role="status">
+    <progress value={done} max={total || 1} />{' '}
+    <span>
+      {total ? `${what}: ${done.toLocaleString()} / ${total.toLocaleString()}` : 'Reading…'}
+      {!!wait && <em className="pwait"> Scryfall asked for a short break (about {Math.ceil(wait / 1000)}s). It continues by itself: nothing is lost.</em>}
+    </span>
   </div>
 );
 

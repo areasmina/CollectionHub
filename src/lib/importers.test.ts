@@ -82,3 +82,21 @@ describe('text import quirks (veteran playtest A8)', () => {
     expect(p.rows.map((r) => r.name)).toEqual(['Kinnan, Bonder Prodigy', 'Basalt Monolith']);
   });
 });
+
+describe('a whole collection in one file', () => {
+  it('reads and merges 100,000 ManaBox rows quickly and without losing any', () => {
+    const head = 'Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price,Misprint,Altered,Condition,Language,Purchase price currency';
+    const id = (i: number) => `${i.toString(16).padStart(8, '0')}-aaaa-4bbb-8ccc-${String(i).padStart(12, '0')}`;
+    const csv = [head, ...Array.from({ length: 100_000 }, (_, i) => `"Card, Number ${i}",tst,Test Set,${i + 1},${i % 7 ? 'normal' : 'foil'},common,${(i % 3) + 1},${i},${id(i)},0.25,false,false,near_mint,en,CAD`)].join('\n');
+    const t = performance.now();
+    const p = parseImport(csv);
+    const rows = mergeRows(p.rows);
+    const ms = performance.now() - t;
+    expect(p.format).toBe('manabox');
+    expect(p.errors).toEqual([]);
+    expect(rows).toHaveLength(100_000);
+    expect(rows.reduce((n, r) => n + r.qty, 0)).toBe(199_999);
+    expect(rows[99_999]).toMatchObject({ name: 'Card, Number 99999', id: id(99_999), set: 'tst', cn: '100000' });
+    expect(ms).toBeLessThan(5000); // a slow CI machine still does this in well under a second or two
+  });
+});

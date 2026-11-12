@@ -39,9 +39,10 @@ test('Import: when Scryfall stops answering, it says so, saves the rest and keep
   const box = await openImport(page);
   await box.locator('textarea').fill('1 Sol Ring\n1 Brand New Card');
   await box.getByRole('button', { name: '+ ADD' }).click();
-  // three waits (5 + 10 + 20 s), run on the fake clock in steps so each failed request gets to land first
+  // the import now waits out an outage for about two minutes before it gives up: run those waits on the fake clock in
+  // steps so each failed request gets to land first
   await expect
-    .poll(async () => (await page.clock.runFor(6_000), await box.locator('.report').count()), { timeout: 20_000 })
+    .poll(async () => (await page.clock.runFor(15_000), await box.locator('.report').count()), { timeout: 40_000 })
     .toBe(1);
   await expect(box.locator('.report')).toContainText('not looked up yet');
   await expect(box.locator('textarea')).toHaveValue('1 Brand New Card');

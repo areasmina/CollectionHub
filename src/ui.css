@@ -2907,6 +2907,21 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .coll .ihelp b {
   color: var(--u-text);
 }
+/* A whole-collection file waits here instead of filling the text box */
+.coll .ibig {
+  margin: 0;
+  padding: var(--s3);
+  width: 100%;
+  border: 1px dashed var(--u-muted);
+  font: 400 13px/1.5 var(--u-mono);
+  color: var(--u-text);
+  overflow-wrap: anywhere;
+}
+.progress .pwait {
+  display: block;
+  font-style: normal;
+  color: var(--u-muted);
+}
 .coll .importrow .file {
   position: relative;
   gap: var(--s2);

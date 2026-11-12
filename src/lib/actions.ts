@@ -13,7 +13,7 @@ export interface ImportResult {
 
 const entryKey = (e: { cardId: string; set?: string; cn?: string; foil?: boolean; list?: string }) => [e.cardId, e.set ?? '', e.cn ?? '', e.foil ? 'f' : '', e.list ?? ''].join('|'); const _oldEntryKey = (e: any) => [e.cardId, e.set ?? '', e.cn ?? '', e.foil ? 'f' : ''].join('|');
 
-export async function importCollection(profile: number, text: string, replace: boolean, onProgress: (done: number, total: number) => void): Promise<ImportResult> {
+export async function importCollection(profile: number, text: string, replace: boolean, onProgress: (done: number, total: number, waitMs?: number) => void): Promise<ImportResult> {
   const parsed = parseImport(text);
   const rows = mergeRows(parsed.rows);
   const { matched, unmatched, failed, down } = await resolveRows(rows, onProgress);
@@ -40,7 +40,7 @@ export const NOT_IN_DECK = /^(side|sideboard|maybe|maybeboard|considering|tokens
 
 /** Deck from a text/CSV list; names are kept as written, Scryfall fixes spelling where it can. Sideboard, maybeboard
  *  and token sections are left out. */
-export async function importDeck(profile: number, name: string, text: string, onProgress: (done: number, total: number) => void) {
+export async function importDeck(profile: number, name: string, text: string, onProgress: (done: number, total: number, waitMs?: number) => void) {
   const parsed = parseImport(text);
   parsed.rows = parsed.rows.filter((r) => !NOT_IN_DECK.test(r.section ?? ''));
   const { matched, unmatched } = await resolveRows(mergeRows(parsed.rows), onProgress);
