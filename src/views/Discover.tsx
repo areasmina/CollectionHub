@@ -279,6 +279,17 @@ export function Discover(s: Shared) {
           searchLabel="Search commander"
           label="Commanders: search and options"
           now={empty ? '' : [colours.join(' '), sortName].filter(Boolean).join(' · ')}
+          extra={
+            <label className="sortsel">
+              <select aria-label="Sort commanders" value={sort} onChange={(e) => (haptic('select'), setSort(e.target.value))}>
+                {SORTS.map(([v, t]) => (
+                  <option key={v} value={v}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+          }
           quick={
             <button
               type="button"
@@ -324,6 +335,22 @@ export function Discover(s: Shared) {
           </OptRow>
         </ToolBar>
       </form>
+      {/* What narrows the list is never hidden: one removable chip per colour, and an easy reset */}
+      {colours.length > 0 && (
+        <div className="fchips" role="group" aria-label="Active filters">
+          {colours.map((l) => (
+            <button key={l} type="button" className="fchip" aria-label={`Remove filter ${COLOURS.find(([x]) => x === l)?.[1] ?? l}`} onClick={() => (haptic('select'), toggle(l))}>
+              {COLOURS.find(([x]) => x === l)?.[1] ?? l} <span aria-hidden="true">✕</span>
+            </button>
+          ))}
+          <button type="button" className="fclear" onClick={() => (haptic('select'), setColours([]))}>
+            Clear all
+          </button>
+          <span className="fcounts" role="status">
+            {shown.length} of {commanders.length} commanders shown
+          </span>
+        </div>
+      )}
 
       {pending > 0 && commanders.length > 0 && <Progress done={commanders.length - pending} total={commanders.length} what="Checking EDHREC average decks" />}
       {sort === 'added' && data?.undated && (

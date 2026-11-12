@@ -818,9 +818,9 @@ html.forging .vhero {
 @media (min-width: 700px) { .fsheet2 { left: 50%; right: auto; bottom: auto; top: 18vh; width: 460px; transform: translateX(-50%); border-bottom: 2px solid var(--text); } }
 /* Small phones: search gets its own full row (it was squeezed to two letters at 320px); view, options, filter and sort share the row under it */
 @media (max-width: 430px) {
-  .dtools.tbar:has(> .fbtn) { flex-wrap: wrap; }
-  .dtools.tbar:has(> .fbtn) > .tsearch { order: -1; flex: 1 1 100%; border-bottom: 2px solid var(--text) !important; }
-  .dtools.tbar:has(> .fbtn) > .tquick { flex: 0 0 auto; border-left: 0; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) { flex-wrap: wrap; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100%; border-bottom: 2px solid var(--text) !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tquick { flex: 0 0 auto; border-left: 0; }
   .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { border-left: 2px solid var(--text); }
   .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
   .sortsel select { width: 100%; min-width: 0; }
@@ -832,3 +832,10 @@ html.forging .vhero {
 .estate b { font-size: 18px; letter-spacing: 0.04em; text-transform: uppercase; }
 .estate p { margin: 0; opacity: 0.85; }
 .estate .u-btn { min-height: 44px; }
+/* Deck page on phones keeps its own slim bar (search + ⋮); sort stays in ⋮ there */
+@media (max-width: 700px) { .lists > .dtools.tbar > .sortsel { display: none; } }
+/* In the wrapped (small phone) bar the ⋮ sits mid-row: its menu hangs from the whole bar, so it can never run off the side */
+@media (max-width: 430px) {
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { position: static !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > .fbody { left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important; top: calc(100% + 4px) !important; }
+}
