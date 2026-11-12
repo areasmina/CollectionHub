@@ -33,7 +33,7 @@ import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
-import { shortfalls } from '../lib/copies';
+import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
 import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
@@ -554,6 +554,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   // Owned copies are shared out oldest deck first, so the share matches the list (a shared card counts for one deck only).
   const siblings = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [deck];
   const sum = { ...summarize(deck.cards.map((c) => c.name), s.mine, s.other), ...deckShareOf(siblings, deck.id, s.mine) };
+  const takenOthers = takenBy(siblings.filter((d) => d.id !== deck.id), s.mine);
   const ownDetails = calculateDeckOwnership(deck.cards, s.mine, addCounts(s.mine, s.other));
   useEffect(() => {
     setBack(onBack);
@@ -994,7 +995,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                               name={c.name}
                               missing={slotInfo(c.name)}
                               big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
-                              options={rankSubs(slotInfo(c.name), candidates, 3, { deck: deck.cards, cardOf: anyCard, commander: deck.commander, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0] }).map(optionOf)}
+                              options={rankSubs(slotInfo(c.name), candidates, 3, { deck: deck.cards, cardOf: anyCard, commander: deck.commander, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0], taken: takenOthers }).map(optionOf)}
                               pool={forgePool()}
                               loading={!!deck.commander && !recs}
                               pin={pinOf(pins, c.name)}
@@ -1029,6 +1030,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               candidates={forgeCands}
               cardOf={anyCard}
               ownedOf={(n) => s.mine.get(norm(n)) ?? 0}
+              taken={takenOthers}
               imgOf={sugImg}
               themes={recs?.tags ?? []}
               cf={cf}
