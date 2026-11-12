@@ -19,8 +19,8 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(page.locator('.dsum, details.dash')).toHaveCount(0);
 
     // Squared stat cards are visible
-    await expect(page.locator('.stats .stat')).toHaveCount(3);
-    await expect(page.locator('.stats .slip')).toBeVisible();
+    await expect(page.locator('.ribbon .rfacts li').first()).toBeVisible();
+    await expect(page.locator('.ribbon .slip-btn.import')).toBeVisible();
 
     // Inline details.importbox accordion is removed
     await expect(page.locator('details.importbox')).toHaveCount(0);

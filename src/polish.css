@@ -788,7 +788,7 @@ html.forging .vhero {
 }
 .dtools.tbar > .fbtn.on { background: var(--accent); color: #000; }
 .fbtn .fcount { background: #000; color: #fff; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 12px; text-align: center; }
-.sortsel select { background: transparent; color: inherit; border: 0; font: inherit; font-weight: 800; width: 64px; text-overflow: ellipsis; cursor: pointer; }
+.sortsel select { background: transparent; color: inherit; border: 0; font: inherit; font-weight: 800; width: 132px; text-overflow: ellipsis; cursor: pointer; }
 .sortsel select option { color: #000; }
 @media (max-width: 520px) { .fbtn .flabel { display: none; } .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { padding: 0 8px; } .sortsel select { width: 54px; } }
 @media (max-width: 360px) { .sortsel select { width: 44px; } }
@@ -826,3 +826,14 @@ html.forging .vhero {
   .sortsel select { width: 100%; min-width: 0; }
 }
 .fbackdrop { z-index: 1009; }
+
+/* ── The ribbon (Collection): facts once, actions at the end ── */
+.coll .ribbon { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 0 0 var(--sp3, 12px); padding: 10px 12px; border: 2px solid var(--text); background: var(--bg); box-shadow: 4px 4px 0 var(--accent); }
+.ribbon .rfacts { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; margin: 0; padding: 0; flex: 1 1 220px; min-width: 0; }
+.ribbon .rfacts li { display: inline-flex; align-items: baseline; gap: 5px; }
+.ribbon .rfacts b { font-size: 22px; line-height: 1; }
+.ribbon .rfacts span { opacity: 0.8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+.ribbon .racts { display: flex; gap: 8px; margin-left: auto; }
+.ribbon .slip-btn { min-height: 44px; padding: 0 14px; border: 2px solid var(--text); background: var(--bg); color: var(--text); font: inherit; font-weight: 900; letter-spacing: 0.05em; cursor: pointer; }
+.ribbon .slip-btn.import { background: var(--accent); color: #000; }
+@media (max-width: 430px) { .ribbon .racts { width: 100%; } .ribbon .slip-btn { flex: 1; } }

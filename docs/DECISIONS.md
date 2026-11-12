@@ -6,6 +6,7 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 | Date | Decision | Status | Notes |
 |---|---|---|---|
+| 2026-11-12 | Collection header: the tilted stat tiles and the appraisal slip fold into ONE ribbon (cards · unique · commanders · ≈CA$ · decks, with + DECK and IMPORT at its end). This replaces the Nov 11 "keep tilted tiles" choice for the Collection page only; the Top 3 card and the Decks overview stay as they are | decided | decision card, Guillermo, Nov 12 06:22 |
 | 2026-11-11 | The comprehensive overhaul runs in five phases (audit, brains, design system, symbiote island, performance + sync + security hardening), each on a preview and merged only on Guillermo's OK; the small security fixes (headers, sync rate limits) go first. Brain stays rule-based. A new host the app talks to must be added to the Content-Security-Policy in `vercel.json` | decided | Guillermo, Nov 11 18:34; audit: claude.ai/artifact/Ht3ZfF72icsmvzkn8awwiL |
 | 2026-11-11 | Forge on phones: deck area is a horizontal swipe cube — CARDS / ANALYSIS / TO BUY — driven by a sticky tablist (`.fcube`); no visual difference on tablet/desktop where both panels stay side by side | decided | claude/spacing-composition-nov11 |
 | 2026-11-11 | Decks overview uses Collection-style zine stat tiles (same card shape, tilts, shadow) with a HIDE / SHOW STATS toggle; My decks no longer uses a flat ribbon for the stats area | decided | claude/spacing-composition-nov11 |

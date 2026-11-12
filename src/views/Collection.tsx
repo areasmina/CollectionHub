@@ -22,7 +22,7 @@ import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
 import { priced, priceSum, Progress, Thumb } from './shared';
-import { Doodles, PageDecor, Title } from './zine';
+import { PageDecor, Title } from './zine';
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 
 type Panel = { key: string; title: string; sub: string; rows: { e: Entry; card: Card; label: string; tone?: 'up' | 'down'; why?: string }[]; empty?: string };
@@ -316,77 +316,44 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />} />
       </section>
 
-      {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
-      <section className="stats">
-        <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
-          <span className="worn" aria-hidden="true" />
-          <span className="spray" aria-hidden="true" />
-          <b>{total.toLocaleString()}</b>
-          <span>cards</span>
-          <Doodles n={377} count={1} spots={[[70, -24]]} />
+      {/* THE RIBBON (owner's call, Nov 12): the binder's facts once, in one strip, with the two actions at its end.
+          Replaces the three tilted tiles and the appraisal slip. */}
+      <section className="ribbon" aria-label="Binder summary">
+        <ul className="rfacts">
+          {facts.map(([n, label, tip]) => (
+            <li key={n + label} title={tip}>
+              <b>{n}</b>
+              {label && <span>{label}</span>}
+              {tip && <span className="rest">est.</span>}
+            </li>
+          ))}
+        </ul>
+        <div className="racts">
+          <button
+            type="button"
+            className="slip-btn deck"
+            onClick={() => {
+              haptic('open');
+              openDeckList();
+            }}
+            title="View and build decks in this binder"
+          >
+            + DECK
+          </button>
+          <button
+            type="button"
+            className="slip-btn import"
+            onClick={() => {
+              haptic('open');
+              setImportOpen(true);
+            }}
+            title="Import cards into this binder"
+          >
+            IMPORT
+          </button>
         </div>
-        <div className="stat" style={{ transform: 'rotate(0.6deg)' }}>
-          <span className="worn" aria-hidden="true" />
-          <span className="spray" aria-hidden="true" />
-          <b>{unique.toLocaleString()}</b>
-          <span>unique cards</span>
-        </div>
-        <div className="stat red gbox" style={{ transform: 'rotate(-1.2deg)' }}>
-          <span className="worn" aria-hidden="true" />
-          <span className="spray" aria-hidden="true" />
-          <b>{commanders.toLocaleString()}</b>
-          <span>commanders</span>
-          <svg className="crown" viewBox="0 0 64 44" aria-hidden="true">
-            <path d="M6 36 L4 10 L18 24 L30 4 L40 22 L58 8 L56 36 Z" />
-            <path d="M5 40 C20 37 42 42 58 38" />
-            <circle cx="30" cy="4" r="2.6" />
-            <circle cx="4" cy="10" r="2.2" />
-            <circle cx="58" cy="8" r="2.2" />
-          </svg>
-        </div>
-        <div className="slip" style={{ transform: 'rotate(-0.5deg)' }}>
-          <span className="warn">warning</span>
-          <div className="slip-top">
-            <div className="slip-val">
-              <span className="se">worth about</span>
-              <b>{value > 0 ? cad(value) : 'CA$—'}</b>
-              <span className="se small" title={PRICE_METHOD}>
-                est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
-              </span>
-            </div>
-            <div className="slip-acts">
-              <button
-                type="button"
-                className="slip-btn deck"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  haptic('open');
-                  openDeckList();
-                }}
-                title="View and build decks in this binder"
-              >
-                + DECK
-              </button>
-              <button
-                type="button"
-                className="slip-btn import"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  haptic('open');
-                  setImportOpen(true);
-                }}
-                title="Import cards into this binder"
-              >
-                IMPORT
-              </button>
-            </div>
-          </div>
-          {value > 0 && <span className="stamp">APPRAISED</span>}
-        </div>
-        <TopWidget entries={entries} cards={cards} />
       </section>
+      <TopWidget entries={entries} cards={cards} />
 
       {/* Pop-up modal for import cards */}
       {importOpen && (

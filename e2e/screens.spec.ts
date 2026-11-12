@@ -127,10 +127,10 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   await go(page, 'collection');
   // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics (always shown since Nov 8)
   await expect(page.locator('.importbox-pop')).toHaveCount(0); // the import pop-up stays shut on a binder with cards
-  await expect(page.locator('.stats')).toBeVisible();
-  await expect(page.locator('.stats .stat')).toHaveCount(3);
-  await expect(page.locator('.stats .slip')).toBeVisible();
-  await expect(page.locator('.stats .stat b').first()).toHaveText('20');
+  await expect(page.locator('.ribbon')).toBeVisible();
+  await expect(page.locator('.ribbon .rfacts li').nth(2)).toBeVisible();
+  await expect(page.locator('.ribbon .slip-btn.import')).toBeVisible();
+  await expect(page.locator('.ribbon .rfacts b').first()).toHaveText('20');
   // IMPORT (on the appraisal slip) opens the import pop-up
   await openImport(page);
   await expect(page.locator('.importbox textarea')).toBeVisible();
