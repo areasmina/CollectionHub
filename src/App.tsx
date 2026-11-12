@@ -17,6 +17,8 @@ import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
 import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
 import { savedProfile } from './lib/ownership';
+import { startKeepOnScreen } from './lib/onscreen';
+startKeepOnScreen(); // pop-ups under buttons never run off the screen
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
 const Collection = lazy(() => import('./views/Collection').then((m) => ({ default: m.Collection })));
