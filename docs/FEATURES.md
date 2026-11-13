@@ -119,4 +119,5 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | One sheet: on phones the ⋮ options, card menu and deck menu open as the same bottom sheet as Collection's filter (title, 44px ✕, thumb-sized controls, page dimmed, island steps away); wider screens keep the popover | Live | #58 | `e2e/one-sheet.spec.ts` |
 | Active settings as chips: what narrows a commander page or deck page shows under the bar as removable chips with Clear all | Live | #59 | `e2e/active-chips.spec.ts` |
 | 44px tap targets on phones: every button, tab, select and section header on the main screens is at least 44px to tap (jump rail widened by an invisible strip; small theme badges on My Decks tiles are the known gap) | Live | #61 | `e2e/tap-targets.spec.ts` |
+| Collection HIDE STATS: the stat tiles, appraisal and Top 3 fold away behind one button (shown by default, remembered per device) so cards reach the first phone screen; + DECK and IMPORT stay | Live | #60 | `e2e/collection-stats-fold.spec.ts` |
 | Card scanning | Parked | – | likely needs a paid service |

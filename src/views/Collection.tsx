@@ -21,7 +21,7 @@ import { norm } from '../lib/names';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
-import { EmptyState, priced, priceSum, Progress, Thumb } from './shared';
+import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 
@@ -161,6 +161,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   const entries = list ?? [];
   // Import modal pop-up: opens by itself for an empty binder (and stays open while an import runs).
   const [importOpen, setImportOpen] = useState<boolean>(false);
+  // HIDE STATS (audit roadmap, phase 3): the tiles stay as they are and open by default; folding them puts cards on the
+  // first phone screen. Same control as My Decks, remembered on this device.
+  const [cstats, setCstats] = useStored<'show' | 'hide'>('ch:collstats', 'show', ['show', 'hide']);
   useEffect(() => {
     if (list !== undefined && list.length === 0) setImportOpen(true);
   }, [list?.length]);
@@ -319,7 +322,16 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
       </section>
 
       {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
-      <section className="stats">
+      <button
+        type="button"
+        className="statfold"
+        aria-expanded={cstats !== 'hide'}
+        onClick={() => (haptic('select'), setCstats(cstats === 'hide' ? 'show' : 'hide'))}
+        title={cstats === 'hide' ? 'Show the collection stats' : 'Hide the collection stats'}
+      >
+        {cstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
+      </button>
+      <section className={`stats${cstats === 'hide' ? ' folded' : ''}`}>
         <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
           <span className="worn" aria-hidden="true" />
           <span className="spray" aria-hidden="true" />

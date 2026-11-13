@@ -60,3 +60,6 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - While a sheet is open the page behind it can't be tapped; ✕, Escape, a tap on the dimmed page or ⋮ again closes it. The island steps off screen while a sheet is open.
 - Theme chips keep their one sideways-scrolling row, also inside the sheet.
 - A setting that narrows a page is never hidden behind ⋮: it shows under the bar as a removable chip (`SetChips`), with Clear all when there is more than one.
+
+## 2026-11-13: Collection keeps its tiles, with HIDE STATS (audit roadmap, phase 3)
+- Guillermo's pick: Collection's stat tiles stay as they are and show by default; a HIDE STATS button (the same control as My Decks) folds the tiles, the appraisal and Top 3 so cards reach the first phone screen. The choice is remembered per device. No ribbon.
