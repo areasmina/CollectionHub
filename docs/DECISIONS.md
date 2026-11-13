@@ -66,3 +66,8 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 ## 2026-11-13: Collection keeps its tiles, with HIDE STATS (audit roadmap, phase 3)
 - Guillermo's pick: Collection's stat tiles stay as they are and show by default; a HIDE STATS button (the same control as My Decks) folds the tiles, the appraisal and Top 3 so cards reach the first phone screen. The choice is remembered per device. No ribbon.
+
+## 2026-11-13: Dynamic Island stays floating, side docks are a thin bar (audit roadmap, phase 4)
+- Guillermo's picks: the island keeps floating (no solid strip); it slides away going down and comes back going up. At the very top of a page a bottom-docked island covers the last row of the first screen until the first small scroll ("Keep it, covers until you scroll").
+- On the left or right edge the island is a thin 46px bar, the same slim shape as the top and bottom island, with the section names running down it; the page keeps a 46px lane free on that side.
+- Motion: one soft spring in and out (no bounce), a light edge shadow so it reads as part of the page, and see-through with a blur while the page is moving under it; solid again at rest.

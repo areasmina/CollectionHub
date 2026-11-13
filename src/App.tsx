@@ -250,7 +250,13 @@ export default function App() {
   const [navAway, setNavAway] = useState(false);
   useEffect(() => {
     let last = window.scrollY;
+    // While the page moves, the island turns see-through (html.scrolling) so the cards it passes over stay visible.
+    const root = document.documentElement;
+    let still = 0;
     const onScroll = () => {
+      root.classList.add('scrolling');
+      clearTimeout(still);
+      still = window.setTimeout(() => root.classList.remove('scrolling'), 450);
       const y = window.scrollY;
       if (islandRests(dock, y, window.innerHeight, document.documentElement.scrollHeight)) setNavAway(false);
       else if (y > last + 6) setNavAway(true);
@@ -258,7 +264,7 @@ export default function App() {
       if (Math.abs(y - last) > 6) last = y;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => (window.removeEventListener('scroll', onScroll), clearTimeout(still), root.classList.remove('scrolling'));
   }, [dock]);
   const [backFn, setBackFn] = useState<(() => void) | null>(null);
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
@@ -302,6 +308,19 @@ export default function App() {
   useEffect(() => onOpenCollection(() => (setTab('collection'), window.scrollTo(0, 0))), []);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
+  // The clear lane (phase 4 step 2): a side-docked island keeps a strip of the page free, as wide as the island itself.
+  const navRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const put = () => root.style.setProperty('--island-w', `${nav.offsetWidth}px`);
+    put();
+    const ro = new ResizeObserver(put);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, []);
+
   const shared = { profile, mine, other: theirs, otherName: nameOf(other), binderName: nameOf(profile) };
 
   return (
@@ -314,6 +333,7 @@ export default function App() {
         <div className="island-scrim" onClick={() => setIslandOpen(false)} aria-hidden="true" />
       )}
       <nav
+        ref={navRef}
         className={`pillnav notch dock-${dock}${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
