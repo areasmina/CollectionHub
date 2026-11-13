@@ -236,7 +236,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   }
 
   const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))])).filter(Boolean).map((c) => [c!.id, c!])), [entries]) ?? new Map<string, Card>();
-  const total = entries.reduce((n, e) => n + e.qty, 0);
+  // One unit for every count on this page: copies (the tiles, the list tabs and the "shown" line all agree).
+  const copies = (rows: { qty: number }[]) => rows.reduce((n, e) => n + e.qty, 0);
+  const total = copies(entries);
   const value = priceSum(entries.map((e) => ({ card: priced(cards.get(e.cardId), e.foil), qty: e.qty })));
   // Prices older than a week are fetched again (only those).
   // Collection prices refresh daily (Scryfall updates once a day), then today's prices are saved for the movers.
@@ -313,7 +315,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
       <section className="chead2">
         {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
             control (switch, add, rename, reset, delete, plus sync and haptics). */}
-        <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={entries.length} binders={binders} onPick={onPick} sync={sync} />} />
+        <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={total} binders={binders} onPick={onPick} sync={sync} />} />
       </section>
 
       {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
@@ -486,7 +488,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             className={`list-tab${activeList === 'all' ? ' active' : ''}`}
             onClick={() => (buzz('select'), setActiveList('all'))}
           >
-            ALL <span className="tab-count">{entries.length}</span>
+            ALL <span className="tab-count">{copies(entries).toLocaleString()}</span>
           </button>
           <button
             type="button"
@@ -495,10 +497,10 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
             className={`list-tab${activeList === 'unlisted' ? ' active' : ''}`}
             onClick={() => (buzz('select'), setActiveList('unlisted'))}
           >
-            UNLISTED <span className="tab-count">{entries.filter((e) => !e.list).length}</span>
+            UNLISTED <span className="tab-count">{copies(entries.filter((e) => !e.list)).toLocaleString()}</span>
           </button>
           {customLists.map((l) => {
-            const count = entries.filter((e) => e.list === l).length;
+            const count = copies(entries.filter((e) => e.list === l)).toLocaleString();
             return (
               <span key={l} className="list-tab-wrap">
                 <button

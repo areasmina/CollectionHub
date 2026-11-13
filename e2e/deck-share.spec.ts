@@ -26,7 +26,7 @@ test('Decks list: a shared copy counts for the older deck only', async ({ page }
 
   const older = page.locator('.dtile', { hasText: 'Older deck' });
   const newer = page.locator('.dtile', { hasText: 'Newer deck' });
-  await expect(older.locator('.cstate')).toHaveText('READY');
+  await expect(older.locator('.cstate')).toHaveText('ALL OWNED');
   await expect(newer.locator('.cstate')).toHaveText('1 MISSING');
   await expect(newer.locator('.cmatch b')).toHaveText('0%');
 });

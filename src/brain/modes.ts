@@ -44,10 +44,9 @@ export function coverage(slots: SlotNow[], owns: (name: string) => boolean) {
   return c;
 }
 
+/** The strip adds only what the hero does not already say ("you own N of 100"): the stand-ins your swaps put in. */
 export function coverageText(c: ReturnType<typeof coverage>) {
-  const parts = [`${c.binder} from your binder`];
-  if (c.standins) parts.push(`${c.standins} stand-in${c.standins === 1 ? '' : 's'}`);
-  return parts.join(' · ');
+  return c.standins ? `${c.standins} stand-in${c.standins === 1 ? '' : 's'} from your binder` : '';
 }
 
 /**
