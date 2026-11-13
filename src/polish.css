@@ -1010,3 +1010,30 @@ html.forging .vhero {
   /* nothing floats over an open sheet: the island steps away until it closes */
   html.sheet-open .pillnav, html:has(.cardmenu) .pillnav, html:has(.fsheet2) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
 }
+
+/* ── 44px TAP TARGETS on phones (audit roadmap, phase 3) ── every button, tab, select and section header gets a full
+   thumb-sized tap area. Heights grow to 44px; nothing else about the look changes. Mouse screens keep compact controls. */
+@media (max-width: 699px) {
+  /* bars and headers */
+  .dtools.tbar > .tbmore > summary { min-width: 44px !important; min-height: 44px !important; }
+  .dtools.tbar > .fbtn { min-width: 44px !important; min-height: 44px !important; }
+  .u-btn, .coll .slip-btn, .coll .list-tab, .dlist .dribbon .dfold, .dlight, .tagpill,
+  .dlist .u-chip, .fsugg .u-chip.theme, .fcube > button, .dstrip .u-btn { min-height: 44px !important; }
+  .coll .list-tab, .tagpill, .dlight, .fsugg .u-chip.theme { display: inline-flex !important; align-items: center !important; }
+  details.cat > summary { min-height: 44px !important; }
+  /* header notes (salt, bracket): the tap area grows to 44px with padding that a negative margin takes back, so the header keeps its height */
+  .vmeta details.scrap > summary { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -12px !important; }
+  .vmeta details.scrap.bracket > summary { margin-block: -5px !important; }
+  .dlist select { min-height: 44px !important; }
+  /* card rows and tiles: swap and ⋮ */
+  .acts .swapbtn, .acts .morebtn, .morebtn,
+  ul.zcompact > li.zrow .acts .swapbtn, ul.zcompact > li.zrow .acts .morebtn { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; }
+  /* text-style buttons: the words stay small, the tap area is a full row high */
+  .decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  /* the suggestions drawer's grab bar: the bar looks the same, the strip you can grab is 44px */
+  .fsugg .fgrab { min-height: 44px !important; }
+  .tagpill { min-width: 44px !important; justify-content: center !important; }
+  /* the jump rail stays a slim 30px strip on the edge; each letter's tap area reaches 14px further in, so it is 44px wide */
+  .jrail > button { position: relative !important; }
+  .jrail > button::before { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 44px; }
+}
