@@ -53,3 +53,27 @@ test('Foil shine is animated (sweep + drifting rainbow) and stands still when mo
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(names).toBe('none');
 });
+
+test('Card pictures are never tilted: the Hidden Gem thumbnail and the collection grid sit square', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  await expect(page.locator('.ztile .timg, .ctile .timg').first()).toBeVisible();
+  const tilted = await page.evaluate(() => {
+    const bad: string[] = [];
+    // a stand-in Hidden Gem card, styled by the real stylesheet
+    const host = document.createElement('div');
+    host.className = 'dpage';
+    host.innerHTML = '<div class="wildcard"><img class="wthumb" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div>';
+    document.body.appendChild(host);
+    const all = [...document.querySelectorAll('.timg, .thumb, .wthumb')];
+    for (const el of all) {
+      for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
+        const t = getComputedStyle(n).transform;
+        if (t !== 'none' && !/^matrix\(1, 0, 0, 1,/.test(t)) bad.push(`${el.className} <- ${(n as HTMLElement).className}: ${t}`);
+      }
+    }
+    host.remove();
+    return bad;
+  });
+  expect(tilted).toEqual([]);
+});

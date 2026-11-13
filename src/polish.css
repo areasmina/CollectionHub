@@ -653,7 +653,8 @@ html.forging .vhero {
   border-radius: 4px !important;
   border: 2px solid #fff824 !important;
   box-shadow: 3px 3px 0 #0a0a0a;
-  transform: rotate(-2deg);
+  /* sacred card rule: a card picture is never tilted (the tilt lives on the tape and stamps, not on the card) */
+  transform: none;
 }
 .dpage .wildcard .wacts {
   flex-wrap: wrap;
