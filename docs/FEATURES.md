@@ -50,6 +50,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | POWER ALL · MIN · B3 · MED · B4 · MAX · B5 | Live | #6, #20 | e2e "Commander settings on a wide screen", "A + D" |
 | GEAR 1ST · 2ND · 3RD (EDHREC budget / every budget / expensive); decks from Discover open at MED · 3RD | Live | #17, #20 | e2e "A + D" |
 | Pins drive EDHREC's filter (first 2 📌 as in=, first 2 💀 as out=; under 20 decks falls back) | Live | #20 | `lib/pins.test.ts`, e2e "Pins drive EDHREC" |
+| Pins and taste memory stay in step: the memory holds what is pinned now, so a pin you undo leaves nothing behind and a pin is never counted twice; the card menu on a deck page records pins like the swap window does | Review | this PR | `brain/brain.test.ts` "a pin you undo leaves nothing behind" |
 | Coverage line, PREFER OWNED, BUY UNDER CA$N (OWNED ONLY removed Nov 7; a saved OWNED ONLY falls back to PREFER OWNED) | Live | #17, #28 | `brain/modes.test.ts`, e2e "A + D" |
 | TO BUY receipt: PULL list + PRINT on the back; grouped by EDHREC play rate, cheapest first, GC / COMBO marks | Live | #17, #20 | `brain/modes.test.ts`, e2e "B: the TO BUY receipt", "TO BUY groups" |
 | Build Readiness + Bracket Fit tiles, "Why this card?" in the swap window | Live | #17 | `brain/validate.test.ts`, e2e "Readiness + Bracket Fit tiles" |
