@@ -1080,3 +1080,29 @@ html.forging .vhero {
   .tbar .fbody label.check { display: flex !important; align-items: center !important; gap: 10px !important; min-height: 44px !important; }
   .tbar .fbody label.check input[type='checkbox'] { width: 24px !important; height: 24px !important; flex: none !important; accent-color: #e60012; }
 }
+
+/* ── Dynamic Island: 44px tap areas on phones (audit roadmap, phase 4 step 3) ── The buttons keep their look and the
+   island keeps its 46px height; each control answers a tap across an invisible 44px area around it. The areas only
+   grow away from the island's row of buttons, so two buttons never share a spot, and a press that moves more than
+   18px is still a drag (re-dock / stretch), never a tap. The grip line on the island's edge keeps its own 60px strip
+   (it is the drag handle and does nothing on a tap), so the middle button's area stops 6px short under it. */
+@media (max-width: 699px) {
+  .pillnav .pback, .pillnav .pill button, .pillnav .syncpill, .island-drawer .id-sync-close { position: relative; }
+  .pillnav .pback::after, .pillnav .pill button::after, .pillnav .syncpill::after, .island-drawer .id-sync-close::after {
+    content: ''; position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+    min-width: 100%; min-height: 100%; width: 44px; height: 44px;
+  }
+  /* section buttons are already wide: only their height grows */
+  .pillnav .pill button::after { width: 100%; }
+  /* side docks stack the buttons: there the areas grow sideways, not up and down */
+  .pillnav:is(.dock-left, .dock-right) .pill button::after { width: 44px; height: 100%; }
+  /* the sync light's own hold-to-shrink target grows with it, so a held thumb on the pill still reaches the light */
+  .pillnav .syncpill .sdot { position: relative; }
+  .pillnav .syncpill .sdot::after { content: ''; position: absolute; inset: -9px; }
+  .pillnav.collapsed .syncpill::after { width: 44px; height: 44px; }
+  /* the sync panel scrolls, so its top edge would clip an area centred on the ✕: this one grows left and down instead */
+  .island-drawer .id-sync-close::after { left: auto; top: -4px; right: -4px; translate: none; width: 46px; height: 46px; }
+  /* the sync pill's area sits behind the light, so a tap on the light itself still reaches the light (tap = sync, hold = shrink) */
+  .pillnav .syncpill { isolation: isolate; }
+  .pillnav .syncpill::after { z-index: -1; }
+}

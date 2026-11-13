@@ -123,4 +123,5 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Readable names and a quieter deck page on phones: no card or deck name under 14px; the saved deck's swap how-to line leaves after the first swap on that device | Live | #62 | `e2e/names-and-hint.spec.ts` |
 | 44px tap targets on phones: every button, tab, select and section header on the main screens is at least 44px to tap (jump rail widened by an invisible strip; small theme badges on My Decks tiles are the known gap) | Live | #61 | `e2e/tap-targets.spec.ts` |
 | Collection HIDE STATS: the stat tiles, appraisal and Top 3 fold away behind one button (shown by default, remembered per device) so cards reach the first phone screen; + DECK and IMPORT stay | Live | #60 | `e2e/collection-stats-fold.spec.ts` |
+| Island tap areas on phones (phase 4 step 3): back, DISCOVER, DECKS, COLLECTION and the sync light each answer a tap across 44px (stacked docks: 44px sideways), the sync panel ✕ too; nothing changes in the look or the island height; the grip line stays the drag handle | Review | this PR | e2e `island-taps.spec.ts` |
 | Card scanning | Parked | – | likely needs a paid service |
