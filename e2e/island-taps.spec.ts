@@ -23,16 +23,15 @@ const reach = (page: import('@playwright/test').Page, sel: string) =>
         return !!t && (t === el || el.contains(t));
       };
       // measured in whole pixels out from the centre: a 44px area reads as 43 or more
-      // (heights are taken on the button's tallest column: the grip line's 60px strip on the island's edge is the drag
-      // handle and keeps its own spot, so the middle button's area is a little shorter right under it)
       const span = (x: number, y: number, dx: number, dy: number) => {
         let n = 0;
         for (let d = 0; d <= 22 && hits(x - d * dx, y - d * dy) && hits(x + d * dx, y + d * dy); d++) n = 2 * d + 1;
         return n;
       };
       const w = span(cx, cy, 1, 0);
-      let h = 0;
-      for (let x = r.left + 2; x <= r.right - 2; x += 2) h = Math.max(h, span(x, cy, 0, 1));
+      // the height is the shortest over the button's width, so the grip line in the middle of the island can't hide in it
+      let h = Infinity;
+      for (let x = r.left + 4; x <= r.right - 4; x += 2) h = Math.min(h, span(x, cy, 0, 1));
       return { name: (el.textContent || el.getAttribute('aria-label') || el.className).toString().trim().slice(0, 12), w, h, look: [Math.round(r.width), Math.round(r.height)] };
     }),
   );
@@ -69,8 +68,7 @@ test('Island: a tap on the edge of a section button goes to that section, not th
   await page.reload();
   const decks = page.locator('.pillnav .pill button', { hasText: 'DECKS' });
   const r = (await decks.boundingBox())!;
-  // above the drawn button, inside its 44px area (off the 60px grip strip in the middle, which is the drag handle)
-  await page.mouse.click(r.x + 4, r.y - 8);
+  await page.mouse.click(r.x + r.width / 2, r.y - 8); // above the drawn button, inside its 44px area, under the grip line
   await expect(page.locator('.pillnav .pill button[aria-current="page"]')).toHaveText('DECKS');
 });
 
