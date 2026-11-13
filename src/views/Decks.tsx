@@ -37,7 +37,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -965,6 +965,12 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
             </ToolBar>
+            <SetChips
+              chips={[
+                ...(show !== 'all' ? [{ label: show.toUpperCase() + ' ONLY', off: () => setShow('all') }] : []),
+                ...(only !== 'all' ? [{ label: ONLYS.find(([v]) => v === only)?.[1] ?? only, off: () => setOnly('all') }] : []),
+              ]}
+            />
             <JumpRail headers={[...sections].filter(([, cs]) => cs.length).map(([h]) => h)} />
             <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
             {[...sections]

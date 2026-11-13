@@ -806,6 +806,36 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
   );
 }
 
+/**
+ * Under a tool bar: one removable chip per setting that changes what is shown, then "Clear all" (audit roadmap, phase 2).
+ * The same strip as Collection's and Discover's active filters, so what narrows a page is never hidden behind ⋮.
+ * Hidden when nothing is on.
+ */
+export function SetChips({ chips }: { chips: { label: string; off: () => unknown }[] }) {
+  if (!chips.length) return null;
+  return (
+    <div className="fchips setchips" role="group" aria-label="Active settings">
+      {chips.map((c) => (
+        <button key={c.label} type="button" className="fchip" aria-label={`Remove ${c.label}`} onClick={() => (haptic('select'), void c.off())}>
+          {c.label} <span aria-hidden="true">✕</span>
+        </button>
+      ))}
+      {chips.length > 1 && (
+        <button
+          type="button"
+          className="fclear"
+          onClick={async () => {
+            haptic('select');
+            for (const c of chips) await c.off(); // one at a time: unpinning saves to the binder
+          }}
+        >
+          Clear all
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** One labelled row inside the tool bar's options. */
 export function OptRow({ label, children }: { label: string; children: ReactNode }) {
   return (
