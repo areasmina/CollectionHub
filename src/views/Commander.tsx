@@ -35,7 +35,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, PhoneView, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, PhoneView, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -1149,6 +1149,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
                 </div>
               </ToolBar>
+              <SetChips
+                chips={[
+                  ...(tag ? [{ label: 'THEME ' + (tags.find((t) => t.slug === tag)?.value ?? tag).toUpperCase(), off: () => setTag('') }] : []),
+                  ...pins.in.map((n) => ({ label: 'PIN ' + n, off: () => setPin(n, 'in') })),
+                  ...pins.out.map((n) => ({ label: 'WITHOUT ' + n, off: () => setPin(n, 'out') })),
+                  ...(show !== 'all' ? [{ label: show.toUpperCase() + ' ONLY', off: () => setShow('all') }] : []),
+                  ...(kind === 'average' && cap ? [{ label: 'BUY UNDER CA$' + cap, off: () => setCap('0') }] : []),
+                  ...(only !== 'all' ? [{ label: ONLYS.find(([v]) => v === only)?.[1] ?? only, off: () => setOnly('all') }] : []),
+                ]}
+              />
               {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {(() => {

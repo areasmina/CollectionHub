@@ -54,3 +54,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The commander strip no longer repeats how many cards come from your binder; it only adds stand-ins from swaps.
 - Correction to 2026-11-12: red is used for more than the frame, the main button and the active tab (Creative Director audit, 2026-11-13). Red clean-up is planned in a later phase.
 - A Discover tile measures EDHREC's plain average deck (quick for 288 commanders) and says "decks avg"; the commander page labels its own number "in this deck" (the deck it opened, at your power and theme). Guillermo's pick, 2026-11-13.
+
+## 2026-11-13: One sheet and one chip strip (audit roadmap, phase 2)
+- On phones (under 700px) every options list and card or deck menu is a bottom sheet shaped like Collection's filter sheet; each keeps its own content. Tablet and desktop keep popovers under their buttons.
+- While a sheet is open the page behind it can't be tapped; ✕, Escape, a tap on the dimmed page or ⋮ again closes it. The island steps off screen while a sheet is open.
+- Theme chips keep their one sideways-scrolling row, also inside the sheet.
+- A setting that narrows a page is never hidden behind ⋮: it shows under the bar as a removable chip (`SetChips`), with Clear all when there is more than one.
