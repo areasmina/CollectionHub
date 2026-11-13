@@ -115,4 +115,5 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Commander card stays whole: the OPTIONS tag hangs under it, nothing on the mana cost or rules text | Live | #51 | `e2e/card-integrity.spec.ts` |
 | Discover sort box shows the whole sort name; phones keep one slim bar with sort behind ⋮ | Live | #50 | `e2e/strip-decks-discover.spec.ts` |
 | One-line compact rows on phones; jump rail stays off the deck header | Live | #47, #49 | `e2e/oneline-rows.spec.ts`, `e2e/jump-rail.spec.ts` |
+| One number per fact: one ownership count everywhere (copies, commander included), READY only for build checks (ownership says ALL OWNED), My Decks bracket uses Game Changers, Collection tabs count copies, Discover tile says it measures the average deck | Live | #56 | `e2e/numbers-agree.spec.ts`, `src/lib/cmdrstats.test.ts`, `src/brain/modes.test.ts` |
 | Card scanning | Parked | – | likely needs a paid service |
