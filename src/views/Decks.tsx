@@ -5,13 +5,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { deckShareOf, deckShares } from '../lib/deckshare';
-import { addToDeck, removeFromDeck, replaceInDeck, savePin, setCommander } from '../lib/deckedit';
+import { addToDeck, removeFromDeck, replaceInDeck, setCommander } from '../lib/deckedit';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
 import { offIdentity } from '../brain/identity';
 import { AGGRESSION, killCheck } from '../brain/win';
-import { recordTaste } from '../brain/store';
+import { pinCard, recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
 import { JumpRail, jumpId } from './JumpRail';
 import { BRACKETS, cachedPages, fetchFiltered, fetchPage, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
@@ -1022,7 +1022,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                               cmdr={(deck.commander ?? deck.name).split(' // ')[0]}
                               onPick={(to) => swapIn(c.name, to)}
                               onUndo={() => setSwapFor(null)}
-                              onPin={deck.commander ? (side) => (savePin(s.profile, deck.commander!, c.name, side), void recordTaste(s.profile, c.name, side === 'in' ? 'always' : 'never', deck.commander!), setSwapFor(null)) : undefined}
+                              onPin={deck.commander ? (side) => (void pinCard(s.profile, deck.commander!, c.name, side), setSwapFor(null)) : undefined}
                               deck={deck.cards.map((x) => x.name)}
                               bracket={call.bracket}
                               onClose={() => setSwapFor(null)}
@@ -1074,7 +1074,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             owned={s.mine.get(norm(menu.card.name)) ?? 0}
             deck={deck}
             onSwap={menu.card.name === deck.commander || BASICS.has(norm(menu.card.name)) ? undefined : () => setSwapFor(menu.card.name)}
-            pin={deck.commander ? { side: pinOf(pins, menu.card.name), canIn: owned(menu.card.name), onPin: (side) => savePin(s.profile, deck.commander!, menu.card.name, side) } : undefined}
+            pin={deck.commander ? { side: pinOf(pins, menu.card.name), canIn: owned(menu.card.name), onPin: (side) => pinCard(s.profile, deck.commander!, menu.card.name, side) } : undefined}
             onClose={() => setMenu(null)}
             onToast={setToast}
           />

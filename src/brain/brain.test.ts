@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parseCombos, setBrainData } from './data';
 import { finisherPlans, killCheck } from './win';
 import { pickWildcards, seedOf } from './wildcard';
-import { addTaste, tasteFor, tasteSummary, type TasteEvent } from './taste';
+import { addTaste, pinTaste, tasteFor, tasteSummary, type TasteEvent } from './taste';
 import { scoreCard, suggestCards, type DeckContext } from './score';
 import { themeOf } from './themes';
 import { rankSubs } from '../lib/subs';
@@ -70,6 +70,16 @@ describe('taste', () => {
     for (const d of 'defghijklm') e = addTaste(e, ev('swiftfoot boots', 'cut', d));
     expect(tasteFor(e, 'swiftfoot boots')!.delta).toBe(-0.15);
     expect(tasteSummary(e)[0].card).toBe('swiftfoot boots');
+  });
+  it('a pin you undo leaves nothing behind, and a pin is never counted twice', () => {
+    let e: TasteEvent[] = [ev('sol ring', 'cut', 'doom'), ev('sol ring', 'always', 'other')];
+    e = pinTaste(e, 'sol ring', 'doom', 'in', 1);
+    e = pinTaste(e, 'sol ring', 'doom', 'in', 2); // the same pin saved again: still one event
+    expect(e.filter((x) => x.deck === 'doom' && x.action === 'always')).toHaveLength(1);
+    e = pinTaste(e, 'sol ring', 'doom', 'out', 3); // moved to "never use": the "always" goes
+    expect(e.filter((x) => x.deck === 'doom').map((x) => x.action)).toEqual(['cut', 'never']);
+    e = pinTaste(e, 'sol ring', 'doom', undefined, 4); // un-pinned
+    expect(e).toEqual([ev('sol ring', 'cut', 'doom'), ev('sol ring', 'always', 'other')]); // swaps and other commanders untouched
   });
 });
 

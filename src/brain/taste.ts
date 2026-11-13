@@ -46,3 +46,10 @@ export function tasteSummary(events: TasteEvent[]): { card: string; nudge: Taste
   }
   return out.sort((a, b) => Math.abs(b.nudge.delta) - Math.abs(a.nudge.delta) || a.card.localeCompare(b.card));
 }
+
+/** A pin changed for one card on one commander: its old always / never events for that commander go away, and one new
+ *  event is kept only if the card is still pinned. So a pin you undo teaches nothing, and nothing is counted twice. */
+export function pinTaste(events: TasteEvent[], card: string, deck: string, now: 'in' | 'out' | undefined, at: number): TasteEvent[] {
+  const rest = events.filter((e) => !(e.card === card && e.deck === deck && (e.action === 'always' || e.action === 'never')));
+  return now ? addTaste(rest, { card, action: now === 'in' ? 'always' : 'never', deck, at }) : rest;
+}
