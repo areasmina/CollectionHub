@@ -158,7 +158,7 @@ export function Discover(s: Shared) {
         for (const [k, p] of pairs) {
           const hit = hits.get(p);
           if (hit) {
-            map.set(k, { stat: statOf(hit.page, s.mine), at: hit.at });
+            map.set(k, { stat: statOf(hit.page, s.mine, byKey.get(k)?.name), at: hit.at });
             anyHit = true;
           } else {
             refresh.add(k);
@@ -175,7 +175,7 @@ export function Discover(s: Shared) {
           const path = pagePath('average', slug(byKey.get(k)!.name));
           // No EDHREC page = null; offline or an error: keep what's shown and try again next time.
           const stat = await fetchPage(path, REFRESH_MS)
-            .then((p) => statOf(p, s.mine))
+            .then((p) => statOf(p, s.mine, byKey.get(k)!.name))
             .catch((e) => (e instanceof NoPage ? null : undefined));
           if (!live) return;
           if (stat !== undefined) {
@@ -373,7 +373,7 @@ export function Discover(s: Shared) {
       <ul className="cgrid" data-zoom={zoom} ref={gridRef}>
         {shown.map((c, i) => {
           const st = stats.get(c.key);
-          const ready = st && st.pct >= 90;
+          const ready = st && st.missing === 0; // READY is kept for the build checks; this is ownership
           return (
             <li key={c.id}>
               <button
@@ -400,7 +400,7 @@ export function Discover(s: Shared) {
                   )}
                   <span className="cfoot">
                     <span>{[st?.decks != null ? `${st.decks.toLocaleString()} decks` : '', usd(c)].filter(Boolean).join(' · ')}</span>
-                    {st && <span className={`cstate${ready ? ' ready' : ''}`}>{ready ? 'READY' : `${st.missing} MISSING`}</span>}
+                    {st && <span className={`cstate${ready ? ' ready' : ''}`}>{ready ? 'ALL OWNED' : `${st.missing} MISSING`}</span>}
                   </span>
                 </span>
               </button>

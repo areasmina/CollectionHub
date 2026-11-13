@@ -18,8 +18,8 @@ describe('coverage', () => {
       owns,
     );
     expect(c).toEqual({ binder: 11, standins: 1, buy: 1, total: 13 });
-    expect(coverageText(c)).toBe('11 from your binder · 1 stand-in');
-    expect(coverageText({ binder: 99, standins: 0, buy: 0, total: 99 })).toBe('99 from your binder');
+    expect(coverageText(c)).toBe('1 stand-in from your binder');
+    expect(coverageText({ binder: 99, standins: 0, buy: 0, total: 99 })).toBe(''); // the hero already says how many you own
   });
 });
 

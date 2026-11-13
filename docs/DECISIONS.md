@@ -45,3 +45,11 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 ## 2026-11-12: Foil and card integrity
 - Foil cards must look like real foil and move (sweep, drifting rainbow, glare follows the pointer). The shine goes on the picture and the frame border only; the name, mana cost, type line, rules text and set line are never covered (Guillermo's "sacred card rule").
 - Fonts and red were audited on every main screen and match the Midnight Override spec: 4 text fonts plus the ransom-letter kit, red only on the frame, the main button and the active tab. No font or red cleanup is wanted.
+
+## 2026-11-13: One number per fact (audit roadmap, phase 1)
+- Ownership is counted one way on every screen (`lib/deckshare.ts` `ownShare`): copies you own out of the deck's copies, the commander included, basic lands counted as owned. Discover tiles, the commander page, saved decks and My Decks all use it.
+- The word READY belongs only to the build checks (readiness n/12). Owning every card says ALL OWNED; My Decks says "fully owned".
+- My Decks works out a deck's bracket with the Game Changers list, like the deck page.
+- Collection counts copies in its tiles, its list tabs and its "shown" line.
+- The commander strip no longer repeats how many cards come from your binder; it only adds stand-ins from swaps.
+- Correction to 2026-11-12: red is used for more than the frame, the main button and the active tab (Creative Director audit, 2026-11-13). Red clean-up is planned in a later phase.
