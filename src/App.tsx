@@ -15,6 +15,7 @@ import { PreviewLayer } from './views/shared';
 import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
+import { islandRests } from './lib/island';
 import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
 import { savedProfile } from './lib/ownership';
 import { startKeepOnScreen } from './lib/onscreen';
@@ -243,20 +244,22 @@ export default function App() {
   useBrainData(); // card roles + combo files: re-render every view once they arrive
   useEffect(() => void loadBrainData(), []);
   // The floating nav slides away while you scroll down and comes back on the way up (or near the top / bottom).
+  // It rests only where the page leaves room on its own edge: the page start for a top or side dock, the page end for a
+  // bottom dock. (It used to come back at both ends on every dock, so a top-docked island landed on the content at the
+  // end of a page, e.g. on Collection's + DECK and IMPORT.)
   const [navAway, setNavAway] = useState(false);
   useEffect(() => {
     let last = window.scrollY;
     const onScroll = () => {
       const y = window.scrollY;
-      const end = y + window.innerHeight >= document.documentElement.scrollHeight - 40;
-      if (y < 80 || end) setNavAway(false);
+      if (islandRests(dock, y, window.innerHeight, document.documentElement.scrollHeight)) setNavAway(false);
       else if (y > last + 6) setNavAway(true);
       else if (y < last - 6) setNavAway(false);
       if (Math.abs(y - last) > 6) last = y;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [dock]);
   const [backFn, setBackFn] = useState<(() => void) | null>(null);
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
