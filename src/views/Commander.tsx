@@ -12,7 +12,7 @@ import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
-import { recordTaste, setWild } from '../brain/store';
+import { pinCard, recordTaste, setWild } from '../brain/store';
 import { comboBreaks, nearCombos } from '../brain/combos';
 import { identityGate, offIdentity } from '../brain/identity';
 import { comboAllowed } from '../brain/win';
@@ -20,7 +20,6 @@ import { brainData } from '../brain/data';
 import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
 import { detectCardSynergies, type CardSynergyMatch } from '../brain/themes';
 import { arrange, noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins, type PinSide } from '../lib/pins';
-import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
@@ -328,8 +327,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     setMenuFor(null);
   }
   async function setPin(card: string, side: PinSide) {
-    await savePin(s.profile, name, card, side);
-    void recordTaste(s.profile, card, side === 'in' ? 'always' : 'never', name);
+    await pinCard(s.profile, name, card, side);
     setMenuFor(null);
   }
   async function toggleBought(cardName: string) {
