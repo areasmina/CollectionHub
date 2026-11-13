@@ -1057,3 +1057,26 @@ html.forging .vhero {
 .coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
 .coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
 .coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
+
+/* ── Phase 2 follow-up (found with the real collection): nothing in the options sheet or the chip strip reads cut off ── */
+@media (max-width: 699px) {
+  /* the ⋮ button says the gear only; theme, pins and filters already show as chips right under the bar */
+  .lists > .dtools.tbar > .tbmore > summary .fnow .fnchip { display: none !important; }
+  .lists > .dtools.tbar > .tbmore > summary .fnow { max-width: none !important; }
+  /* chips: one row you can slide, each a full 44px to tap; Clear all stays in reach on the right */
+  .fchips.setchips { flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .fchips.setchips::-webkit-scrollbar { display: none; }
+  .fchips .fchip, .fchips .fclear { min-height: 44px !important; flex: none !important; white-space: nowrap !important; }
+  .fchips.setchips .fclear { position: sticky !important; right: 0 !important; z-index: 1; background: #0a0a0a !important; box-shadow: -8px 0 0 0 #0a0a0a; }
+  /* PIN gets the whole first row beside APPLY, WITHOUT the second, so both hints read in full */
+  .tbar .fbody .cf-row { flex-wrap: wrap !important; }
+  .tbar .fbody .cf-row > .cglance-wrap:first-child { order: 1; flex: 1 1 0 !important; }
+  .tbar .fbody .cf-row > .cf-apply-btn { order: 2; }
+  .tbar .fbody .cf-row > .cf-clear-btn { order: 3; }
+  .tbar .fbody .cf-row > .cglance-wrap:nth-child(2) { order: 4; flex: 1 1 100% !important; }
+  /* the theme row slides sideways: a fade on the right edge says there is more */
+  .dtools.tbar > .tbmore .fbody .themes { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); padding-right: 36px !important; }
+  /* tick boxes in the sheet: a 24px box on a 44px row */
+  .tbar .fbody label.check { display: flex !important; align-items: center !important; gap: 10px !important; min-height: 44px !important; }
+  .tbar .fbody label.check input[type='checkbox'] { width: 24px !important; height: 24px !important; flex: none !important; accent-color: #e60012; }
+}
