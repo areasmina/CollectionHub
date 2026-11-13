@@ -60,3 +60,6 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - While a sheet is open the page behind it can't be tapped; ✕, Escape, a tap on the dimmed page or ⋮ again closes it. The island steps off screen while a sheet is open.
 - Theme chips keep their one sideways-scrolling row, also inside the sheet.
 - A setting that narrows a page is never hidden behind ⋮: it shows under the bar as a removable chip (`SetChips`), with Clear all when there is more than one.
+
+## 2026-11-13: Saved deck page keeps its header (audit roadmap, phase 3)
+- Guillermo's pick: on phones the saved deck header (commander card, title, match %, the three tiles) stays as designed even though cards start just below the first screen; it is not shrunk and the page does not open scrolled past it. The swap how-to line shows only until the first swap on that device.

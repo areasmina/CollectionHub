@@ -118,4 +118,5 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | One number per fact: one ownership count everywhere (copies, commander included), READY only for build checks (ownership says ALL OWNED), My Decks bracket uses Game Changers, Collection tabs count copies, Discover tile says it measures the average deck | Live | #56 | `e2e/numbers-agree.spec.ts`, `src/lib/cmdrstats.test.ts`, `src/brain/modes.test.ts` |
 | One sheet: on phones the ⋮ options, card menu and deck menu open as the same bottom sheet as Collection's filter (title, 44px ✕, thumb-sized controls, page dimmed, island steps away); wider screens keep the popover | Live | #58 | `e2e/one-sheet.spec.ts` |
 | Active settings as chips: what narrows a commander page or deck page shows under the bar as removable chips with Clear all | Live | #59 | `e2e/active-chips.spec.ts` |
+| Readable names and a quieter deck page on phones: no card or deck name under 14px; the saved deck's swap how-to line leaves after the first swap on that device | Live | #62 | `e2e/names-and-hint.spec.ts` |
 | Card scanning | Parked | – | likely needs a paid service |
