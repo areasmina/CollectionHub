@@ -581,6 +581,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
   const [only, setOnly] = useState<Only>('all'); // Game Changers / price bands, for this visit
+  // The swap how-to line shows until the first swap on this device, then gives its row back to the cards (owner's pick, Nov 13).
+  const [swapHint, setSwapHint] = useStored<'show' | 'done'>('ch:swaphint', 'show', ['show', 'done']);
   // Foil deck cards are priced at the foil price of the printing on file.
   const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
@@ -746,6 +748,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const forgePool = () =>
     binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));
   async function swapIn(from: string, to: string) {
+    setSwapHint('done'); // the how-to line has done its job after the first swap
     if (cmdr && offIdentity([to], ci, (n) => binderCard.get(norm(n))?.ci ?? cardOf(n)?.ci).length) return; // hard rule: never outside the colours
     haptic('success');
     const key = deck.commander ?? deck.name;
@@ -972,7 +975,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               ]}
             />
             <JumpRail headers={[...sections].filter(([, cs]) => cs.length).map(([h]) => h)} />
-            <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
+            {swapHint === 'show' && <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>}
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {
