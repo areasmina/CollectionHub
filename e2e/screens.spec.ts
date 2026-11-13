@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -18,6 +18,7 @@ const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list')
     const row = (await opts(page)).locator('.phoneview');
     await expect(row).toBeVisible();
     await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
+    await closeOpts(page); // the options are a sheet over the page on phones
   }
 };
 
@@ -47,7 +48,8 @@ test('Discover (overhaul): loud title + eye + tagline, one toolbar (sort and col
   await expect(card.locator('.cmatch b')).toHaveText('100%');
   await expect(card.locator('.u-meter i.on')).toHaveCount(10);
   await expect(card.locator('.cfoot')).toContainText('4,321 decks');
-  await expect(card.locator('.cstate')).toHaveText('READY');
+  await expect(card.locator('.cfoot')).toContainText('avg'); // the tile measures EDHREC's average deck, and says so
+  await expect(card.locator('.cstate')).toHaveText('ALL OWNED'); // READY is kept for the build checks
   // phones: two tiles across
   if (info.project.name === 'phone') {
     const cols = await page.locator('.cgrid').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length);
@@ -314,6 +316,7 @@ test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and 
   await expect(group.locator('option:checked')).toHaveText('CARD TYPE · MISSING');
   await group.selectOption('show:all');
   await expect(page.locator('details.cat').first()).toBeVisible();
+  await closeOpts(page);
   const curve = page.locator('.dpanel .curve, .dpanel .dsec').first();
   if (info.project.name === 'desktop') await expect(curve).toBeVisible();
   else {
@@ -666,11 +669,11 @@ test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', asyn
   await go(page, 'decks');
   const ribbon = page.getByRole('region', { name: 'Deck collection overview' });
   await expect(ribbon).toContainText('1 deck in');
-  await expect(ribbon).toContainText('1 ready to play');
+  await expect(ribbon).toContainText('1 all owned');
   await expect(ribbon).toContainText('avg power');
   const tile = page.locator('.dcard').first();
   await expect(tile.locator('.cmatch b')).toHaveText('100%');
-  await expect(tile.locator('.cstate.ready')).toHaveText('READY');
+  await expect(tile.locator('.cstate.ready')).toHaveText('ALL OWNED');
   await expect(tile.locator('.u-meter i')).toHaveCount(10);
   const t = await tile.evaluate((e) => getComputedStyle(e).transform);
   expect(t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
@@ -712,7 +715,9 @@ test('EDHREC With / Without card: self-testing filter, honest fallback', async (
 test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, never removes', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
   const cov = page.locator('.dstrip .dstatus');
-  await expect(cov).toContainText('from your binder');
+  // the hero says how many you own, once; the strip no longer repeats it with a different count
+  await expect(page.locator('.vmatch small')).toContainText(/you own \d+ of \d+/);
+  await expect(cov).not.toContainText('from your binder');
   await expect(page.locator('.vtile.fit summary')).toContainText(/FITS/); // decks open at MED power, MAX budget
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
@@ -731,7 +736,7 @@ test('OWNED ONLY is gone: a device that had it saved builds with PREFER OWNED', 
   await page.evaluate(() => localStorage.setItem('ch:own', 'owned'));
   await page.reload();
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.dstrip .dstatus')).toContainText('from your binder');
+  await expect(page.locator('.dstrip .dstatus')).toBeVisible();
   await expect(page.locator('.dstrip .cmode', { hasText: 'owned only' })).toHaveCount(0);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Cards' })).toHaveCount(0);

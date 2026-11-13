@@ -14,9 +14,17 @@ describe('commander stats', () => {
     expect(statOf(page(['Sol Ring', 'Forest', 'Cultivate', 'Rhystic Study']), mine)).toEqual({ pct: 50, missing: 2, decks: 10 });
   });
 
-  it('binder signature ignores order and quantities, changes with the cards', () => {
+  it('counts copies, with the commander: 20 Forests are 20 cards, and a card wanted twice needs two copies', () => {
+    const p = { header: '', tags: [], numDecks: 10, lists: [{ header: 'Lands', cards: [{ name: 'Forest', qty: 20 }, { name: 'Snow-Covered Island', qty: 4 }, { name: 'Sol Ring' }, { name: 'Cultivate' }] }] };
+    const mine = new Map([['sol ring', 1], ['snow-covered island', 1], ['tatyova, benthic druid', 1]]);
+    // 27 copies with the commander; owned: commander 1 + Forest 20 + snow island 1 of 4 + Sol Ring 1 = 23
+    expect(statOf(p, mine, 'Tatyova, Benthic Druid')).toEqual({ pct: 85, missing: 4, decks: 10 });
+  });
+
+  it('binder signature ignores order, changes with the cards and with how many you own', () => {
     const a = binderSig(1, new Map([['a', 1], ['b', 2]]));
-    expect(binderSig(1, new Map([['b', 5], ['a', 1]]))).toBe(a);
+    expect(binderSig(1, new Map([['b', 2], ['a', 1]]))).toBe(a);
+    expect(binderSig(1, new Map([['b', 5], ['a', 1]]))).not.toBe(a);
     expect(binderSig(1, new Map([['a', 1], ['c', 2]]))).not.toBe(a);
     expect(binderSig(2, new Map([['a', 1], ['b', 2]]))).not.toBe(a);
   });

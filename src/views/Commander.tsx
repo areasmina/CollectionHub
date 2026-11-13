@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { BASICS, statusOf, summarize } from '../lib/compare';
+import { ownShare } from '../lib/deckshare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, GEARS, cachedPage, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
@@ -34,7 +35,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, PhoneView, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, PhoneView, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -225,7 +226,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const sections = page ? (kind === 'average' ? orderSections(page.lists, page.card ? { name, id: page.card.id, qty: 1 } : undefined) : page.lists) : [];
   const all = sections.flatMap((l) => l.cards);
   const names = [...new Set(all.map((c) => c.name))];
-  const sum = summarize(names, s.mine, s.other);
+  // One ownership count on every screen (lib/deckshare ownShare): copies owned out of the deck's copies, commander included.
+  const sum = { ...summarize(names, s.mine, s.other), ...ownShare([...new Map(all.map((c) => [norm(c.name), c])).values()], s.mine) };
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
   const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
@@ -724,7 +726,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span className="vbar">
                 <Meter pct={page ? sum.pct : 0} label={`Collection match ${sum.pct}%`} />
                 <small>
-                  collection match · you own {sum.owned} of {sum.total}
+                  collection match · you own {sum.owned} of {sum.total} in this deck
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>
@@ -745,7 +747,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <span>loading EDHREC data…</span>
               ) : kind === 'average' ? (
                 <>
-                  <span className="coverage">{covText}</span>
+                  {covText && <span className="coverage">{covText}</span>}
                   {pricesIn && deckCost > 0 && (
                     <span className="dcost" title={`What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}`}>
                       deck ≈{cad(deckCost)}
@@ -1147,6 +1149,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
                 </div>
               </ToolBar>
+              <SetChips
+                chips={[
+                  ...(tag ? [{ label: 'THEME ' + (tags.find((t) => t.slug === tag)?.value ?? tag).toUpperCase(), off: () => setTag('') }] : []),
+                  ...pins.in.map((n) => ({ label: 'PIN ' + n, off: () => setPin(n, 'in') })),
+                  ...pins.out.map((n) => ({ label: 'WITHOUT ' + n, off: () => setPin(n, 'out') })),
+                  ...(show !== 'all' ? [{ label: show.toUpperCase() + ' ONLY', off: () => setShow('all') }] : []),
+                  ...(kind === 'average' && cap ? [{ label: 'BUY UNDER CA$' + cap, off: () => setCap('0') }] : []),
+                  ...(only !== 'all' ? [{ label: ONLYS.find(([v]) => v === only)?.[1] ?? only, off: () => setOnly('all') }] : []),
+                ]}
+              />
               {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {(() => {

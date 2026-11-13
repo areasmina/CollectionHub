@@ -37,7 +37,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -965,6 +965,12 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
             </ToolBar>
+            <SetChips
+              chips={[
+                ...(show !== 'all' ? [{ label: show.toUpperCase() + ' ONLY', off: () => setShow('all') }] : []),
+                ...(only !== 'all' ? [{ label: ONLYS.find(([v]) => v === only)?.[1] ?? only, off: () => setOnly('all') }] : []),
+              ]}
+            />
             <JumpRail headers={[...sections].filter(([, cs]) => cs.length).map(([h]) => h)} />
             <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
             {[...sections]
@@ -1137,6 +1143,10 @@ export function Decks(s: Shared) {
       // Same printing choice as the deck page (newest fetched wins).
       return new Map(cs.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, withCheapest(c, cheap)!]));
     }, [decks]) ?? new Map<string, Card>();
+  // The same bracket call as the deck page: with the Game Changers list (without it a deck can never reach IV here).
+  const [gcAll, setGcAll] = useState<Set<string> | null>(null);
+  useEffect(() => void gameChangers().then(setGcAll), []);
+  const listBracket = (d: { cards: { name: string }[] }) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), gcAll).bracket;
   const [open, setOpen] = useState<number | null>(null);
   const [listMenu, setListMenu] = useState<{ id: number; at: MenuAt } | null>(null);
   const menuDeck = listMenu && decks.find((d) => d.id === listMenu.id);
@@ -1164,7 +1174,7 @@ export function Decks(s: Shared) {
     }
   }
   const bracketsWithScores = decks
-    .map((d) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket)
+    .map((d) => listBracket(d))
     .filter((b) => b > 0);
   const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce<number>((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
 
@@ -1226,18 +1236,18 @@ export function Decks(s: Shared) {
       if (dsort === 'name-asc') return a.name.localeCompare(b.name);
       if (dsort === 'name-desc') return b.name.localeCompare(a.name);
       if (dsort === 'match-desc') {
-        const pa = summarize(a.cards.map((c) => c.name), s.mine, s.other).pct;
-        const pb = summarize(b.cards.map((c) => c.name), s.mine, s.other).pct;
+        const pa = shareById.get(a.id)?.pct ?? 0; // the % the tile shows
+        const pb = shareById.get(b.id)?.pct ?? 0;
         return pb - pa;
       }
       if (dsort === 'power-desc') {
-        const ba = bracketOf(a.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
-        const bb = bracketOf(b.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        const ba = listBracket(a);
+        const bb = listBracket(b);
         return bb - ba;
       }
       if (dsort === 'power-asc') {
-        const ba = bracketOf(a.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
-        const bb = bracketOf(b.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        const ba = listBracket(a);
+        const bb = listBracket(b);
         return ba - bb;
       }
       if (dsort === 'cards-desc') {
@@ -1295,12 +1305,12 @@ export function Decks(s: Shared) {
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
                 <b>{readyDecks}</b>{' '}
-                <span>ready to play</span>
+                <span>all owned</span>
               </div>
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
                 <b>{uniqueCardsInDecks}</b>{' '}
-                <span>cards in play</span>
+                <span>unique cards in play</span>
               </div>
               <div className="stat red">
                 <span className="spray" aria-hidden="true" />
@@ -1364,7 +1374,7 @@ export function Decks(s: Shared) {
                   className={`u-chip ${dstatus === st ? 'active' : ''}`}
                   onClick={() => setDstatus(st)}
                 >
-                  {st === 'all' ? 'ALL' : st === 'ready' ? 'READY (100%)' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
+                  {st === 'all' ? 'ALL' : st === 'ready' ? 'ALL OWNED' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
                 </button>
               ))}
             </div>
@@ -1482,7 +1492,7 @@ export function Decks(s: Shared) {
                         {d.cards.reduce((n, x) => n + x.qty, 0)} cards
                         {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
                       </span>
-                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.pct === 100 ? 'READY' : `${sum.missing} MISSING`}</span>
+                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.missing === 0 && sum.total > 0 ? 'ALL OWNED' : `${sum.missing} MISSING`}</span>
                     </span>
                   </span>
                 </DeckTile>

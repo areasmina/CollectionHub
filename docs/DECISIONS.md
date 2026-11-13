@@ -45,3 +45,21 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 ## 2026-11-12: Foil and card integrity
 - Foil cards must look like real foil and move (sweep, drifting rainbow, glare follows the pointer). The shine goes on the picture and the frame border only; the name, mana cost, type line, rules text and set line are never covered (Guillermo's "sacred card rule").
 - Fonts and red were audited on every main screen and match the Midnight Override spec: 4 text fonts plus the ransom-letter kit, red only on the frame, the main button and the active tab. No font or red cleanup is wanted.
+
+## 2026-11-13: One number per fact (audit roadmap, phase 1)
+- Ownership is counted one way on every screen (`lib/deckshare.ts` `ownShare`): copies you own out of the deck's copies, the commander included, basic lands counted as owned. Discover tiles, the commander page, saved decks and My Decks all use it.
+- The word READY belongs only to the build checks (readiness n/12). Owning every card says ALL OWNED; My Decks says "all owned", and its "unique cards in play" tile names its unit.
+- My Decks works out a deck's bracket with the Game Changers list, like the deck page.
+- Collection counts copies in its tiles, its list tabs and its "shown" line.
+- The commander strip no longer repeats how many cards come from your binder; it only adds stand-ins from swaps.
+- Correction to 2026-11-12: red is used for more than the frame, the main button and the active tab (Creative Director audit, 2026-11-13). Red clean-up is planned in a later phase.
+- A Discover tile measures EDHREC's plain average deck (quick for 288 commanders) and says "decks avg"; the commander page labels its own number "in this deck" (the deck it opened, at your power and theme). Guillermo's pick, 2026-11-13.
+
+## 2026-11-13: One sheet and one chip strip (audit roadmap, phase 2)
+- On phones (under 700px) every options list and card or deck menu is a bottom sheet shaped like Collection's filter sheet; each keeps its own content. Tablet and desktop keep popovers under their buttons.
+- While a sheet is open the page behind it can't be tapped; ✕, Escape, a tap on the dimmed page or ⋮ again closes it. The island steps off screen while a sheet is open.
+- Theme chips keep their one sideways-scrolling row, also inside the sheet.
+- A setting that narrows a page is never hidden behind ⋮: it shows under the bar as a removable chip (`SetChips`), with Clear all when there is more than one.
+
+## 2026-11-13: Collection keeps its tiles, with HIDE STATS (audit roadmap, phase 3)
+- Guillermo's pick: Collection's stat tiles stay as they are and show by default; a HIDE STATS button (the same control as My Decks) folds the tiles, the appraisal and Top 3 so cards reach the first phone screen. The choice is remembered per device. No ribbon.

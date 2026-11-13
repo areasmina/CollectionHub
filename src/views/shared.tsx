@@ -784,12 +784,19 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && ref.current?.open && (ref.current.removeAttribute('open'), ref.current.querySelector('summary')?.focus());
     addEventListener('pointerdown', out);
     addEventListener('keydown', esc);
-    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc));
+    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc), void document.documentElement.classList.remove('sheet-open'));
   }, []);
   return (
     <div className="dtools tbar" role="toolbar" aria-label={label}>
       {quick && <div className="tquick">{quick}</div>}
-      <details className="fsheet tbmore" ref={ref} onToggle={(e) => e.currentTarget.open && haptic('open')}>
+      {/* On phones the options open as the one bottom sheet (same shape as Collection's filter sheet); a tap on the
+          dimmed page behind it (the details' own ::before) closes it. Wider screens keep the popover under the button. */}
+      <details
+        className="fsheet tbmore"
+        ref={ref}
+        onToggle={(e) => (e.currentTarget.open && haptic('open'), document.documentElement.classList.toggle('sheet-open', !!document.querySelector('details.tbmore[open]')))}
+        onClick={(e) => e.target === e.currentTarget && e.currentTarget.removeAttribute('open')}
+      >
         <summary aria-label="Options" title="Options">
           {now && <span className="fnow">{now}</span>}
           <span className="kebab" aria-hidden="true">
@@ -798,10 +805,50 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
             <i />
           </span>
         </summary>
-        <div className="fbody">{children}</div>
+        <div className="fbody">
+          <div className="sheethead">
+            <span aria-hidden="true">
+              <Ransom text="OPTIONS" size={24} seed={43} />
+            </span>
+            <button type="button" className="close" aria-label="Close options" onClick={() => (haptic('tap'), ref.current?.removeAttribute('open'))}>
+              ✕
+            </button>
+          </div>
+          {children}
+        </div>
       </details>
       <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />
       {extra}
+    </div>
+  );
+}
+
+/**
+ * Under a tool bar: one removable chip per setting that changes what is shown, then "Clear all" (audit roadmap, phase 2).
+ * The same strip as Collection's and Discover's active filters, so what narrows a page is never hidden behind ⋮.
+ * Hidden when nothing is on.
+ */
+export function SetChips({ chips }: { chips: { label: string; off: () => unknown }[] }) {
+  if (!chips.length) return null;
+  return (
+    <div className="fchips setchips" role="group" aria-label="Active settings">
+      {chips.map((c) => (
+        <button key={c.label} type="button" className="fchip" aria-label={`Remove ${c.label}`} onClick={() => (haptic('select'), void c.off())}>
+          {c.label} <span aria-hidden="true">✕</span>
+        </button>
+      ))}
+      {chips.length > 1 && (
+        <button
+          type="button"
+          className="fclear"
+          onClick={async () => {
+            haptic('select');
+            for (const c of chips) await c.off(); // one at a time: unpinning saves to the binder
+          }}
+        >
+          Clear all
+        </button>
+      )}
     </div>
   );
 }

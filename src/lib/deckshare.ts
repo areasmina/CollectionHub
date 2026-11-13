@@ -48,3 +48,9 @@ export function deckShareOf(decks: { id?: number; cards: DeckCard[] }[], id: num
   const i = decks.findIndex((d) => d.id === id);
   return i < 0 ? { total: 0, owned: 0, missing: 0, pct: 0 } : deckShares(decks, mine)[i];
 }
+
+/** THE ownership count, used by every screen (Discover tiles, commander and deck pages, My Decks): copies you own out of
+ *  the deck's copies. A card listed twice needs two copies; basic lands count as owned. One deck on its own (no sharing). */
+export function ownShare(cards: { name: string; qty?: number }[], mine: Map<string, number>): DeckShare {
+  return deckShares([{ cards: cards.map((c) => ({ name: c.name, qty: c.qty ?? 1 })) }], mine)[0];
+}

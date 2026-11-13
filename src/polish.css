@@ -835,11 +835,7 @@ html.forging .vhero {
 .estate .u-btn { min-height: 44px; }
 /* Deck page on phones keeps its own slim bar (search + ⋮); sort stays in ⋮ there */
 @media (max-width: 700px) { .lists > .dtools.tbar > .sortsel { display: none; } }
-/* In the wrapped (small phone) bar the ⋮ sits mid-row: its menu hangs from the whole bar, so it can never run off the side */
-@media (max-width: 430px) {
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { position: static !important; }
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > .fbody { left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important; top: calc(100% + 4px) !important; }
-}
+/* (the small-phone ⋮ dropdown rules lived here; on phones the options are now the one bottom sheet, see ONE SHEET below) */
 
 /* ── Compact list on phones = one line per card (ManaBox idea): art chip · ✓ name · pips · price · ⋮ ──
    The type line, binder count and SWAP label hide; tapping the row still opens the swap note, the ⋮ still opens the menu. */
@@ -973,3 +969,85 @@ html.forging .vhero {
 @media (prefers-reduced-motion: reduce) {
   .foil::before, .foil::after { animation: none !important; }
 }
+
+/* ── ONE SHEET (audit roadmap, phase 2): on phones every options list, filter and card menu is the same bottom sheet ──
+   The shape is Collection's filter sheet (.fsheet2): full width, on the bottom edge, 2px frame, accent line on top,
+   a header with the title and a 44px ✕, the page dimmed behind it. Wider screens keep popovers under their buttons. */
+.tbmore > .fbody > .sheethead { display: none; }
+/* THEME sits in a column row: its label kept its 68px row width as a height, leaving a tall empty gap (all sizes) */
+.dtools.tbar > .tbmore .optrow:has(.themes) > .lbl { flex: 0 0 auto !important; }
+@media (max-width: 699px) {
+  .dtools.tbar:has(> .tbmore[open]) { z-index: 1010 !important; }
+  .dtools.tbar > .tbmore[open]::before { content: ''; position: fixed; inset: 0; z-index: 1008; background: rgba(0, 0, 0, 0.6); }
+  /* the ⋮ that opened the sheet stays above the dimmed page (and under the sheet), so a second tap on it still closes the options */
+  .dtools.tbar > .tbmore[open] > summary { position: relative !important; z-index: 1009 !important; }
+  .dtools.tbar > .tbmore[open] > .fbody {
+    position: fixed !important; left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
+    width: auto !important; max-width: none !important; max-height: 85dvh !important; overflow-y: auto !important;
+    translate: none !important; transform: none !important; margin: 0 !important; z-index: 1010 !important;
+    padding: 0 14px calc(12px + env(safe-area-inset-bottom)) !important; gap: 10px !important;
+    background: var(--bg) !important; border: 2px solid var(--text) !important; border-bottom: 0 !important;
+    border-radius: 0 !important; box-shadow: 0 -4px 0 var(--accent) !important; animation: none !important;
+  }
+  .tbmore > .fbody > .sheethead {
+    display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 2;
+    margin: 0 -14px; padding: 12px 14px 8px; background: var(--bg); font-weight: 900;
+  }
+  .tbmore > .fbody > .sheethead .close { min-width: 44px; min-height: 44px; background: none; border: 0; color: inherit; font-size: 18px; cursor: pointer; }
+  /* every control in the sheet is a full thumb target */
+  .tbmore[open] > .fbody :is(button, select, input:not([type='checkbox']), .u-chip) { min-height: 44px !important; }
+  /* inside the sheet the sort choices wrap; the theme chips keep their one sideways-scrolling row (owner's rule) */
+  .tbmore[open] > .fbody .sorts { flex-wrap: wrap !important; overflow: visible !important; }
+  .tbmore[open] > .fbody .optrow > .lbl { height: auto !important; min-height: 0 !important; align-self: flex-start; }
+  /* the card menu and the deck menu: the same sheet, not a pop-up at the finger */
+  .cardmenu {
+    left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto !important;
+    max-height: 85dvh !important; transform: none !important; z-index: 1010 !important;
+    border: 2px solid var(--text) !important; border-bottom: 0 !important; border-radius: 0 !important;
+    box-shadow: 0 -4px 0 var(--accent) !important; padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+  .backdrop.menuback { z-index: 1009 !important; background: rgba(0, 0, 0, 0.6) !important; }
+  .cardmenu li > :is(button, a) { min-height: 44px !important; }
+  /* nothing floats over an open sheet: the island steps away until it closes */
+  html.sheet-open .pillnav, html:has(.cardmenu) .pillnav, html:has(.fsheet2) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
+}
+
+/* ── 44px TAP TARGETS on phones (audit roadmap, phase 3) ── every button, tab, select and section header gets a full
+   thumb-sized tap area. Heights grow to 44px; nothing else about the look changes. Mouse screens keep compact controls. */
+@media (max-width: 699px) {
+  /* bars and headers */
+  .dtools.tbar > .tbmore > summary { min-width: 44px !important; min-height: 44px !important; }
+  .dtools.tbar > .fbtn { min-width: 44px !important; min-height: 44px !important; }
+  .u-btn, .coll .slip-btn, .coll .list-tab, .dlist .dribbon .dfold, .dlight, .tagpill,
+  .dlist .u-chip, .fsugg .u-chip.theme, .fcube > button, .dstrip .u-btn { min-height: 44px !important; }
+  .coll .list-tab, .tagpill, .dlight, .fsugg .u-chip.theme { display: inline-flex !important; align-items: center !important; }
+  details.cat > summary { min-height: 44px !important; }
+  /* header notes (salt, bracket): the tap area grows to 44px with padding that a negative margin takes back, so the header keeps its height */
+  .vmeta details.scrap > summary { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -12px !important; }
+  .vmeta details.scrap.bracket > summary { margin-block: -5px !important; }
+  .dlist select { min-height: 44px !important; }
+  /* card rows and tiles: swap and ⋮ */
+  .acts .swapbtn, .acts .morebtn, .morebtn,
+  ul.zcompact > li.zrow .acts .swapbtn, ul.zcompact > li.zrow .acts .morebtn { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; }
+  /* text-style buttons: the words stay small, the tap area is a full row high */
+  .decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  /* the suggestions drawer's grab bar: the bar looks the same, the strip you can grab is 44px */
+  .fsugg .fgrab { min-height: 44px !important; }
+  .tagpill { min-width: 44px !important; justify-content: center !important; }
+  /* the jump rail stays a slim 30px strip on the edge; each letter's tap area reaches 14px further in, so it is 44px wide */
+  .jrail > button { position: relative !important; }
+  .jrail > button::before { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 44px; }
+}
+/* ── Collection: HIDE STATS (audit roadmap, phase 3) ── the tiles, the appraisal and Top 3 fold away so cards reach the
+   first phone screen; + DECK and IMPORT stay. Same button as My Decks' fold, with a full 44px tap height. */
+.coll .statfold {
+  display: block; margin: 0 0 var(--s2, 8px) auto; padding: 4px 12px; min-height: 44px; cursor: pointer;
+  background: #0a0a0a; border: 1px solid #3a3a3a; color: #b5b5b5;
+  font: 400 12px var(--u-display, 'Anton', sans-serif); letter-spacing: 0.1em; transform: rotate(-1deg);
+}
+.coll .statfold:hover, .coll .statfold:focus-visible { color: #fff; border-color: #e60012; }
+.coll .stats.folded > .stat, .coll .stats.folded > .topwidget,
+.coll .stats.folded .slip-val, .coll .stats.folded .slip > .warn, .coll .stats.folded .slip > .stamp { display: none !important; }
+.coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
+.coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
+.coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
