@@ -1010,3 +1010,17 @@ html.forging .vhero {
   /* nothing floats over an open sheet: the island steps away until it closes */
   html.sheet-open .pillnav, html:has(.cardmenu) .pillnav, html:has(.fsheet2) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
 }
+
+/* ── Collection: HIDE STATS (audit roadmap, phase 3) ── the tiles, the appraisal and Top 3 fold away so cards reach the
+   first phone screen; + DECK and IMPORT stay. Same button as My Decks' fold, with a full 44px tap height. */
+.coll .statfold {
+  display: block; margin: 0 0 var(--s2, 8px) auto; padding: 4px 12px; min-height: 44px; cursor: pointer;
+  background: #0a0a0a; border: 1px solid #3a3a3a; color: #b5b5b5;
+  font: 400 12px var(--u-display, 'Anton', sans-serif); letter-spacing: 0.1em; transform: rotate(-1deg);
+}
+.coll .statfold:hover, .coll .statfold:focus-visible { color: #fff; border-color: #e60012; }
+.coll .stats.folded > .stat, .coll .stats.folded > .topwidget,
+.coll .stats.folded .slip-val, .coll .stats.folded .slip > .warn, .coll .stats.folded .slip > .stamp { display: none !important; }
+.coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
+.coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
+.coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
