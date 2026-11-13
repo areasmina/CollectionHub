@@ -135,8 +135,10 @@ test.describe('Collection & Decks Workbench Features', () => {
     await page.locator('.island-scrim').click();
     await expect(drawer).toHaveCount(0);
 
-    // Island lip is decorative and does not open drawer
-    await page.locator('.island-lip').click();
+    // Island lip is decorative and does not open drawer. (It takes no taps of its own since the island's 44px tap areas,
+    // phase 4: a tap on the line lands on the section button under it, so tap its spot and check sync stays closed.)
+    const lip = (await page.locator('.island-lip').boundingBox())!;
+    await page.mouse.click(lip.x + lip.width / 2, lip.y + lip.height / 2);
     await expect(drawer).toHaveCount(0);
   });
 });
