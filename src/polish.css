@@ -1017,3 +1017,42 @@ html.forging .vhero {
   .dcard .nm, .dcard .nm b { font-size: 14px !important; line-height: 1.15 !important; }
   .decklink { font-size: 14px !important; }
 }
+/* ── 44px TAP TARGETS on phones (audit roadmap, phase 3) ── every button, tab, select and section header gets a full
+   thumb-sized tap area. Heights grow to 44px; nothing else about the look changes. Mouse screens keep compact controls. */
+@media (max-width: 699px) {
+  /* bars and headers */
+  .dtools.tbar > .tbmore > summary { min-width: 44px !important; min-height: 44px !important; }
+  .dtools.tbar > .fbtn { min-width: 44px !important; min-height: 44px !important; }
+  .u-btn, .coll .slip-btn, .coll .list-tab, .dlist .dribbon .dfold, .dlight, .tagpill,
+  .dlist .u-chip, .fsugg .u-chip.theme, .fcube > button, .dstrip .u-btn { min-height: 44px !important; }
+  .coll .list-tab, .tagpill, .dlight, .fsugg .u-chip.theme { display: inline-flex !important; align-items: center !important; }
+  details.cat > summary { min-height: 44px !important; }
+  /* header notes (salt, bracket): the tap area grows to 44px with padding that a negative margin takes back, so the header keeps its height */
+  .vmeta details.scrap > summary { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -12px !important; }
+  .vmeta details.scrap.bracket > summary { margin-block: -5px !important; }
+  .dlist select { min-height: 44px !important; }
+  /* card rows and tiles: swap and ⋮ */
+  .acts .swapbtn, .acts .morebtn, .morebtn,
+  ul.zcompact > li.zrow .acts .swapbtn, ul.zcompact > li.zrow .acts .morebtn { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; }
+  /* text-style buttons: the words stay small, the tap area is a full row high */
+  .decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  /* the suggestions drawer's grab bar: the bar looks the same, the strip you can grab is 44px */
+  .fsugg .fgrab { min-height: 44px !important; }
+  .tagpill { min-width: 44px !important; justify-content: center !important; }
+  /* the jump rail stays a slim 30px strip on the edge; each letter's tap area reaches 14px further in, so it is 44px wide */
+  .jrail > button { position: relative !important; }
+  .jrail > button::before { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 44px; }
+}
+/* ── Collection: HIDE STATS (audit roadmap, phase 3) ── the tiles, the appraisal and Top 3 fold away so cards reach the
+   first phone screen; + DECK and IMPORT stay. Same button as My Decks' fold, with a full 44px tap height. */
+.coll .statfold {
+  display: block; margin: 0 0 var(--s2, 8px) auto; padding: 4px 12px; min-height: 44px; cursor: pointer;
+  background: #0a0a0a; border: 1px solid #3a3a3a; color: #b5b5b5;
+  font: 400 12px var(--u-display, 'Anton', sans-serif); letter-spacing: 0.1em; transform: rotate(-1deg);
+}
+.coll .statfold:hover, .coll .statfold:focus-visible { color: #fff; border-color: #e60012; }
+.coll .stats.folded > .stat, .coll .stats.folded > .topwidget,
+.coll .stats.folded .slip-val, .coll .stats.folded .slip > .warn, .coll .stats.folded .slip > .stamp { display: none !important; }
+.coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
+.coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
+.coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
