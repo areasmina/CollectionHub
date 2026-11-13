@@ -116,4 +116,6 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Discover sort box shows the whole sort name; phones keep one slim bar with sort behind ⋮ | Live | #50 | `e2e/strip-decks-discover.spec.ts` |
 | One-line compact rows on phones; jump rail stays off the deck header | Live | #47, #49 | `e2e/oneline-rows.spec.ts`, `e2e/jump-rail.spec.ts` |
 | One number per fact: one ownership count everywhere (copies, commander included), READY only for build checks (ownership says ALL OWNED), My Decks bracket uses Game Changers, Collection tabs count copies, Discover tile says it measures the average deck | Live | #56 | `e2e/numbers-agree.spec.ts`, `src/lib/cmdrstats.test.ts`, `src/brain/modes.test.ts` |
+| One sheet: on phones the ⋮ options, card menu and deck menu open as the same bottom sheet as Collection's filter (title, 44px ✕, thumb-sized controls, page dimmed, island steps away); wider screens keep the popover | Live | #58 | `e2e/one-sheet.spec.ts` |
+| Active settings as chips: what narrows a commander page or deck page shows under the bar as removable chips with Clear all | Live | #59 | `e2e/active-chips.spec.ts` |
 | Card scanning | Parked | – | likely needs a paid service |
