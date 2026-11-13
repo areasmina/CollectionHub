@@ -48,7 +48,7 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 ## 2026-11-13: One number per fact (audit roadmap, phase 1)
 - Ownership is counted one way on every screen (`lib/deckshare.ts` `ownShare`): copies you own out of the deck's copies, the commander included, basic lands counted as owned. Discover tiles, the commander page, saved decks and My Decks all use it.
-- The word READY belongs only to the build checks (readiness n/12). Owning every card says ALL OWNED; My Decks says "fully owned".
+- The word READY belongs only to the build checks (readiness n/12). Owning every card says ALL OWNED; My Decks says "all owned", and its "unique cards in play" tile names its unit.
 - My Decks works out a deck's bracket with the Game Changers list, like the deck page.
 - Collection counts copies in its tiles, its list tabs and its "shown" line.
 - The commander strip no longer repeats how many cards come from your binder; it only adds stand-ins from swaps.

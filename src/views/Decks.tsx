@@ -1299,12 +1299,12 @@ export function Decks(s: Shared) {
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
                 <b>{readyDecks}</b>{' '}
-                <span>fully owned</span>
+                <span>all owned</span>
               </div>
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
                 <b>{uniqueCardsInDecks}</b>{' '}
-                <span>cards in play</span>
+                <span>unique cards in play</span>
               </div>
               <div className="stat red">
                 <span className="spray" aria-hidden="true" />

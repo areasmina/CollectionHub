@@ -666,7 +666,7 @@ test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', asyn
   await go(page, 'decks');
   const ribbon = page.getByRole('region', { name: 'Deck collection overview' });
   await expect(ribbon).toContainText('1 deck in');
-  await expect(ribbon).toContainText('1 fully owned');
+  await expect(ribbon).toContainText('1 all owned');
   await expect(ribbon).toContainText('avg power');
   const tile = page.locator('.dcard').first();
   await expect(tile.locator('.cmatch b')).toHaveText('100%');
