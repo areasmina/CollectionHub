@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -18,6 +18,7 @@ const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list')
     const row = (await opts(page)).locator('.phoneview');
     await expect(row).toBeVisible();
     await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
+    await closeOpts(page); // the options are a sheet over the page on phones
   }
 };
 
@@ -315,6 +316,7 @@ test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and 
   await expect(group.locator('option:checked')).toHaveText('CARD TYPE · MISSING');
   await group.selectOption('show:all');
   await expect(page.locator('details.cat').first()).toBeVisible();
+  await closeOpts(page);
   const curve = page.locator('.dpanel .curve, .dpanel .dsec').first();
   if (info.project.name === 'desktop') await expect(curve).toBeVisible();
   else {
