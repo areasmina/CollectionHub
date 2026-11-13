@@ -1010,6 +1010,8 @@ html.forging .vhero {
   .cardmenu li > :is(button, a) { min-height: 44px !important; }
   /* nothing floats over an open sheet: the island steps away until it closes */
   html.sheet-open .pillnav, html:has(.cardmenu) .pillnav, html:has(.fsheet2) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
+  /* on the other edges sliding down would leave it on screen: there it fades out instead */
+  html:is(.sheet-open, :has(.cardmenu), :has(.fsheet2)) .pillnav:not(.dock-bottom) { translate: none !important; opacity: 0 !important; visibility: hidden !important; }
 }
 
 /* ── Readable names on phones (audit roadmap, phase 3) ── no card or deck name under 14px; two lines before cutting. */
@@ -1079,4 +1081,24 @@ html.forging .vhero {
   /* tick boxes in the sheet: a 24px box on a 44px row */
   .tbar .fbody label.check { display: flex !important; align-items: center !important; gap: 10px !important; min-height: 44px !important; }
   .tbar .fbody label.check input[type='checkbox'] { width: 24px !important; height: 24px !important; flex: none !important; accent-color: #e60012; }
+}
+
+/* ── Dynamic Island: nothing else floats into it (audit roadmap, phase 4 step 4) ──
+   1. While a window is open over the page (the swap window), the island steps away on every edge and every screen,
+      like it does for sheets. (The sheet rule above slid it downwards on every edge, which only hid a bottom dock.)
+   2. Island on the top edge: the Forge bar moves down under it while it shows, so FORGE, the deck name and ✕ LEAVE are
+      never under it. Wide screens keep the island in the bar's empty middle, where it covers nothing.
+   3. Island on the bottom edge of a phone: the Forge suggestions sheet peeks just above it while it shows. */
+html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+@media (max-width: 699px) { html:has(.swapnote) .pillnav.dock-bottom { translate: 0 140% !important; opacity: 1 !important; } }
+.forgetop { transition: top 0.25s ease; }
+@media (max-width: 1099px) {
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop { top: 46px !important; }
+}
+@media (max-width: 700px) {
+  html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
+  html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forgetop, html.forging .fsugg { transition: none !important; }
 }
