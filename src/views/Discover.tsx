@@ -382,7 +382,7 @@ export function Discover(s: Shared) {
                 onPointerEnter={() => warmCmdr(c.name)}
                 onTouchStart={() => warmCmdr(c.name)}
                 onClick={() => (setOpenNo(i + 1), setOpen(c.name))}
-                aria-label={`${c.name}${st ? `, ${st.pct}% owned, ${st.missing} cards missing` : ''}`}
+                aria-label={`${c.name}${st ? `, ${st.pct}% owned of the average EDHREC deck, ${st.missing} cards missing` : ''}`}
               >
                 <span className="cart">{c.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}</span>
                 <span className="cinfo">
@@ -393,13 +393,13 @@ export function Discover(s: Shared) {
                   {st ? (
                     <span className="cmatch">
                       <b>{st.pct}%</b>
-                      <Meter pct={st.pct} label={`${st.pct}% owned`} tone="discover" />
+                      <Meter pct={st.pct} label={`${st.pct}% of the average deck owned`} tone="discover" />
                     </span>
                   ) : (
                     <span className="own">{st === null ? 'No EDHREC deck yet' : 'Checking EDHREC…'}</span>
                   )}
                   <span className="cfoot">
-                    <span>{[st?.decks != null ? `${st.decks.toLocaleString()} decks` : '', usd(c)].filter(Boolean).join(' · ')}</span>
+                    <span>{[st?.decks != null ? `${st.decks.toLocaleString()} decks avg` : '', usd(c)].filter(Boolean).join(' · ')}</span>
                     {st && <span className={`cstate${ready ? ' ready' : ''}`}>{ready ? 'ALL OWNED' : `${st.missing} MISSING`}</span>}
                   </span>
                 </span>

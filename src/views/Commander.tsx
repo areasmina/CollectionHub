@@ -726,7 +726,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span className="vbar">
                 <Meter pct={page ? sum.pct : 0} label={`Collection match ${sum.pct}%`} />
                 <small>
-                  collection match · you own {sum.owned} of {sum.total}
+                  collection match · you own {sum.owned} of {sum.total} in this deck
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>

@@ -38,7 +38,7 @@ test('Ownership is one count everywhere: copies you own out of the deck, command
   await expect(tile.locator('.cstate')).toHaveText('ALL OWNED'); // READY is kept for the build checks
   await tile.click();
   // 5 spells + 10 Forest + 10 Island + the commander = 26 copies (it used to say "8 of 8" next to "25 from your binder")
-  await expect(page.locator('.vmatch small')).toContainText('you own 26 of 26');
+  await expect(page.locator('.vmatch small')).toContainText('you own 26 of 26 in this deck');
   await expect(page.locator('.vmatch .num')).toHaveText('100%');
   await expect(page.locator('.dstrip .dstatus')).not.toContainText('from your binder');
   // the word READY now only belongs to the build checks

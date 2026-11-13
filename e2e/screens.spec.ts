@@ -47,6 +47,7 @@ test('Discover (overhaul): loud title + eye + tagline, one toolbar (sort and col
   await expect(card.locator('.cmatch b')).toHaveText('100%');
   await expect(card.locator('.u-meter i.on')).toHaveCount(10);
   await expect(card.locator('.cfoot')).toContainText('4,321 decks');
+  await expect(card.locator('.cfoot')).toContainText('avg'); // the tile measures EDHREC's average deck, and says so
   await expect(card.locator('.cstate')).toHaveText('ALL OWNED'); // READY is kept for the build checks
   // phones: two tiles across
   if (info.project.name === 'phone') {

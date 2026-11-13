@@ -53,3 +53,4 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Collection counts copies in its tiles, its list tabs and its "shown" line.
 - The commander strip no longer repeats how many cards come from your binder; it only adds stand-ins from swaps.
 - Correction to 2026-11-12: red is used for more than the frame, the main button and the active tab (Creative Director audit, 2026-11-13). Red clean-up is planned in a later phase.
+- A Discover tile measures EDHREC's plain average deck (quick for 288 commanders) and says "decks avg"; the commander page labels its own number "in this deck" (the deck it opened, at your power and theme). Guillermo's pick, 2026-11-13.
