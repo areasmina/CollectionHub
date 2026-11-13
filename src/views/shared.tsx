@@ -776,7 +776,7 @@ export function SearchBox({ q, setQ, placeholder = 'name or rules text_', ariaLa
  * which opens the options (power, budget, sort, show, view, size, grouping). On wider screens the bar also names the
  * options in use. Kept class names (.dtools / .fsheet / .fbody) so the old hooks still find it.
  */
-export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: string; quick?: ReactNode; extra?: ReactNode; label?: string; children: ReactNode }) {
+export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: ReactNode; quick?: ReactNode; extra?: ReactNode; label?: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   // a tap outside the open options closes them
   useEffect(() => {

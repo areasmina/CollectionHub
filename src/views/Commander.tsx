@@ -897,7 +897,18 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <ToolBar
                 q={q}
                 setQ={setQ}
-                now={[tag ? `#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag}` : '', `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', show !== 'all' ? show.toUpperCase() : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+                now={
+                  <>
+                    {/* the parts that also show as chips under the bar are hidden on phones, so the button never reads cut off */}
+                    {tag && <span className="fnchip">{`#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag} · `}</span>}
+                    {`${GEARS.find(([v]) => v === budget)?.[1]} GEAR`}
+                    {[pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', show !== 'all' ? show.toUpperCase() : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : '']
+                      .filter(Boolean)
+                      .map((t) => (
+                        <span key={t} className="fnchip">{` · ${t}`}</span>
+                      ))}
+                  </>
+                }
                 quick={
                   <>
                     <div className="qsegs" role="group" aria-label="Quick filter">
