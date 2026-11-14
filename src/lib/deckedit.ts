@@ -41,6 +41,24 @@ const saveDeck = (deck: Deck, cards: Deck['cards'], label?: string) => {
   return db.decks.update(deck.id!, { cards, updated: Date.now() });
 };
 
+/** Collection: turns one binder copy of a card foil (or back to non-foil). Nothing is added or lost: the copy moves
+ *  between the foil and non-foil rows of the same printing. Returns an undo that puts the rows back as they were. */
+export async function setBinderFoil(profile: number, name: string, toFoil: boolean) {
+  const before = (await db.entries.where('profile').equals(profile).toArray()).filter((e) => norm(e.name) === norm(name));
+  await db.transaction('rw', db.entries, async () => {
+    const { put, del } = flipOneCopy(before, name, toFoil);
+    if (del.length) await db.entries.bulkDelete(del);
+    if (put.length) await db.entries.bulkPut(put.map((e) => (e.id === undefined ? (({ id: _, ...r }) => r)(e) : e)) as Entry[]);
+  });
+  return async () => {
+    await db.transaction('rw', db.entries, async () => {
+      const now = (await db.entries.where('profile').equals(profile).toArray()).filter((e) => norm(e.name) === norm(name));
+      await db.entries.bulkDelete(now.map((e) => e.id!));
+      await db.entries.bulkPut(before);
+    });
+  };
+}
+
 /** Deck card to foil / non-foil, and one binder copy with it when you own one. */
 export async function setFoil(deck: Deck, profile: number, name: string, foil: boolean) {
   await db.transaction('rw', db.decks, db.entries, async () => {

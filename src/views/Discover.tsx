@@ -9,7 +9,7 @@ import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edh
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
 import { openCollection } from '../lib/nav';
-import { OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
+import { EmptyState, OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
 import { Pips, Ransom, Title, EyeDoodle, ManaIcon, PageDecor } from './zine';
 import { Meter } from './parts';
 
@@ -158,7 +158,7 @@ export function Discover(s: Shared) {
         for (const [k, p] of pairs) {
           const hit = hits.get(p);
           if (hit) {
-            map.set(k, { stat: statOf(hit.page, s.mine), at: hit.at });
+            map.set(k, { stat: statOf(hit.page, s.mine, byKey.get(k)?.name), at: hit.at });
             anyHit = true;
           } else {
             refresh.add(k);
@@ -175,7 +175,7 @@ export function Discover(s: Shared) {
           const path = pagePath('average', slug(byKey.get(k)!.name));
           // No EDHREC page = null; offline or an error: keep what's shown and try again next time.
           const stat = await fetchPage(path, REFRESH_MS)
-            .then((p) => statOf(p, s.mine))
+            .then((p) => statOf(p, s.mine, byKey.get(k)!.name))
             .catch((e) => (e instanceof NoPage ? null : undefined));
           if (!live) return;
           if (stat !== undefined) {
@@ -358,10 +358,22 @@ export function Discover(s: Shared) {
       )}
       {/* The commander count is the title's answer ("335 DECKS"), so no count line here */}
       {!commanders.length && data && <Welcome empty={s.mine.size === 0} />}
+      {!empty && shown.length === 0 && (
+        <EmptyState
+          title="No commander matches"
+          action={
+            <button type="button" className="u-btn" onClick={() => (haptic('select'), setQ(''), setColours([]))}>
+              CLEAR SEARCH AND COLOURS
+            </button>
+          }
+        >
+          {q.trim() ? `None of your ${commanders.length} commanders matches “${q.trim()}”. Press Enter to open any commander by name.` : 'None of your commanders has all of these colours.'}
+        </EmptyState>
+      )}
       <ul className="cgrid" data-zoom={zoom} ref={gridRef}>
         {shown.map((c, i) => {
           const st = stats.get(c.key);
-          const ready = st && st.pct >= 90;
+          const ready = st && st.missing === 0; // READY is kept for the build checks; this is ownership
           return (
             <li key={c.id}>
               <button
@@ -370,7 +382,7 @@ export function Discover(s: Shared) {
                 onPointerEnter={() => warmCmdr(c.name)}
                 onTouchStart={() => warmCmdr(c.name)}
                 onClick={() => (setOpenNo(i + 1), setOpen(c.name))}
-                aria-label={`${c.name}${st ? `, ${st.pct}% owned, ${st.missing} cards missing` : ''}`}
+                aria-label={`${c.name}${st ? `, ${st.pct}% owned of the average EDHREC deck, ${st.missing} cards missing` : ''}`}
               >
                 <span className="cart">{c.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}</span>
                 <span className="cinfo">
@@ -381,14 +393,14 @@ export function Discover(s: Shared) {
                   {st ? (
                     <span className="cmatch">
                       <b>{st.pct}%</b>
-                      <Meter pct={st.pct} label={`${st.pct}% owned`} tone="discover" />
+                      <Meter pct={st.pct} label={`${st.pct}% of the average deck owned`} tone="discover" />
                     </span>
                   ) : (
                     <span className="own">{st === null ? 'No EDHREC deck yet' : 'Checking EDHREC…'}</span>
                   )}
                   <span className="cfoot">
-                    <span>{[st?.decks != null ? `${st.decks.toLocaleString()} decks` : '', usd(c)].filter(Boolean).join(' · ')}</span>
-                    {st && <span className={`cstate${ready ? ' ready' : ''}`}>{ready ? 'READY' : `${st.missing} MISSING`}</span>}
+                    <span>{[st?.decks != null ? `${st.decks.toLocaleString()} decks avg` : '', usd(c)].filter(Boolean).join(' · ')}</span>
+                    {st && <span className={`cstate${ready ? ' ready' : ''}`}>{ready ? 'ALL OWNED' : `${st.missing} MISSING`}</span>}
                   </span>
                 </span>
               </button>

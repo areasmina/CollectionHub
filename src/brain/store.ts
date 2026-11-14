@@ -1,6 +1,8 @@
 import { db } from '../lib/db';
 import { norm } from '../lib/names';
-import { addTaste, type TasteAction } from './taste';
+import { addTaste, pinTaste, type TasteAction } from './taste';
+import { savePin } from '../lib/deckedit';
+import { noPins, pinOf, type PinSide } from '../lib/pins';
 import type { Aggression } from './win';
 import { WILDCARD_DEFAULT, WILDCARD_MAX } from './wildcard';
 
@@ -28,6 +30,14 @@ export const setWild = (profile: number, commander: string, w: { off?: boolean; 
 /** Remember one thing the player did (a swap in = add, a swap out = cut, pins = always / never). */
 export const recordTaste = (profile: number, card: string, action: TasteAction, deck: string) =>
   patch(profile, (b) => void (b.taste = addTaste(b.taste ?? [], { card: norm(card), action, deck, at: Date.now() })));
+
+/** Pin or un-pin a card for a commander, and keep the taste memory in step: the memory holds what is pinned now,
+ *  so an undone pin leaves nothing behind. */
+export async function pinCard(profile: number, commander: string, card: string, side: PinSide) {
+  await savePin(profile, commander, card, side);
+  const now = pinOf((await db.profiles.get(profile))?.pins?.[commander] ?? noPins(), card);
+  await patch(profile, (b) => void (b.taste = pinTaste(b.taste ?? [], norm(card), commander, now, Date.now())));
+}
 
 /** Forget everything learned (the "reset my taste" button). */
 export const resetTaste = (profile: number) => patch(profile, (b) => void (b.taste = []));

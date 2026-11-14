@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
 import { BASICS, statusOf, summarize } from '../lib/compare';
+import { ownShare } from '../lib/deckshare';
 import { db, type Card } from '../lib/db';
 import { BRACKETS, GEARS, cachedPage, fetchFiltered, filterWebUrl, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../lib/edhrec';
 import { norm, slug as toSlug } from '../lib/names';
@@ -11,7 +12,7 @@ import { searchByText } from '../lib/search';
 import { cardsByIds, cheapest, withCheapest } from '../lib/scryfall';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
-import { recordTaste, setWild } from '../brain/store';
+import { pinCard, recordTaste, setWild } from '../brain/store';
 import { comboBreaks, nearCombos } from '../brain/combos';
 import { identityGate, offIdentity } from '../brain/identity';
 import { comboAllowed } from '../brain/win';
@@ -19,7 +20,6 @@ import { brainData } from '../brain/data';
 import { pickWildcards, seedOf, wildcardCandidates, WILDCARD_DEFAULT } from '../brain/wildcard';
 import { detectCardSynergies, type CardSynergyMatch } from '../brain/themes';
 import { arrange, noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins, type PinSide } from '../lib/pins';
-import { savePin } from '../lib/deckedit';
 import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib/nav';
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
@@ -34,7 +34,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, PhoneView, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -225,7 +225,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const sections = page ? (kind === 'average' ? orderSections(page.lists, page.card ? { name, id: page.card.id, qty: 1 } : undefined) : page.lists) : [];
   const all = sections.flatMap((l) => l.cards);
   const names = [...new Set(all.map((c) => c.name))];
-  const sum = summarize(names, s.mine, s.other);
+  // One ownership count on every screen (lib/deckshare ownShare): copies owned out of the deck's copies, commander included.
+  const sum = { ...summarize(names, s.mine, s.other), ...ownShare([...new Map(all.map((c) => [norm(c.name), c])).values()], s.mine) };
   const missing = [...new Map(all.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => [c.name, c])).values()];
   const cardOf = (c: EdhCard) => (c.id ? cards.get(c.id) : undefined);
   const deckCost = priceSum([...new Map(all.map((c) => [c.name, c])).values()].map((c) => ({ card: cardOf(c), qty: c.qty ?? 1 })));
@@ -326,8 +327,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
     setMenuFor(null);
   }
   async function setPin(card: string, side: PinSide) {
-    await savePin(s.profile, name, card, side);
-    void recordTaste(s.profile, card, side === 'in' ? 'always' : 'never', name);
+    await pinCard(s.profile, name, card, side);
     setMenuFor(null);
   }
   async function toggleBought(cardName: string) {
@@ -513,24 +513,12 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const label = name.split(' // ')[0];
   const pw = BRACKETS.find(([v]) => v === bracket);
   const powerLabel = pw && (pw[2] ? `${pw[1].toUpperCase()} · B${pw[2]}` : pw[1].toUpperCase());
-  // Grid (card images) is the default; the choice is remembered on this device.
-  // Phones start on the compact list (name · mana · price · owned), owner's call Nov 6.
-  const [view, setViewState] = useState<View>(() => {
-    try {
-      const v = localStorage.getItem('ch:view');
-      return v === 'list' || v === 'grid' || v === 'compact' ? v : narrow ? 'compact' : 'grid';
-    } catch {
-      return narrow ? 'compact' : 'grid';
-    }
-  });
+  // Grid (card images) is the default at every screen size (owner's call, Nov 13); the choice is remembered on this
+  // device. The key is new on purpose: phones used to start on the compact list, and they all start on the grid once.
+  const [view, setViewPref] = useStored<View>(VIEW_KEY, 'grid', ['grid', 'list', 'compact']);
   const setView = (v: View) => {
-    setViewState(v);
+    setViewPref(v);
     setMenuFor(null);
-    try {
-      localStorage.setItem('ch:view', v);
-    } catch {
-      /* per-device convenience only */
-    }
   };
   const Item = view === 'grid' ? CardTile : CardLine;
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
@@ -724,7 +712,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span className="vbar">
                 <Meter pct={page ? sum.pct : 0} label={`Collection match ${sum.pct}%`} />
                 <small>
-                  collection match · you own {sum.owned} of {sum.total}
+                  collection match · you own {sum.owned} of {sum.total} in this deck
                   {sum.other > 0 ? ` · ${sum.other} in ${s.otherName}` : ''}
                 </small>
               </span>
@@ -745,7 +733,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <span>loading EDHREC data…</span>
               ) : kind === 'average' ? (
                 <>
-                  <span className="coverage">{covText}</span>
+                  {covText && <span className="coverage">{covText}</span>}
                   {pricesIn && deckCost > 0 && (
                     <span className="dcost" title={`What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}`}>
                       deck ≈{cad(deckCost)}
@@ -891,11 +879,22 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </div>
             )}
             <div className="lists" {...(forging ? drop : {})}>
-              {/* The one slim bar (owner's rule): search, quick view/filter pills on wider screens, then ⋮ with POWER, GEAR, SORT, SHOW, VIEW and EDHREC's With / Without card */}
+              {/* The one slim bar (owner's rule): search, quick view/filter pills on wider screens, then ⋮ with POWER, GEAR, SORT, SHOW and EDHREC's With / Without card */}
               <ToolBar
                 q={q}
                 setQ={setQ}
-                now={[tag ? `#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag}` : '', `${GEARS.find(([v]) => v === budget)?.[1]} GEAR`, pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', show !== 'all' ? show.toUpperCase() : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : ''].filter(Boolean).join(' · ')}
+                now={
+                  <>
+                    {/* the parts that also show as chips under the bar are hidden on phones, so the button never reads cut off */}
+                    {tag && <span className="fnchip">{`#${tags.find((t) => t.slug === tag)?.value.toUpperCase() ?? tag} · `}</span>}
+                    {`${GEARS.find(([v]) => v === budget)?.[1]} GEAR`}
+                    {[pins.in.length + pins.out.length ? `${pins.in.length + pins.out.length} PINNED` : '', show !== 'all' ? show.toUpperCase() : '', kind === 'average' && cap ? '≤$' + cap : '', only !== 'all' ? ONLYS.find(([v]) => v === only)?.[1] : '']
+                      .filter(Boolean)
+                      .map((t) => (
+                        <span key={t} className="fnchip">{` · ${t}`}</span>
+                      ))}
+                  </>
+                }
                 quick={
                   <>
                     <div className="qsegs" role="group" aria-label="Quick filter">
@@ -906,13 +905,13 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       ))}
                     </div>
                     <div className="qsegs qviews" role="group" aria-label="Quick view">
-                      <button type="button" aria-pressed={view === 'grid'} title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                      <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
                         <GridIcon />
                       </button>
-                      <button type="button" aria-pressed={view === 'list'} title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                      <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
                         <ListIcon />
                       </button>
-                      <button type="button" aria-pressed={view === 'compact'} title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
+                      <button type="button" aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
                         <CompactIcon />
                       </button>
                     </div>
@@ -1132,7 +1131,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 )}
 
                 {/* 4. The rest: Gear, Buy under, Sort / Show / Only */}
-                <PhoneView view={view} onChange={setView} />
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
@@ -1147,6 +1145,16 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
                 </div>
               </ToolBar>
+              <SetChips
+                chips={[
+                  ...(tag ? [{ label: 'THEME ' + (tags.find((t) => t.slug === tag)?.value ?? tag).toUpperCase(), off: () => setTag('') }] : []),
+                  ...pins.in.map((n) => ({ label: 'PIN ' + n, off: () => setPin(n, 'in') })),
+                  ...pins.out.map((n) => ({ label: 'WITHOUT ' + n, off: () => setPin(n, 'out') })),
+                  ...(show !== 'all' ? [{ label: show.toUpperCase() + ' ONLY', off: () => setShow('all') }] : []),
+                  ...(kind === 'average' && cap ? [{ label: 'BUY UNDER CA$' + cap, off: () => setCap('0') }] : []),
+                  ...(only !== 'all' ? [{ label: ONLYS.find(([v]) => v === only)?.[1] ?? only, off: () => setOnly('all') }] : []),
+                ]}
+              />
               {noBudget && !noBracket && <small className="bnote">No EDHREC decks in {GEARS.find(([v]) => v === budget)?.[1]} gear: showing every budget (2ND)</small>}
               {noBracket && <small className="bnote">No EDHREC decks at {BRACKETS.find(([v]) => v === bracket)?.[1].toLowerCase()} power: showing all brackets</small>}
               {(() => {

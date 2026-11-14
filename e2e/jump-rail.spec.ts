@@ -7,11 +7,19 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-test('Deck page: the jump rail lists the sections, fits the screen, and a tap lands on that section', async ({ page }) => {
+test('Deck page: the jump rail lists the sections, fits the screen, and a tap lands on that section', async ({ page }, info) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'decks'));
   await page.reload();
   await page.locator('.dcard', { hasText: 'Tatyova Lands' }).click();
   const rail = page.getByRole('navigation', { name: 'Jump to section' });
+  if (info.project.name === 'phone') {
+    // On phones the rail is pinned to the screen edge: it stays away while the deck's header (scores, FORGE) fills
+    // the screen, and comes in once the card list reaches the top of the screen.
+    await expect(page.locator('.dpage .lists').first()).toBeAttached();
+    await page.evaluate(() => scrollTo(0, 0));
+    await expect(rail).toBeHidden();
+    await page.locator('.lists > .tbar').first().evaluate((e) => e.scrollIntoView({ block: 'start' }));
+  }
   await expect(rail).toBeVisible();
   await expect(rail.getByRole('button')).toHaveText(['CRE', 'INS', 'SOR', 'ART', 'ENC', 'LND']);
   await fits(page, ['.jrail']);

@@ -653,7 +653,8 @@ html.forging .vhero {
   border-radius: 4px !important;
   border: 2px solid #fff824 !important;
   box-shadow: 3px 3px 0 #0a0a0a;
-  transform: rotate(-2deg);
+  /* sacred card rule: a card picture is never tilted (the tilt lives on the tape and stamps, not on the card) */
+  transform: none;
 }
 .dpage .wildcard .wacts {
   flex-wrap: wrap;
@@ -786,7 +787,7 @@ html.forging .vhero {
   padding: 0 10px;
   cursor: pointer;
 }
-.dtools.tbar > .fbtn.on { background: var(--accent); color: #000; }
+.dtools.tbar > .fbtn.on { background: var(--text); color: #000; }
 .fbtn .fcount { background: #000; color: #fff; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 12px; text-align: center; }
 .sortsel select { background: transparent; color: inherit; border: 0; font: inherit; font-weight: 800; width: 64px; text-overflow: ellipsis; cursor: pointer; }
 .sortsel select option { color: #000; }
@@ -795,7 +796,7 @@ html.forging .vhero {
 
 .fchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 var(--sp3, 12px); }
 .fchip, .fclear { min-height: 36px; padding: 0 10px; border: 2px solid var(--text); background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
-.fchip { background: var(--accent); color: #000; }
+.fchip { background: var(--text); color: #000; }
 .fclear { border-style: dashed; }
 .fcounts { margin-left: auto; opacity: 0.75; font-size: 13px; }
 
@@ -810,16 +811,16 @@ html.forging .vhero {
 .fs-group .lbl { display: block; font-weight: 800; margin-bottom: 6px; }
 .fs-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .fs-row .u-chip { min-height: 44px; }
-.fs-row .u-chip[aria-pressed='true'] { background: var(--accent); color: #000; }
+.fs-row .u-chip[aria-pressed='true'] { background: var(--text); color: #000; }
 .fs-row .pip { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--text); background: var(--bg); color: var(--text); font-weight: 900; cursor: pointer; }
-.fs-row .pip[aria-pressed='true'] { background: var(--accent); color: #000; outline: 3px solid var(--text); }
+.fs-row .pip[aria-pressed='true'] { background: var(--text); color: #000; outline: 3px solid var(--text); outline-offset: 2px; }
 .fs-foot { display: flex; gap: 8px; justify-content: space-between; padding: 10px 14px; border-top: 2px solid var(--text); }
 .fs-foot .primary { flex: 1; min-height: 44px; }
 @media (min-width: 700px) { .fsheet2 { left: 50%; right: auto; bottom: auto; top: 18vh; width: 460px; transform: translateX(-50%); border-bottom: 2px solid var(--text); } }
 /* Small phones: search gets its own full row (it was squeezed to two letters at 320px); view, options, filter and sort share the row under it */
 @media (max-width: 430px) {
   .dtools.tbar:not(.lists > *):has(> .sortsel) { flex-wrap: wrap; }
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100%; border-bottom: 2px solid var(--text) !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100% !important; border-bottom: 2px solid var(--text) !important; }
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tquick { flex: 0 0 auto; border-left: 0; }
   .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { border-left: 2px solid var(--text); }
   .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
@@ -827,10 +828,487 @@ html.forging .vhero {
 }
 .fbackdrop { z-index: 1009; }
 
+/* ── The one "nothing to show" note ── */
+.estate { position: relative; display: grid; justify-items: start; gap: 8px; margin: var(--sp3, 12px) 0; padding: 16px; border: 2px dashed var(--text); background: var(--bg); }
+.estate .etitle { display: block; margin-top: 4px; }
+.estate p { margin: 0; opacity: 0.85; }
+.estate .u-btn { min-height: 44px; }
 /* Deck page on phones keeps its own slim bar (search + ⋮); sort stays in ⋮ there */
 @media (max-width: 700px) { .lists > .dtools.tbar > .sortsel { display: none; } }
-/* In the wrapped (small phone) bar the ⋮ sits mid-row: its menu hangs from the whole bar, so it can never run off the side */
+/* (the small-phone ⋮ dropdown rules lived here; on phones the options are now the one bottom sheet, see ONE SHEET below) */
+
+/* ── Compact list on phones = one line per card (ManaBox idea): art chip · ✓ name · pips · price · ⋮ ──
+   The type line, binder count and SWAP label hide; tapping the row still opens the swap note, the ⋮ still opens the menu. */
+@media (max-width: 700px) {
+  ul.zcompact > li.zrow {
+    display: grid !important;
+    grid-template-columns: 30px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 48px !important;
+    padding: 4px 8px !important;
+  }
+  ul.zcompact > li.zrow .thumb { display: block !important; width: 30px !important; height: 30px !important; border-radius: 3px !important; overflow: hidden; }
+  ul.zcompact > li.zrow .thumb img { width: 100% !important; height: 100% !important; object-fit: cover !important; object-position: 50% 22% !important; }
+  ul.zcompact > li.zrow .info { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; }
+  ul.zcompact > li.zrow .zrow-head { display: flex !important; align-items: center !important; gap: 6px !important; min-width: 0 !important; flex-wrap: nowrap !important; }
+  ul.zcompact > li.zrow .nm { min-width: 0 !important; white-space: normal !important; overflow: hidden !important; display: -webkit-box !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; line-height: 1.1 !important; font-size: 15px !important; }
+  ul.zcompact > li.zrow .manapips .manapip { width: 14px !important; height: 14px !important; font-size: 9px !important; }
+  ul.zcompact > li.zrow .manapips { flex: none !important; }
+  ul.zcompact > li.zrow .zrow-type,
+  ul.zcompact > li.zrow .zrow-owned-badge,
+  ul.zcompact > li.zrow .zrow-missing-badge,
+  ul.zcompact > li.zrow .swap-lbl { display: none !important; }
+  ul.zcompact > li.zrow .zrow-sub:not(:has(.swapmark, .bannedtag, .tagother, .note)) { display: none !important; }
+  ul.zcompact > li.zrow .acts { display: flex !important; align-items: center !important; gap: 4px !important; }
+  ul.zcompact > li.zrow .acts .swapbtn,
+  ul.zcompact > li.zrow .acts .morebtn { width: 34px !important; min-width: 34px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; }
+  ul.zcompact > li.zrow .price.tapey { font-size: 12px !important; padding: 2px 4px !important; }
+}
+.fs-row.colours .mana-filter-btn { min-width: 48px; min-height: 48px; display: inline-grid; place-items: center; }
+.fs-row.colours .cless { font-size: 20px; line-height: 1; }
+.colours button[data-c='C'][aria-pressed='true'] { border-color: #cfcfcf !important; color: #cfcfcf !important; box-shadow: 0 0 14px rgba(207, 207, 207, 0.7), inset 0 0 6px rgba(207, 207, 207, 0.3) !important; }
+
+/* Say it once: when the bar has its own sort box (Discover, Collection), the ⋮ button doesn't repeat the sort name; the
+   sort box shows it in full and active colours show as chips under the bar. The deck page keeps its label (phones hide
+   its sort box). */
+.dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > summary > .fnow { display: none !important; }
+/* Wider screens: the sort box is as wide as its words, so the chosen sort reads in full (it was cut to "%…"). */
+@media (min-width: 431px) {
+  .sortsel select { width: auto !important; max-width: 240px; }
+}
+/* Discover on phones keeps its one slim bar (search + "% OWNED ⋮"), like the deck page: the sort sits behind ⋮ there,
+   because a sort box squeezed into that row could only show "%…". */
 @media (max-width: 430px) {
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { position: static !important; }
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore > .fbody { left: 0 !important; right: 0 !important; width: auto !important; max-width: none !important; top: calc(100% + 4px) !important; }
+  .dfind > .dtools.tbar { flex-wrap: nowrap !important; }
+  .dfind > .dtools.tbar > .sortsel { display: none !important; }
+  .dfind > .dtools.tbar > .tsearch { order: 0 !important; flex: 1 1 auto !important; border-bottom: 0 !important; }
+  .dfind > .dtools.tbar > .tbmore { position: relative !important; }
+  .dfind > .dtools.tbar > .tbmore > summary > .fnow { display: inline !important; }
+}
+
+/* Sacred card rule: the commander card stays whole. Its ⋯ OPTIONS tag hangs under the card like a tape label (it used
+   to sit on the mana cost, and the one-time "tap for options" tape covered the rules text and collector line). */
+.cmdrbtn .cmdrmore {
+  position: static !important;
+  display: flex !important;
+  width: fit-content;
+  margin: 8px auto 0;
+  height: 28px;
+  border-radius: 0;
+  background: var(--hazard, #ffd400);
+  color: var(--ink, #0a0a0a);
+  border: 0;
+  box-shadow: 2px 2px 0 var(--ink, #0a0a0a);
+  transform: rotate(-2deg);
+  opacity: 1;
+  font-size: 15px;
+}
+.cmdrbtn .cmdrmore b { max-width: 80px !important; font-size: 13px; }
+
+/* ── Foil (Guillermo, Nov 12: "should look like a real foil card"). Like a real foil, the shine sits in the picture and
+   on the card's frame, never on the printed text: name, mana cost, type line, rules text and the set line stay crisp
+   (sacred card rule).
+   ::after = the picture: prismatic rainbow bands + fine light streaks + the bright glare that follows your finger or
+             mouse (--gx/--gy from Thumb), clipped to the art box.
+   ::before = the frame: a softer rainbow sweep on the outer border only.
+   Small list chips show only art, so they get the picture shine over the whole chip. */
+.foil::after {
+  background:
+    radial-gradient(circle at var(--gx) var(--gy), rgba(255, 255, 245, 0.9) 0%, rgba(255, 240, 200, 0.55) 8%, rgba(255, 255, 255, 0) 34%),
+    linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.75) 48%, rgba(255, 245, 220, 0.9) 50%, rgba(255, 255, 255, 0.75) 52%, transparent 62%),
+    repeating-linear-gradient(115deg, transparent 0 6%, rgba(255, 255, 255, 0.35) 7.5%, transparent 9%, transparent 13%, rgba(255, 255, 255, 0.18) 14%, transparent 15.5%),
+    repeating-linear-gradient(125deg, #ff4fb8 0%, #ffcf3a 6%, #4dff9a 12%, #36c2ff 18%, #8b5cff 24%, #ff4fb8 30%) !important;
+  background-size: 100% 100%, 320% 100%, 240% 240%, 200% 200% !important;
+  background-repeat: no-repeat, no-repeat, repeat, repeat !important;
+  background-blend-mode: screen, screen, screen, normal;
+  mix-blend-mode: overlay !important;
+  opacity: 0.92 !important;
+  /* like light moving over a real foil: a bright band sweeps across every few seconds, the rainbow drifts, and the
+     hot spot wanders (or follows your finger / mouse) */
+  background-position: 0 0, var(--sw) 0, var(--wx) var(--wx), var(--wx) var(--wx) !important;
+  animation: foilglare 12s ease-in-out infinite alternate, foilsweep 5.5s cubic-bezier(0.45, 0.05, 0.35, 1) infinite, foilwash 9s ease-in-out infinite alternate !important;
+}
+:is(.timg, .thand, .thumb).foil::after {
+  /* the art box of a modern card frame: below the name bar, above the type line */
+  clip-path: inset(10.5% 7.5% 44.5% 7.5%);
+}
+.thumb.foil::after { clip-path: none; }
+.foil::before {
+  background: repeating-linear-gradient(125deg, #ff4fb8 0%, #ffcf3a 8%, #4dff9a 16%, #36c2ff 24%, #8b5cff 32%, #ff4fb8 40%) !important;
+  background-size: 220% 220% !important;
+  mix-blend-mode: overlay !important;
+  opacity: 0.8 !important;
+  animation: holoshift 8s ease-in-out infinite alternate !important;
+}
+:is(.timg, .thand).foil::before {
+  /* only the outer border of the frame */
+  -webkit-mask: linear-gradient(90deg, #000 0 6%, transparent 6% 94%, #000 94%), linear-gradient(180deg, #000 0 4%, transparent 4% 96.5%, #000 96.5%);
+  mask: linear-gradient(90deg, #000 0 6%, transparent 6% 94%, #000 94%), linear-gradient(180deg, #000 0 4%, transparent 4% 96.5%, #000 96.5%);
+}
+.thumb.foil::before { display: none; }
+/* while a finger or mouse is on the card the hot spot follows it (the wandering stops), the sweep and rainbow keep going */
+.foil.tracking::after {
+  animation: foilsweep 5.5s cubic-bezier(0.45, 0.05, 0.35, 1) infinite, foilwash 9s ease-in-out infinite alternate !important;
+}
+@property --sw { syntax: '<percentage>'; inherits: false; initial-value: 130%; }
+@property --wx { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+@keyframes foilsweep {
+  0% { --sw: 130%; }
+  55%, 100% { --sw: -30%; }
+}
+@keyframes foilwash {
+  from { --wx: 0%; }
+  to { --wx: 100%; }
+}
+@keyframes foilglare {
+  0% { --gx: 22%; --gy: 18%; }
+  50% { --gx: 70%; --gy: 45%; }
+  100% { --gx: 40%; --gy: 80%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foil::before, .foil::after { animation: none !important; }
+}
+
+/* ── ONE SHEET (audit roadmap, phase 2): on phones every options list, filter and card menu is the same bottom sheet ──
+   The shape is Collection's filter sheet (.fsheet2): full width, on the bottom edge, 2px frame, accent line on top,
+   a header with the title and a 44px ✕, the page dimmed behind it. Wider screens keep popovers under their buttons. */
+.tbmore > .fbody > .sheethead { display: none; }
+/* THEME sits in a column row: its label kept its 68px row width as a height, leaving a tall empty gap (all sizes) */
+.dtools.tbar > .tbmore .optrow:has(.themes) > .lbl { flex: 0 0 auto !important; }
+@media (max-width: 699px) {
+  .dtools.tbar:has(> .tbmore[open]) { z-index: 1010 !important; }
+  .dtools.tbar > .tbmore[open]::before { content: ''; position: fixed; inset: 0; z-index: 1008; background: rgba(0, 0, 0, 0.6); }
+  /* the ⋮ that opened the sheet stays above the dimmed page (and under the sheet), so a second tap on it still closes the options */
+  .dtools.tbar > .tbmore[open] > summary { position: relative !important; z-index: 1009 !important; }
+  .dtools.tbar > .tbmore[open] > .fbody {
+    position: fixed !important; left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important;
+    width: auto !important; max-width: none !important; max-height: 85dvh !important; overflow-y: auto !important;
+    translate: none !important; transform: none !important; margin: 0 !important; z-index: 1010 !important;
+    padding: 0 14px calc(12px + env(safe-area-inset-bottom)) !important; gap: 10px !important;
+    background: var(--bg) !important; border: 2px solid var(--text) !important; border-bottom: 0 !important;
+    border-radius: 0 !important; box-shadow: 0 -4px 0 var(--accent) !important; animation: none !important;
+  }
+  .tbmore > .fbody > .sheethead {
+    display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 2;
+    margin: 0 -14px; padding: 12px 14px 8px; background: var(--bg); font-weight: 900;
+  }
+  .tbmore > .fbody > .sheethead .close { min-width: 44px; min-height: 44px; background: none; border: 0; color: inherit; font-size: 18px; cursor: pointer; }
+  /* every control in the sheet is a full thumb target */
+  .tbmore[open] > .fbody :is(button, select, input:not([type='checkbox']), .u-chip) { min-height: 44px !important; }
+  /* inside the sheet the sort choices wrap; the theme chips keep their one sideways-scrolling row (owner's rule) */
+  .tbmore[open] > .fbody .sorts { flex-wrap: wrap !important; overflow: visible !important; }
+  .tbmore[open] > .fbody .optrow > .lbl { height: auto !important; min-height: 0 !important; align-self: flex-start; }
+  /* the card menu and the deck menu: the same sheet, not a pop-up at the finger */
+  .cardmenu {
+    left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto !important;
+    max-height: 85dvh !important; transform: none !important; z-index: 1010 !important;
+    border: 2px solid var(--text) !important; border-bottom: 0 !important; border-radius: 0 !important;
+    box-shadow: 0 -4px 0 var(--accent) !important; padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+  .backdrop.menuback { z-index: 1009 !important; background: rgba(0, 0, 0, 0.6) !important; }
+  .cardmenu li > :is(button, a) { min-height: 44px !important; }
+  /* nothing floats over an open sheet: the island steps away until it closes */
+  html.sheet-open .pillnav, html:has(.cardmenu) .pillnav, html:has(.fsheet2) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
+  /* on the other edges sliding down would leave it on screen: there it fades out instead */
+  html:is(.sheet-open, :has(.cardmenu), :has(.fsheet2)) .pillnav:not(.dock-bottom) { translate: none !important; opacity: 0 !important; visibility: hidden !important; }
+}
+
+/* ── Readable names on phones (audit roadmap, phase 3) ── no card or deck name under 14px; two lines before cutting. */
+@media (max-width: 699px) {
+  .coll .ztile .tname, ul.zgrid .ztile .tname { font-size: 14px !important; line-height: 1.15 !important; white-space: normal !important; display: -webkit-box !important; -webkit-box-orient: vertical !important; -webkit-line-clamp: 2 !important; overflow: hidden !important; }
+  .dcard .nm, .dcard .nm b { font-size: 14px !important; line-height: 1.15 !important; }
+  .decklink { font-size: 14px !important; }
+}
+/* ── 44px TAP TARGETS on phones (audit roadmap, phase 3) ── every button, tab, select and section header gets a full
+   thumb-sized tap area. Heights grow to 44px; nothing else about the look changes. Mouse screens keep compact controls. */
+@media (max-width: 699px) {
+  /* bars and headers */
+  .dtools.tbar > .tbmore > summary { min-width: 44px !important; min-height: 44px !important; }
+  .dtools.tbar > .fbtn { min-width: 44px !important; min-height: 44px !important; }
+  .u-btn, .coll .slip-btn, .coll .list-tab, .dlist .dribbon .dfold, .dlight, .tagpill,
+  .dlist .u-chip, .fsugg .u-chip.theme, .fcube > button, .dstrip .u-btn { min-height: 44px !important; }
+  .coll .list-tab, .tagpill, .dlight, .fsugg .u-chip.theme { display: inline-flex !important; align-items: center !important; }
+  details.cat > summary { min-height: 44px !important; }
+  /* header notes (salt, bracket): the tap area grows to 44px with padding that a negative margin takes back, so the header keeps its height */
+  .vmeta details.scrap > summary { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -12px !important; }
+  .vmeta details.scrap.bracket > summary { margin-block: -5px !important; }
+  .dlist select { min-height: 44px !important; }
+  /* card rows and tiles: swap and ⋮ */
+  .acts .swapbtn, .acts .morebtn, .morebtn,
+  ul.zcompact > li.zrow .acts .swapbtn, ul.zcompact > li.zrow .acts .morebtn { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; }
+  /* text-style buttons: the words stay small, the tap area is a full row high */
+  .decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  /* the suggestions drawer's grab bar: the bar looks the same, the strip you can grab is 44px */
+  .fsugg .fgrab { min-height: 44px !important; }
+  .tagpill { min-width: 44px !important; justify-content: center !important; }
+  /* the jump rail stays a slim 30px strip on the edge; each letter's tap area reaches 14px further in, so it is 44px wide */
+  .jrail > button { position: relative !important; }
+  .jrail > button::before { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 44px; }
+}
+/* ── Collection: HIDE STATS (audit roadmap, phase 3) ── the tiles, the appraisal and Top 3 fold away so cards reach the
+   first phone screen; + DECK and IMPORT stay. Same button as My Decks' fold, with a full 44px tap height. */
+.coll .statfold {
+  display: block; margin: 0 0 var(--s2, 8px) auto; padding: 4px 12px; min-height: 44px; cursor: pointer;
+  background: #0a0a0a; border: 1px solid #3a3a3a; color: #b5b5b5;
+  font: 400 12px var(--u-display, 'Anton', sans-serif); letter-spacing: 0.1em; transform: rotate(-1deg);
+}
+.coll .statfold:hover, .coll .statfold:focus-visible { color: #fff; border-color: #e60012; }
+.coll .stats.folded > .stat, .coll .stats.folded > .topwidget,
+.coll .stats.folded .slip-val, .coll .stats.folded .slip > .warn, .coll .stats.folded .slip > .stamp { display: none !important; }
+.coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
+.coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
+.coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
+
+/* ── Phase 2 follow-up (found with the real collection): nothing in the options sheet or the chip strip reads cut off ── */
+@media (max-width: 699px) {
+  /* the ⋮ button says the gear only; theme, pins and filters already show as chips right under the bar */
+  .lists > .dtools.tbar > .tbmore > summary .fnow .fnchip { display: none !important; }
+  .lists > .dtools.tbar > .tbmore > summary .fnow { max-width: none !important; }
+  /* chips: one row you can slide, each a full 44px to tap; Clear all stays in reach on the right */
+  .fchips.setchips { flex-wrap: nowrap !important; overflow-x: auto !important; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .fchips.setchips::-webkit-scrollbar { display: none; }
+  .fchips .fchip, .fchips .fclear { min-height: 44px !important; flex: none !important; white-space: nowrap !important; }
+  .fchips.setchips .fclear { position: sticky !important; right: 0 !important; z-index: 1; background: #0a0a0a !important; box-shadow: -8px 0 0 0 #0a0a0a; }
+  /* PIN gets the whole first row beside APPLY, WITHOUT the second, so both hints read in full */
+  .tbar .fbody .cf-row { flex-wrap: wrap !important; }
+  .tbar .fbody .cf-row > .cglance-wrap:first-child { order: 1; flex: 1 1 0 !important; }
+  .tbar .fbody .cf-row > .cf-apply-btn { order: 2; }
+  .tbar .fbody .cf-row > .cf-clear-btn { order: 3; }
+  .tbar .fbody .cf-row > .cglance-wrap:nth-child(2) { order: 4; flex: 1 1 100% !important; }
+  /* the theme row slides sideways: a fade on the right edge says there is more */
+  .dtools.tbar > .tbmore .fbody .themes { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); padding-right: 36px !important; }
+  /* tick boxes in the sheet: a 24px box on a 44px row */
+  .tbar .fbody label.check { display: flex !important; align-items: center !important; gap: 10px !important; min-height: 44px !important; }
+  .tbar .fbody label.check input[type='checkbox'] { width: 24px !important; height: 24px !important; flex: none !important; accent-color: #e60012; }
+}
+
+/* ── Dynamic Island: 44px tap areas on phones (audit roadmap, phase 4 step 3) ── The buttons keep their look and the
+   island keeps its 46px height; each control answers a tap across an invisible 44px area around it. The areas only
+   grow away from the island's row of buttons, so two buttons never share a spot, and a press that moves more than
+   18px is still a drag (re-dock / stretch), never a tap. */
+@media (max-width: 699px) {
+  .pillnav .pback, .pillnav .pill button, .pillnav .syncpill, .island-drawer .id-sync-close { position: relative; }
+  .pillnav .pback::after, .pillnav .pill button::after, .pillnav .syncpill::after, .island-drawer .id-sync-close::after {
+    content: ''; position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+    min-width: 100%; min-height: 100%; width: 44px; height: 44px;
+  }
+  /* section buttons are already wide: only their height grows */
+  .pillnav .pill button::after { width: 100%; }
+  /* side docks stack the buttons: there the areas grow sideways, not up and down */
+  .pillnav:is(.dock-left, .dock-right) .pill button::after { width: 44px; height: 100%; }
+  /* the sync light's own hold-to-shrink target grows with it, so a held thumb on the pill still reaches the light */
+  .pillnav .syncpill .sdot { position: relative; }
+  .pillnav .syncpill .sdot::after { content: ''; position: absolute; inset: -9px; }
+  .pillnav.collapsed .syncpill::after { width: 44px; height: 44px; }
+  /* the grip line is a picture of the handle: the whole island is the handle (a drag starts anywhere on it), so the
+     line itself takes no taps and the middle button keeps its full area under it */
+  .pillnav .island-lip, .pillnav .island-lip * { pointer-events: none; }
+  /* the sync panel scrolls, so its top edge would clip an area centred on the ✕: this one grows left and down instead */
+  .island-drawer .id-sync-close::after { left: auto; top: -4px; right: -4px; translate: none; width: 46px; height: 46px; }
+  /* the sync pill's area sits behind the light, so a tap on the light itself still reaches the light (tap = sync, hold = shrink) */
+  .pillnav .syncpill { isolation: isolate; }
+  .pillnav .syncpill::after { z-index: -1; }
+}
+
+/* ── Dynamic Island: nothing else floats into it (audit roadmap, phase 4 step 4) ──
+   1. While a window is open over the page (the swap window), the island steps away on every edge and every screen,
+      like it does for sheets. (The sheet rule above slid it downwards on every edge, which only hid a bottom dock.)
+   2. Island on the top edge: the Forge bar moves down under it while it shows, so FORGE, the deck name and ✕ LEAVE are
+      never under it. Wide screens keep the island in the bar's empty middle, where it covers nothing.
+   3. Island on the bottom edge of a phone: the Forge suggestions sheet peeks just above it while it shows. */
+html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+@media (max-width: 699px) { html:has(.swapnote) .pillnav.dock-bottom { translate: 0 140% !important; opacity: 1 !important; } }
+.forgetop { transition: top 0.25s ease; }
+@media (max-width: 1099px) {
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop { top: 46px !important; }
+}
+@media (max-width: 700px) {
+  html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
+  html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forgetop, html.forging .fsugg { transition: none !important; }
+}
+
+/* ── Phones: the card view and size controls stay on the bar (owner's call, Nov 13) ── Grid / list / compact and SIZE
+   were only inside ⋮ on phones (or nowhere, on Collection), so they read as lost. They now sit on the bar itself, 44px
+   tall like every other phone control. Deck pages give them their own row under the search; Collection already had a
+   second row and they join it. The ALL / OWNED / MISSING pills stay in ⋮ on phones (SHOW), as before. */
+@media (max-width: 700px) {
+  .dpage .lists > .dtools.tbar { flex-wrap: wrap !important; height: auto !important; max-height: none !important; }
+  .dpage .lists > .dtools.tbar > .tquick,
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) {
+    display: flex !important; order: 9; flex: 1 1 100% !important; height: auto !important; min-height: 52px;
+    gap: 10px !important; padding: 4px 8px !important; border: 0 !important; border-top: 1px solid #3a3a3a !important;
+  }
+  .dpage .lists > .dtools.tbar > .tquick > .qsegs:not(.qviews),
+  .coll .dtools.tbar > .tquick > .qsegs:not(.qviews) { display: none !important; }
+  .dpage .lists > .dtools.tbar > .tquick > .qsegs.qviews,
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews,
+  .coll .dtools.tbar > .tquick > .qsegs.qviews,
+  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews { display: inline-flex !important; height: 48px !important; box-sizing: border-box !important; }
+  .coll .dtools.tbar > .tquick { display: inline-flex !important; }
+  :is(.dpage .lists, .coll) > .dtools.tbar > .tquick > .qsegs.qviews > button,
+  .coll .dtools.tbar > .tquick > .qsegs.qviews > button { min-width: 44px !important; min-height: 44px !important; padding: 0 !important; }
+  :is(.dpage .lists, .coll) .dtools.tbar > .tquick > .qzoom-btn { min-height: 44px !important; }
+  /* in the Forge the wide-screen rule that caps this row's width must not clip it on a phone */
+  html.forging .deckgrid.forge-split .dpage .lists > .dtools.tbar > .tquick,
+  html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick { max-width: none !important; overflow: visible !important; }
+  /* Collection's second row also holds ⋮, FILTER and the sort: tighter gaps so the sort's name still reads */
+  .coll .dtools.tbar > .tquick { gap: 6px !important; padding: 0 6px !important; }
+  .coll .dtools.tbar > .tquick > .qzoom-btn { padding: 0 8px !important; }
+  /* Collection grid, ManaBox sizing: S = 4 across, M = 3 across (the start), L = 2 across — the same steps as a deck's grid */
+  .collbar[data-zoom='s'] ~ * .cgrid2, .collbar[data-zoom='s'] ~ .cgrid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; }
+  .collbar[data-zoom='m'] ~ * .cgrid2, .collbar[data-zoom='m'] ~ .cgrid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+  .collbar[data-zoom='l'] ~ * .cgrid2, .collbar[data-zoom='l'] ~ .cgrid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) { .coll .dtools.tbar > .sortsel select { font-size: 14px !important; } }
+
+/* ── Card sections, every screen (owner's call, Nov 13: "as clean as Moxfield") ── Each section (Creatures, Instants,
+   Lands …) is its own full-width block: a header row, then its cards in rows that fill the width and wrap as needed.
+   Open grid sections used to share a row on wide screens when they were small, which read as mangled. The card's
+   smallest width per SIZE is set so a card stays readable: the grid adds or drops a column as the space changes (the
+   Forge's side panels opening or closing, a wider or narrower window), and never squeezes a card below that width.
+   Phones keep their fixed steps (S 4 across, M 3, L 2). Card pictures keep their own shape at every width. */
+.deckgrid > .lists > details.cat,
+.deckgrid > .lists > details.cat[open]:has(> ul.zgrid) {
+  flex: 1 1 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+@media (min-width: 701px) {
+  .deckgrid > .lists > details.cat > ul.zgrid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important; gap: 16px 14px !important; }
+  .deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)) !important; gap: 12px 10px !important; }
+  .deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid { grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)) !important; gap: 20px 18px !important; }
+  /* a section with a few cards keeps them at card size on the left instead of stretching them across the row */
+  .deckgrid > .lists > details.cat > ul.zgrid > li { max-width: 300px !important; }
+  .deckgrid > .lists > details.cat + details.cat { margin-top: 12px; }
+}
+
+/* ── Dynamic Island, phase 4 step 2: a clear lane on the side it is docked to ──
+   A side-docked island rests on the page's edge, so the page keeps a strip that wide free (App.tsx measures the island
+   into --island-w). Shrunk to its dot it needs no lane. Things pinned to that edge move in beside it. */
+html:has(.pillnav.dock-right:not(.collapsed)) .stage { padding-right: var(--island-w, 0px) !important; }
+html:has(.pillnav.dock-left:not(.collapsed)) .stage { padding-left: var(--island-w, 0px) !important; }
+@media (max-width: 700px) {
+  html:has(.pillnav.dock-right:not(.collapsed)) .lists > .jrail-wrap { right: calc(var(--island-w, 0px) + 4px) !important; }
+}
+
+/* ── Dynamic Island: thin side bar (Guillermo, Nov 13: "same shape as the top and bottom island") ──
+   On the left or right edge it is a slim 46px bar like the top and bottom island, not a box: the section names run
+   down the bar, the back button and the sync light sit at its ends, and the lane it needs is only 46px. */
+.pillnav:is(.dock-left, .dock-right):not(.collapsed) {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  padding: 10px 0 !important;
+}
+.pillnav.dock-left:not(.collapsed) { border-radius: 0 22px 22px 0 !important; }
+.pillnav.dock-right:not(.collapsed) { border-radius: 22px 0 0 22px !important; }
+.pillnav.dock-left .island-membrane { border-radius: 0 22px 22px 0 !important; }
+.pillnav.dock-right .island-membrane { border-radius: 22px 0 0 22px !important; }
+.pillnav:is(.dock-left, .dock-right) .island-content { align-items: center !important; gap: 6px !important; }
+.pillnav:is(.dock-left, .dock-right) .pback { width: 30px !important; height: 30px !important; margin: 0 !important; }
+.pillnav:is(.dock-left, .dock-right) .pill {
+  width: 34px !important;
+  padding: 3px !important;
+  gap: 3px !important;
+  border-radius: 999px !important;
+  align-items: center !important;
+}
+.pillnav:is(.dock-left, .dock-right) .pill button {
+  writing-mode: vertical-rl;
+  width: 26px !important;
+  height: auto !important;
+  padding: 12px 0 !important;
+  font: 400 13px/1 var(--u-display) !important;
+  letter-spacing: 0.08em !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+}
+.pillnav:is(.dock-left, .dock-right) .syncpill {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+}
+.pillnav:is(.dock-left, .dock-right) .syncpill .sync-main { padding: 0 !important; }
+.pillnav:is(.dock-left, .dock-right) .syncpill span.sync-lbl:not(.sdot) { display: none !important; }
+.pillnav:is(.dock-left, .dock-right) .island-lip { height: 32px !important; }
+
+/* ── Dynamic Island motion and feel (Guillermo, Nov 13: "smooth as the Apple one", "part of the site", "transparent at
+   times") ── It glides in and out on one soft spring instead of a bounce, sits on its edge with a light shadow instead
+   of a heavy floating one, and turns see-through with a blur while the page is moving under it. */
+.pillnav {
+  transition:
+    transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease,
+    background-color 0.35s ease,
+    box-shadow 0.35s ease,
+    -webkit-backdrop-filter 0.35s ease,
+    backdrop-filter 0.35s ease !important;
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  .pillnav {
+    transition-timing-function:
+      linear(0, 0.06 2%, 0.23 5%, 0.5 9.5%, 0.74 14%, 0.9 19%, 0.99 25%, 1.025 31%, 1.03 37%, 1.018 46%, 1.005 58%, 0.999 72%, 1),
+      ease, ease, ease, ease, ease !important;
+  }
+}
+.pillnav:not(.floating):not(.collapsed) { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 6px 20px rgba(0, 0, 0, 0.55) !important; }
+.pillnav:not(.floating) .island-membrane { box-shadow: none !important; }
+.pillnav::before, .pillnav::after, .pillnav .island-membrane { transition: opacity 0.35s ease, background-color 0.35s ease; }
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+}
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) .island-membrane { background-color: transparent !important; }
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching)::before,
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching)::after { opacity: 0.5; }
+@media (prefers-reduced-motion: reduce) {
+  .pillnav { transition: opacity 0.2s ease, background-color 0.2s ease !important; }
+}
+/* Top dock: the Forge bar moves down under the island; the strip it leaves above is filled, so no scrolled card or
+   tile shows (or sits) under the island there. */
+@media (max-width: 1099px) {
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 46px; background: var(--u-ink); }
+}
+
+/* ── Dynamic Island: picked up and put down (Guillermo, Nov 13: "the detaching and attaching animation can be better") ──
+   Picked up, it lifts a little and keeps its capsule shape with the red venom glow, breathing gently, instead of
+   squashing into a lens with its edge corners still showing. It follows the finger from any edge (side docks used to
+   pin it to the middle of the screen while dragging). App.tsx glides it from the finger to its new edge on release. */
+.pillnav.floating {
+  left: var(--fx) !important;
+  top: var(--fy) !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 999px !important;
+  animation: island-held 1.4s ease-in-out infinite alternate, venom-simmer 0.6s ease-in-out infinite alternate !important;
+}
+.pillnav.floating::before, .pillnav.floating::after { display: none !important; }
+.pillnav.floating .island-membrane { border-radius: 999px !important; animation: none !important; }
+@keyframes island-held {
+  from { scale: 1.04; rotate: -0.6deg; }
+  to { scale: 1.07; rotate: 0.6deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav.floating { animation: none !important; scale: 1.04; }
+}
+
+/* ── Desktop composition fixes (owner's screenshot, Nov 13) ──
+   1. The active-setting chips (PIN …, Clear all) take their own full row under the bar, with room above and below,
+      instead of sharing a row with the first card section.
+   2. MISSING no longer sits on the card picture (it covered art and, at small sizes, the type line: the sacred card
+      rule). It is a flat label right under the card, where the price and swap notes already live. The card itself stays
+      in black and white, so missing still reads at a glance. */
+.deckgrid > .lists > .setchips { flex: 1 1 100% !important; min-width: 100% !important; margin: 8px 0 4px !important; }
+.dpage .ztile .misstape,
+ul.zgrid .ztile .misstape {
+  position: static !important; transform: none !important; align-self: flex-start;
+  margin: 0 !important; top: auto !important; left: auto !important;
 }

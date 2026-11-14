@@ -41,3 +41,39 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 | 2026-11-04 | Keep the existing visual identity (Midnight Override, zine × punk look) | decided | – |
 | 2026-10-12 | Decks are virtual and may share cards; warn when decks together need more copies than owned | decided | `lib/copies.ts`; physical reservations may come later only as an option |
 | 2026-10-12 | Moxfield import = pasted text only (no API); prices are USD converted to CA$ | decided | – |
+
+## 2026-11-12: Foil and card integrity
+- Foil cards must look like real foil and move (sweep, drifting rainbow, glare follows the pointer). The shine goes on the picture and the frame border only; the name, mana cost, type line, rules text and set line are never covered (Guillermo's "sacred card rule").
+- Fonts and red were audited on every main screen and match the Midnight Override spec: 4 text fonts plus the ransom-letter kit, red only on the frame, the main button and the active tab. No font or red cleanup is wanted.
+
+## 2026-11-13: One number per fact (audit roadmap, phase 1)
+- Ownership is counted one way on every screen (`lib/deckshare.ts` `ownShare`): copies you own out of the deck's copies, the commander included, basic lands counted as owned. Discover tiles, the commander page, saved decks and My Decks all use it.
+- The word READY belongs only to the build checks (readiness n/12). Owning every card says ALL OWNED; My Decks says "all owned", and its "unique cards in play" tile names its unit.
+- My Decks works out a deck's bracket with the Game Changers list, like the deck page.
+- Collection counts copies in its tiles, its list tabs and its "shown" line.
+- The commander strip no longer repeats how many cards come from your binder; it only adds stand-ins from swaps.
+- Correction to 2026-11-12: red is used for more than the frame, the main button and the active tab (Creative Director audit, 2026-11-13). Red clean-up is planned in a later phase.
+- A Discover tile measures EDHREC's plain average deck (quick for 288 commanders) and says "decks avg"; the commander page labels its own number "in this deck" (the deck it opened, at your power and theme). Guillermo's pick, 2026-11-13.
+
+## 2026-11-13: One sheet and one chip strip (audit roadmap, phase 2)
+- On phones (under 700px) every options list and card or deck menu is a bottom sheet shaped like Collection's filter sheet; each keeps its own content. Tablet and desktop keep popovers under their buttons.
+- While a sheet is open the page behind it can't be tapped; ✕, Escape, a tap on the dimmed page or ⋮ again closes it. The island steps off screen while a sheet is open.
+- Theme chips keep their one sideways-scrolling row, also inside the sheet.
+- A setting that narrows a page is never hidden behind ⋮: it shows under the bar as a removable chip (`SetChips`), with Clear all when there is more than one.
+
+## 2026-11-13: Saved deck page keeps its header (audit roadmap, phase 3)
+- Guillermo's pick: on phones the saved deck header (commander card, title, match %, the three tiles) stays as designed even though cards start just below the first screen; it is not shrunk and the page does not open scrolled past it. The swap how-to line shows only until the first swap on that device.
+
+## 2026-11-13: Collection keeps its tiles, with HIDE STATS (audit roadmap, phase 3)
+- Guillermo's pick: Collection's stat tiles stay as they are and show by default; a HIDE STATS button (the same control as My Decks) folds the tiles, the appraisal and Top 3 so cards reach the first phone screen. The choice is remembered per device. No ribbon.
+
+## 2026-11-13: Cards open as a grid, and the view controls stay on the bar
+- Guillermo's call: cards open as a grid at every screen size, phones included. This replaces "compact list is the phone default" (2026-11-06). The view is remembered per device under a new key (`ch:cardview`), so a phone that was on the old default starts on the grid once and then keeps what its owner picks.
+- Grid / list / compact and SIZE sit on the bar itself at every width. On phones they have their own row under the search on deck pages (so the bar is two rows there, replacing "one slim row" for phones only) and join the second row on Collection. They are never moved into ⋮ again: twice that read as "lost".
+- Phone grid sizes follow ManaBox: S = 4 across, M = 3 across (the start), L = 2 across, on Collection and on decks.
+- Card sections (Creatures, Instants, Lands …) are each a full-width block on every screen, "as clean as Moxfield": a header row, then cards in rows that wrap to the width. Small open sections no longer share a row on wide screens. Each SIZE has a smallest card width (S 124px, M 168px, L 236px above phone width), so the grid adds or drops columns and never squeezes a card.
+
+## 2026-11-13: Dynamic Island stays floating, side docks are a thin bar (audit roadmap, phase 4)
+- Guillermo's picks: the island keeps floating (no solid strip); it slides away going down and comes back going up. At the very top of a page a bottom-docked island covers the last row of the first screen until the first small scroll ("Keep it, covers until you scroll").
+- On the left or right edge the island is a thin 46px bar, the same slim shape as the top and bottom island, with the section names running down it; the page keeps a 46px lane free on that side.
+- Motion: one soft spring in and out (no bounce), a light edge shadow so it reads as part of the page, and see-through with a blur while the page is moving under it; solid again at rest.

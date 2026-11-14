@@ -1,24 +1,17 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
   await seed(page);
 });
 
-/** Grid / list: the quick pills on the bar from tablet width up; on phones (pills hidden) the VIEW row inside ⋮. */
+/** Grid / list: the quick pills on the bar, at every screen width (phones too, since Nov 13). */
 const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
-  if (page.viewportSize()!.width > 700) {
-    const sw = page.locator('.qviews').first();
-    await expect(sw).toBeVisible();
-    await fits(page, ['.qviews']);
-    await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
-  } else {
-    await expect(page.locator('.qviews').first()).toBeHidden();
-    const row = (await opts(page)).locator('.phoneview');
-    await expect(row).toBeVisible();
-    await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
-  }
+  const sw = page.locator('.qviews').first();
+  await expect(sw).toBeVisible();
+  await fits(page, ['.qviews']);
+  await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
 };
 
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
@@ -47,7 +40,8 @@ test('Discover (overhaul): loud title + eye + tagline, one toolbar (sort and col
   await expect(card.locator('.cmatch b')).toHaveText('100%');
   await expect(card.locator('.u-meter i.on')).toHaveCount(10);
   await expect(card.locator('.cfoot')).toContainText('4,321 decks');
-  await expect(card.locator('.cstate')).toHaveText('READY');
+  await expect(card.locator('.cfoot')).toContainText('avg'); // the tile measures EDHREC's average deck, and says so
+  await expect(card.locator('.cstate')).toHaveText('ALL OWNED'); // READY is kept for the build checks
   // phones: two tiles across
   if (info.project.name === 'phone') {
     const cols = await page.locator('.cgrid').evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(' ').length);
@@ -314,6 +308,7 @@ test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and 
   await expect(group.locator('option:checked')).toHaveText('CARD TYPE · MISSING');
   await group.selectOption('show:all');
   await expect(page.locator('details.cat').first()).toBeVisible();
+  await closeOpts(page);
   const curve = page.locator('.dpanel .curve, .dpanel .dsec').first();
   if (info.project.name === 'desktop') await expect(curve).toBeVisible();
   else {
@@ -666,11 +661,11 @@ test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', asyn
   await go(page, 'decks');
   const ribbon = page.getByRole('region', { name: 'Deck collection overview' });
   await expect(ribbon).toContainText('1 deck in');
-  await expect(ribbon).toContainText('1 ready to play');
+  await expect(ribbon).toContainText('1 all owned');
   await expect(ribbon).toContainText('avg power');
   const tile = page.locator('.dcard').first();
   await expect(tile.locator('.cmatch b')).toHaveText('100%');
-  await expect(tile.locator('.cstate.ready')).toHaveText('READY');
+  await expect(tile.locator('.cstate.ready')).toHaveText('ALL OWNED');
   await expect(tile.locator('.u-meter i')).toHaveCount(10);
   const t = await tile.evaluate((e) => getComputedStyle(e).transform);
   expect(t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
@@ -712,7 +707,9 @@ test('EDHREC With / Without card: self-testing filter, honest fallback', async (
 test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, never removes', async ({ page }, info) => {
   await page.locator('.ccard').first().click();
   const cov = page.locator('.dstrip .dstatus');
-  await expect(cov).toContainText('from your binder');
+  // the hero says how many you own, once; the strip no longer repeats it with a different count
+  await expect(page.locator('.vmatch small')).toContainText(/you own \d+ of \d+/);
+  await expect(cov).not.toContainText('from your binder');
   await expect(page.locator('.vtile.fit summary')).toContainText(/FITS/); // decks open at MED power, MAX budget
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('3RD GEAR');
   const before = await cov.innerText();
@@ -731,7 +728,7 @@ test('OWNED ONLY is gone: a device that had it saved builds with PREFER OWNED', 
   await page.evaluate(() => localStorage.setItem('ch:own', 'owned'));
   await page.reload();
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.dstrip .dstatus')).toContainText('from your binder');
+  await expect(page.locator('.dstrip .dstatus')).toBeVisible();
   await expect(page.locator('.dstrip .cmode', { hasText: 'owned only' })).toHaveCount(0);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Cards' })).toHaveCount(0);
@@ -796,16 +793,17 @@ test('Readiness + Bracket Fit tiles beside Match; the swap window says why the c
   await expect(page.locator('.dhero .vtile.ready')).toBeVisible();
 });
 
-test('Platform space pass: multi-column open deck categories on wide screens, side-by-side workbench on tablet and desktop', async ({ page }, info) => {
-  await page.evaluate(() => localStorage.setItem('ch:view', 'grid'));
+test('Platform space pass: every open deck category is a full-width block (owner, Nov 13), side-by-side workbench on tablet and desktop', async ({ page }, info) => {
+  await page.evaluate(() => localStorage.setItem('ch:cardview', 'grid'));
   await page.locator('.ccard').first().click();
   const cats = page.locator('details.cat[open]');
   await expect(cats.first()).toBeVisible();
   if (info.project.name !== 'phone') {
-    // On tablet and desktop, small 1-card grid categories share a horizontal row instead of each taking 100% width
+    // Small 1-card grid categories no longer share a row (that read as mangled): each is its own full-width block
     const [c0, c1] = await Promise.all([cats.nth(0).boundingBox(), cats.nth(1).boundingBox()]);
-    expect(Math.abs(c0!.y - c1!.y)).toBeLessThan(12);
-    expect(c1!.x).toBeGreaterThan(c0!.x + c0!.width - 2);
+    expect(c1!.y).toBeGreaterThan(c0!.y + c0!.height - 2);
+    expect(Math.abs(c1!.x - c0!.x)).toBeLessThan(2);
+    expect(Math.abs(c1!.width - c0!.width)).toBeLessThan(2);
     // The deck takes the full width: TO BUY / PULL is a drawer now, not a column beside it
     const [lists, strip] = await Promise.all([page.locator('.deckgrid > .lists').boundingBox(), page.locator('.dstrip').boundingBox()]);
     expect(Math.abs(lists!.width - strip!.width)).toBeLessThan(4);

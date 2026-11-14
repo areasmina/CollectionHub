@@ -99,6 +99,15 @@ export const opts = async (page: Page, scope = '') => {
   return d;
 };
 
+/** Closes the ⋮ options if they are open. On phones they are a bottom sheet over a dimmed page, so the page behind
+ *  can't be tapped until the sheet is closed (its ✕); on wider screens the popover closes the same way via Escape. */
+export const closeOpts = async (page: Page) => {
+  const x = page.locator('.tbmore[open] .sheethead .close');
+  if (await x.isVisible()) await x.click();
+  else await page.keyboard.press('Escape');
+  await page.locator('.tbmore[open]').waitFor({ state: 'detached' });
+};
+
 /** Opens Collection's import pop-up (IMPORT on the appraisal slip; it opens by itself on an empty binder) and returns it. */
 export const openImport = async (page: Page) => {
   const pop = page.locator('.importbox-pop');

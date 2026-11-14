@@ -11,6 +11,7 @@ import { shortText, type Shortfall } from '../lib/copies';
 import { deckSalt, saltMap } from '../lib/edhrec';
 import { cad, finishUsd, PRICE_METHOD, rateNote, toCad } from '../lib/prices';
 import { dragEnd, dragStart } from '../lib/drag';
+import { Ransom } from './zine';
 
 /** Every legal card in a binder, one per name (live). */
 export function useBinder(profile: number) {
@@ -371,18 +372,12 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
 }
 
 /**
- * Phones only: grid / list / compact inside the ⋮ menu. The quick view pills on the bar are hidden at phone width, and
- * the menu's VIEW row was removed as redundant on Nov 7, which left phones with no way to change the view.
+ * Where a deck's card view (grid / list / compact) is remembered on this device. Grid is the start at every screen size
+ * (owner's call, Nov 13). The key replaced 'ch:view', under which phones started on the compact list, so every device
+ * starts on the grid once and then keeps what its owner picks. The view pills sit on the bar at every width (on phones
+ * too: twice they were moved into a menu there, and twice the owner could not find them).
  */
-export function PhoneView({ view, onChange }: { view: string; onChange: (v: 'grid' | 'list' | 'compact') => void }) {
-  return (
-    <div className="phoneview">
-      <OptRow label="VIEW">
-        <Segs label="View" value={view} options={[['grid', 'GRID', 'Grid view'], ['list', 'LIST', 'List view'], ['compact', 'COMPACT', 'Compact list']]} onChange={(v) => onChange(v as 'grid' | 'list' | 'compact')} />
-      </OptRow>
-    </div>
-  );
-}
+export const VIEW_KEY = 'ch:cardview';
 
 /** onScroll for sideways chip rows: a light tick each time the row moves past another chip (scroll-snap step). */
 export function snapTick(e: React.UIEvent<HTMLElement>) {
@@ -733,11 +728,10 @@ export function ShortAlert({ items, inline, currentDeck }: { items: Shortfall[];
   );
 }
 
-/** The commander's big card is its menu button (it replaces the old one-card "Commander" section): a lift and a
- *  ⋯ OPTIONS corner on hover, a faint corner on touch screens, and a one-time "tap for options" tape. */
+/** The commander's big card is its menu button (it replaces the old one-card "Commander" section). The ⋯ OPTIONS tag
+ *  sits under the card, never on it: nothing may cover the card's name, mana cost, rules text or collector line. */
 export function CmdrCard({ src, name, onMenu, children }: { src: string; name: string; onMenu: (x: number, y: number) => void; children?: ReactNode }) {
-  const [seen, setSeen] = useStored<'0' | '1'>('cmdrhint', '0', ['0', '1']);
-  const open = (x: number, y: number) => (haptic('open'), setSeen('1'), onMenu(x, y));
+  const open = (x: number, y: number) => (haptic('open'), onMenu(x, y));
   return (
     <button
       type="button"
@@ -756,11 +750,6 @@ export function CmdrCard({ src, name, onMenu, children }: { src: string; name: s
       <span className="cmdrmore" aria-hidden="true">
         ⋯ <b>OPTIONS</b>
       </span>
-      {seen === '0' && (
-        <span className="cmdrhint" aria-hidden="true">
-          tap for options
-        </span>
-      )}
     </button>
   );
 }
@@ -781,7 +770,7 @@ export function SearchBox({ q, setQ, placeholder = 'name or rules text_', ariaLa
  * which opens the options (power, budget, sort, show, view, size, grouping). On wider screens the bar also names the
  * options in use. Kept class names (.dtools / .fsheet / .fbody) so the old hooks still find it.
  */
-export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: string; quick?: ReactNode; extra?: ReactNode; label?: string; children: ReactNode }) {
+export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: ReactNode; quick?: ReactNode; extra?: ReactNode; label?: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   // a tap outside the open options closes them
   useEffect(() => {
@@ -789,12 +778,19 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && ref.current?.open && (ref.current.removeAttribute('open'), ref.current.querySelector('summary')?.focus());
     addEventListener('pointerdown', out);
     addEventListener('keydown', esc);
-    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc));
+    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc), void document.documentElement.classList.remove('sheet-open'));
   }, []);
   return (
     <div className="dtools tbar" role="toolbar" aria-label={label}>
       {quick && <div className="tquick">{quick}</div>}
-      <details className="fsheet tbmore" ref={ref} onToggle={(e) => e.currentTarget.open && haptic('open')}>
+      {/* On phones the options open as the one bottom sheet (same shape as Collection's filter sheet); a tap on the
+          dimmed page behind it (the details' own ::before) closes it. Wider screens keep the popover under the button. */}
+      <details
+        className="fsheet tbmore"
+        ref={ref}
+        onToggle={(e) => (e.currentTarget.open && haptic('open'), document.documentElement.classList.toggle('sheet-open', !!document.querySelector('details.tbmore[open]')))}
+        onClick={(e) => e.target === e.currentTarget && e.currentTarget.removeAttribute('open')}
+      >
         <summary aria-label="Options" title="Options">
           {now && <span className="fnow">{now}</span>}
           <span className="kebab" aria-hidden="true">
@@ -803,10 +799,50 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
             <i />
           </span>
         </summary>
-        <div className="fbody">{children}</div>
+        <div className="fbody">
+          <div className="sheethead">
+            <span aria-hidden="true">
+              <Ransom text="OPTIONS" size={24} seed={43} />
+            </span>
+            <button type="button" className="close" aria-label="Close options" onClick={() => (haptic('tap'), ref.current?.removeAttribute('open'))}>
+              ✕
+            </button>
+          </div>
+          {children}
+        </div>
       </details>
       <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />
       {extra}
+    </div>
+  );
+}
+
+/**
+ * Under a tool bar: one removable chip per setting that changes what is shown, then "Clear all" (audit roadmap, phase 2).
+ * The same strip as Collection's and Discover's active filters, so what narrows a page is never hidden behind ⋮.
+ * Hidden when nothing is on.
+ */
+export function SetChips({ chips }: { chips: { label: string; off: () => unknown }[] }) {
+  if (!chips.length) return null;
+  return (
+    <div className="fchips setchips" role="group" aria-label="Active settings">
+      {chips.map((c) => (
+        <button key={c.label} type="button" className="fchip" aria-label={`Remove ${c.label}`} onClick={() => (haptic('select'), void c.off())}>
+          {c.label} <span aria-hidden="true">✕</span>
+        </button>
+      ))}
+      {chips.length > 1 && (
+        <button
+          type="button"
+          className="fclear"
+          onClick={async () => {
+            haptic('select');
+            for (const c of chips) await c.off(); // one at a time: unpinning saves to the binder
+          }}
+        >
+          Clear all
+        </button>
+      )}
     </div>
   );
 }
@@ -817,6 +853,21 @@ export function OptRow({ label, children }: { label: string; children: ReactNode
     <div className="optrow">
       <span className="lbl">{label}</span>
       {children}
+    </div>
+  );
+}
+
+/** The one "nothing to show" note (lists, searches, filters): what happened in plain words and the way out. */
+export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="estate" role="status" aria-label={title}>
+      {/* the note is empty frame space, so it may carry the zine (Overhaul rule 1): a tape strip and ransom letters */}
+      <span aria-hidden="true" className="tape" style={{ width: 70, height: 18, top: -9, left: 18, transform: 'rotate(-4deg)' }} />
+      <span className="etitle" aria-hidden="true">
+        <Ransom text={title.toUpperCase()} size={22} seed={title.length * 7 + 3} />
+      </span>
+      {children && <p>{children}</p>}
+      {action}
     </div>
   );
 }

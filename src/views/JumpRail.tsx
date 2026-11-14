@@ -69,9 +69,12 @@ export function JumpRail({ headers }: { headers: string[] }) {
     );
     els.forEach((e) => io.observe(e));
     // On phones the rail is pinned to the screen edge, so it only shows while its list is on screen (the swipe
-    // cube can slide the list away sideways).
+    // cube can slide the list away sideways). It waits until the list reaches the top third of the screen, so it never
+    // floats over the deck's header (scores, FORGE) while the list is still further down.
     const list = ref.current?.closest('.lists');
-    const lio = new IntersectionObserver((es) => setInView(es.some((e) => e.isIntersecting)));
+    const lio = new IntersectionObserver((es) => setInView(es.some((e) => e.isIntersecting)), {
+      rootMargin: '0px 0px -70% 0px',
+    });
     if (list) lio.observe(list);
     return () => (io.disconnect(), lio.disconnect());
     // eslint-disable-next-line react-hooks/exhaustive-deps

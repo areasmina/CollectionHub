@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
+import { ManaIcon, Ransom } from './zine';
 import { COLOURS, COLOUR_NAME, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Show } from '../lib/collfilter';
 
 /** The Filter button of the control strip: a count when something narrows the list, and a sheet with the choices.
@@ -31,16 +32,19 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
           <div className="backdrop fbackdrop" onClick={() => setOpen(false)} />
           <div className="fsheet2" role="dialog" aria-modal="true" aria-label="Filter cards">
             <div className="nh">
-              <span>FILTER <mark>CARDS</mark></span>
+              <span aria-hidden="true">
+                <Ransom text="FILTER CARDS" size={24} seed={41} />
+              </span>
               <button type="button" className="close" onClick={() => setOpen(false)} aria-label="Close filter">✕</button>
             </div>
             <div className="fs-body">
               <div className="fs-group">
                 <span className="lbl">Colours</span>
-                <div className="fs-row">
+                {/* the same mana buttons as Discover's colour filter (one part, one look) */}
+                <div className="fs-row colours">
                   {COLOURS.map((c) => (
-                    <button key={c} type="button" className={`pip pip-${c}`} aria-pressed={filter.colours.includes(c)} aria-label={COLOUR_NAME[c]} title={COLOUR_NAME[c]} onClick={() => pick('colours', c)}>
-                      {c}
+                    <button key={c} type="button" data-c={c} className="u-chip mana-filter-btn" aria-pressed={filter.colours.includes(c)} aria-label={COLOUR_NAME[c]} title={COLOUR_NAME[c]} onClick={() => pick('colours', c)}>
+                      {c === 'C' ? <b className="cless">◇</b> : <ManaIcon c={c} />}
                     </button>
                   ))}
                 </div>

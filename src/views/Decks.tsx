@@ -5,13 +5,13 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { deckShareOf, deckShares } from '../lib/deckshare';
-import { addToDeck, removeFromDeck, replaceInDeck, savePin, setCommander } from '../lib/deckedit';
+import { addToDeck, removeFromDeck, replaceInDeck, setCommander } from '../lib/deckedit';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../lib/pins';
 import { rankSubs, recInfoOf, type SubCard } from '../lib/subs';
 import { binderCandidates } from '../brain/candidates';
 import { offIdentity } from '../brain/identity';
 import { AGGRESSION, killCheck } from '../brain/win';
-import { recordTaste } from '../brain/store';
+import { pinCard, recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
 import { JumpRail, jumpId } from './JumpRail';
 import { BRACKETS, cachedPages, fetchFiltered, fetchPage, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
@@ -37,7 +37,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, PhoneView, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -574,13 +574,15 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
       .catch(() => {});
     gameChangers().then(setGc);
   }, [deck.id]);
-  const [view, setView] = useStored<'grid' | 'list' | 'compact'>('ch:view', typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches ? 'compact' : 'grid', ['grid', 'list', 'compact']);
+  const [view, setView] = useStored<'grid' | 'list' | 'compact'>(VIEW_KEY, 'grid', ['grid', 'list', 'compact']);
   const [zoom, setZoom] = useStored<'s' | 'm' | 'l'>('ch:cmdrzoom', 'm', ['s', 'm', 'l']);
   const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
   const [q, setQ] = useState(''); // search the deck by name or rules text
   const [show, setShow] = useStored<Show>('ch:dshow', 'all', SHOWS.map(([v]) => v));
   const [only, setOnly] = useState<Only>('all'); // Game Changers / price bands, for this visit
+  // The swap how-to line shows until the first swap on this device, then gives its row back to the cards (owner's pick, Nov 13).
+  const [swapHint, setSwapHint] = useStored<'show' | 'done'>('ch:swaphint', 'show', ['show', 'done']);
   // Foil deck cards are priced at the foil price of the printing on file.
   const cardFor = (c: DeckCard) => (c.foil ? atFinish(cardOf(c.name), true) : cardOf(c.name));
   const missingCost = priceSum(deck.cards.filter((c) => statusOf(c.name, s.mine) !== 'owned').map((c) => ({ card: cardFor(c), qty: c.qty })));
@@ -746,6 +748,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const forgePool = () =>
     binder.filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key)).map((b) => optionOf({ ...recInfo.get(b.key), name: b.name, type: b.type, cmc: b.cmc }));
   async function swapIn(from: string, to: string) {
+    setSwapHint('done'); // the how-to line has done its job after the first swap
     if (cmdr && offIdentity([to], ci, (n) => binderCard.get(norm(n))?.ci ?? cardOf(n)?.ci).length) return; // hard rule: never outside the colours
     haptic('success');
     const key = deck.commander ?? deck.name;
@@ -960,13 +963,18 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </>
               }
             >
-              <PhoneView view={view} onChange={setView} />
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
             </ToolBar>
+            <SetChips
+              chips={[
+                ...(show !== 'all' ? [{ label: show.toUpperCase() + ' ONLY', off: () => setShow('all') }] : []),
+                ...(only !== 'all' ? [{ label: ONLYS.find(([v]) => v === only)?.[1] ?? only, off: () => setOnly('all') }] : []),
+              ]}
+            />
             <JumpRail headers={[...sections].filter(([, cs]) => cs.length).map(([h]) => h)} />
-            <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>
+            {swapHint === 'show' && <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>}
             {[...sections]
               .filter(([, cs]) => cs.length)
               .map(([h, cs]) => {
@@ -1016,7 +1024,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                               cmdr={(deck.commander ?? deck.name).split(' // ')[0]}
                               onPick={(to) => swapIn(c.name, to)}
                               onUndo={() => setSwapFor(null)}
-                              onPin={deck.commander ? (side) => (savePin(s.profile, deck.commander!, c.name, side), void recordTaste(s.profile, c.name, side === 'in' ? 'always' : 'never', deck.commander!), setSwapFor(null)) : undefined}
+                              onPin={deck.commander ? (side) => (void pinCard(s.profile, deck.commander!, c.name, side), setSwapFor(null)) : undefined}
                               deck={deck.cards.map((x) => x.name)}
                               bracket={call.bracket}
                               onClose={() => setSwapFor(null)}
@@ -1068,7 +1076,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             owned={s.mine.get(norm(menu.card.name)) ?? 0}
             deck={deck}
             onSwap={menu.card.name === deck.commander || BASICS.has(norm(menu.card.name)) ? undefined : () => setSwapFor(menu.card.name)}
-            pin={deck.commander ? { side: pinOf(pins, menu.card.name), canIn: owned(menu.card.name), onPin: (side) => savePin(s.profile, deck.commander!, menu.card.name, side) } : undefined}
+            pin={deck.commander ? { side: pinOf(pins, menu.card.name), canIn: owned(menu.card.name), onPin: (side) => pinCard(s.profile, deck.commander!, menu.card.name, side) } : undefined}
             onClose={() => setMenu(null)}
             onToast={setToast}
           />
@@ -1137,6 +1145,10 @@ export function Decks(s: Shared) {
       // Same printing choice as the deck page (newest fetched wins).
       return new Map(cs.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, withCheapest(c, cheap)!]));
     }, [decks]) ?? new Map<string, Card>();
+  // The same bracket call as the deck page: with the Game Changers list (without it a deck can never reach IV here).
+  const [gcAll, setGcAll] = useState<Set<string> | null>(null);
+  useEffect(() => void gameChangers().then(setGcAll), []);
+  const listBracket = (d: { cards: { name: string }[] }) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), gcAll).bracket;
   const [open, setOpen] = useState<number | null>(null);
   const [listMenu, setListMenu] = useState<{ id: number; at: MenuAt } | null>(null);
   const menuDeck = listMenu && decks.find((d) => d.id === listMenu.id);
@@ -1164,7 +1176,7 @@ export function Decks(s: Shared) {
     }
   }
   const bracketsWithScores = decks
-    .map((d) => bracketOf(d.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket)
+    .map((d) => listBracket(d))
     .filter((b) => b > 0);
   const avgBracket = bracketsWithScores.length ? Math.round(bracketsWithScores.reduce<number>((a, b) => a + b, 0) / bracketsWithScores.length) : 3;
 
@@ -1226,18 +1238,18 @@ export function Decks(s: Shared) {
       if (dsort === 'name-asc') return a.name.localeCompare(b.name);
       if (dsort === 'name-desc') return b.name.localeCompare(a.name);
       if (dsort === 'match-desc') {
-        const pa = summarize(a.cards.map((c) => c.name), s.mine, s.other).pct;
-        const pb = summarize(b.cards.map((c) => c.name), s.mine, s.other).pct;
+        const pa = shareById.get(a.id)?.pct ?? 0; // the % the tile shows
+        const pb = shareById.get(b.id)?.pct ?? 0;
         return pb - pa;
       }
       if (dsort === 'power-desc') {
-        const ba = bracketOf(a.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
-        const bb = bracketOf(b.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        const ba = listBracket(a);
+        const bb = listBracket(b);
         return bb - ba;
       }
       if (dsort === 'power-asc') {
-        const ba = bracketOf(a.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
-        const bb = bracketOf(b.cards.map((c) => ({ name: c.name, card: priced.get(norm(c.name)) })), null).bracket;
+        const ba = listBracket(a);
+        const bb = listBracket(b);
         return ba - bb;
       }
       if (dsort === 'cards-desc') {
@@ -1295,12 +1307,12 @@ export function Decks(s: Shared) {
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
                 <b>{readyDecks}</b>{' '}
-                <span>ready to play</span>
+                <span>all owned</span>
               </div>
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
                 <b>{uniqueCardsInDecks}</b>{' '}
-                <span>cards in play</span>
+                <span>unique cards in play</span>
               </div>
               <div className="stat red">
                 <span className="spray" aria-hidden="true" />
@@ -1364,7 +1376,7 @@ export function Decks(s: Shared) {
                   className={`u-chip ${dstatus === st ? 'active' : ''}`}
                   onClick={() => setDstatus(st)}
                 >
-                  {st === 'all' ? 'ALL' : st === 'ready' ? 'READY (100%)' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
+                  {st === 'all' ? 'ALL' : st === 'ready' ? 'ALL OWNED' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
                 </button>
               ))}
             </div>
@@ -1482,7 +1494,7 @@ export function Decks(s: Shared) {
                         {d.cards.reduce((n, x) => n + x.qty, 0)} cards
                         {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
                       </span>
-                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.pct === 100 ? 'READY' : `${sum.missing} MISSING`}</span>
+                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.missing === 0 && sum.total > 0 ? 'ALL OWNED' : `${sum.missing} MISSING`}</span>
                     </span>
                   </span>
                 </DeckTile>

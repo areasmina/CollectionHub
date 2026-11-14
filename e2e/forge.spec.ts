@@ -50,8 +50,9 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   // tap the suggestion, then tap a deck card: swapped, with UNDO in the Forge bar
   await row.locator('.frow').click();
   await expect(sugg.locator('.fplace')).toContainText('Arcane Signet');
-  // on phones the forge sheet may overlap the bottom cards; force the click through
-  await page.locator('.lists [data-card="Sol Ring"]').first().click({ force: true });
+  // on phones the forge sheet may overlap the bottom cards. A forced mouse click lands on whatever is on top at that
+  // spot (sometimes the sheet, which made this check fail about 1 run in 8), so click the card element itself.
+  await page.locator('.lists [data-card="Sol Ring"]').first().evaluate((el) => (el as HTMLElement).click());
   await expect(page.locator('.toast')).toContainText('Swapped Sol Ring for Arcane Signet');
   await expect(page.locator('.lists [data-card="Arcane Signet"]')).toHaveCount(1);
   await top.locator('.fundo').click();
@@ -109,17 +110,16 @@ test('ONLY: price bands and Game Changers filter the deck', async ({ page }) => 
   await expect(page.locator('.lists [data-card="Sol Ring"]')).toHaveCount(1);
 });
 
-test('Phones start on the compact list; grid and list stay one tap away', async ({ page }, info) => {
+test('Every screen starts on the card grid; list and compact stay one tap away on the bar', async ({ page }) => {
   await page.locator('.ccard').first().click();
-  const narrow = info.project.name === 'phone';
-  await expect(page.locator('ul.zcompact')).toHaveCount(narrow ? await page.locator('details.cat').count() : 0);
+  await expect(page.locator('ul.zgrid').first()).toBeVisible();
+  await expect(page.locator('ul.zcompact')).toHaveCount(0);
   const qviews = page.locator('.dpage .qviews button');
-  if (await qviews.first().isVisible()) {
-    await qviews.nth(2).click();
-    await expect(page.locator('ul.zcompact').first()).toBeVisible();
-    await qviews.nth(0).click();
-    await expect(page.locator('ul.zcompact')).toHaveCount(0);
-  }
+  await expect(qviews).toHaveCount(3);
+  await qviews.nth(2).click();
+  await expect(page.locator('ul.zcompact').first()).toBeVisible();
+  await qviews.nth(0).click();
+  await expect(page.locator('ul.zcompact')).toHaveCount(0);
 });
 
 test('TO BUY groups by EDHREC play rate, cheapest first, with subtotals', async ({ page }, info) => {
@@ -148,7 +148,7 @@ test('TO BUY groups by EDHREC play rate, cheapest first, with subtotals', async 
 });
 
 test('Compact list: names stay readable on a phone', async ({ page }, info) => {
-  await page.evaluate(() => localStorage.setItem('ch:view', 'compact'));
+  await page.evaluate(() => localStorage.setItem('ch:cardview', 'compact'));
   await page.reload();
   await page.locator('.ccard').first().click();
   const nm = page.locator('ul.zcompact li.zrow .nm', { hasText: 'Lotus Cobra' }).first();

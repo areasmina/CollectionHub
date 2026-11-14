@@ -1,6 +1,6 @@
 import { haptic } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
 import { ownedMap } from './lib/compare';
 import { db, type Card } from './lib/db';
@@ -15,6 +15,7 @@ import { PreviewLayer } from './views/shared';
 import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
+import { islandRests } from './lib/island';
 import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
 import { savedProfile } from './lib/ownership';
 import { startKeepOnScreen } from './lib/onscreen';
@@ -89,6 +90,10 @@ export default function App() {
     didDrag: false,
   });
 
+  // Detach and attach glide (Guillermo, Nov 13: "the detaching and attaching animation can be better"). The island
+  // used to jump between its edge and the finger. Now it is measured just before it leaves (or lands) and slides from
+  // there to its new place on one soft spring, growing or shrinking into its new shape (a FLIP animation).
+  const flipFrom = useRef<DOMRect | null>(null);
   const onIslandDown = (targetTab?: Tab) => (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('.syncpill, .pback')) return;
     dragRef.current = {
@@ -114,6 +119,7 @@ export default function App() {
 
       // Dragging > 75px detaches the island so user can reposition it to any of 4 edges!
       if (dist > 75) {
+        if (!isRepositioning) flipFrom.current = navRef.current?.getBoundingClientRect() ?? null;
         setIsRepositioning(true);
         setDragX(e.clientX);
         setDragY(e.clientY);
@@ -154,6 +160,7 @@ export default function App() {
       setIsRepositioning(false);
 
       if (wasRepositioning) {
+        flipFrom.current = navRef.current?.getBoundingClientRect() ?? null;
         const distTop = e.clientY;
         const distBottom = window.innerHeight - e.clientY;
         const distLeft = e.clientX;
@@ -243,20 +250,28 @@ export default function App() {
   useBrainData(); // card roles + combo files: re-render every view once they arrive
   useEffect(() => void loadBrainData(), []);
   // The floating nav slides away while you scroll down and comes back on the way up (or near the top / bottom).
+  // It rests only where the page leaves room on its own edge: the page start for a top or side dock, the page end for a
+  // bottom dock. (It used to come back at both ends on every dock, so a top-docked island landed on the content at the
+  // end of a page, e.g. on Collection's + DECK and IMPORT.)
   const [navAway, setNavAway] = useState(false);
   useEffect(() => {
     let last = window.scrollY;
+    // While the page moves, the island turns see-through (html.scrolling) so the cards it passes over stay visible.
+    const root = document.documentElement;
+    let still = 0;
     const onScroll = () => {
+      root.classList.add('scrolling');
+      clearTimeout(still);
+      still = window.setTimeout(() => root.classList.remove('scrolling'), 450);
       const y = window.scrollY;
-      const end = y + window.innerHeight >= document.documentElement.scrollHeight - 40;
-      if (y < 80 || end) setNavAway(false);
+      if (islandRests(dock, y, window.innerHeight, document.documentElement.scrollHeight)) setNavAway(false);
       else if (y > last + 6) setNavAway(true);
       else if (y < last - 6) setNavAway(false);
       if (Math.abs(y - last) > 6) last = y;
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    return () => (window.removeEventListener('scroll', onScroll), clearTimeout(still), root.classList.remove('scrolling'));
+  }, [dock]);
   const [backFn, setBackFn] = useState<(() => void) | null>(null);
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
@@ -299,6 +314,43 @@ export default function App() {
   useEffect(() => onOpenCollection(() => (setTab('collection'), window.scrollTo(0, 0))), []);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
+  // The clear lane (phase 4 step 2): a side-docked island keeps a strip of the page free, as wide as the island itself.
+  const navRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav || typeof ResizeObserver === 'undefined') return;
+    const root = document.documentElement;
+    const put = () => root.style.setProperty('--island-w', `${nav.offsetWidth}px`);
+    put();
+    const ro = new ResizeObserver(put);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    const from = flipFrom.current;
+    const nav = navRef.current;
+    flipFrom.current = null;
+    if (!from || !nav || typeof nav.animate !== 'function') return;
+    if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // measure the new place without the CSS slide in between (the glide below replaces it)
+    nav.style.setProperty('transition', 'none', 'important');
+    const to = nav.getBoundingClientRect();
+    requestAnimationFrame(() => nav.style.removeProperty('transition'));
+    if (!to.width || !to.height) return;
+    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+    const sx = Math.min(3, Math.max(0.3, from.width / to.width));
+    const sy = Math.min(3, Math.max(0.3, from.height / to.height));
+    nav.animate(
+      [
+        { translate: `${dx}px ${dy}px`, scale: `${sx} ${sy}` },
+        { translate: '0px 0px', scale: '1 1' },
+      ],
+      { duration: isRepositioning ? 260 : 520, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' },
+    );
+  }, [dock, isRepositioning]);
+
   const shared = { profile, mine, other: theirs, otherName: nameOf(other), binderName: nameOf(profile) };
 
   return (
@@ -311,6 +363,7 @@ export default function App() {
         <div className="island-scrim" onClick={() => setIslandOpen(false)} aria-hidden="true" />
       )}
       <nav
+        ref={navRef}
         className={`pillnav notch dock-${dock}${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
@@ -329,7 +382,8 @@ export default function App() {
               : undefined,
           left: isRepositioning ? `${dragX}px` : undefined,
           top: isRepositioning ? `${dragY}px` : undefined,
-        }}
+          ...(isRepositioning ? { '--fx': `${dragX}px`, '--fy': `${dragY}px` } : {}),
+        } as React.CSSProperties}
       >
         {/* Viscous gooey melted cheese / symbiote tendrils when pulling away from dock edge */}
         {pullDist > 4 && !isRepositioning && (
