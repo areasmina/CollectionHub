@@ -28,7 +28,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Rotating top-3 widget (most valuable, risers / fallers) from daily snapshots | Live | 3a | `lib/pricewatch.test.ts` |
 | BANNED tape for cards not legal in Commander | Live | #11 | manual, no test yet |
 | Filters: colour, type, mana value (0 to 7+), price per copy (≈CA$ bands at your printing and finish), foil / non-foil, commanders, in deck / not in deck, each a removable chip | Live (rarity not yet: the app does not store it) | this PR | `lib/collfilter.test.ts`, e2e `collection-strip.spec.ts` |
-| My Decks: a saved deck that breaks a Commander rule shows a red NOT LEGAL tag on its tile with the first problem (short of 100 cards, banned card, off-colour card, doubled card; +N when there are more); tap-and-hold/hover gives the full reason. Uses the same four rules checks as the deck page's Readiness tile (`deckRules`) | In review | this PR | `brain/validate.test.ts` "deckRules + rulesLabel", `e2e/deck-legal.spec.ts` (3 sizes) |
+| My Decks: a saved deck that breaks a Commander rule shows a red NOT LEGAL tag on its tile with the first problem (short of 100 cards, banned card, off-colour card, doubled card; +N when there are more); tap-and-hold/hover gives the full reason. Uses the same four rules checks as the deck page's Readiness tile (`deckRules`) | Live | #81 | `brain/validate.test.ts` "deckRules + rulesLabel", `e2e/deck-legal.spec.ts` (3 sizes) |
 | Per-entry language, condition, other finishes | Planned | – | – |
 | Custom lists inside a binder (trade, wishlist, sell…): list tabs, MOVE TO LIST… in the card menu | Partial | 61c46e7 (pushed to main) | no test yet |
 | More binders + the Unassigned Cards binder: deleting a binder releases its cards there; the binder stays open after a reload; DELETE shows only with two real binders | Live | 61c46e7, 97f0ab5, review fixes Nov 11 | `lib/ownership.test.ts` "Saved binder" |
@@ -62,6 +62,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | IV+ stamp on decks forged from cEDH data | Live | #11 | manual, no test yet |
 | Colour identity is a hard rule on every suggestion path | Live | #16 | `brain/round2.test.ts` |
 | Suggested deck built from owned cards first (Deck Wizard rules) | Partial | #7, #10 | brain core live; full builder port in progress (brain thread) |
+| BEST FOR MY CARDS (Suggested Deck, roadmap 5.1): one button on the commander page's deck strip checks EDHREC's average deck at power 3, 4 and 5 (Min / Med / Max) and every gear (1ST $, 2ND any, 3RD $$$), opens the one your binder owns the most of (ties: more cards owned, then cheaper gear, then lower power), and lists the others as chips with their % (one tap opens one). Uses THE ownership count, so the % matches the header. Respects the theme picked | In review | this PR | `lib/bestfit.test.ts`, `e2e/best-fit.spec.ts` (3 sizes) |
 
 ## Decks and the Forge
 

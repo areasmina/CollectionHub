@@ -25,6 +25,7 @@ import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
 import { allocate } from '../lib/allocation';
+import { pickBest, scanBestFit, type FitResult } from '../lib/bestfit';
 import { bracketFit, karstenLands, readiness } from '../brain/validate';
 import { buildDeck } from '../brain/build';
 import { commanderThemes, themeOf } from '../brain/themes';
@@ -82,6 +83,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [budget, setBudget] = useState(OPEN_BUDGET);
   const [noBudget, setNoBudget] = useState(false); // no page at this budget: showing any budget
   const [tag, setTag] = useState('');
+  // BEST FOR MY CARDS (roadmap 5.1): EDHREC's deck at power 3, 4, 5 and every budget, the most-owned one opened.
+  const [best, setBest] = useState<{ busy: boolean; done: number; results?: FitResult[] }>({ busy: false, done: 0 });
   const [allTags, setAllTags] = useState(false);
   const [page, setPage] = useState<EdhPage | null>(null);
   const [recs, setRecs] = useState<EdhPage | null>(null); // EDHREC recommendations behind an average deck
@@ -185,6 +188,19 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   useEffect(() => {
     showPage(pagePath('commander', slug), (p) => setTags(p.tags)).catch(() => setTags([]));
   }, [slug]);
+  useEffect(() => setBest({ busy: false, done: 0 }), [slug, tag]);
+  const runBest = async () => {
+    if (best.busy) return;
+    haptic('open');
+    setBest({ busy: true, done: 0 });
+    const results = await scanBestFit({ slug, commander: name, tag, mine: s.mine }, undefined, (done) => setBest((b) => ({ ...b, done })));
+    const top = pickBest(results);
+    setBest({ busy: false, done: results.length, results });
+    if (!top) return;
+    haptic('success');
+    setBracket(top.bracket);
+    setBudget(top.budget);
+  };
 
   // EDHREC lists carry Scryfall ids but no prices: prices/images/types from Scryfall (cached a week), cheapest printing's price.
   // Load the 99-card deck (`page`) first and only look up cheapest printings for cards in the deck (not all 250 recommendations).
@@ -764,6 +780,17 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 </button>
               )}
               {page && kind === 'average' && !forging && (
+                <button
+                  type="button"
+                  className="u-btn bestfit"
+                  aria-busy={best.busy}
+                  onClick={runBest}
+                  title="Check EDHREC's decks at power 3, 4 and 5 and every budget, and open the one you already own the most of"
+                >
+                  {best.busy ? `CHECKING ${best.done}/9` : 'BEST FOR MY CARDS'}
+                </button>
+              )}
+              {page && kind === 'average' && !forging && (
                 <button type="button" className="u-btn primary forge" onClick={() => (haptic('open'), setManualForge(true))} title="Open The Forge: live role meters and ranked suggestions">
                   FORGE
                 </button>
@@ -771,6 +798,33 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             </div>
           </section>
         )}
+
+        {best.results && kind === 'average' && !forging && (() => {
+          const ok = best.results.filter((r) => r.share).sort((a, b) => b.share!.pct - a.share!.pct);
+          const top = pickBest(best.results);
+          const label = (r: FitResult) => `${BRACKETS.find(([v]) => v === r.bracket)?.[1].toUpperCase()} POWER · ${GEARS.find(([v]) => v === r.budget)?.[1]} GEAR`;
+          return (
+            <section className="bestfit-row" aria-label="Best for my cards">
+              <small className="bnote" role="status">
+                {top
+                  ? `Checked ${ok.length} EDHREC decks: you own the most of ${label(top).toLowerCase()} (${top.share!.owned} of ${top.share!.total} cards, ${top.share!.pct}%).`
+                  : 'EDHREC has no decks at power 3, 4 or 5 to compare right now.'}
+              </small>
+              {ok.length > 1 && (
+                <div className="themes" role="group" aria-label="Decks checked">
+                  {ok.map((r) => (
+                    <button key={r.bracket + r.budget} type="button" className="u-chip" aria-pressed={bracket === r.bracket && budget === r.budget} onClick={() => (haptic('select'), setBracket(r.bracket), setBudget(r.budget))}>
+                      {label(r)} <small>{r.share!.pct}%</small>
+                    </button>
+                  ))}
+                  <button type="button" className="u-chip" onClick={() => (haptic('tap'), setBest({ busy: false, done: 0 }))}>
+                    HIDE
+                  </button>
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         {page && (wild || wildSet.off) && (
           <section className="wildcard" aria-label="WILDCARD">

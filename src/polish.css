@@ -1558,3 +1558,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 /* on a narrow tile the reason drops under NOT LEGAL instead of being cut off */
 .dgrid .dtile .dlegal i { font-style: normal; display: inline-block; white-space: nowrap; }
 .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+/* BEST FOR MY CARDS (roadmap 5.1): the scan result sits under the deck strip, the same note + theme chips as elsewhere */
+.bestfit-row { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 10px; min-width: 0; }
+.bestfit-row .bnote { display: block; margin: 0; }
+.bestfit-row .themes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.bestfit-row .themes .u-chip { flex: 0 0 auto; white-space: nowrap; min-height: 44px; }

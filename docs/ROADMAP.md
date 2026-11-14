@@ -99,7 +99,7 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
    from text before this fix may point at another printing (ManaBox CSV imports use Scryfall ids and were fine);
    re-import such a list to correct it.
 5. ✅ Collection Match in the commander header (owned of total, %, missing, missing cost) + copies alert.
-6. ⬜ Suggested Deck (5.1): scan B3/B4/B5 × budgets, pick the most-owned page, build a 100-card deck from owned cards
+6. 🟡 Suggested Deck (5.1): scan B3/B4/B5 × budgets, pick the most-owned page (✅ BEST FOR MY CARDS, Nov 14; the existing owned-first build then applies), build a 100-card deck from owned cards
    first, fill gaps with owned substitutes, list purchases separately.
 7. 🟡 My Decks: import text, view, price, missing, note/tags, export, delete. Deck page rebuilt (Moxfield-like):
    commander-style header (commander art, ransom name, pips, price · salt · bracket under the name, owned %), grid/list,
