@@ -1,7 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { importCollection, importDeck, resetProfile, type ImportResult } from '../lib/actions';
 import { parseImport } from '../lib/importers';
 import { SAMPLE_COLLECTION } from '../lib/sample';
@@ -24,21 +24,29 @@ import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
+import { firstPerKey } from '../lib/topn';
 
 type Panel = { key: string; title: string; sub: string; rows: { e: Entry; card: Card; label: string; tone?: 'up' | 'down'; why?: string }[]; empty?: string };
 
 /** Rotating "top 3" widget: most valuable, highest total, 3-day risers (biggest gains), 3-day fallers (biggest losers).
  *  Every 4 s; hover pauses, clicking advances to the next panel. */
-function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
+// memo: typing in the search re-renders the page, and the binder's top cards don't change with the search
+const TopWidget = memo(function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Card> }) {
   const [i, setI] = useState(0);
   const [hold, setHold] = useState(false);
   const [past, setPast] = useState<Awaited<ReturnType<typeof snapshotFrom>>>(null);
   useEffect(() => void snapshotFrom(3).then(setPast), [entries.length, cards.size]);
   const unit = (e: Entry) => Number(priced(cards.get(e.cardId), e.foil)?.usd ?? 0);
-  const uniq = (xs: Entry[]) => xs.filter((x, j, a) => a.findIndex((y) => cards.get(y.cardId)?.key === cards.get(x.cardId)?.key) === j);
-  const owned = entries.filter((e) => cards.get(e.cardId) && unit(e) > 0);
-  const byUnit = uniq([...owned].sort((a, b) => unit(b) - unit(a))).slice(0, 3);
-  const byTotal = uniq([...owned].sort((a, b) => unit(b) * b.qty - unit(a) * a.qty)).slice(0, 3);
+  // one printing per card (the first, i.e. the priciest, wins); worked out once per binder change, not per panel turn
+  const { owned, byUnit, byTotal } = useMemo(() => {
+    const keyOf = (e: Entry) => cards.get(e.cardId)?.key;
+    const owned = entries.filter((e) => cards.get(e.cardId) && unit(e) > 0);
+    return {
+      owned,
+      byUnit: firstPerKey([...owned].sort((a, b) => unit(b) - unit(a)), keyOf, 3),
+      byTotal: firstPerKey([...owned].sort((a, b) => unit(b) * b.qty - unit(a) * a.qty), keyOf, 3),
+    };
+  }, [entries, cards]);
   const since = past ? new Date(past.day + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
   const moveRows = (ms: Move[], tone: 'up' | 'down') =>
     ms.map((m) => ({
@@ -102,7 +110,7 @@ function TopWidget({ entries, cards }: { entries: Entry[]; cards: Map<string, Ca
       </ul>
     </div>
   );
-}
+});
 
 /** Files larger than this (about 5,000 lines) are held aside instead of being shown in the text box. */
 const BIG_FILE = 200_000;
@@ -252,35 +260,41 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         .catch(() => {});
   }, [entries.length]);
   // Filter by active list tab: 'all' = everything, 'unlisted' = no list tag, else specific list name
-  const inTab = entries.filter((e) => {
-    if (activeList === 'all') return true;
-    if (activeList === 'unlisted') return !e.list;
-    return e.list === activeList;
-  });
-  const usedIn = inUse(deckRows);
-  const listFiltered = applyFilter(inTab, filter, { cardOf: (e) => cards.get(e.cardId), inDeck: (n) => usedIn.has(norm(n)), isCommander: (c) => !!c.legal && isCommander(c.type, c.text) });
+  // The list is worked out only when the binder, tab, filter, sort or (deferred) search changes, never just because a
+  // letter was typed: the box answers at once and the cards follow as soon as the phone is free (ManaBox-fast).
+  const dq = useDeferredValue(q);
+  const usedIn = useMemo(() => inUse(deckRows), [deckRows]);
+  const { inTab, shown } = useMemo(() => {
+    const inTab = entries.filter((e) => {
+      if (activeList === 'all') return true;
+      if (activeList === 'unlisted') return !e.list;
+      return e.list === activeList;
+    });
+    const listFiltered = applyFilter(inTab, filter, { cardOf: (e) => cards.get(e.cardId), inDeck: (n) => usedIn.has(norm(n)), isCommander: (c) => !!c.legal && isCommander(c.type, c.text) });
 
-  // Sort according to chosen sortOrder
-  const sorted = [...listFiltered].sort((a, b) => {
-    if (sortOrder === 'name-desc') return b.name.localeCompare(a.name);
-    if (sortOrder === 'price-desc') {
-      const pa = Number(priced(cards.get(a.cardId), a.foil)?.usd ?? 0);
-      const pb = Number(priced(cards.get(b.cardId), b.foil)?.usd ?? 0);
-      return pb - pa || a.name.localeCompare(b.name);
-    }
-    if (sortOrder === 'mv-asc') {
-      const ca = cards.get(a.cardId)?.cmc ?? 0;
-      const cb = cards.get(b.cardId)?.cmc ?? 0;
-      return ca - cb || a.name.localeCompare(b.name);
-    }
-    if (sortOrder === 'added-desc') {
-      return (b.added ?? 0) - (a.added ?? 0) || a.name.localeCompare(b.name);
-    }
-    return a.name.localeCompare(b.name);
-  });
+    // Sort according to chosen sortOrder
+    const sorted = [...listFiltered].sort((a, b) => {
+      if (sortOrder === 'name-desc') return b.name.localeCompare(a.name);
+      if (sortOrder === 'price-desc') {
+        const pa = Number(priced(cards.get(a.cardId), a.foil)?.usd ?? 0);
+        const pb = Number(priced(cards.get(b.cardId), b.foil)?.usd ?? 0);
+        return pb - pa || a.name.localeCompare(b.name);
+      }
+      if (sortOrder === 'mv-asc') {
+        const ca = cards.get(a.cardId)?.cmc ?? 0;
+        const cb = cards.get(b.cardId)?.cmc ?? 0;
+        return ca - cb || a.name.localeCompare(b.name);
+      }
+      if (sortOrder === 'added-desc') {
+        return (b.added ?? 0) - (a.added ?? 0) || a.name.localeCompare(b.name);
+      }
+      return a.name.localeCompare(b.name);
+    });
 
-  // name or rules text (Oracle + reminder text) or type line
-  const shown = searchByText(sorted, q, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
+    // name or rules text (Oracle + reminder text) or type line
+    const shown = searchByText(sorted, dq, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
+    return { inTab, shown };
+  }, [entries, activeList, filter, cards, usedIn, sortOrder, dq]);
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
 
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
