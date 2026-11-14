@@ -1137,6 +1137,8 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
    second row and they join it. The ALL / OWNED / MISSING pills stay in ⋮ on phones (SHOW), as before. */
 @media (max-width: 700px) {
   .dpage .lists > .dtools.tbar { flex-wrap: wrap !important; height: auto !important; max-height: none !important; }
+  /* ⋮ and the search share the first row: the wrap must never push the search onto a row of its own */
+  .dpage .lists > .dtools.tbar > .tsearch { flex: 1 1 0 !important; min-width: 0 !important; }
   .dpage .lists > .dtools.tbar > .tquick,
   .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) {
     display: flex !important; order: 9; flex: 1 1 100% !important; height: auto !important; min-height: 52px;
