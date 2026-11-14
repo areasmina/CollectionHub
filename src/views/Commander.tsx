@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { notOffered } from '../lib/collsearch';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
@@ -372,6 +373,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
   // The forging zone: your first swap on this deck (or clicking ⚒ FORGE & EDIT) starts it; leaving with unsaved swaps asks whether to keep the deck.
   const [manualForge, setManualForge] = useState(false);
+  const [openSearch, setOpenSearch] = useState(0); // + MY CARDS: opens the Forge on its search of your own cards
   const changes = Object.keys(swapsOk).length;
   const forging = kind === 'average' && (changes > 0 || manualForge);
   const [anExpanded, setAnExpanded] = useState(() => {
@@ -929,6 +931,11 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         SIZE {zoom.toUpperCase()}
                       </button>
                     )}
+                    {kind === 'average' && binder.length > 0 && (
+                      <button type="button" className="u-btn ghost qadd-btn" title="Search your own cards and put them in this deck" onClick={() => (haptic('open'), setManualForge(true), setOpenSearch((n) => n + 1))}>
+                        + MY CARDS
+                      </button>
+                    )}
                   </>
                 }
               >
@@ -1281,6 +1288,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   expanded={sugExpanded}
                   onToggleExpand={toggleSug}
                   onJustBuild={kind === 'average' && binder.length > 0 ? () => void forgeFromBinder() : undefined}
+                  openSearch={openSearch}
+                  whyNot={(text) => notOffered(text, binder, ci, new Set(deckNow.map((c) => norm(c.name))), never)}
                   building={saving}
                 />
               </div>

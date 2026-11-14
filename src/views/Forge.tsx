@@ -4,6 +4,7 @@ import { db, type Card, type DeckCard } from '../lib/db';
 import { haptic } from '../lib/haptics';
 import { norm } from '../lib/names';
 import { searchByText } from '../lib/search';
+import type { NotOffered } from '../lib/collsearch';
 import { BASICS } from '../lib/compare';
 import { isLand, roleOf, type DeckStats, type Role } from '../lib/deckstats';
 import type { SubCard } from '../lib/subs';
@@ -481,6 +482,8 @@ const SORTS: [ForgeSort, string, string][] = [
   ['pop', 'POPULAR', 'How many of this commander’s EDHREC decks play the card'],
 ];
 type Tab = 'all' | 'owned' | 'missing';
+/** How many of your matching cards a search lists at once (the suggestions list stops at 60 too). */
+const SEARCH_MAX = 60;
 const OWN_W = 0.1; // a card you own is a card you can play tonight: a small, stated nudge
 
 interface Row {
@@ -525,6 +528,8 @@ export function ForgeSuggest({
   onToggleExpand,
   onJustBuild,
   building,
+  openSearch = 0,
+  whyNot,
 }: {
   aggression?: Aggression; // the page's dial (the commander page sets it from POWER); else your brain setting
   profile: number;
@@ -551,6 +556,8 @@ export function ForgeSuggest({
   onToggleExpand?: () => void;
   onJustBuild?: () => void;
   building?: boolean;
+  openSearch?: number; // goes up each time the page's + MY CARDS button is tapped: the panel opens on the search, focused
+  whyNot?: (q: string) => NotOffered; // your cards that match the search but can't be added here, and why
 }) {
   const [localExpanded, setLocalExpanded] = useState(() => {
     try {
@@ -588,6 +595,17 @@ export function ForgeSuggest({
   const tagOf = themes.find((t) => t.slug === theme);
   const focus = useMemo(() => (tagOf ? themeOf(tagOf.value) : undefined), [tagOf?.value]); // eslint-disable-line react-hooks/exhaustive-deps
   const [cfDraft, setCfDraft] = useState({ inc: cf?.inc[0] ?? '', exc: cf?.exc[0] ?? '' });
+  // + MY CARDS on the page's bar: show the suggestions pane, pull the phone sheet up, open the full list and put the
+  // cursor in the search, so "look through my collection" is one tap from the deck.
+  const qBox = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!openSearch) return;
+    setPane('sugg');
+    setSheet(true);
+    if (!expanded) toggle();
+    const t = setTimeout(() => qBox.current?.focus({ preventScroll: false }), 60);
+    return () => clearTimeout(t);
+  }, [openSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx: DeckContext = { deck, cardOf, commander, bracket, aggression, taste: brain?.taste, focus, taken };
   // which candidates have no copy to spare changes with the other decks, not with this one
@@ -620,10 +638,14 @@ export function ForgeSuggest({
   const searching = q.trim().length >= 2;
   const value = (r: Row) => (sort === 'ours' ? r.total : sort === 'lift' ? (r.c.lift ?? (r.c.synergy != null ? 1 + r.c.synergy : 0)) : (r.c.incl ?? 0));
   let list = rows.filter((r) => (tab === 'owned' ? r.owned > 0 : tab === 'missing' ? r.owned === 0 : true) && (!role || r.roles.includes(role)) && (!focus || r.fits));
-  // the search covers your own cards (in the commander's colours): name, rules text, type line
-  if (searching) list = searchByText(list.filter((r) => r.owned > 0), q, (r) => ({ name: r.c.name, type: r.card?.type ?? r.c.type, text: r.card?.text }));
+  // The search covers every card of yours that can go in this deck (in the commander's colours, not already in it):
+  // name, rules text, type line. It looks past the OWNED / NOT OWNED tab, the role chip and the theme chip, which only
+  // narrow the suggestions: a card you own is found even when the app would not have suggested it.
+  if (searching) list = searchByText(rows.filter((r) => r.owned > 0), q, (r) => ({ name: r.c.name, type: r.card?.type ?? r.c.type, text: r.card?.text }));
   else list = [...list].sort((a, b) => Number(!!a.blocked) - Number(!!b.blocked) || value(b) - value(a) || a.c.name.localeCompare(b.c.name));
-  const shown = list.slice(0, more ? 60 : 20);
+  const shown = list.slice(0, searching ? SEARCH_MAX : more ? 60 : 20);
+  const narrowed = tab !== 'all' || !!role || !!focus;
+  const not = searching && whyNot ? whyNot(q) : undefined;
 
   // Rows that change place slide to it (FLIP) with a green flash, so you see what the last change moved.
   const box = useRef<HTMLOListElement>(null);
@@ -787,7 +809,8 @@ export function ForgeSuggest({
         ))}
       </div>
       <label className="sbox fq">
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search my cards_" aria-label="Search my cards (name or rules text)" autoComplete="off" />
+        <span className="tab">MY CARDS</span>
+        <input ref={qBox} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="search my cards_" aria-label="Search my cards (name or rules text)" autoComplete="off" />
       </label>
       <div className="fchips" role="group" aria-label="Filter suggestions">
         {short.map((n) => (
@@ -867,6 +890,12 @@ export function ForgeSuggest({
           <button onClick={() => onPlace(null)}>cancel</button>
         </p>
       )}
+      {searching && shown.length > 0 && (
+        <p className="small fqnote" role="status">
+          {list.length} of your cards {list.length === 1 ? 'matches' : 'match'}
+          {narrowed ? ' (the search looks at all your cards, past the filters above)' : ''}.
+        </p>
+      )}
       <ol ref={box} className="frows">
         {shown.map((r) => {
           const img = imgOf(r.c.name);
@@ -906,7 +935,15 @@ export function ForgeSuggest({
           {more ? 'FEWER' : `MORE (${Math.min(60, list.length) - 20})`}
         </button>
       )}
-      {!shown.length && <p className="small">{searching ? `No card of yours in these colours matches “${q}”.` : loading ? 'Loading suggestions…' : 'Nothing matches these filters.'}</p>}
+      {searching && list.length > SEARCH_MAX && <p className="small">Showing the first {SEARCH_MAX} of {list.length} matches. Type more of the name to narrow it.</p>}
+      {!shown.length && <p className="small">{searching ? `No card of yours that can go in this deck matches “${q}”.` : loading ? 'Loading suggestions…' : 'Nothing matches these filters.'}</p>}
+      {not && (not.inDeck.length > 0 || not.offColour.length > 0 || not.never.length > 0) && (
+        <ul className="small fwhynot" aria-label="Your cards that match but can't be added">
+          {not.inDeck.length > 0 && <li>Already in this deck: {not.inDeck.join(', ')}.</li>}
+          {not.offColour.length > 0 && <li>Yours, but outside this commander's colours (a Commander rule): {not.offColour.join(', ')}.</li>}
+          {not.never.length > 0 && <li>Yours, but marked NEVER USE here: {not.never.join(', ')}.</li>}
+        </ul>
+      )}
       <p className="small fsrc">Reasons come from EDHREC (play rate, lift), Scryfall Tagger roles, card text and your deck. Prices never change the order.</p>
       </>
       )}
