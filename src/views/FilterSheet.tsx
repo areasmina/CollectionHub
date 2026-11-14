@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
 import { ManaIcon, Ransom } from './zine';
-import { COLOURS, COLOUR_NAME, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Show } from '../lib/collfilter';
+import { COLOURS, COLOUR_NAME, FINISH_LABEL, MVS, PRICES, PRICE_LABEL, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Finish, type Show } from '../lib/collfilter';
 
 /** The Filter button of the control strip: a count when something narrows the list, and a sheet with the choices.
  *  The sheet sits at the bottom of the screen on a phone (thumb reach) and as a panel on wider screens. */
@@ -15,7 +15,7 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
     addEventListener('keydown', esc);
     return () => removeEventListener('keydown', esc);
   }, [open]);
-  const pick = (kind: 'colours' | 'types' | 'show', v: string) => (haptic('select'), setFilter(toggled(filter, kind, v)));
+  const pick = (kind: Parameters<typeof toggled>[1], v: string) => (haptic('select'), setFilter(toggled(filter, kind, v)));
   return (
     <>
       <button type="button" className={`fbtn${n ? ' on' : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-label={n ? `Filter, ${n} active` : 'Filter'} onClick={() => (haptic('open'), setOpen(true))}>
@@ -65,6 +65,36 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
                   {(Object.keys(SHOW_LABEL) as Show[]).filter((s) => s !== 'all').map((s) => (
                     <button key={s} type="button" className="u-chip" aria-pressed={filter.show === s} onClick={() => pick('show', s)}>
                       {SHOW_LABEL[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="fs-group">
+                <span className="lbl">Mana value</span>
+                <div className="fs-row mvs">
+                  {MVS.map((v) => (
+                    <button key={v} type="button" className="u-chip" aria-pressed={filter.mv.includes(v)} aria-label={`Mana value ${v}`} onClick={() => pick('mv', v)}>
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="fs-group">
+                <span className="lbl">Price per copy</span>
+                <div className="fs-row">
+                  {PRICES.map((v) => (
+                    <button key={v} type="button" className="u-chip" aria-pressed={filter.prices.includes(v)} onClick={() => pick('prices', v)}>
+                      {PRICE_LABEL[v]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="fs-group">
+                <span className="lbl">Finish</span>
+                <div className="fs-row">
+                  {(Object.keys(FINISH_LABEL) as Finish[]).filter((v) => v !== 'all').map((v) => (
+                    <button key={v} type="button" className="u-chip" aria-pressed={filter.finish === v} onClick={() => pick('finish', v)}>
+                      {FINISH_LABEL[v]}
                     </button>
                   ))}
                 </div>
