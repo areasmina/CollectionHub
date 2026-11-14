@@ -13,12 +13,10 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   await page.locator('.ccard').first().click();
   await expect(page.locator('.vhero')).toBeVisible();
 
-  // On wide screens, .qviews is visible on the bar
-  if ((page.viewportSize()?.width ?? 1280) > 700) {
-    const qviews = page.locator('.dpage .qviews button');
-    await expect(qviews.first()).toBeVisible();
-    await expect(qviews).toHaveCount(3);
-  }
+  // .qviews is visible on the bar at every width (phones too, since Nov 13)
+  const qviews = page.locator('.dpage .qviews button');
+  await expect(qviews.first()).toBeVisible();
+  await expect(qviews).toHaveCount(3);
 
   // Scroll toolbar to top of viewport so entire dropdown is framed inside the window
   const cmdrFilterSummary = page.locator('.dpage .tbmore summary');
@@ -29,9 +27,8 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   const cmdrDropdown = page.locator('.dpage .tbmore[open]');
   await expect(cmdrDropdown).toBeVisible();
 
-  // No VIEW row in the dropdown where the bar already has the view pills; on phones (pills hidden) it is the only view switch
-  const wide = (page.viewportSize()?.width ?? 1280) > 700;
-  await expect(cmdrDropdown.locator('.optrow:visible', { hasText: 'VIEW' })).toHaveCount(wide ? 0 : 1);
+  // No VIEW row in the dropdown: the bar has the view pills at every width
+  await expect(cmdrDropdown.locator('.optrow:visible', { hasText: 'VIEW' })).toHaveCount(0);
 
   // Verify new hierarchy: PIN & WITHOUT card selection -> THEME -> the rest
   const fbody = page.locator('.dtools.tbar > .tbmore > .fbody');
@@ -88,5 +85,5 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
 
   const deckDropdown = page.locator('.dpage .tbmore[open]');
   await expect(deckDropdown).toBeVisible();
-  await expect(deckDropdown.locator('.optrow:visible', { hasText: 'VIEW' })).toHaveCount(wide ? 0 : 1);
+  await expect(deckDropdown.locator('.optrow:visible', { hasText: 'VIEW' })).toHaveCount(0);
 });

@@ -6,20 +6,12 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-/** Grid / list: the quick pills on the bar from tablet width up; on phones (pills hidden) the VIEW row inside ⋮. */
+/** Grid / list: the quick pills on the bar, at every screen width (phones too, since Nov 13). */
 const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
-  if (page.viewportSize()!.width > 700) {
-    const sw = page.locator('.qviews').first();
-    await expect(sw).toBeVisible();
-    await fits(page, ['.qviews']);
-    await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
-  } else {
-    await expect(page.locator('.qviews').first()).toBeHidden();
-    const row = (await opts(page)).locator('.phoneview');
-    await expect(row).toBeVisible();
-    await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
-    await closeOpts(page); // the options are a sheet over the page on phones
-  }
+  const sw = page.locator('.qviews').first();
+  await expect(sw).toBeVisible();
+  await fits(page, ['.qviews']);
+  await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
 };
 
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
@@ -802,7 +794,7 @@ test('Readiness + Bracket Fit tiles beside Match; the swap window says why the c
 });
 
 test('Platform space pass: multi-column open deck categories on wide screens, side-by-side workbench on tablet and desktop', async ({ page }, info) => {
-  await page.evaluate(() => localStorage.setItem('ch:view', 'grid'));
+  await page.evaluate(() => localStorage.setItem('ch:cardview', 'grid'));
   await page.locator('.ccard').first().click();
   const cats = page.locator('details.cat[open]');
   await expect(cats.first()).toBeVisible();

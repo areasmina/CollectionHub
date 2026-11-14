@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('Phone round: card is its own swap button, % in the burst, one FILTERS button', async ({ page }, info) => {
-  await page.evaluate(() => localStorage.setItem('ch:view', 'grid')); // these checks are about the card grid
+  await page.evaluate(() => localStorage.setItem('ch:cardview', 'grid')); // these checks are about the card grid
   await page.locator('.ccard').first().click();
   await expect(page.locator('.vmatch .num')).toHaveText(/%$/);
   // the big % leads, the slanted green bars follow it
@@ -59,7 +59,8 @@ test('One slim bar: search + ⋮ (GEAR inside, POWER in Bracket Fit), groups sta
   const bar = page.locator('.lists > .tbar');
   await expect(page.locator('.slimbar')).toHaveCount(0);
   await expect(bar.locator('.tsearch input')).toBeVisible();
-  expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(52); // one slim row at every width
+  // one slim row; on phones a second row under it holds the view pills and SIZE (owner's call, Nov 13)
+  expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(info.project.name === 'phone' ? 108 : 52);
   expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('sticky');
   await expect(page.locator('.dstrip .power')).toHaveCount(0); // POWER is said once: inside the Bracket Fit tile (Nov 7)
   await expect(page.locator('.vtile.fit summary')).toContainText(/FITS|TARGET/i);
@@ -102,7 +103,7 @@ test('One slim bar: search + ⋮ (GEAR inside, POWER in Bracket Fit), groups sta
 });
 
 test('Nov 6 batch: rules-text search, one price tape, swap window search up top, deck colour', async ({ page }, info) => {
-  await page.evaluate(() => localStorage.setItem('ch:view', 'grid')); // these checks are about the card grid
+  await page.evaluate(() => localStorage.setItem('ch:cardview', 'grid')); // these checks are about the card grid
   await page.locator('.ccard').first().click();
   // search by rules text, not just the name: "landfall" finds Lotus Cobra
   const box = page.locator('.lists > .dtools .tsearch input');

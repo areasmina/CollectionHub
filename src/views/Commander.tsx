@@ -34,7 +34,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, PhoneView, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -513,24 +513,12 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const label = name.split(' // ')[0];
   const pw = BRACKETS.find(([v]) => v === bracket);
   const powerLabel = pw && (pw[2] ? `${pw[1].toUpperCase()} · B${pw[2]}` : pw[1].toUpperCase());
-  // Grid (card images) is the default; the choice is remembered on this device.
-  // Phones start on the compact list (name · mana · price · owned), owner's call Nov 6.
-  const [view, setViewState] = useState<View>(() => {
-    try {
-      const v = localStorage.getItem('ch:view');
-      return v === 'list' || v === 'grid' || v === 'compact' ? v : narrow ? 'compact' : 'grid';
-    } catch {
-      return narrow ? 'compact' : 'grid';
-    }
-  });
+  // Grid (card images) is the default at every screen size (owner's call, Nov 13); the choice is remembered on this
+  // device. The key is new on purpose: phones used to start on the compact list, and they all start on the grid once.
+  const [view, setViewPref] = useStored<View>(VIEW_KEY, 'grid', ['grid', 'list', 'compact']);
   const setView = (v: View) => {
-    setViewState(v);
+    setViewPref(v);
     setMenuFor(null);
-    try {
-      localStorage.setItem('ch:view', v);
-    } catch {
-      /* per-device convenience only */
-    }
   };
   const Item = view === 'grid' ? CardTile : CardLine;
   const [sort, setSort] = useStored<SortKey>('ch:csort', 'list', CSORTS.map(([v]) => v));
@@ -891,7 +879,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               </div>
             )}
             <div className="lists" {...(forging ? drop : {})}>
-              {/* The one slim bar (owner's rule): search, quick view/filter pills on wider screens, then ⋮ with POWER, GEAR, SORT, SHOW, VIEW and EDHREC's With / Without card */}
+              {/* The one slim bar (owner's rule): search, quick view/filter pills on wider screens, then ⋮ with POWER, GEAR, SORT, SHOW and EDHREC's With / Without card */}
               <ToolBar
                 q={q}
                 setQ={setQ}
@@ -917,13 +905,13 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       ))}
                     </div>
                     <div className="qsegs qviews" role="group" aria-label="Quick view">
-                      <button type="button" aria-pressed={view === 'grid'} title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
+                      <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
                         <GridIcon />
                       </button>
-                      <button type="button" aria-pressed={view === 'list'} title="List view" onClick={() => (haptic('select'), setView('list'))}>
+                      <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
                         <ListIcon />
                       </button>
-                      <button type="button" aria-pressed={view === 'compact'} title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
+                      <button type="button" aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
                         <CompactIcon />
                       </button>
                     </div>
@@ -1143,7 +1131,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 )}
 
                 {/* 4. The rest: Gear, Buy under, Sort / Show / Only */}
-                <PhoneView view={view} onChange={setView} />
                 <OptRow label="GEAR">
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>

@@ -66,3 +66,10 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 ## 2026-11-13: Collection keeps its tiles, with HIDE STATS (audit roadmap, phase 3)
 - Guillermo's pick: Collection's stat tiles stay as they are and show by default; a HIDE STATS button (the same control as My Decks) folds the tiles, the appraisal and Top 3 so cards reach the first phone screen. The choice is remembered per device. No ribbon.
+
+## 2026-11-13: Cards open as a grid, and the view controls stay on the bar
+- Guillermo's call: cards open as a grid at every screen size, phones included. This replaces "compact list is the phone default" (2026-11-06). The view is remembered per device under a new key (`ch:cardview`), so a phone that was on the old default starts on the grid once and then keeps what its owner picks.
+- Grid / list / compact and SIZE sit on the bar itself at every width. On phones they have their own row under the search on deck pages (so the bar is two rows there, replacing "one slim row" for phones only) and join the second row on Collection. They are never moved into ⋮ again: twice that read as "lost".
+- Phone grid sizes follow ManaBox: S = 4 across, M = 3 across (the start), L = 2 across, on Collection and on decks.
+- Card sections (Creatures, Instants, Lands …) are each a full-width block on every screen, "as clean as Moxfield": a header row, then cards in rows that wrap to the width. Small open sections no longer share a row on wide screens. Each SIZE has a smallest card width (S 124px, M 168px, L 236px above phone width), so the grid adds or drops columns and never squeezes a card.
+

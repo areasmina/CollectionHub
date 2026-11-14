@@ -8421,15 +8421,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 
 
 /* Review fixes, Nov 11 */
-/* Phones: the quick view pills are hidden on the bar, so grid / list / compact live in the ⋮ menu there (and only there). */
-.phoneview {
-  display: none;
-}
-@media (max-width: 700px) {
-  .phoneview {
-    display: block;
-  }
-}
 /* Tablets: the 520px ⋮ menu opened under its button and ran off the right edge (460–900px on an 820px screen).
    Between phone and desktop widths it hangs from the bar's right edge instead, so all of it stays on screen. */
 @media (min-width: 701px) and (max-width: 1100px) {

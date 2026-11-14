@@ -8,7 +8,7 @@ test('Detailed list view composition and placing in Forge', async ({ page }) => 
   // Set view to 'list' (detailed list view)
   await page.evaluate(() => {
     localStorage.setItem('ch:tab', 'decks');
-    localStorage.setItem('ch:view', 'list');
+    localStorage.setItem('ch:cardview', 'list');
   });
   await page.reload();
 

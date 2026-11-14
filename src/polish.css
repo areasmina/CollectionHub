@@ -1130,3 +1130,58 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
 @media (prefers-reduced-motion: reduce) {
   .forgetop, html.forging .fsugg { transition: none !important; }
 }
+
+/* ── Phones: the card view and size controls stay on the bar (owner's call, Nov 13) ── Grid / list / compact and SIZE
+   were only inside ⋮ on phones (or nowhere, on Collection), so they read as lost. They now sit on the bar itself, 44px
+   tall like every other phone control. Deck pages give them their own row under the search; Collection already had a
+   second row and they join it. The ALL / OWNED / MISSING pills stay in ⋮ on phones (SHOW), as before. */
+@media (max-width: 700px) {
+  .dpage .lists > .dtools.tbar { flex-wrap: wrap !important; height: auto !important; max-height: none !important; }
+  .dpage .lists > .dtools.tbar > .tquick,
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) {
+    display: flex !important; order: 9; flex: 1 1 100% !important; height: auto !important; min-height: 52px;
+    gap: 10px !important; padding: 4px 8px !important; border: 0 !important; border-top: 1px solid #3a3a3a !important;
+  }
+  .dpage .lists > .dtools.tbar > .tquick > .qsegs:not(.qviews),
+  .coll .dtools.tbar > .tquick > .qsegs:not(.qviews) { display: none !important; }
+  .dpage .lists > .dtools.tbar > .tquick > .qsegs.qviews,
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews,
+  .coll .dtools.tbar > .tquick > .qsegs.qviews,
+  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews { display: inline-flex !important; height: 48px !important; box-sizing: border-box !important; }
+  .coll .dtools.tbar > .tquick { display: inline-flex !important; }
+  :is(.dpage .lists, .coll) > .dtools.tbar > .tquick > .qsegs.qviews > button,
+  .coll .dtools.tbar > .tquick > .qsegs.qviews > button { min-width: 44px !important; min-height: 44px !important; padding: 0 !important; }
+  :is(.dpage .lists, .coll) .dtools.tbar > .tquick > .qzoom-btn { min-height: 44px !important; }
+  /* in the Forge the wide-screen rule that caps this row's width must not clip it on a phone */
+  html.forging .deckgrid.forge-split .dpage .lists > .dtools.tbar > .tquick,
+  html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick { max-width: none !important; overflow: visible !important; }
+  /* Collection's second row also holds ⋮, FILTER and the sort: tighter gaps so the sort's name still reads */
+  .coll .dtools.tbar > .tquick { gap: 6px !important; padding: 0 6px !important; }
+  .coll .dtools.tbar > .tquick > .qzoom-btn { padding: 0 8px !important; }
+  /* Collection grid, ManaBox sizing: S = 4 across, M = 3 across (the start), L = 2 across — the same steps as a deck's grid */
+  .collbar[data-zoom='s'] ~ * .cgrid2, .collbar[data-zoom='s'] ~ .cgrid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; }
+  .collbar[data-zoom='m'] ~ * .cgrid2, .collbar[data-zoom='m'] ~ .cgrid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+  .collbar[data-zoom='l'] ~ * .cgrid2, .collbar[data-zoom='l'] ~ .cgrid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) { .coll .dtools.tbar > .sortsel select { font-size: 14px !important; } }
+
+/* ── Card sections, every screen (owner's call, Nov 13: "as clean as Moxfield") ── Each section (Creatures, Instants,
+   Lands …) is its own full-width block: a header row, then its cards in rows that fill the width and wrap as needed.
+   Open grid sections used to share a row on wide screens when they were small, which read as mangled. The card's
+   smallest width per SIZE is set so a card stays readable: the grid adds or drops a column as the space changes (the
+   Forge's side panels opening or closing, a wider or narrower window), and never squeezes a card below that width.
+   Phones keep their fixed steps (S 4 across, M 3, L 2). Card pictures keep their own shape at every width. */
+.deckgrid > .lists > details.cat,
+.deckgrid > .lists > details.cat[open]:has(> ul.zgrid) {
+  flex: 1 1 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+@media (min-width: 701px) {
+  .deckgrid > .lists > details.cat > ul.zgrid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important; gap: 16px 14px !important; }
+  .deckgrid[data-zoom='s'] > .lists > details.cat > ul.zgrid { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)) !important; gap: 12px 10px !important; }
+  .deckgrid[data-zoom='l'] > .lists > details.cat > ul.zgrid { grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)) !important; gap: 20px 18px !important; }
+  /* a section with a few cards keeps them at card size on the left instead of stretching them across the row */
+  .deckgrid > .lists > details.cat > ul.zgrid > li { max-width: 300px !important; }
+  .deckgrid > .lists > details.cat + details.cat { margin-top: 12px; }
+}
