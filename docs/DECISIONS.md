@@ -73,3 +73,7 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Phone grid sizes follow ManaBox: S = 4 across, M = 3 across (the start), L = 2 across, on Collection and on decks.
 - Card sections (Creatures, Instants, Lands …) are each a full-width block on every screen, "as clean as Moxfield": a header row, then cards in rows that wrap to the width. Small open sections no longer share a row on wide screens. Each SIZE has a smallest card width (S 124px, M 168px, L 236px above phone width), so the grid adds or drops columns and never squeezes a card.
 
+## 2026-11-13: Dynamic Island stays floating, side docks are a thin bar (audit roadmap, phase 4)
+- Guillermo's picks: the island keeps floating (no solid strip); it slides away going down and comes back going up. At the very top of a page a bottom-docked island covers the last row of the first screen until the first small scroll ("Keep it, covers until you scroll").
+- On the left or right edge the island is a thin 46px bar, the same slim shape as the top and bottom island, with the section names running down it; the page keeps a 46px lane free on that side.
+- Motion: one soft spring in and out (no bounce), a light edge shadow so it reads as part of the page, and see-through with a blur while the page is moving under it; solid again at rest.

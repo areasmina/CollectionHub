@@ -1185,3 +1185,117 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   .deckgrid > .lists > details.cat > ul.zgrid > li { max-width: 300px !important; }
   .deckgrid > .lists > details.cat + details.cat { margin-top: 12px; }
 }
+
+/* ── Dynamic Island, phase 4 step 2: a clear lane on the side it is docked to ──
+   A side-docked island rests on the page's edge, so the page keeps a strip that wide free (App.tsx measures the island
+   into --island-w). Shrunk to its dot it needs no lane. Things pinned to that edge move in beside it. */
+html:has(.pillnav.dock-right:not(.collapsed)) .stage { padding-right: var(--island-w, 0px) !important; }
+html:has(.pillnav.dock-left:not(.collapsed)) .stage { padding-left: var(--island-w, 0px) !important; }
+@media (max-width: 700px) {
+  html:has(.pillnav.dock-right:not(.collapsed)) .lists > .jrail-wrap { right: calc(var(--island-w, 0px) + 4px) !important; }
+}
+
+/* ── Dynamic Island: thin side bar (Guillermo, Nov 13: "same shape as the top and bottom island") ──
+   On the left or right edge it is a slim 46px bar like the top and bottom island, not a box: the section names run
+   down the bar, the back button and the sync light sit at its ends, and the lane it needs is only 46px. */
+.pillnav:is(.dock-left, .dock-right):not(.collapsed) {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  padding: 10px 0 !important;
+}
+.pillnav.dock-left:not(.collapsed) { border-radius: 0 22px 22px 0 !important; }
+.pillnav.dock-right:not(.collapsed) { border-radius: 22px 0 0 22px !important; }
+.pillnav.dock-left .island-membrane { border-radius: 0 22px 22px 0 !important; }
+.pillnav.dock-right .island-membrane { border-radius: 22px 0 0 22px !important; }
+.pillnav:is(.dock-left, .dock-right) .island-content { align-items: center !important; gap: 6px !important; }
+.pillnav:is(.dock-left, .dock-right) .pback { width: 30px !important; height: 30px !important; margin: 0 !important; }
+.pillnav:is(.dock-left, .dock-right) .pill {
+  width: 34px !important;
+  padding: 3px !important;
+  gap: 3px !important;
+  border-radius: 999px !important;
+  align-items: center !important;
+}
+.pillnav:is(.dock-left, .dock-right) .pill button {
+  writing-mode: vertical-rl;
+  width: 26px !important;
+  height: auto !important;
+  padding: 12px 0 !important;
+  font: 400 13px/1 var(--u-display) !important;
+  letter-spacing: 0.08em !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+}
+.pillnav:is(.dock-left, .dock-right) .syncpill {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+}
+.pillnav:is(.dock-left, .dock-right) .syncpill .sync-main { padding: 0 !important; }
+.pillnav:is(.dock-left, .dock-right) .syncpill span.sync-lbl:not(.sdot) { display: none !important; }
+.pillnav:is(.dock-left, .dock-right) .island-lip { height: 32px !important; }
+
+/* ── Dynamic Island motion and feel (Guillermo, Nov 13: "smooth as the Apple one", "part of the site", "transparent at
+   times") ── It glides in and out on one soft spring instead of a bounce, sits on its edge with a light shadow instead
+   of a heavy floating one, and turns see-through with a blur while the page is moving under it. */
+.pillnav {
+  transition:
+    transform 0.55s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease,
+    background-color 0.35s ease,
+    box-shadow 0.35s ease,
+    -webkit-backdrop-filter 0.35s ease,
+    backdrop-filter 0.35s ease !important;
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  .pillnav {
+    transition-timing-function:
+      linear(0, 0.06 2%, 0.23 5%, 0.5 9.5%, 0.74 14%, 0.9 19%, 0.99 25%, 1.025 31%, 1.03 37%, 1.018 46%, 1.005 58%, 0.999 72%, 1),
+      ease, ease, ease, ease, ease !important;
+  }
+}
+.pillnav:not(.floating):not(.collapsed) { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 6px 20px rgba(0, 0, 0, 0.55) !important; }
+.pillnav:not(.floating) .island-membrane { box-shadow: none !important; }
+.pillnav::before, .pillnav::after, .pillnav .island-membrane { transition: opacity 0.35s ease, background-color 0.35s ease; }
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+}
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) .island-membrane { background-color: transparent !important; }
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching)::before,
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching)::after { opacity: 0.5; }
+@media (prefers-reduced-motion: reduce) {
+  .pillnav { transition: opacity 0.2s ease, background-color 0.2s ease !important; }
+}
+/* Top dock: the Forge bar moves down under the island; the strip it leaves above is filled, so no scrolled card or
+   tile shows (or sits) under the island there. */
+@media (max-width: 1099px) {
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 46px; background: var(--u-ink); }
+}
+
+/* ── Dynamic Island: picked up and put down (Guillermo, Nov 13: "the detaching and attaching animation can be better") ──
+   Picked up, it lifts a little and keeps its capsule shape with the red venom glow, breathing gently, instead of
+   squashing into a lens with its edge corners still showing. It follows the finger from any edge (side docks used to
+   pin it to the middle of the screen while dragging). App.tsx glides it from the finger to its new edge on release. */
+.pillnav.floating {
+  left: var(--fx) !important;
+  top: var(--fy) !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  border-radius: 999px !important;
+  animation: island-held 1.4s ease-in-out infinite alternate, venom-simmer 0.6s ease-in-out infinite alternate !important;
+}
+.pillnav.floating::before, .pillnav.floating::after { display: none !important; }
+.pillnav.floating .island-membrane { border-radius: 999px !important; animation: none !important; }
+@keyframes island-held {
+  from { scale: 1.04; rotate: -0.6deg; }
+  to { scale: 1.07; rotate: 0.6deg; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav.floating { animation: none !important; scale: 1.04; }
+}
