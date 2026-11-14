@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { addSignet, mockWorld, seed } from './mock';
+import { addSignet, mockWorld, seed, showStats } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -19,6 +19,7 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(page.locator('.dsum, details.dash')).toHaveCount(0);
 
     // Squared stat cards are visible
+    await showStats(page); // they start folded (Nov 13)
     await expect(page.locator('.stats .stat')).toHaveCount(3);
     await expect(page.locator('.stats .slip')).toBeVisible();
 
@@ -74,24 +75,25 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(menu.getByRole('menuitem', { name: '+ ADD TAG' })).toBeVisible();
   });
 
-  test('Decks overview: HIDE STATS button toggles the stats tiles section', async ({ page }) => {
+  test('Decks overview: stats start folded; SHOW STATS sits beside the deck buttons and toggles the tiles', async ({ page }) => {
     await go(page, 'decks');
 
-    // stats are visible by default
+    // the tiles start folded (Nov 13); SHOW STATS sits on the row of the deck buttons
     const stats = page.locator('.dstats');
-    await expect(stats).toBeVisible();
-
-    // clicking HIDE STATS hides the section — force through any rotated tile overlap
     const foldBtn = page.locator('.dfold');
-    await expect(foldBtn).toBeVisible();
-    await foldBtn.click({ force: true });
-    await expect(stats).toBeHidden();
     await expect(foldBtn).toContainText(/SHOW STATS/i);
+    await expect(stats).toBeHidden();
+    const row = async (sel: string) => { const b = (await page.locator(sel).first().boundingBox())!; return b.y + b.height / 2; };
+    expect(Math.abs((await row('.dfold')) - (await row('.dribbon-acts > .u-btn')))).toBeLessThanOrEqual(3);
+    expect((await foldBtn.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
-    // clicking again restores them
-    await foldBtn.click({ force: true });
+    // one tap shows them, another folds them again
+    await foldBtn.click();
     await expect(stats).toBeVisible();
     await expect(foldBtn).toContainText(/HIDE STATS/i);
+    await foldBtn.click();
+    await expect(stats).toBeHidden();
+    await expect(foldBtn).toContainText(/SHOW STATS/i);
   });
 
   test('Forge cube on phones: CARDS · ANALYSIS · TO BUY tabs and face switching', async ({ page }, info) => {

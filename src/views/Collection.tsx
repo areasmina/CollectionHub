@@ -161,9 +161,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   const entries = list ?? [];
   // Import modal pop-up: opens by itself for an empty binder (and stays open while an import runs).
   const [importOpen, setImportOpen] = useState<boolean>(false);
-  // HIDE STATS (audit roadmap, phase 3): the tiles stay as they are and open by default; folding them puts cards on the
+  // HIDE STATS (audit roadmap, phase 3): the tiles stay as they are; they start folded (Guillermo, Nov 13), which puts cards on the
   // first phone screen. Same control as My Decks, remembered on this device.
-  const [cstats, setCstats] = useStored<'show' | 'hide'>('ch:collstats', 'show', ['show', 'hide']);
+  const [cstats, setCstats] = useStored<'show' | 'hide'>('ch:collstats', 'hide', ['show', 'hide']);
   useEffect(() => {
     if (list !== undefined && list.length === 0) setImportOpen(true);
   }, [list?.length]);
@@ -322,15 +322,6 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
       </section>
 
       {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
-      <button
-        type="button"
-        className="statfold"
-        aria-expanded={cstats !== 'hide'}
-        onClick={() => (haptic('select'), setCstats(cstats === 'hide' ? 'show' : 'hide'))}
-        title={cstats === 'hide' ? 'Show the collection stats' : 'Hide the collection stats'}
-      >
-        {cstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
-      </button>
       <section className={`stats${cstats === 'hide' ? ' folded' : ''}`}>
         <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
           <span className="worn" aria-hidden="true" />
@@ -394,6 +385,16 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
                 title="Import cards into this binder"
               >
                 IMPORT
+              </button>
+              {/* SHOW / HIDE STATS sits on the same row as + DECK and IMPORT (Guillermo, Nov 13): one line of controls */}
+              <button
+                type="button"
+                className="statfold"
+                aria-expanded={cstats !== 'hide'}
+                onClick={() => (haptic('select'), setCstats(cstats === 'hide' ? 'show' : 'hide'))}
+                title={cstats === 'hide' ? 'Show the collection stats' : 'Hide the collection stats'}
+              >
+                {cstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
               </button>
             </div>
           </div>

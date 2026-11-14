@@ -1073,6 +1073,23 @@ html.forging .vhero {
 .coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
 .coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
 .coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
+/* ── Collection and My Decks: SHOW / HIDE STATS shares the row of + DECK / IMPORT (Guillermo, Nov 13) ──
+   One line of controls instead of a lone button above the tiles; it sits right after them, same height as its
+   neighbours. The tiles start folded on both pages. */
+.coll .slip-acts > .statfold {
+  display: inline-flex; align-items: center; margin: 0; transform: none; white-space: nowrap; flex: none;
+}
+.coll .slip-acts { flex-wrap: wrap; align-items: stretch !important; }
+.coll .stats.folded > .slip { width: 100% !important; grid-column: 1 / -1 !important; }
+.dlist .dribbon > .dribbon-acts > .dfold {
+  display: inline-flex; align-items: center; justify-content: center; margin: 0; transform: none;
+  white-space: nowrap; min-height: 44px; flex: none !important; width: auto !important; max-width: max-content;
+}
+@media (max-width: 700px) {
+  /* phones: the two deck buttons share the row's width, the fold button keeps its own size at the end */
+  .dlist .dribbon > .dribbon-acts { grid-template-columns: 1fr 1fr auto; }
+  .dlist .dribbon > .dribbon-acts > .u-btn { padding-left: 8px; padding-right: 8px; white-space: nowrap; }
+}
 
 /* ── Phase 2 follow-up (found with the real collection): nothing in the options sheet or the chip strip reads cut off ── */
 @media (max-width: 699px) {
