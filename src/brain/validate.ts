@@ -96,6 +96,44 @@ export function landColours(c: Pick<Card, 'type' | 'text'>): Set<string> {
   return out;
 }
 
+/**
+ * The four rules checks alone (100 cards, singleton, Commander-legal, inside the colour identity): what makes a deck
+ * legal to play. Readiness starts with these; My Decks runs them on every saved deck so an imported or hand-edited
+ * deck that can't be played says so on its tile.
+ */
+export function deckRules(o: {
+  deck: DeckCard[];
+  cardOf: (name: string) => Pick<Card, 'type' | 'text' | 'cmc' | 'mana' | 'ci' | 'legal'> | undefined;
+  commander?: string;
+  partner?: string;
+  identity: string[];
+  /** No commander picked yet: there are no colours to be outside of, so skip that check (My Decks tiles). */
+  skipIdentity?: boolean;
+}): Check[] {
+  const st = deckStats(o.deck, o.cardOf, o.commander);
+  const checks: Check[] = [];
+  const add = (c: Check) => checks.push(c);
+  const list = (xs: string[]) => xs.slice(0, 5).join(', ') + (xs.length > 5 ? '…' : '');
+  add({ key: 'cards', kind: 'rules', label: 'Cards', value: `${st.total}`, target: '100', ok: st.total === 100, says: st.total === 100 ? '100 cards, commander included.' : `${st.total} cards: a Commander deck has exactly 100.` });
+  const counts = new Map<string, { name: string; n: number }>();
+  for (const c of o.deck) {
+    const k = norm(c.name);
+    counts.set(k, { name: c.name, n: (counts.get(k)?.n ?? 0) + c.qty });
+  }
+  const dupes = [...counts.entries()].filter(([k, v]) => v.n > 1 && !BASICS.has(k) && !ANY_NUMBER.test(o.cardOf(v.name)?.text ?? '')).map(([, v]) => v.name);
+  add({ key: 'singleton', kind: 'rules', label: 'Singleton', value: dupes.length ? `${dupes.length} doubled` : 'yes', target: 'one of each', ok: !dupes.length, says: dupes.length ? `More than one copy of ${list(dupes)}.` : 'One copy of each card (basics aside).', cards: dupes });
+  const banned = o.deck.filter((c) => o.cardOf(c.name)?.legal === false).map((c) => c.name);
+  add({ key: 'legal', kind: 'rules', label: 'Legal', value: banned.length ? `${banned.length} banned` : 'yes', target: 'no banned cards', ok: !banned.length, says: banned.length ? `Not legal in Commander: ${list(banned)}.` : 'Every card is legal in Commander.', cards: banned });
+  if (o.skipIdentity) return checks;
+  const lead = new Set([o.commander, o.partner].filter(Boolean).map((n) => norm(n!)));
+  const off = o.deck.filter((c) => !lead.has(norm(c.name))).filter((c) => {
+    const ci = o.cardOf(c.name)?.ci;
+    return ci !== undefined && !inIdentity(ci, o.identity);
+  }).map((c) => c.name);
+  add({ key: 'identity', kind: 'rules', label: 'Colours', value: off.length ? `${off.length} outside` : 'yes', target: `inside ${o.identity.join('') || 'colourless'}`, ok: !off.length, says: off.length ? `Outside the commander's colours: ${list(off)}.` : "Every card is inside the commander's colours.", cards: off });
+  return checks;
+}
+
 export function readiness(o: {
   deck: DeckCard[];
   cardOf: (name: string) => Pick<Card, 'type' | 'text' | 'cmc' | 'mana' | 'ci' | 'legal'> | undefined;
@@ -109,25 +147,9 @@ export function readiness(o: {
   const st = deckStats(o.deck, o.cardOf, o.commander);
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
-  const list = (xs: string[]) => xs.slice(0, 5).join(', ') + (xs.length > 5 ? '…' : '');
 
-  // Rules
-  add({ key: 'cards', kind: 'rules', label: 'Cards', value: `${st.total}`, target: '100', ok: st.total === 100, says: st.total === 100 ? '100 cards, commander included.' : `${st.total} cards: a Commander deck has exactly 100.` });
-  const counts = new Map<string, { name: string; n: number }>();
-  for (const c of o.deck) {
-    const k = norm(c.name);
-    counts.set(k, { name: c.name, n: (counts.get(k)?.n ?? 0) + c.qty });
-  }
-  const dupes = [...counts.entries()].filter(([k, v]) => v.n > 1 && !BASICS.has(k) && !ANY_NUMBER.test(o.cardOf(v.name)?.text ?? '')).map(([, v]) => v.name);
-  add({ key: 'singleton', kind: 'rules', label: 'Singleton', value: dupes.length ? `${dupes.length} doubled` : 'yes', target: 'one of each', ok: !dupes.length, says: dupes.length ? `More than one copy of ${list(dupes)}.` : 'One copy of each card (basics aside).', cards: dupes });
-  const banned = o.deck.filter((c) => o.cardOf(c.name)?.legal === false).map((c) => c.name);
-  add({ key: 'legal', kind: 'rules', label: 'Legal', value: banned.length ? `${banned.length} banned` : 'yes', target: 'no banned cards', ok: !banned.length, says: banned.length ? `Not legal in Commander: ${list(banned)}.` : 'Every card is legal in Commander.', cards: banned });
-  const lead = new Set([o.commander, o.partner].filter(Boolean).map((n) => norm(n!)));
-  const off = o.deck.filter((c) => !lead.has(norm(c.name))).filter((c) => {
-    const ci = o.cardOf(c.name)?.ci;
-    return ci !== undefined && !inIdentity(ci, o.identity);
-  }).map((c) => c.name);
-  add({ key: 'identity', kind: 'rules', label: 'Colours', value: off.length ? `${off.length} outside` : 'yes', target: `inside ${o.identity.join('') || 'colourless'}`, ok: !off.length, says: off.length ? `Outside the commander's colours: ${list(off)}.` : "Every card is inside the commander's colours.", cards: off });
+  // Rules (the same four checks My Decks runs on every saved deck)
+  for (const c of deckRules(o)) add(c);
 
   // Build
   const range = (key: CheckKey, label: string, n: number, [lo, hi]: [number, number], low: string) =>
@@ -260,4 +282,20 @@ export function bracketFit(call: BracketCall, aim: number): BracketFit {
     mld: call.mld,
     extraTurns: call.extraTurns,
   };
+}
+
+/**
+ * The one short label a My Decks tile shows when a saved deck breaks a rule, and the full reasons for its tooltip and
+ * screen readers. The first broken rule names the label, in the order a player fixes them: card count, banned,
+ * off-colour, doubled. Undefined when the deck is legal.
+ */
+export function rulesLabel(checks: Check[]): { label: string; says: string } | undefined {
+  const bad = checks.filter((c) => c.kind === 'rules' && !c.ok);
+  if (!bad.length) return undefined;
+  const order: CheckKey[] = ['cards', 'legal', 'identity', 'singleton'];
+  const first = [...bad].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))[0];
+  const n = first.cards?.length ?? 0;
+  const label =
+    first.key === 'cards' ? `${first.value}/100 CARDS` : first.key === 'legal' ? `${n} BANNED` : first.key === 'identity' ? `${n} OFF-COLOUR` : `${n} DOUBLED`;
+  return { label: bad.length > 1 ? `${label} +${bad.length - 1}` : label, says: `Not legal in Commander yet. ${bad.map((c) => c.says).join(' ')}` };
 }

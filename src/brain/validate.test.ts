@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracketFit, karstenLands, karstenSources, landColours, readiness } from './validate';
+import { bracketFit, deckRules, karstenLands, karstenSources, landColours, readiness, rulesLabel } from './validate';
 import { whyCard } from './why';
 import { setBrainData } from './data';
 
@@ -40,6 +40,36 @@ describe('readiness', () => {
     expect(r.checks.find((c) => c.key === 'legal')!.cards).toEqual(['Mana Crypt']);
     expect(r.checks.find((c) => c.key === 'identity')!.cards).toEqual(['Kaya']);
     expect(r.checks.find((c) => c.key === 'singleton')!.cards).toEqual(['Sol Ring']);
+  });
+});
+
+describe('deckRules + rulesLabel (My Decks tiles, Nov 14)', () => {
+  it('are exactly the rules checks readiness starts with', () => {
+    const d = deck([['Mana Crypt', 1], ['Kaya', 1], ['Sol Ring', 1]]);
+    const o = { deck: d, cardOf, commander: 'Cmdr', identity: ['U', 'B'] };
+    expect(deckRules(o)).toEqual(readiness(o).checks.filter((c) => c.kind === 'rules'));
+  });
+  it('a legal 100 has no label', () => {
+    expect(rulesLabel(deckRules({ deck: deck(), cardOf, commander: 'Cmdr', identity: ['U', 'B'] }))).toBeUndefined();
+  });
+  it('a short deck says how many of 100, and lists every reason', () => {
+    const short = deck().slice(0, 30);
+    const r = rulesLabel(deckRules({ deck: short, cardOf, commander: 'Cmdr', identity: ['U', 'B'] }))!;
+    const total = short.reduce((n, c) => n + c.qty, 0);
+    expect(r.label).toBe(`${total}/100 CARDS`);
+    expect(r.says).toContain('a Commander deck has exactly 100');
+  });
+  it('banned comes before off-colour and doubled; the rest is counted', () => {
+    const d = deck([['Mana Crypt', 1], ['Kaya', 1], ['Sol Ring', 1]]);
+    const r = rulesLabel(deckRules({ deck: d, cardOf, commander: 'Cmdr', identity: ['U', 'B'] }))!;
+    expect(r.label).toBe('1 BANNED +2');
+    expect(r.says).toContain('Mana Crypt');
+    expect(r.says).toContain('Kaya');
+    expect(r.says).toContain('More than one copy of Sol Ring');
+  });
+  it('no commander yet: colours are not judged', () => {
+    const checks = deckRules({ deck: deck([['Kaya', 1]]), cardOf, identity: [], skipIdentity: true });
+    expect(checks.map((c) => c.key)).toEqual(['cards', 'singleton', 'legal']);
   });
 });
 

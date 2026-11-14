@@ -28,6 +28,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Rotating top-3 widget (most valuable, risers / fallers) from daily snapshots | Live | 3a | `lib/pricewatch.test.ts` |
 | BANNED tape for cards not legal in Commander | Live | #11 | manual, no test yet |
 | Filters: colour, type, mana value (0 to 7+), price per copy (≈CA$ bands at your printing and finish), foil / non-foil, commanders, in deck / not in deck, each a removable chip | Live (rarity not yet: the app does not store it) | this PR | `lib/collfilter.test.ts`, e2e `collection-strip.spec.ts` |
+| My Decks: a saved deck that breaks a Commander rule shows a red NOT LEGAL tag on its tile with the first problem (short of 100 cards, banned card, off-colour card, doubled card; +N when there are more); tap-and-hold/hover gives the full reason. Uses the same four rules checks as the deck page's Readiness tile (`deckRules`) | In review | this PR | `brain/validate.test.ts` "deckRules + rulesLabel", `e2e/deck-legal.spec.ts` (3 sizes) |
 | Per-entry language, condition, other finishes | Planned | – | – |
 | Custom lists inside a binder (trade, wishlist, sell…): list tabs, MOVE TO LIST… in the card menu | Partial | 61c46e7 (pushed to main) | no test yet |
 | More binders + the Unassigned Cards binder: deleting a binder releases its cards there; the binder stays open after a reload; DELETE shows only with two real binders | Live | 61c46e7, 97f0ab5, review fixes Nov 11 | `lib/ownership.test.ts` "Saved binder" |
