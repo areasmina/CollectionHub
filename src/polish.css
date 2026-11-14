@@ -1046,6 +1046,20 @@ html.forging .vhero {
   .jrail > button { position: relative !important; }
   .jrail > button::before { content: ''; position: absolute; top: 0; bottom: 0; right: 0; width: 44px; }
 }
+/* ── 44px TAP TARGETS inside pop-ups on phones (phase 3 leftover) ── the sweep of every pop-up: option pickers on the
+   commander page, deck chips in the card menu, the ✕ of the swap window and the import pop-ups, the binder menu rows,
+   and the deck menu's colour dots and custom shade. Mouse screens keep their compact controls. */
+@media (max-width: 699px) {
+  .dtools.tbar .tbmore[open] .fbody label.sbox.pick { height: auto !important; min-height: 44px !important; }
+  .dtools.tbar .tbmore[open] .fbody label.sbox.pick select { min-height: 44px !important; font-size: 13px !important; }
+  .cardmenu li.using .deck-chip { height: 44px !important; min-height: 44px !important; padding: 0 12px !important; }
+  .swapnote .close, .note-pop .close, .importbox-pop .close { min-width: 44px !important; min-height: 44px !important; }
+  .bindermenu button { min-height: 44px !important; }
+  .deckmenu .swatches { gap: 8px !important; flex-wrap: wrap !important; }
+  .deckmenu .swatches button { width: 44px !important; height: 44px !important; min-width: 44px !important; }
+  .deckmenu .custom-color-label { min-height: 44px !important; align-items: center !important; }
+  .deckmenu .custom-color-label input[type='color'] { min-height: 36px !important; }
+}
 /* ── Collection: HIDE STATS (audit roadmap, phase 3) ── the tiles, the appraisal and Top 3 fold away so cards reach the
    first phone screen; + DECK and IMPORT stay. Same button as My Decks' fold, with a full 44px tap height. */
 .coll .statfold {

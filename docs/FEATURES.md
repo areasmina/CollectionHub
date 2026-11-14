@@ -36,7 +36,6 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 
 ## Discover and commander page
 
-| Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
 | Commanders in your binder, ranked; search any commander | Live | v1 | e2e "Discover (overhaul)" |
 | Overhaul phase 3, Discover: loud frame (ransom title, the eye, tagline, "N DECKS" answer), one toolbar (search, Enter opens; SORT and COLOUR behind ⋮, chosen ones named on the bar), flat commander tiles (art, name + pips, match % + green meter, decks · price, READY / N MISSING), two across on phones | Live | #24 | e2e "Discover (overhaul)", "Title answer" |
@@ -64,7 +63,6 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 
 ## Decks and the Forge
 
-| Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
 | Deck page: header, toolbar, analysis, card menu | Live | v1, #6 | e2e "Deck page: header, toolbar, analysis and the card menu" |
 | Rename, duplicate, delete (asks first) | Live | #6 | e2e "Deck page: Rename and Duplicate", "Delete is in the DECK menu" |
@@ -97,7 +95,6 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 
 ## Sync and app
 
-| Feature | Status | PR / commit | Proven by |
 |---|---|---|---|
 | EDHREC behind one adapter, its terms in `docs/data-sources.md` | Live | #12 | `lib/sources/sources.test.ts` (no other file calls EDHREC) |
 | Clean-up round: one slim tool bar, binder menu, Collection fold, no hamburger | Live | #15 | e2e (updated in #15) |
@@ -124,6 +121,8 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | 44px tap targets on phones: every button, tab, select and section header on the main screens is at least 44px to tap (jump rail widened by an invisible strip; small theme badges on My Decks tiles are the known gap) | Live | #61 | `e2e/tap-targets.spec.ts` |
 | Collection HIDE STATS: the stat tiles, appraisal and Top 3 fold away behind one button (folded at first since Nov 13, remembered per device) so cards reach the first phone screen; + DECK and IMPORT stay | Live | #60 | `e2e/collection-stats-fold.spec.ts` |
 | Collection and My Decks: the stat tiles start folded; SHOW / HIDE STATS sits on the row of + DECK / IMPORT (Collection) and + NEW BLANK DECK / IMPORT DECK (My Decks), 44px tall, in line with them | Building | this PR | `e2e/collection-stats-fold.spec.ts`, `e2e/workbench-features.spec.ts` "Decks overview" |
+| 44px tap targets inside pop-ups on phones: option pickers on the commander page, deck chips in the card menu, the ✕ of the swap window and import pop-ups, binder menu rows, the deck menu's colour dots and custom shade (theme badges on My Decks tiles stay the known gap) | Live | #77 | `e2e/tap-targets-popups.spec.ts` |
+| Collection HIDE STATS: the stat tiles, appraisal and Top 3 fold away behind one button (shown by default, remembered per device) so cards reach the first phone screen; + DECK and IMPORT stay | Live | #60 | `e2e/collection-stats-fold.spec.ts` |
 | Island clear lane, thin side bar and smoother motion (phase 4 step 2): on the left or right edge the island is a 46px bar with the names running down it and the page keeps a 46px lane free (the phone jump rail moves in beside it); a top dock never sits on content at a page start, a bottom dock never at a page end (at the very top it covers until the first scroll, Guillermo's pick); soft spring motion, light edge shadow, see-through while the page moves; picked up it stays a lifted capsule that follows the finger, and it glides to its new edge when let go | Live | #68 | e2e `island-lane.spec.ts` |
 | Island and other floating things (phase 4 step 4): the swap window sends the island away on every edge, sheets fade it on the top and side edges (a bottom dock still slides away); a top-docked island never covers the Forge bar (the bar moves under it below 1100px wide); on phones the Forge suggestions sheet peeks above a bottom-docked island | Live | #67 | e2e `island-clear.spec.ts` |
 | Island tap areas on phones (phase 4 step 3): back, DISCOVER, DECKS, COLLECTION and the sync light each answer a tap across 44px (stacked docks: 44px sideways), the sync panel ✕ too; nothing changes in the look or the island height; the grip line stays the drag handle | Live | #66 | e2e `island-taps.spec.ts` |
@@ -131,4 +130,4 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Card scanning | Parked | – | likely needs a paid service |
 | Search your own cards while building a deck: + MY CARDS on the deck bar (saved deck and commander page) opens the Forge on its MY CARDS search, focused; the search covers every card of yours that can go in the deck (in the colours, not already in it), past the OWNED / NOT OWNED tab, role and theme chips, up to 60 matches; + ADD on a saved deck, tap-then-tap swap on the commander page; matching cards that can't go in are named with the reason (already in the deck, outside the colours, NEVER USE) | Live | #72 | `lib/collsearch.test.ts`, `e2e/my-cards-search.spec.ts` |
 | Cards open as a grid everywhere; grid / list / compact and SIZE on the bar at every width (phones: own row on deck pages, 44px controls; Collection gets list / grid on phones for the first time); phone grid 3 across at M like ManaBox (S 4, L 2); every card section a full-width block with rows that wrap to the width (S / M / L smallest card widths 124 / 168 / 236px); MISSING is a label under the card, never on its picture; pin chips take their own row | Live | #69 | `e2e/view-on-bar.spec.ts` (grid start, controls reachable and 44px, SIZE steps, old setting ignored once, sections full width, card shape kept, 320 and 360px), `e2e/forge.spec.ts` "Every screen starts on the card grid" |
-| Phone deck bar: ⋮ and the search always share the first row (view and SIZE on the second), never three rows | Building | this PR | `e2e/bar-row.spec.ts` |
+| Phone deck bar: ⋮ and the search always share the first row (view and SIZE on the second), never three rows | Live | #74 | `e2e/bar-row.spec.ts` |
