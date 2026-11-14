@@ -25,6 +25,7 @@ import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
 import { allocate } from '../lib/allocation';
+import { archidektUrl, spellbookUrl } from '../lib/links';
 import { pickBest, scanBestFit, type FitResult } from '../lib/bestfit';
 import { bracketFit, karstenLands, readiness } from '../brain/validate';
 import { buildDeck } from '../brain/build';
@@ -712,6 +713,12 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               {page && <SaltStat names={names} />}
               <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
                 EDHREC ↗
+              </a>
+              <a href={spellbookUrl(name)} target="_blank" rel="noreferrer" title="Every known combo with this commander, on Commander Spellbook">
+                COMBOS ↗
+              </a>
+              <a href={archidektUrl(name)} target="_blank" rel="noreferrer" title="Other players' decks with this commander, on Archidekt">
+                ARCHIDEKT ↗
               </a>
               {mine.length > 0 && !saved && (
                 <span className="mydecks">

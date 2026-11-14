@@ -62,7 +62,8 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | IV+ stamp on decks forged from cEDH data | Live | #11 | manual, no test yet |
 | Colour identity is a hard rule on every suggestion path | Live | #16 | `brain/round2.test.ts` |
 | Suggested deck built from owned cards first (Deck Wizard rules) | Partial | #7, #10 | brain core live; full builder port in progress (brain thread) |
-| BEST FOR MY CARDS (Suggested Deck, roadmap 5.1): one button on the commander page's deck strip checks EDHREC's average deck at power 3, 4 and 5 (Min / Med / Max) and every gear (1ST $, 2ND any, 3RD $$$), opens the one your binder owns the most of (ties: more cards owned, then cheaper gear, then lower power), and lists the others as chips with their % (one tap opens one). Uses THE ownership count, so the % matches the header. Respects the theme picked | In review | this PR | `lib/bestfit.test.ts`, `e2e/best-fit.spec.ts` (3 sizes) |
+| BEST FOR MY CARDS (Suggested Deck, roadmap 5.1): one button on the commander page's deck strip checks EDHREC's average deck at power 3, 4 and 5 (Min / Med / Max) and every gear (1ST $, 2ND any, 3RD $$$), opens the one your binder owns the most of (ties: more cards owned, then cheaper gear, then lower power), and lists the others as chips with their % (one tap opens one). Uses THE ownership count, so the % matches the header. Respects the theme picked | Live | #82 | `lib/bestfit.test.ts`, `e2e/best-fit.spec.ts` (3 sizes) |
+| Outside links: COMBOS ↗ (Commander Spellbook, every combo with the commander) and ARCHIDEKT ↗ (other players' Commander decks with it) sit next to EDHREC ↗ on the commander page and on a saved deck's header; both use the sites' own URL forms. Moxfield has no public search link: decks go there through EXPORT FOR MOXFIELD | In review | this PR | `lib/links.test.ts`, `e2e/outside-links.spec.ts` (3 sizes) |
 
 ## Decks and the Forge
 

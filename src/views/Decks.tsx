@@ -29,6 +29,7 @@ import { CardMenu } from './CardMenu';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../lib/db';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, type BracketCall, type DeckStats, type RefShape } from '../lib/deckstats';
 import { deckArena, deckCsv, deckText, download } from '../lib/export';
+import { archidektUrl, spellbookUrl } from '../lib/links';
 import { norm, slug } from '../lib/names';
 import { cad, fetchedNote, PRICE_METHOD, shopUrl, toCad } from '../lib/prices';
 import { commanderSlug, guessCommander, pairIdentity } from '../lib/commander';
@@ -847,6 +848,16 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               {st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
               <SaltStat names={deck.cards.map((c) => c.name)} />
               <BracketStat call={call} cedh={deck.source === 'cedh'} />
+              {deck.commander && (
+                <>
+                  <a href={spellbookUrl(deck.commander)} target="_blank" rel="noreferrer" title="Every known combo with this commander, on Commander Spellbook">
+                    COMBOS ↗
+                  </a>
+                  <a href={archidektUrl(deck.commander)} target="_blank" rel="noreferrer" title="Other players' decks with this commander, on Archidekt">
+                    ARCHIDEKT ↗
+                  </a>
+                </>
+              )}
             </div>
             <div className="vmatch" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
               <b className="num">{sum.pct}%</b>

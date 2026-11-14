@@ -130,7 +130,7 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 
 ## Priority 3: integrations and usability
 
-1. 🟡 External links: EDHREC and Scryfall done. Commander Spellbook, Moxfield, Archidekt search links ⬜ (links only;
+1. ✅ External links: EDHREC and Scryfall done; Commander Spellbook and Archidekt links on commander and deck pages (Nov 14); Moxfield via EXPORT FOR MOXFIELD (it has no public search link) (links only;
    no Moxfield API, Archidekt read API undocumented).
 2. ⬜ Custom lists (trade, buy, reserved, upgrade, sell, wishlist, custom) without duplicating entries.
 3. 🟡 Presentation modes: grid, list, by set done; compact grid, by colour, by value ⬜.
