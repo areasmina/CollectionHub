@@ -1388,3 +1388,150 @@ ul.zgrid .ztile .misstape {
   .ctile .cart > .cmdtape { font-size: 0; padding: 0 6px; left: -4px; }
   .ctile .cart > .cmdtape::before { content: '♛'; font: 400 13px/1.5 system-ui, sans-serif; }
 }
+
+/* ── Search that stays in reach (ManaBox benchmark, Nov 14) ──
+   1. Collection and Discover: the bar was sticky only inside its own wrapper (.collbar / form.dfind), which is exactly
+      as tall as the bar, so it scrolled away with the page. The wrapper is what sticks now, at the same 6px as the deck
+      pages' bar. When the ⋮ sheet is open the wrapper rises above the nav, as the deck pages' bar already does.
+   2. Every search box carries a magnifier so it reads as a search bar at a glance.
+   3. My Decks: two slim rows (search + sort, then one sliding row of status and tag chips), pinned the same way, with
+      44px controls and a 16px input (smaller text makes iPhones zoom the page on focus). */
+.dpage.coll .collbar,
+.dpage.disc > .dfind,
+.dpage.dlist > .decktoolbar {
+  position: sticky;
+  top: 6px;
+  z-index: 30;
+}
+.dpage.coll .collbar > .dtools.tbar,
+.dpage.disc > .dfind > .dtools.tbar {
+  position: relative !important;
+  top: 0;
+}
+.dpage.coll .collbar:has(.tbmore[open]),
+.dpage.disc > .dfind:has(.tbmore[open]) {
+  z-index: 1010;
+}
+
+.tsearch,
+.decktoolbar .dsearchbox {
+  position: relative;
+}
+.tsearch > .sicon,
+.decktoolbar .dsearchbox > .sicon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--u-muted, #9a9a9a);
+  pointer-events: none;
+  z-index: 1;
+}
+.tsearch:focus-within > .sicon,
+.decktoolbar .dsearchbox:focus-within > .sicon {
+  color: var(--u-text, #f2f2f2);
+}
+.dtools.tbar > .tsearch input,
+.decktoolbar .dsearchbox input {
+  padding-left: 38px !important;
+}
+/* the cramped phone deck bar (⋮ + search share one row) keeps every pixel for the text */
+@media (max-width: 700px) {
+  .dpage .lists > .dtools.tbar > .tsearch > .sicon { left: 8px; width: 16px; height: 16px; }
+  .dpage .lists > .dtools.tbar > .tsearch input { padding-left: 30px !important; }
+}
+
+.dpage.dlist > .decktoolbar {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px !important;
+  padding: 8px !important;
+  box-shadow: 4px 4px 0 var(--accent, #e60012);
+}
+.decktoolbar .dsearchrow {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 8px;
+  align-items: stretch;
+  min-width: 0;
+}
+.decktoolbar .dsearchrow > .dsearchbox {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+.decktoolbar .dsearchbox input { min-width: 0; }
+.decktoolbar .dsearchbox input {
+  height: 44px;
+  font-size: 16px !important;
+  box-sizing: border-box;
+}
+.decktoolbar .dsearchrow > .dsortpick {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.decktoolbar .dsearchrow > .dsortpick > select {
+  height: 44px;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+}
+/* status and tags: one row that slides sideways instead of stacking */
+.dpage.dlist > .decktoolbar > .dfilters {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 6px !important;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  width: 100%;
+  min-width: 0;
+}
+.dpage.dlist > .decktoolbar > .dfilters::-webkit-scrollbar { display: none; }
+.dpage.dlist > .decktoolbar > .dfilters > .dstatuspick,
+.dpage.dlist > .decktoolbar > .dfilters > .decktagpills {
+  display: flex !important;
+  flex: 0 0 auto;
+  flex-wrap: nowrap !important;
+  overflow: visible !important;
+  gap: 6px !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+.dpage.dlist > .decktoolbar > .dfilters > .decktagpills {
+  padding-left: 8px !important;
+  border-left: 1px solid #33333e !important;
+}
+.dpage.dlist > .decktoolbar .dstatuspick > .u-chip,
+.dpage.dlist > .decktoolbar .decktagpills > .tagpill {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .decktoolbar .dsearchrow > .dsortpick > span { display: none; }
+  .decktoolbar .dsearchrow > .dsortpick { flex: 0 0 38%; }
+  .decktoolbar .dsearchrow > .dsortpick > select { width: 100%; }
+}
+/* A top-docked island (the desktop default) comes back while you scroll up, exactly when you reach for the search:
+   the pinned bars then sit just under it (46px island + 6px) instead of under it, as the Forge bar already does. */
+.dpage.coll .collbar,
+.dpage.disc > .dfind,
+.dpage.dlist > .decktoolbar,
+.dpage .lists > .dtools.tbar {
+  transition: top 0.25s ease;
+}
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
+  top: 52px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dpage.coll .collbar, .dpage.disc > .dfind, .dpage.dlist > .decktoolbar, .dpage .lists > .dtools.tbar { transition: none; }
+}

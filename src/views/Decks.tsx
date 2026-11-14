@@ -38,7 +38,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -1355,21 +1355,26 @@ export function Decks(s: Shared) {
           </span>
           </div>
         </div>
-        {/* Decks Workbench Toolbar: search, sort, status filters, and tag pills */}
+        {/* Decks Workbench Toolbar (ManaBox-style, Nov 14): row 1 is the search and the sort, row 2 one sliding row of
+            status and tag chips. Two slim rows that stay pinned while the deck tiles scroll under them. */}
         <div className="decktoolbar" role="search" aria-label="Deck filters and tools">
-          <div className="dsearchbox">
-            <input
-              type="search"
-              placeholder="Search decks by name, commander, or tag…"
-              value={dq}
-              onChange={(e) => setDq(e.target.value)}
-              aria-label="Search decks"
-            />
-          </div>
-          <div className="dfilters">
+          <div className="dsearchrow">
+            <label className="dsearchbox">
+              <SearchIcon />
+              <input
+                type="search"
+                placeholder="search decks_"
+                title="Search decks by name, commander, or tag"
+                value={dq}
+                onChange={(e) => setDq(e.target.value)}
+                aria-label="Search decks"
+                enterKeyHint="search"
+                autoComplete="off"
+              />
+            </label>
             <label className="dsortpick">
               <span>SORT:</span>
-              <select value={dsort} onChange={(e) => setDsort(e.target.value as any)}>
+              <select value={dsort} onChange={(e) => setDsort(e.target.value as any)} aria-label="Sort decks">
                 <option value="updated-desc">RECENTLY UPDATED</option>
                 <option value="name-asc">NAME (A → Z)</option>
                 <option value="name-desc">NAME (Z → A)</option>
@@ -1379,41 +1384,35 @@ export function Decks(s: Shared) {
                 <option value="cards-desc">CARD COUNT</option>
               </select>
             </label>
-            <div className="dstatuspick">
+          </div>
+          <div className="dfilters">
+            <div className="dstatuspick" role="group" aria-label="Show decks">
               {(['all', 'ready', 'in-progress', 'active'] as const).map((st) => (
                 <button
                   key={st}
                   type="button"
                   className={`u-chip ${dstatus === st ? 'active' : ''}`}
+                  aria-pressed={dstatus === st}
                   onClick={() => setDstatus(st)}
                 >
                   {st === 'all' ? 'ALL' : st === 'ready' ? 'ALL OWNED' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
                 </button>
               ))}
             </div>
-          </div>
-          {allTags.length > 0 && (
-            <div className="decktagpills" aria-label="Filter by tag">
-              <span className="tlabel">TAGS:</span>
-              <button
-                type="button"
-                className={`tagpill ${dtag === 'all' ? 'active' : ''}`}
-                onClick={() => setDtag('all')}
-              >
-                ALL
-              </button>
-              {allTags.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className={`tagpill ${dtag === t ? 'active' : ''}`}
-                  onClick={() => setDtag(dtag === t ? 'all' : t)}
-                >
-                  #{t}
+            {allTags.length > 0 && (
+              <div className="decktagpills" role="group" aria-label="Filter by tag">
+                <span className="tlabel">TAGS:</span>
+                <button type="button" className={`tagpill ${dtag === 'all' ? 'active' : ''}`} aria-pressed={dtag === 'all'} onClick={() => setDtag('all')}>
+                  ALL
                 </button>
-              ))}
-            </div>
-          )}
+                {allTags.map((t) => (
+                  <button key={t} type="button" className={`tagpill ${dtag === t ? 'active' : ''}`} aria-pressed={dtag === t} onClick={() => setDtag(dtag === t ? 'all' : t)}>
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
         {decks.length > 0 && (

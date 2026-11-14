@@ -754,11 +754,22 @@ export function CmdrCard({ src, name, onMenu, children }: { src: string; name: s
   );
 }
 
+/** The magnifier every search box carries (ManaBox: a search bar reads as one at a glance). Decoration only. */
+export function SearchIcon() {
+  return (
+    <svg className="sicon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+      <circle cx="7.5" cy="7.5" r="5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M11.2 11.2 16 16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="square" />
+    </svg>
+  );
+}
+
 /** The SEARCH segment every toolbar starts with: cards by name or rules text (Oracle + reminder text). */
 export function SearchBox({ q, setQ, placeholder = 'name or rules text_', ariaLabel = 'Search cards by name or rules text' }: { q: string; setQ: (v: string) => void; placeholder?: string; ariaLabel?: string }) {
   return (
     <label className="sbox dark tsearch">
       <span className="tab">SEARCH</span>
+      <SearchIcon />
       <input type="search" placeholder={placeholder} value={q} onChange={(e) => setQ(e.target.value)} aria-label={ariaLabel} enterKeyHint="search" />
       <span aria-hidden="true" className="fade" />
     </label>
