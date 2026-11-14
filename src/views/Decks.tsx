@@ -1194,7 +1194,7 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
-  const [dstats, setDstats] = useStored<'show' | 'hide'>('ch:deckstats', 'show', ['show', 'hide']);
+  const [dstats, setDstats] = useStored<'show' | 'hide'>('ch:deckstats', 'hide', ['show', 'hide']);
   // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
   const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
     try {
@@ -1298,15 +1298,6 @@ export function Decks(s: Shared) {
           <div className={`dribbon${dstats === 'hide' ? ' folded' : ''}`} role="region" aria-label="Deck collection overview">
           {decks.length > 0 && (
             <>
-            <button
-              type="button"
-              className="dfold"
-              aria-expanded={dstats !== 'hide'}
-              onClick={() => (haptic('select'), setDstats(dstats === 'hide' ? 'show' : 'hide'))}
-              title={dstats === 'hide' ? 'Show the deck stats' : 'Hide the deck stats'}
-            >
-              {dstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
-            </button>
             <section className="stats dstats" hidden={dstats === 'hide'}>
               <div className="stat">
                 <span className="spray" aria-hidden="true" />
@@ -1350,6 +1341,17 @@ export function Decks(s: Shared) {
             <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
               IMPORT DECK
             </button>
+            {decks.length > 0 && (
+            <button
+              type="button"
+              className="dfold"
+              aria-expanded={dstats !== 'hide'}
+              onClick={() => (haptic('select'), setDstats(dstats === 'hide' ? 'show' : 'hide'))}
+              title={dstats === 'hide' ? 'Show the deck stats' : 'Hide the deck stats'}
+            >
+              {dstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
+            </button>
+            )}
           </span>
           </div>
         </div>

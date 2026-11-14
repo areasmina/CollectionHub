@@ -84,3 +84,6 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 ## 2026-11-14: No personal card list in the repo
 - Guillermo's call: his own ManaBox collection CSV is removed from `legacy/DeckWizard/` ("every user will have something different"); `.gitignore` keeps personal lists out from now on. Git history is not rewritten. The MIT sample list in `reference/` stays, and the app's built-in sample collection is unaffected. He will rotate the old OAuth secret later.
+
+## 2026-11-14: Stat tiles start folded, one row of controls
+- Guillermo's ask (Nov 13): on Collection and My Decks the stat tiles start hidden, and the SHOW STATS button sits beside Import / Add deck so the section reads as one piece. A device that already chose HIDE or SHOW keeps its choice.
