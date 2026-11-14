@@ -87,3 +87,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 ## 2026-11-14: Stat tiles start folded, one row of controls
 - Guillermo's ask (Nov 13): on Collection and My Decks the stat tiles start hidden, and the SHOW STATS button sits beside Import / Add deck so the section reads as one piece. A device that already chose HIDE or SHOW keeps its choice.
+
+## 2026-11-14: Search stays in reach (ManaBox benchmark)
+- Guillermo's ask: a site as clean, fast and easy as ManaBox, with proper search and filter bars. On Collection, Discover and My Decks the search bar (with filter and sort) stays pinned at the top while the page scrolls; a top-docked island pushes it down rather than covering it. Every search box carries a magnifier. My Decks' bar is two slim rows. Approved and live (#79).
+- The Midnight Override look (colours, type, zine marks) is kept exactly as it is through UX work: nothing visual changes unless Guillermo asks (his words, Nov 14: "remember our original graphic design… I don't wanna lose it").
+- Collection filters add mana value, price per copy and foil, in the same Filter sheet with removable chips. Price bands are ≈CA$ per copy at your own printing and finish (under 1, 1 to 5, 5 to 20, 20 and up); a card without a price never passes a price band. Rarity waits: storing it changes the saved card data, so it needs his OK first.
+

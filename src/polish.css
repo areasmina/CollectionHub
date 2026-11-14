@@ -1535,3 +1535,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 @media (prefers-reduced-motion: reduce) {
   .dpage.coll .collbar, .dpage.disc > .dfind, .dpage.dlist > .decktoolbar, .dpage .lists > .dtools.tbar { transition: none; }
 }
+
+/* Collection filter sheet, round 2 (Nov 14): mana value chips are square 44px buttons, so the 8 values sit in one or
+   two tidy rows instead of chips of uneven widths. Same chip look as the rest of the sheet. */
+.fs-row.mvs .u-chip { min-width: 44px; padding: 0 6px; justify-content: center; font-family: var(--u-mono, monospace); }
