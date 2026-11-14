@@ -1186,6 +1186,34 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   .deckgrid > .lists > details.cat + details.cat { margin-top: 12px; }
 }
 
+/* ── + MY CARDS (owner's ask, Nov 13: "look through our collection and add our own cards") ── The deck bar's way into
+   the Forge search of your own cards. Same shape as SIZE so the bar stays one family; a yellow edge marks it as the one
+   action on the row (yellow = a find, per the colour rules). On phones the row may wrap to a second line at 320px. */
+.qadd-btn {
+  height: 36px !important; min-height: 36px !important; padding: 0 12px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  font: 700 12px/1 var(--u-mono, monospace) !important; letter-spacing: 0.05em !important; white-space: nowrap !important;
+  background: #141416 !important; color: #ffd400 !important;
+  border: 1px solid #ffd400 !important; border-radius: 6px !important; cursor: pointer !important;
+}
+.qadd-btn:hover { background: #ffd400 !important; color: #0a0a0a !important; }
+.qadd-btn:active { transform: scale(0.97) !important; }
+@media (max-width: 700px) {
+  .dpage .lists > .dtools.tbar > .tquick { flex-wrap: wrap !important; }
+  /* keep + MY CARDS on the same row as the view pills and SIZE on a normal phone (the bar stays two rows); it only
+     drops to its own row on the narrowest phones */
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qadd-btn) { gap: 8px !important; }
+  .dpage .lists > .dtools.tbar > .tquick > .qadd-btn {
+    min-height: 44px !important; flex: 1 1 auto !important; min-width: 0 !important;
+    padding: 0 8px !important; font-size: 12px !important; letter-spacing: 0 !important;
+  }
+}
+/* the search of your own cards inside the suggestions: a MY CARDS tab on the box, and the "why not" notes under it */
+.fsugg .fq > .tab { flex: none; display: inline-flex; align-items: center; }
+.fsugg .fqnote { margin: 0 0 var(--s2, 8px); }
+.fsugg .fwhynot { margin: var(--s2, 8px) 0; padding-left: 18px; color: var(--u-muted, #b8b8c0); }
+.fsugg .fwhynot li + li { margin-top: 4px; }
+
 /* ── Dynamic Island, phase 4 step 2: a clear lane on the side it is docked to ──
    A side-docked island rests on the page's edge, so the page keeps a strip that wide free (App.tsx measures the island
    into --island-w). Shrunk to its dot it needs no lane. Things pinned to that edge move in beside it. */

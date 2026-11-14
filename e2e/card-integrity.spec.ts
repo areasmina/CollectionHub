@@ -11,9 +11,10 @@ test('Commander and deck pages: the ⋯ OPTIONS tag hangs under the commander ca
   const check = async () => {
     const btn = page.locator('.cmdrbtn').first();
     await expect(btn).toBeVisible();
-    const img = (await btn.locator('img').first().boundingBox())!;
-    const tag = (await btn.locator('.cmdrmore').boundingBox())!;
-    expect(tag.y).toBeGreaterThanOrEqual(img.y + img.height - 1); // below the card's bottom edge
+    // both boxes in one read: the page can still be scrolling into place after a load, and two separate reads would
+    // measure the card and the tag at different scroll positions
+    const [imgBottom, tagTop] = await btn.evaluate((b) => [b.querySelector('img')!.getBoundingClientRect().bottom, b.querySelector('.cmdrmore')!.getBoundingClientRect().top]);
+    expect(tagTop).toBeGreaterThanOrEqual(imgBottom - 1); // below the card's bottom edge
     await expect(btn.locator('.cmdrhint')).toHaveCount(0); // the old tape over the rules text is gone
   };
   await page.locator('.ccard').first().click();

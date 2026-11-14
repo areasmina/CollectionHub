@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { notOffered } from '../lib/collsearch';
 import { DECK_COLOURS, deckColour } from '../lib/deckcolor';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -576,6 +577,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   }, [deck.id]);
   const [view, setView] = useStored<'grid' | 'list' | 'compact'>(VIEW_KEY, 'grid', ['grid', 'list', 'compact']);
   const [zoom, setZoom] = useStored<'s' | 'm' | 'l'>('ch:cmdrzoom', 'm', ['s', 'm', 'l']);
+  const [openSearch, setOpenSearch] = useState(0); // + MY CARDS: opens the suggestions on their search of your own cards
   const [grouping, setGrouping] = useStored<Grouping>('ch:dgroup', 'type', GROUPINGS.map(([v]) => v));
   const [sort, setSort] = useStored<SortKey>('ch:dsort', 'mv', SORTS.map(([v]) => v));
   const [q, setQ] = useState(''); // search the deck by name or rules text
@@ -960,6 +962,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                       SIZE {zoom.toUpperCase()}
                     </button>
                   )}
+                  {binder.length > 0 && (
+                    <button type="button" className="u-btn ghost qadd-btn" title="Search your own cards and put them in this deck" onClick={() => (haptic('open'), setOpenSearch((n) => n + 1))}>
+                      + MY CARDS
+                    </button>
+                  )}
                 </>
               }
             >
@@ -1064,6 +1071,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               loading={!!deck.commander && !recs}
               expanded={sugExpanded}
               onToggleExpand={toggleSug}
+              openSearch={openSearch}
+              whyNot={(text) => notOffered(text, binder, cmdr ? ci : undefined, inDeck, never)}
             />
           </div>
         </div>

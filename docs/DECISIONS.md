@@ -73,6 +73,10 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Phone grid sizes follow ManaBox: S = 4 across, M = 3 across (the start), L = 2 across, on Collection and on decks.
 - Card sections (Creatures, Instants, Lands …) are each a full-width block on every screen, "as clean as Moxfield": a header row, then cards in rows that wrap to the width. Small open sections no longer share a row on wide screens. Each SIZE has a smallest card width (S 124px, M 168px, L 236px above phone width), so the grid adds or drops columns and never squeezes a card.
 
+## 2026-11-13: Your own cards, not only suggestions, while building a deck
+- Guillermo's ask: while building a deck he searches his own collection and adds his own cards. This extends the Forge's Live Suggestions search rather than adding a second search: + MY CARDS on the deck bar opens it. The search looks at every owned card that can legally go in (colour identity stays a hard rule), past the suggestion filters, and names matching cards it can't offer with the reason, so a card he knows he owns never just goes missing.
+- The commander page still swaps (its deck stays at 100 cards); a saved deck adds.
+
 ## 2026-11-13: Dynamic Island stays floating, side docks are a thin bar (audit roadmap, phase 4)
 - Guillermo's picks: the island keeps floating (no solid strip); it slides away going down and comes back going up. At the very top of a page a bottom-docked island covers the last row of the first screen until the first small scroll ("Keep it, covers until you scroll").
 - On the left or right edge the island is a thin 46px bar, the same slim shape as the top and bottom island, with the section names running down it; the page keeps a 46px lane free on that side.
