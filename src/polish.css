@@ -1299,3 +1299,16 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 @media (prefers-reduced-motion: reduce) {
   .pillnav.floating { animation: none !important; scale: 1.04; }
 }
+
+/* ── Desktop composition fixes (owner's screenshot, Nov 13) ──
+   1. The active-setting chips (PIN …, Clear all) take their own full row under the bar, with room above and below,
+      instead of sharing a row with the first card section.
+   2. MISSING no longer sits on the card picture (it covered art and, at small sizes, the type line: the sacred card
+      rule). It is a flat label right under the card, where the price and swap notes already live. The card itself stays
+      in black and white, so missing still reads at a glance. */
+.deckgrid > .lists > .setchips { flex: 1 1 100% !important; min-width: 100% !important; margin: 8px 0 4px !important; }
+.dpage .ztile .misstape,
+ul.zgrid .ztile .misstape {
+  position: static !important; transform: none !important; align-self: flex-start;
+  margin: 0 !important; top: auto !important; left: auto !important;
+}

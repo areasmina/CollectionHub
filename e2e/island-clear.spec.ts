@@ -45,7 +45,7 @@ for (const dock of ['top', 'bottom', 'left', 'right'] as const)
     await start(page, dock, 'discover');
     await page.locator('.ccard').first().click();
     await page.waitForSelector('details.cat');
-    await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+    await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click({ position: { x: 12, y: 12 } }); // the card's top corner: on a narrow phone grid tile the ⋮ sits in its middle
     await expect(page.locator('.swapnote')).toBeVisible();
     await gone(page);
     await page.keyboard.press('Escape');
