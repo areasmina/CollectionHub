@@ -1,6 +1,6 @@
 import { haptic } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
 import { ownedMap } from './lib/compare';
 import { db, type Card } from './lib/db';
@@ -90,6 +90,10 @@ export default function App() {
     didDrag: false,
   });
 
+  // Detach and attach glide (Guillermo, Nov 13: "the detaching and attaching animation can be better"). The island
+  // used to jump between its edge and the finger. Now it is measured just before it leaves (or lands) and slides from
+  // there to its new place on one soft spring, growing or shrinking into its new shape (a FLIP animation).
+  const flipFrom = useRef<DOMRect | null>(null);
   const onIslandDown = (targetTab?: Tab) => (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('.syncpill, .pback')) return;
     dragRef.current = {
@@ -115,6 +119,7 @@ export default function App() {
 
       // Dragging > 75px detaches the island so user can reposition it to any of 4 edges!
       if (dist > 75) {
+        if (!isRepositioning) flipFrom.current = navRef.current?.getBoundingClientRect() ?? null;
         setIsRepositioning(true);
         setDragX(e.clientX);
         setDragY(e.clientY);
@@ -155,6 +160,7 @@ export default function App() {
       setIsRepositioning(false);
 
       if (wasRepositioning) {
+        flipFrom.current = navRef.current?.getBoundingClientRect() ?? null;
         const distTop = e.clientY;
         const distBottom = window.innerHeight - e.clientY;
         const distLeft = e.clientX;
@@ -321,6 +327,30 @@ export default function App() {
     return () => ro.disconnect();
   }, []);
 
+  useLayoutEffect(() => {
+    const from = flipFrom.current;
+    const nav = navRef.current;
+    flipFrom.current = null;
+    if (!from || !nav || typeof nav.animate !== 'function') return;
+    if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // measure the new place without the CSS slide in between (the glide below replaces it)
+    nav.style.setProperty('transition', 'none', 'important');
+    const to = nav.getBoundingClientRect();
+    requestAnimationFrame(() => nav.style.removeProperty('transition'));
+    if (!to.width || !to.height) return;
+    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+    const sx = Math.min(3, Math.max(0.3, from.width / to.width));
+    const sy = Math.min(3, Math.max(0.3, from.height / to.height));
+    nav.animate(
+      [
+        { translate: `${dx}px ${dy}px`, scale: `${sx} ${sy}` },
+        { translate: '0px 0px', scale: '1 1' },
+      ],
+      { duration: isRepositioning ? 260 : 520, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' },
+    );
+  }, [dock, isRepositioning]);
+
   const shared = { profile, mine, other: theirs, otherName: nameOf(other), binderName: nameOf(profile) };
 
   return (
@@ -352,7 +382,8 @@ export default function App() {
               : undefined,
           left: isRepositioning ? `${dragX}px` : undefined,
           top: isRepositioning ? `${dragY}px` : undefined,
-        }}
+          ...(isRepositioning ? { '--fx': `${dragX}px`, '--fy': `${dragY}px` } : {}),
+        } as React.CSSProperties}
       >
         {/* Viscous gooey melted cheese / symbiote tendrils when pulling away from dock edge */}
         {pullDist > 4 && !isRepositioning && (

@@ -10,9 +10,13 @@ import { mockWorld, seed } from './mock';
  *   the first screen until the first small scroll: Guillermo's pick ("Keep it, covers until you scroll").
  * - While the page moves the island turns see-through; at rest it is solid again.
  */
+/** Go to a section with the island on a given edge. The sample data is seeded once per test, not on every visit. */
 const open = async (page: Page, dock: string, tab: string) => {
-  await mockWorld(page);
-  await seed(page);
+  if (!(await page.evaluate(() => (window as unknown as { __seeded?: boolean }).__seeded).catch(() => false))) {
+    await mockWorld(page);
+    await seed(page);
+    await page.addInitScript(() => void ((window as unknown as { __seeded?: boolean }).__seeded = true));
+  }
   await page.evaluate(([d, t]) => (localStorage.setItem('ch:island_dock', d), localStorage.setItem('ch:tab', t)), [dock, tab]);
   await page.reload();
   await page.waitForSelector('.pillnav', { state: 'attached' });
@@ -106,9 +110,33 @@ test('While the page moves the island turns see-through, then solid again at res
   await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 3}px`));
   const bg = () => page.locator('.pillnav').evaluate((e) => getComputedStyle(e).backgroundColor);
   expect(await bg()).toBe('rgb(0, 0, 0)');
-  await page.evaluate(() => window.scrollBy(0, 30));
-  await expect(page.locator('html.scrolling')).toHaveCount(1);
-  await expect.poll(bg).toBe('rgba(0, 0, 0, 0.5)');
+  // keep the page moving while we look (a slow machine could otherwise let it come to rest between two looks)
+  const moving = () => page.evaluate(() => (window.scrollBy(0, 8), document.documentElement.classList.contains('scrolling')));
+  await expect.poll(moving).toBe(true);
+  await expect.poll(async () => (await moving(), bg()), { intervals: [100] }).toBe('rgba(0, 0, 0, 0.5)');
   await expect(page.locator('html.scrolling')).toHaveCount(0, { timeout: 2000 });
   await expect.poll(bg).toBe('rgb(0, 0, 0)');
+});
+
+test('Detach and attach: the island glides from the finger to its new edge instead of jumping', async ({ page }) => {
+  await open(page, 'bottom', 'discover');
+  await page.waitForSelector('.ccard');
+  const nav = page.locator('.pillnav');
+  const b = (await nav.locator('.pill').boundingBox())!;
+  const vw = page.viewportSize()!.width, vh = page.viewportSize()!.height;
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2, b.y - 120, { steps: 6 });
+  await expect(page.locator('.pillnav.floating')).toHaveCount(1); // detached: it follows the finger
+  expect(await nav.evaluate((e) => e.getAnimations().some((a) => a.playState === 'running' && 'translate' in ((a.effect as KeyframeEffect).getKeyframes()[0] ?? {}))), 'detach glides').toBe(true);
+  await page.mouse.move(vw - 30, vh / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator('.pillnav.dock-right')).toHaveCount(1);
+  // landing: a glide is running, and the island starts from where the finger let go, not at the edge
+  const mid = await nav.evaluate((e) => ({ glide: e.getAnimations().some((a) => a.playState === 'running' && 'scale' in ((a.effect as KeyframeEffect).getKeyframes()[0] ?? {})) }));
+  expect(mid.glide, 'attach glides').toBe(true);
+  await expect.poll(() => nav.evaluate((e) => e.getAnimations().filter((a) => a.playState === 'running' && 'scale' in ((a.effect as KeyframeEffect).getKeyframes()[0] ?? {})).length)).toBe(0);
+  const end = (await nav.boundingBox())!;
+  expect(Math.round(end.x + end.width)).toBe(vw); // settled flush on the right edge
+  expect(end.width).toBeLessThanOrEqual(47);
 });
