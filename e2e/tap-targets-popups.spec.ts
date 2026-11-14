@@ -66,6 +66,9 @@ test('Phone: nothing under 44px inside the pop-ups (options, card menu, swap win
   await page.getByRole('button', { name: 'IMPORT DECK' }).click();
   found.deckImport = await small(page, '.dimport');
   await page.keyboard.press('Escape');
+  // scroll to the deck first: a late scroll event would close the menu again
+  await page.locator('.dcard').first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(400);
   await page.locator('.dcard').first().click({ button: 'right' });
   await page.waitForSelector('.deckmenu');
   found.deckMenu = await small(page, '.deckmenu');
