@@ -1373,3 +1373,18 @@ ul.zgrid .ztile .misstape {
   position: static !important; transform: none !important; align-self: flex-start;
   margin: 0 !important; top: auto !important; left: auto !important;
 }
+
+/* ── Collection grid: COMMANDER tape (Guillermo, Nov 13) ── a card that can lead a deck wears a yellow tape on its
+   top-left, on the same line as the price sticker on the top-right (same top, same type, mirrored tilt). Always shown,
+   so commanders can be spotted while scrolling. The ⋮ button moves down a little under it. */
+.ctile .cart > .cmdtape {
+  position: absolute; top: -12px; left: -8px; z-index: 3; pointer-events: none;
+  padding: 1px 8px; background: #ffcc00; color: #0a0a0a;
+  font: 400 11px/1.5 var(--u-display, 'Anton', sans-serif); letter-spacing: 0.08em;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.35); transform: rotate(-3deg); white-space: nowrap;
+}
+@media (max-width: 700px) {
+  /* phone cards are too narrow for the word next to the price: the tape carries a crown instead */
+  .ctile .cart > .cmdtape { font-size: 0; padding: 0 6px; left: -4px; }
+  .ctile .cart > .cmdtape::before { content: '♛'; font: 400 13px/1.5 system-ui, sans-serif; }
+}

@@ -8,6 +8,7 @@ import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
 import { colourByCard } from '../lib/deckcolor';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { isCommander } from './Discover';
 
 type MenuFn = (e: Entry, x: number, y: number) => void;
 /** A card row / tile with the card menu: right-click, press and hold, or its ⋯ button. */
@@ -201,6 +202,10 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
       </span>
     ) : null;
   };
+  const cmd = (e: Entry) => {
+    const c = cards.get(e.cardId);
+    return !!c && c.legal !== false && isCommander(c.type ?? '', c.text ?? '');
+  };
   const setLine = (e: Entry) => [e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ');
   if (view === 'grid')
     return (
@@ -214,6 +219,12 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
             </span>
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
+              {/* Can lead a deck: a yellow tape on the card's top-left, on the same line as the price sticker (top-right) */}
+              {cmd(e) && (
+                <span className="cmdtape" title="Can be your commander">
+                  COMMANDER
+                </span>
+              )}
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
               {useMark(e)}
               <Tally e={e} />
