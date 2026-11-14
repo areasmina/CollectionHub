@@ -1539,3 +1539,22 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 /* Collection filter sheet, round 2 (Nov 14): mana value chips are square 44px buttons, so the 8 values sit in one or
    two tidy rows instead of chips of uneven widths. Same chip look as the rest of the sheet. */
 .fs-row.mvs .u-chip { min-width: 44px; padding: 0 6px; justify-content: center; font-family: var(--u-mono, monospace); }
+
+/* My Decks tile: a saved deck that breaks a Commander rule (Nov 14). Same tape shape as ALL OWNED / N MISSING; crimson
+   because it is a real warning (white on crimson keeps the small text readable). Full reasons on hover / for readers. */
+.dgrid .dtile .dlegal {
+  align-self: flex-start;
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  background: var(--accent, #e60012);
+  color: #fff;
+  transform: rotate(1deg);
+  font: 400 11px var(--u-display, 'Anton', sans-serif);
+  letter-spacing: 0.08em;
+  max-width: 100%;
+  line-height: 1.35;
+}
+/* on a narrow tile the reason drops under NOT LEGAL instead of being cut off */
+.dgrid .dtile .dlegal i { font-style: normal; display: inline-block; white-space: nowrap; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }

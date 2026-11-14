@@ -16,7 +16,7 @@ import { pinCard, recordTaste } from '../brain/store';
 import { roleSource } from '../lib/deckstats';
 import { JumpRail, jumpId } from './JumpRail';
 import { BRACKETS, cachedPages, fetchFiltered, fetchPage, pagePath, showPage, type CardFilter, type EdhPage } from '../lib/edhrec';
-import { bracketFit, readiness, type BracketFit, type Readiness } from '../brain/validate';
+import { bracketFit, deckRules, readiness, rulesLabel, type BracketFit, type Readiness } from '../brain/validate';
 import { whyCard } from '../brain/why';
 import { commanderThemes, themeOf, type Theme } from '../brain/themes';
 
@@ -1435,6 +1435,12 @@ export function Decks(s: Shared) {
             const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
             const autoThemes = themesOf(d);
             const c = lead ?? d.cards.map((x) => priced.get(norm(x.name))).reduce<Card | undefined>((best, x) => (x?.img && Number(x.usd ?? 0) > Number(best?.usd ?? -1) ? x : best), undefined);
+            // The same rules the deck page checks (100 cards, banned, colours, singleton), once the card data is in:
+            // an imported or hand-edited deck that can't be played yet says so on its tile.
+            const partnerCard = d.partner ? priced.get(norm(d.partner)) : undefined;
+            const broken = priced.size
+              ? rulesLabel(deckRules({ deck: d.cards, cardOf: (n) => priced.get(norm(n)), commander: d.commander, partner: d.partner, identity: lead ? pairIdentity(lead.ci, partnerCard?.ci) : [], skipIdentity: !lead }))
+              : undefined;
             return (
               <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d) } as React.CSSProperties}>
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
@@ -1506,6 +1512,14 @@ export function Decks(s: Shared) {
                       </span>
                       <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.missing === 0 && sum.total > 0 ? 'ALL OWNED' : `${sum.missing} MISSING`}</span>
                     </span>
+                    {broken && (
+                      <span className="dlegal" title={broken.says}>
+                        <span aria-hidden="true">
+                          <i>NOT LEGAL ·</i> <i>{broken.label}</i>
+                        </span>
+                        <span className="vh">{broken.says}</span>
+                      </span>
+                    )}
                   </span>
                 </DeckTile>
                 <DeckLight deck={d} />
