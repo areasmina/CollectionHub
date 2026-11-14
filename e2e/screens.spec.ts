@@ -6,20 +6,12 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-/** Grid / list: the quick pills on the bar from tablet width up; on phones (pills hidden) the VIEW row inside ⋮. */
+/** Grid / list: the quick pills on the bar, at every screen width (phones too, since Nov 13). */
 const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
-  if (page.viewportSize()!.width > 700) {
-    const sw = page.locator('.qviews').first();
-    await expect(sw).toBeVisible();
-    await fits(page, ['.qviews']);
-    await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
-  } else {
-    await expect(page.locator('.qviews').first()).toBeHidden();
-    const row = (await opts(page)).locator('.phoneview');
-    await expect(row).toBeVisible();
-    await row.getByRole('radio', { name: v.toUpperCase(), exact: true }).click();
-    await closeOpts(page); // the options are a sheet over the page on phones
-  }
+  const sw = page.locator('.qviews').first();
+  await expect(sw).toBeVisible();
+  await fits(page, ['.qviews']);
+  await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
 };
 
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
@@ -801,16 +793,17 @@ test('Readiness + Bracket Fit tiles beside Match; the swap window says why the c
   await expect(page.locator('.dhero .vtile.ready')).toBeVisible();
 });
 
-test('Platform space pass: multi-column open deck categories on wide screens, side-by-side workbench on tablet and desktop', async ({ page }, info) => {
-  await page.evaluate(() => localStorage.setItem('ch:view', 'grid'));
+test('Platform space pass: every open deck category is a full-width block (owner, Nov 13), side-by-side workbench on tablet and desktop', async ({ page }, info) => {
+  await page.evaluate(() => localStorage.setItem('ch:cardview', 'grid'));
   await page.locator('.ccard').first().click();
   const cats = page.locator('details.cat[open]');
   await expect(cats.first()).toBeVisible();
   if (info.project.name !== 'phone') {
-    // On tablet and desktop, small 1-card grid categories share a horizontal row instead of each taking 100% width
+    // Small 1-card grid categories no longer share a row (that read as mangled): each is its own full-width block
     const [c0, c1] = await Promise.all([cats.nth(0).boundingBox(), cats.nth(1).boundingBox()]);
-    expect(Math.abs(c0!.y - c1!.y)).toBeLessThan(12);
-    expect(c1!.x).toBeGreaterThan(c0!.x + c0!.width - 2);
+    expect(c1!.y).toBeGreaterThan(c0!.y + c0!.height - 2);
+    expect(Math.abs(c1!.x - c0!.x)).toBeLessThan(2);
+    expect(Math.abs(c1!.width - c0!.width)).toBeLessThan(2);
     // The deck takes the full width: TO BUY / PULL is a drawer now, not a column beside it
     const [lists, strip] = await Promise.all([page.locator('.deckgrid > .lists').boundingBox(), page.locator('.dstrip').boundingBox()]);
     expect(Math.abs(lists!.width - strip!.width)).toBeLessThan(4);

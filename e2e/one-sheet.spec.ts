@@ -86,14 +86,13 @@ test('Options sheet keeps every choice it had as a dropdown (commander page)', a
   await expect(d.getByLabel('Card left out')).toBeVisible();
   await expect(d.getByRole('button', { name: 'APPLY' })).toBeVisible();
   await expect(d.locator('.themes')).toBeVisible();
-  await expect(d.locator('.phoneview')).toBeVisible();
   await expect(d.getByRole('radiogroup', { name: 'Gear' })).toBeVisible();
   await expect(d.locator('.sbox')).toHaveCount(5);
   // a choice made in the sheet takes effect and the sheet stays open for the next one
-  await d.locator('.phoneview').getByRole('radio', { name: 'LIST', exact: true }).click();
+  await d.locator('.show-pick select').selectOption('owned');
+  await expect(d.locator('.show-pick select')).toHaveValue('owned');
   await expect(page.locator('.tbmore[open]')).toHaveCount(1);
   await closeOpts(page);
-  await expect(page.locator('ul.zlist').first()).toBeVisible();
 });
 
 test('Card menu: the same bottom sheet on phones, a pop-up by the card on wider screens', async ({ page }, info) => {

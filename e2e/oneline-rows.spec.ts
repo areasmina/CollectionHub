@@ -6,7 +6,7 @@ test('Deck page, compact view on a phone: every card is one line and nothing spi
   test.skip(info.project.name !== 'phone', 'the one-line layout is for phones; wider screens keep their compact list');
   await mockWorld(page);
   await seed(page);
-  await page.evaluate(() => (localStorage.setItem('ch:tab', 'decks'), localStorage.setItem('ch:view', 'compact')));
+  await page.evaluate(() => (localStorage.setItem('ch:tab', 'decks'), localStorage.setItem('ch:cardview', 'compact')));
   await page.reload();
   await page.locator('.dcard', { hasText: 'Tatyova Lands' }).click();
   const rows = page.locator('ul.zcompact > li.zrow');

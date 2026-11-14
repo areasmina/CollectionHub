@@ -372,18 +372,12 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
 }
 
 /**
- * Phones only: grid / list / compact inside the ⋮ menu. The quick view pills on the bar are hidden at phone width, and
- * the menu's VIEW row was removed as redundant on Nov 7, which left phones with no way to change the view.
+ * Where a deck's card view (grid / list / compact) is remembered on this device. Grid is the start at every screen size
+ * (owner's call, Nov 13). The key replaced 'ch:view', under which phones started on the compact list, so every device
+ * starts on the grid once and then keeps what its owner picks. The view pills sit on the bar at every width (on phones
+ * too: twice they were moved into a menu there, and twice the owner could not find them).
  */
-export function PhoneView({ view, onChange }: { view: string; onChange: (v: 'grid' | 'list' | 'compact') => void }) {
-  return (
-    <div className="phoneview">
-      <OptRow label="VIEW">
-        <Segs label="View" value={view} options={[['grid', 'GRID', 'Grid view'], ['list', 'LIST', 'List view'], ['compact', 'COMPACT', 'Compact list']]} onChange={(v) => onChange(v as 'grid' | 'list' | 'compact')} />
-      </OptRow>
-    </div>
-  );
-}
+export const VIEW_KEY = 'ch:cardview';
 
 /** onScroll for sideways chip rows: a light tick each time the row moves past another chip (scroll-snap step). */
 export function snapTick(e: React.UIEvent<HTMLElement>) {
