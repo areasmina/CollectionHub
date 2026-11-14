@@ -139,3 +139,29 @@ for (const w of [320, 360]) {
     await page.screenshot({ path: `test-results/view-on-bar-coll-${w}.png` });
   });
 }
+
+test('MISSING sits under the card, never on its picture; the pin chips get their own row', async ({ page }) => {
+  // give away Counterspell so one card in the deck is missing
+  await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction('entries', 'readwrite');
+    const st = tx.objectStore('entries');
+    const r = st.getAll();
+    r.onsuccess = () => r.result.filter((e: any) => e.name === 'Counterspell').forEach((e: any) => st.delete(e.id));
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.locator('.ccard').first().click();
+  const tile = page.locator('ul.zgrid > li.ztile.missing').first();
+  await expect(tile).toBeVisible();
+  const [img, tape] = await Promise.all([tile.locator('.timg').boundingBox(), tile.locator('.misstape').boundingBox()]);
+  expect(tape!.y).toBeGreaterThanOrEqual(img!.y + img!.height - 1); // below the picture: art, type line and rules text stay clear
+  // a pin shows as a chip under the bar, on a row of its own (not beside the first section)
+  await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click({ position: { x: 12, y: 12 } });
+  await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: /ALWAYS IN/ }).click();
+  await page.keyboard.press('Escape');
+  const chips = page.locator('.deckgrid > .lists > .setchips');
+  await expect(chips).toBeVisible();
+  const [c, first] = await Promise.all([chips.boundingBox(), page.locator('.deckgrid > .lists > details.cat').first().boundingBox()]);
+  expect(first!.y).toBeGreaterThanOrEqual(c!.y + c!.height - 1);
+});

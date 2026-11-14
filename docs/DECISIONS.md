@@ -77,3 +77,7 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Guillermo's ask: while building a deck he searches his own collection and adds his own cards. This extends the Forge's Live Suggestions search rather than adding a second search: + MY CARDS on the deck bar opens it. The search looks at every owned card that can legally go in (colour identity stays a hard rule), past the suggestion filters, and names matching cards it can't offer with the reason, so a card he knows he owns never just goes missing.
 - The commander page still swaps (its deck stays at 100 cards); a saved deck adds.
 
+## 2026-11-13: Dynamic Island stays floating, side docks are a thin bar (audit roadmap, phase 4)
+- Guillermo's picks: the island keeps floating (no solid strip); it slides away going down and comes back going up. At the very top of a page a bottom-docked island covers the last row of the first screen until the first small scroll ("Keep it, covers until you scroll").
+- On the left or right edge the island is a thin 46px bar, the same slim shape as the top and bottom island, with the section names running down it; the page keeps a 46px lane free on that side.
+- Motion: one soft spring in and out (no bounce), a light edge shadow so it reads as part of the page, and see-through with a blur while the page is moving under it; solid again at rest.
