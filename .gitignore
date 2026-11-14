@@ -20,3 +20,7 @@ screenshots/
 !public/**/*.png
 test-results/
 playwright-report/
+
+# Personal card lists never live in the repo (Guillermo, 2026-11-14): every user brings their own
+legacy/DeckWizard/*.csv
+legacy/DeckWizard/collection/

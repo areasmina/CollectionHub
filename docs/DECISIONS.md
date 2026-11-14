@@ -77,3 +77,6 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Guillermo's picks: the island keeps floating (no solid strip); it slides away going down and comes back going up. At the very top of a page a bottom-docked island covers the last row of the first screen until the first small scroll ("Keep it, covers until you scroll").
 - On the left or right edge the island is a thin 46px bar, the same slim shape as the top and bottom island, with the section names running down it; the page keeps a 46px lane free on that side.
 - Motion: one soft spring in and out (no bounce), a light edge shadow so it reads as part of the page, and see-through with a blur while the page is moving under it; solid again at rest.
+
+## 2026-11-14: No personal card list in the repo
+- Guillermo's call: his own ManaBox collection CSV is removed from `legacy/DeckWizard/` ("every user will have something different"); `.gitignore` keeps personal lists out from now on. Git history is not rewritten. The MIT sample list in `reference/` stays, and the app's built-in sample collection is unaffected. He will rotate the old OAuth secret later.
