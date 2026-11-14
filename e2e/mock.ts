@@ -116,3 +116,10 @@ export const openImport = async (page: Page) => {
   await pop.waitFor();
   return pop;
 };
+
+/** The stat tiles start folded on Collection and My Decks (Nov 13): SHOW STATS, beside the page's buttons, opens them. */
+export const showStats = async (page: Page) => {
+  const fold = page.locator('.coll .statfold, .dlist .dfold').first();
+  await fold.waitFor();
+  if ((await fold.getAttribute('aria-expanded')) === 'false') await fold.click();
+};

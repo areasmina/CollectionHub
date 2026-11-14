@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, showStats } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -119,8 +119,9 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
 
 test('Collection (overhaul): one ribbon says the facts once, grid tiles with tally marks', async ({ page }) => {
   await go(page, 'collection');
-  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics (always shown since Nov 8)
+  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics (folded at first since Nov 13)
   await expect(page.locator('.importbox-pop')).toHaveCount(0); // the import pop-up stays shut on a binder with cards
+  await showStats(page); // the tiles start folded (Nov 13)
   await expect(page.locator('.stats')).toBeVisible();
   await expect(page.locator('.stats .stat')).toHaveCount(3);
   await expect(page.locator('.stats .slip')).toBeVisible();
