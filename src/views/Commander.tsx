@@ -25,7 +25,6 @@ import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../lib
 import { orderSections, regroup } from '../lib/sections';
 import { groupOf } from '../lib/deckstats';
 import { allocate } from '../lib/allocation';
-import { archidektUrl, spellbookUrl } from '../lib/links';
 import { pickBest, scanBestFit, type FitResult } from '../lib/bestfit';
 import { bracketFit, karstenLands, readiness } from '../brain/validate';
 import { buildDeck } from '../brain/build';
@@ -37,7 +36,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -705,21 +704,12 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 26 : 32) : label.length > 28 ? 40 : 52} seed={11} />
               </h1>
             </div>
-            {/* the quiet monospace line: colours · rank · decks · salt · EDHREC · your decks with this commander */}
+            {/* the quiet monospace line: colours · rank · decks · salt · your decks with this commander; then EDHREC · COMBOS · ARCHIDEKT */}
             <p className="vmeta">
               <Pips ci={ci} size={20} />
               <span>NO.{no ? String(no).padStart(3, '0') : '—'}</span>
               <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} decks</span>
               {page && <SaltStat names={names} />}
-              <a href={`https://edhrec.com/${path}`} target="_blank" rel="noreferrer">
-                EDHREC ↗
-              </a>
-              <a href={spellbookUrl(name)} target="_blank" rel="noreferrer" title="Every known combo with this commander, on Commander Spellbook">
-                COMBOS ↗
-              </a>
-              <a href={archidektUrl(name)} target="_blank" rel="noreferrer" title="Other players' decks with this commander, on Archidekt">
-                ARCHIDEKT ↗
-              </a>
               {mine.length > 0 && !saved && (
                 <span className="mydecks">
                   your deck{mine.length > 1 ? 's' : ''}:{' '}
@@ -731,6 +721,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   ))}
                 </span>
               )}
+              <OutsideLinks commander={name} edhrecPath={path} />
             </p>
             <div className="vmatch" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>
               <b className="num">{page ? `${sum.pct}%` : '—'}</b>

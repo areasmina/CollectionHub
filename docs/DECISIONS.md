@@ -93,3 +93,10 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The Midnight Override look (colours, type, zine marks) is kept exactly as it is through UX work: nothing visual changes unless Guillermo asks (his words, Nov 14: "remember our original graphic design… I don't wanna lose it").
 - Collection filters add mana value, price per copy and foil, in the same Filter sheet with removable chips. Price bands are ≈CA$ per copy at your own printing and finish (under 1, 1 to 5, 5 to 20, 20 and up); a card without a price never passes a price band. Rarity waits: storing it changes the saved card data, so it needs his OK first.
 
+
+## 2026-11-14: Header links and the OPTIONS tag (Guillermo)
+
+- Outside links (EDHREC, COMBOS, ARCHIDEKT) stay together as one group, in that order, on their own row at the end of the
+  header line, on the commander page and on every saved deck.
+- The ⋯ OPTIONS tag under the commander card "should be and act like the price tag in the collection": same yellow torn
+  tape and type as Collection's price, same peel on hover / tap / focus. It stays under the card (sacred card rule).

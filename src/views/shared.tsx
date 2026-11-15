@@ -1,3 +1,4 @@
+import { archidektUrl, spellbookUrl } from '../lib/links';
 import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
 import { deckColour } from '../lib/deckcolor';
@@ -751,6 +752,24 @@ export function CmdrCard({ src, name, onMenu, children }: { src: string; name: s
         ⋯ <b>OPTIONS</b>
       </span>
     </button>
+  );
+}
+
+/** The three outside sites for a commander, always together and in this order (EDHREC, then combos, then other decks):
+ *  the commander page and a saved deck's header carry the same group. */
+export function OutsideLinks({ commander, edhrecPath }: { commander: string; edhrecPath: string }) {
+  return (
+    <span className="vlinks" aria-label="Open on other sites">
+      <a href={`https://edhrec.com/${edhrecPath}`} target="_blank" rel="noreferrer" title="This commander's page on EDHREC">
+        EDHREC ↗
+      </a>
+      <a href={spellbookUrl(commander)} target="_blank" rel="noreferrer" title="Every known combo with this commander, on Commander Spellbook">
+        COMBOS ↗
+      </a>
+      <a href={archidektUrl(commander)} target="_blank" rel="noreferrer" title="Other players' decks with this commander, on Archidekt">
+        ARCHIDEKT ↗
+      </a>
+    </span>
   );
 }
 

@@ -894,17 +894,33 @@ html.forging .vhero {
   display: flex !important;
   width: fit-content;
   margin: 8px auto 0;
-  height: 28px;
+  height: auto;
+  min-height: 28px;
   border-radius: 0;
-  background: var(--hazard, #ffd400);
-  color: var(--ink, #0a0a0a);
   border: 0;
-  box-shadow: 2px 2px 0 var(--ink, #0a0a0a);
-  transform: rotate(-2deg);
   opacity: 1;
+  /* Guillermo, Nov 14: the OPTIONS tag looks and acts like Collection's price tag. Same yellow tape (torn ends,
+     Collection's .price.tapey.t0), same type and ink, same peel: it rests half turned back and peels flat with the
+     price tag's springy turn when you point at the card, tap it, or reach it with the keyboard. */
+  background: #ffcc00;
+  clip-path: polygon(0 8%, 5% 0, 3% 30%, 6% 55%, 2% 80%, 5% 100%, 95% 92%, 98% 70%, 94% 45%, 99% 22%, 96% 0);
+  color: #141414;
+  font-family: var(--se);
   font-size: 15px;
+  padding: 3px 12px;
+  box-shadow: none;
+  transform-origin: 100% 50%;
+  transform: perspective(240px) rotate(-3deg) rotateY(-24deg);
+  transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
-.cmdrbtn .cmdrmore b { max-width: 80px !important; font-size: 13px; }
+.cmdrbtn:is(:hover, :focus-visible, :active) .cmdrmore { transform: perspective(240px) rotate(-3deg) rotateY(0deg); }
+.cmdrbtn .cmdrmore b { max-width: none !important; font: inherit; letter-spacing: 0.04em; }
+@media (hover: none) {
+  .cmdrbtn .cmdrmore { transform: rotate(-3deg); } /* phones: no pointer to peel it, so it sits flat and readable */
+}
+@media (prefers-reduced-motion: reduce) {
+  .cmdrbtn .cmdrmore { transition: none; }
+}
 
 /* ── Foil (Guillermo, Nov 12: "should look like a real foil card"). Like a real foil, the shine sits in the picture and
    on the card's frame, never on the printed text: name, mana cost, type line, rules text and the set line stay crisp
@@ -1564,3 +1580,10 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .bestfit-row .bnote { display: block; margin: 0; }
 .bestfit-row .themes { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .bestfit-row .themes .u-chip { flex: 0 0 auto; white-space: nowrap; min-height: 44px; }
+
+/* Outside links (EDHREC, COMBOS, ARCHIDEKT): one group, same order and spacing on the commander page and a saved deck */
+.vmeta .vlinks { display: flex; flex-basis: 100%; flex-wrap: wrap; align-items: center; gap: var(--s2, 8px) var(--s4, 16px); white-space: nowrap; }
+@media (max-width: 700px) {
+  /* 44px to tap, given back by a negative margin so the header keeps its height (as the salt and bracket notes do) */
+  .vmeta .vlinks a { display: inline-flex; align-items: center; min-height: 44px; margin-block: -12px; }
+}
