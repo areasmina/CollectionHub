@@ -1,6 +1,6 @@
 import { haptic } from '../lib/haptics';
 import { notOffered } from '../lib/collsearch';
-import { DECK_COLOURS, deckColour } from '../lib/deckcolor';
+import { deckColour, hsvHex, wheelColour } from '../lib/deckcolor';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
@@ -328,6 +328,55 @@ function DeckTile({ onClick, onMenu, label, children }: { onClick: () => void; o
 type MenuAt = { x: number; y: number; anchor?: DOMRect }; // a point (right-click / hold) or under the DECK box
 
 
+/**
+ * The deck colour wheel: a rainbow circle you tap to choose the colour a deck's cards glow in (Guillermo, Nov 15, in
+ * place of the block of swatches). The angle is the hue and the distance from the middle is how strong it is, which is
+ * exactly how the circle is drawn, so what you touch is what you get. Dragging keeps picking while the finger moves.
+ * The ring's edge is also a slider for keyboard and screen-reader use: left and right walk the hue round.
+ */
+function ColourWheel({ value, onPick }: { value: string; onPick: (c: string) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hue, setHue] = useState(0);
+  const at = (e: React.PointerEvent) => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2);
+    const dy = e.clientY - (r.top + r.height / 2);
+    setHue((Math.atan2(dx, -dy) * (180 / Math.PI) + 360) % 360);
+    onPick(wheelColour(dx, dy, r.width / 2));
+  };
+  return (
+    <span className="cwheel-wrap">
+      <div
+        ref={ref}
+        className="cwheel"
+        role="slider"
+        tabIndex={0}
+        aria-label="Deck colour wheel: left and right turn the colour"
+        aria-valuemin={0}
+        aria-valuemax={359}
+        aria-valuenow={Math.round(hue)}
+        aria-valuetext={value}
+        onPointerDown={(e) => (e.currentTarget.setPointerCapture(e.pointerId), at(e))}
+        onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && at(e)}
+        onKeyDown={(e) => {
+          const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 10 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -10 : 0;
+          if (!step) return;
+          e.preventDefault();
+          const h = (hue + step + 360) % 360;
+          setHue(h);
+          haptic('select');
+          onPick(hsvHex(h, 1, 1));
+        }}
+      >
+        <span className="cwheel-now" style={{ background: value }} aria-hidden="true" />
+      </div>
+      <code className="cwheel-val">{value.toUpperCase()}</code>
+    </span>
+  );
+}
+
 function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: MenuAt; onClose: () => void; onDeleted?: () => void; onOpen: (id: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
@@ -403,30 +452,9 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
               </li>
               <li className="colourrow">
                 <span className="cl">DECK COLOUR <small>cards glow in it</small></span>
-                <span className="swatches" role="radiogroup" aria-label="Deck colour">
-                  {DECK_COLOURS.map(([c, label]) => (
-                    <button
-                      key={c}
-                      role="radio"
-                      aria-checked={deckColour(deck) === c}
-                      aria-label={label}
-                      title={label}
-                      style={{ background: c }}
-                      onClick={act(() => (haptic('select'), db.decks.update(deck.id!, { color: c })))}
-                    />
-                  ))}
-                </span>
-                <label className="custom-color-label" title="Pick any custom shade for this deck">
-                  <span>CUSTOM SHADE:</span>
-                  <input
-                    type="color"
-                    value={deck.color?.startsWith('#') ? deck.color : '#e60012'}
-                    onChange={(e) => {
-                      haptic('select');
-                      db.decks.update(deck.id!, { color: e.target.value });
-                    }}
-                  />
-                </label>
+                {/* One rainbow circle instead of a block of swatches (Guillermo, Nov 15): tap anywhere on it for that
+                    shade, the middle for white. The dot in the centre shows what the deck wears now. */}
+                <ColourWheel value={deckColour(deck)} onPick={(c) => (haptic('select'), db.decks.update(deck.id!, { color: c }))} />
               </li>
               <li>
                 <button
@@ -1414,22 +1442,21 @@ export function Decks(s: Shared) {
                 ))}
               </div>
             )}
+            {/* SIZE joins the filters row (Guillermo, Nov 15): it used to float alone over the decks */}
+            {decks.length > 0 && (
+              <button
+                type="button"
+                className="u-btn ghost qzoom-btn dsize"
+                title={dzoom === 's' ? 'Size: Small (3 across on phones). Tap for Medium' : dzoom === 'm' ? 'Size: Medium. Tap for Large' : 'Size: Large. Tap for Small'}
+                aria-label={`Deck size ${dzoom.toUpperCase()}: tap to cycle size`}
+                onClick={() => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's'))}
+              >
+                SIZE {dzoom.toUpperCase()}
+              </button>
+            )}
           </div>
         </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
-        {decks.length > 0 && (
-          <div className="dsizebar">
-            <button
-              type="button"
-              className="u-btn ghost qzoom-btn"
-              title={dzoom === 's' ? 'Size: Small (3 across on phones). Tap for Medium' : dzoom === 'm' ? 'Size: Medium. Tap for Large' : 'Size: Large. Tap for Small'}
-              aria-label={`Deck size ${dzoom.toUpperCase()}: tap to cycle size`}
-              onClick={() => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's'))}
-            >
-              SIZE {dzoom.toUpperCase()}
-            </button>
-          </div>
-        )}
         <ul className="dgrid cgrid" data-zoom={dzoom}>
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
@@ -1517,7 +1544,7 @@ export function Decks(s: Shared) {
                     {broken && (
                       <span className="dlegal" title={broken.says}>
                         <span aria-hidden="true">
-                          <i>NOT LEGAL ·</i> <i>{broken.label}</i>
+                          <i>NOT LEGAL</i> <i>· {broken.label}</i>
                         </span>
                         <span className="vh">{broken.says}</span>
                       </span>

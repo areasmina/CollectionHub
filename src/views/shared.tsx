@@ -314,11 +314,8 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
   return (
     <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} tabIndex={onOpen ? undefined : 0} {...press} {...dragProps(name, drag)}>
       <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
-      {st === 'missing' && (
-        <span className="misstape" aria-hidden="true">
-          MISSING
-        </span>
-      )}
+      {/* No MISSING label on a tile (Guillermo, Nov 15): the card is already black and white and dimmed, so the
+          label only repeated it. Screen readers still hear "(missing)" next to the name below. */}
       {card?.legal === false && (
         <span className="bannedtape" title="Not legal in Commander (Scryfall)">
           BANNED

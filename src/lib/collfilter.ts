@@ -14,6 +14,9 @@ export const MVS = ['0', '1', '2', '3', '4', '5', '6', '7+'] as const;
 /** Price bands per copy, in ≈CA$, at your printing and finish (the same price the card shows). Bands never overlap. */
 export const PRICES = ['u1', 'u5', 'u20', 'o20'] as const;
 export const PRICE_LABEL: Record<string, string> = { u1: 'Under CA$1', u5: 'CA$1–5', u20: 'CA$5–20', o20: 'CA$20 and up' };
+/** Scryfall rarity. Cards whose data was cached before rarity was stored have none until their next price refresh. */
+export const RARITIES = ['common', 'uncommon', 'rare', 'mythic'] as const;
+export const RARITY_LABEL: Record<string, string> = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', mythic: 'Mythic' };
 export type Finish = 'all' | 'foil' | 'nonfoil';
 export const FINISH_LABEL: Record<Finish, string> = { all: 'All', foil: 'Foil', nonfoil: 'Non-foil' };
 
@@ -23,15 +26,16 @@ export interface CollFilter {
   show: Show;
   mv: string[];
   prices: string[];
+  rarities: string[];
   finish: Finish;
 }
-export const noFilter = (): CollFilter => ({ colours: [], types: [], show: 'all', mv: [], prices: [], finish: 'all' });
+export const noFilter = (): CollFilter => ({ colours: [], types: [], show: 'all', mv: [], prices: [], rarities: [], finish: 'all' });
 
 /** How many groups are narrowing the list (what the Filter button counts). */
 export const filterCount = (f: CollFilter) =>
-  Number(f.colours.length > 0) + Number(f.types.length > 0) + Number(f.show !== 'all') + Number(f.mv.length > 0) + Number(f.prices.length > 0) + Number(f.finish !== 'all');
+  Number(f.colours.length > 0) + Number(f.types.length > 0) + Number(f.show !== 'all') + Number(f.mv.length > 0) + Number(f.prices.length > 0) + Number(f.rarities.length > 0) + Number(f.finish !== 'all');
 
-type Kind = 'colours' | 'types' | 'show' | 'mv' | 'prices' | 'finish';
+type Kind = 'colours' | 'types' | 'show' | 'mv' | 'prices' | 'rarities' | 'finish';
 
 /** One removable chip per picked value, so nothing that narrows the list is hidden. */
 export function filterChips(f: CollFilter): { kind: Kind; value: string; label: string }[] {
@@ -41,6 +45,7 @@ export function filterChips(f: CollFilter): { kind: Kind; value: string; label: 
     ...(f.show !== 'all' ? [{ kind: 'show' as const, value: f.show, label: SHOW_LABEL[f.show] }] : []),
     ...f.mv.map((v) => ({ kind: 'mv' as const, value: v, label: `MV ${v}` })),
     ...f.prices.map((v) => ({ kind: 'prices' as const, value: v, label: PRICE_LABEL[v] ?? v })),
+    ...f.rarities.map((v) => ({ kind: 'rarities' as const, value: v, label: RARITY_LABEL[v] ?? v })),
     ...(f.finish !== 'all' ? [{ kind: 'finish' as const, value: f.finish, label: FINISH_LABEL[f.finish] }] : []),
   ];
 }
@@ -90,6 +95,9 @@ export function matches(e: Entry, f: CollFilter, env: FilterEnv): boolean {
     const band = priceBand(c, e.foil);
     if (!band || !f.prices.includes(band)) return false;
   }
+  // rarity: a card cached before rarity was stored has none, so it can't be placed and is left out (it fills in on its
+  // next price refresh, and no card is ever removed from the binder)
+  if (f.rarities.length && !(c?.rarity && f.rarities.includes(c.rarity))) return false;
   if (f.finish === 'foil' && !e.foil) return false;
   if (f.finish === 'nonfoil' && e.foil) return false;
   return true;

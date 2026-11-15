@@ -119,19 +119,21 @@ test('Commander settings on a wide screen: tags stay compact (two rows at most)'
 
 test('Collection (overhaul): one ribbon says the facts once, grid tiles with tally marks', async ({ page }) => {
   await go(page, 'collection');
-  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics (folded at first since Nov 13)
+  // zine soul overhaul: orderly stats tiles and appraisal slip with punk aesthetics, on the ANALYTICS tab since Nov 15
   await expect(page.locator('.importbox-pop')).toHaveCount(0); // the import pop-up stays shut on a binder with cards
-  await showStats(page); // the tiles start folded (Nov 13)
+  await showStats(page); // opens the ANALYTICS tab
   await expect(page.locator('.stats')).toBeVisible();
   await expect(page.locator('.stats .stat')).toHaveCount(3);
   await expect(page.locator('.stats .slip')).toBeVisible();
   await expect(page.locator('.stats .stat b').first()).toHaveText('20');
-  // IMPORT (on the appraisal slip) opens the import pop-up
+  await expect(page.locator('.topwidget')).toBeVisible(); // rotating top 3 highlights
+  // IMPORT (on the tab row) opens the import pop-up from either tab
   await openImport(page);
   await expect(page.locator('.importbox textarea')).toBeVisible();
   await fits(page, ['.importbox-pop']);
   await page.locator('.importbox-pop .close').click();
-  await expect(page.locator('.topwidget')).toBeVisible(); // rotating top 3 highlights
+  // back to the cards
+  await page.locator('.coll .ctab', { hasText: 'CARDS' }).click();
   await expect(page.locator('.ctile').first()).toBeVisible();
   // no name title outside the card; the copy pips sit on the card and show once it's selected (tap / focus / hover)
   await expect(page.locator('.ctile > .tname').first()).toHaveCSS('width', '1px');

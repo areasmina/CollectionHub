@@ -30,3 +30,25 @@ export function colourByCard(decks: Pick<Deck, 'id' | 'color' | 'cards' | 'inact
   }
   return out;
 }
+
+/**
+ * The colour wheel (Guillermo, Nov 15: "a rainbow circle we can click and choose colour from").
+ * A point on the wheel, given as an offset from its centre in pixels and the wheel's radius, becomes a colour the same
+ * way the wheel is drawn: the angle (clockwise from the top) is the hue, and the distance from the centre is how much
+ * of it there is, so the middle is white and the rim is the full ink. Anything past the rim is clamped to the rim.
+ */
+export function wheelColour(dx: number, dy: number, radius: number): string {
+  const hue = (Math.atan2(dx, -dy) * (180 / Math.PI) + 360) % 360;
+  const sat = radius > 0 ? Math.min(1, Math.hypot(dx, dy) / radius) : 0;
+  return hsvHex(hue, sat, 1);
+}
+
+/** Hue (0–360), saturation and value (0–1) as a #rrggbb string. */
+export function hsvHex(h: number, s: number, v: number): string {
+  const f = (n: number) => {
+    const k = (n + h / 60) % 6;
+    const x = v - v * s * Math.max(0, Math.min(k, 4 - k, 1));
+    return Math.round(x * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(5)}${f(3)}${f(1)}`;
+}

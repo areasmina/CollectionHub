@@ -14,10 +14,12 @@ test.beforeEach(async ({ page }) => {
 const pick = async (page: Page, value: string, quick: string) => {
   const d = await opts(page, '.lists');
   const box = d.locator(value === 'owned' ? '.show-pick select' : 'select:has(option[value="under5"])').first();
-  if (await box.isVisible()) await box.selectOption(value);
-  else await page.locator('.lists .tquick').getByRole('button', { name: quick, exact: true }).click();
+  const inSheet = await box.isVisible();
+  if (inSheet) await box.selectOption(value);
   await page.keyboard.press('Escape');
   await expect(page.locator('.tbmore[open]')).toHaveCount(0);
+  // The quick buttons live on the bar, under the ⋮ sheet, so the sheet closes before they are pressed.
+  if (!inSheet) await page.locator('.lists .tquick').getByRole('button', { name: quick, exact: true }).click();
 };
 
 test('Commander page: SHOW and ONLY appear as chips; each chip removes its setting, Clear all removes them all', async ({ page }, info) => {

@@ -1,21 +1,21 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /** Small fake Scryfall / EDHREC world: a few cards, one commander, prices, an exchange rate. */
-type C = { name: string; type: string; cmc: number; mana: string; text: string; ci: string[]; usd: string };
+type C = { name: string; type: string; cmc: number; mana: string; text: string; ci: string[]; usd: string; rarity: string };
 const list: C[] = [
-  { name: 'Tatyova, Benthic Druid', type: 'Legendary Creature — Merfolk Druid', cmc: 5, mana: '{3}{G}{U}', text: 'Landfall — you gain 1 life and draw a card.', ci: ['G', 'U'], usd: '0.40' },
-  { name: 'Sol Ring', type: 'Artifact', cmc: 1, mana: '{1}', text: '{T}: Add {C}{C}.', ci: [], usd: '1.50' },
-  { name: 'Cultivate', type: 'Sorcery', cmc: 3, mana: '{2}{G}', text: 'Search your library for up to two basic land cards.', ci: ['G'], usd: '0.40' },
-  { name: 'Rhystic Study', type: 'Enchantment', cmc: 3, mana: '{2}{U}', text: 'Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.', ci: ['U'], usd: '38.00' },
-  { name: 'Counterspell', type: 'Instant', cmc: 2, mana: '{U}{U}', text: 'Counter target spell.', ci: ['U'], usd: '1.20' },
-  { name: 'Lotus Cobra', type: 'Creature — Snake', cmc: 2, mana: '{1}{G}', text: 'Landfall — add one mana of any color.', ci: ['G'], usd: '6.50' },
-  { name: 'Forest', type: 'Basic Land — Forest', cmc: 0, mana: '', text: '({T}: Add {G}.)', ci: [], usd: '0.10' },
-  { name: 'Island', type: 'Basic Land — Island', cmc: 0, mana: '', text: '({T}: Add {U}.)', ci: [], usd: '0.10' },
+  { name: 'Tatyova, Benthic Druid', type: 'Legendary Creature — Merfolk Druid', cmc: 5, mana: '{3}{G}{U}', text: 'Landfall — you gain 1 life and draw a card.', ci: ['G', 'U'], usd: '0.40', rarity: 'rare' },
+  { name: 'Sol Ring', type: 'Artifact', cmc: 1, mana: '{1}', text: '{T}: Add {C}{C}.', ci: [], usd: '1.50', rarity: 'uncommon' },
+  { name: 'Cultivate', type: 'Sorcery', cmc: 3, mana: '{2}{G}', text: 'Search your library for up to two basic land cards.', ci: ['G'], usd: '0.40', rarity: 'common' },
+  { name: 'Rhystic Study', type: 'Enchantment', cmc: 3, mana: '{2}{U}', text: 'Whenever an opponent casts a spell, you may draw a card unless that player pays {1}.', ci: ['U'], usd: '38.00', rarity: 'rare' },
+  { name: 'Counterspell', type: 'Instant', cmc: 2, mana: '{U}{U}', text: 'Counter target spell.', ci: ['U'], usd: '1.20', rarity: 'common' },
+  { name: 'Lotus Cobra', type: 'Creature — Snake', cmc: 2, mana: '{1}{G}', text: 'Landfall — add one mana of any color.', ci: ['G'], usd: '6.50', rarity: 'mythic' },
+  { name: 'Forest', type: 'Basic Land — Forest', cmc: 0, mana: '', text: '({T}: Add {G}.)', ci: [], usd: '0.10', rarity: 'common' },
+  { name: 'Island', type: 'Basic Land — Island', cmc: 0, mana: '', text: '({T}: Add {U}.)', ci: [], usd: '0.10', rarity: 'common' },
 ];
 export const cards = list.map((c, i) => ({ ...c, id: `${(i + 1).toString(16).padStart(8, '0')}-1111-2222-3333-${String(i).padStart(12, '0')}` }));
 const byName = new Map(cards.map((c) => [c.name.toLowerCase(), c]));
 const sc = (c: (typeof cards)[number]) => ({
-  object: 'card', id: c.id, name: c.name, type_line: c.type, oracle_text: c.text, color_identity: c.ci, mana_cost: c.mana, cmc: c.cmc, set: 'tst', collector_number: '1',
+  object: 'card', id: c.id, name: c.name, type_line: c.type, oracle_text: c.text, color_identity: c.ci, mana_cost: c.mana, cmc: c.cmc, rarity: c.rarity, set: 'tst', collector_number: '1',
   image_uris: { small: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg` }, prices: { usd: c.usd, usd_foil: (Number(c.usd) * 2).toFixed(2) }, legalities: { commander: 'legal' },
 });
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkqGcAAAIEAQAhVzR2AAAAAElFTkSuQmCC', 'base64');
@@ -58,7 +58,7 @@ export async function seed(page: Page) {
     });
     const tx = db.transaction(['entries', 'decks', 'cards'], 'readwrite');
     cs.forEach((c, i) => {
-      tx.objectStore('cards').put({ id: c.id, name: c.name, key: c.name.toLowerCase(), type: c.type, text: c.text, ci: c.ci, img: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg`, usd: c.usd, usdFoil: c.usd, mana: c.mana, cmc: c.cmc, legal: true, pv: 2, at: Date.now() });
+      tx.objectStore('cards').put({ id: c.id, name: c.name, key: c.name.toLowerCase(), type: c.type, text: c.text, ci: c.ci, img: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg`, usd: c.usd, usdFoil: c.usd, mana: c.mana, cmc: c.cmc, rarity: c.rarity, legal: true, pv: 3, at: Date.now() });
       tx.objectStore('entries').put({ profile: 1, cardId: c.id, name: c.name, qty: (i % 4) + 1, set: 'tst', cn: String(i), foil: i === 3 });
     });
     tx.objectStore('decks').put({ profile: 1, name: 'Tatyova Lands', commander: cs[0].name, cards: cs.map((c) => ({ name: c.name, qty: c.type.startsWith('Basic') ? 20 : 1 })), updated: Date.now() });
@@ -85,7 +85,7 @@ export const addSignet = async (page: Page) => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
     const tx = db.transaction(['cards', 'entries'], 'readwrite');
     const id = 'aaaaaaaa-1111-2222-3333-000000000099';
-    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, legal: true, pv: 2, at: Date.now() });
+    tx.objectStore('cards').put({ id, name: 'Arcane Signet', key: 'arcane signet', type: 'Artifact', text: '', ci: [], cmc: 2, rarity: 'uncommon', legal: true, pv: 3, at: Date.now() });
     tx.objectStore('entries').put({ profile: 1, cardId: id, name: 'Arcane Signet', qty: 1 });
     await new Promise((ok) => (tx.oncomplete = ok));
   });
@@ -117,9 +117,18 @@ export const openImport = async (page: Page) => {
   return pop;
 };
 
-/** The stat tiles start folded on Collection and My Decks (Nov 13): SHOW STATS, beside the page's buttons, opens them. */
+/**
+ * The stats: on Collection they live on the ANALYTICS tab (Guillermo, Nov 15, so cards open first); on My Decks they
+ * still fold behind SHOW STATS. Either way, this puts them on screen.
+ */
 export const showStats = async (page: Page) => {
-  const fold = page.locator('.coll .statfold, .dlist .dfold').first();
-  await fold.waitFor();
-  if ((await fold.getAttribute('aria-expanded')) === 'false') await fold.click();
+  const tab = page.locator('.coll .ctab', { hasText: 'ANALYTICS' });
+  const fold = page.locator('.dlist .dfold');
+  await expect(tab.or(fold).first()).toBeVisible();
+  if (await tab.count()) {
+    if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+    await page.locator('.coll .stats > .stat').first().waitFor();
+    return;
+  }
+  if ((await fold.first().getAttribute('aria-expanded')) === 'false') await fold.first().click();
 };

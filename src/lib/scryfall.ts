@@ -65,7 +65,8 @@ export function toCard(c: any): Card {
     cmc: c.cmc,
     buy: c.purchase_uris?.tcgplayer,
     legal: c.legalities?.commander === 'legal',
-    pv: 2,
+    rarity: typeof c.rarity === 'string' ? c.rarity : undefined,
+    pv: 3,
     at: Date.now(),
   };
 }
@@ -78,8 +79,8 @@ export async function cardsByIds(ids: string[], maxAge = WEEK, onProgress?: (car
   const uniq = [...new Set(ids)];
   if (!uniq.length) return new Map();
   const out = new Map<string, Card>();
-  // pv 2 = has the foil price: older cache entries are fetched again once.
-  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && c.pv === 2 && Date.now() - c.at < maxAge && out.set(c.id, c));
+  // pv 3 = has the foil price and the rarity: older cache entries are fetched again once (prices only; no card is lost).
+  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && (c.pv ?? 0) >= 3 && Date.now() - c.at < maxAge && out.set(c.id, c));
   if (out.size) onProgress?.(new Map(out));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {

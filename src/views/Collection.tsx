@@ -1,7 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { importCollection, importDeck, resetProfile, type ImportResult } from '../lib/actions';
 import { parseImport } from '../lib/importers';
 import { SAMPLE_COLLECTION } from '../lib/sample';
@@ -23,6 +23,8 @@ import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
+
+const Analytics = lazy(() => import('./Analytics'));
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 import { firstPerKey } from '../lib/topn';
 
@@ -164,9 +166,9 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   const entries = list ?? [];
   // Import modal pop-up: opens by itself for an empty binder (and stays open while an import runs).
   const [importOpen, setImportOpen] = useState<boolean>(false);
-  // HIDE STATS (audit roadmap, phase 3): the tiles stay as they are; they start folded (Guillermo, Nov 13), which puts cards on the
-  // first phone screen. Same control as My Decks, remembered on this device.
-  const [cstats, setCstats] = useStored<'show' | 'hide'>('ch:collstats', 'hide', ['show', 'hide']);
+  // CARDS | ANALYTICS (Guillermo, Nov 15): the binder is the promise of this page, so cards are what opens, every time.
+  // The stat tiles, Top 3 and the charts live on the second tab, which replaces the old SHOW / HIDE STATS fold.
+  const [ctab, setCtab] = useState<'cards' | 'analytics'>('cards');
   useEffect(() => {
     if (list !== undefined && list.length === 0) setImportOpen(true);
   }, [list?.length]);
@@ -330,8 +332,39 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={total} binders={binders} onPick={onPick} sync={sync} />} />
       </section>
 
+      {/* The two faces of a binder: your cards, and what they add up to. + DECK and IMPORT stay on the row, so they are
+          one tap away from either tab. */}
+      <nav className="ctabs" aria-label="Collection view">
+        <div className="ctabset" role="tablist" aria-label="Collection view">
+          {([['cards', 'CARDS'], ['analytics', 'ANALYTICS']] as const).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              id={`ctab-${v}`}
+              aria-selected={ctab === v}
+              aria-controls={`cpane-${v}`}
+              className={`ctab${ctab === v ? ' on' : ''}`}
+              onClick={() => (haptic('select'), setCtab(v))}
+            >
+              {label}
+              {v === 'cards' && <span className="ctab-n">{total.toLocaleString()}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="ctab-acts">
+          <button type="button" className="slip-btn deck" onClick={() => (haptic('open'), openDeckList())} title="View and build decks in this binder">
+            + DECK
+          </button>
+          <button type="button" className="slip-btn import" onClick={() => (haptic('open'), setImportOpen(true))} title="Import cards into this binder">
+            IMPORT
+          </button>
+        </div>
+      </nav>
+
       {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
-      <section className={`stats${cstats === 'hide' ? ' folded' : ''}`}>
+      {ctab === 'analytics' && (
+      <section className="stats" id="cpane-analytics" role="tabpanel" aria-labelledby="ctab-analytics">
         <div className="stat gbox" style={{ transform: 'rotate(-0.8deg)' }}>
           <span className="worn" aria-hidden="true" />
           <span className="spray" aria-hidden="true" />
@@ -368,49 +401,20 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
                 est. · your printings and finishes · {fetchedNote(entries.map((e) => cards.get(e.cardId)?.at))}
               </span>
             </div>
-            <div className="slip-acts">
-              <button
-                type="button"
-                className="slip-btn deck"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  haptic('open');
-                  openDeckList();
-                }}
-                title="View and build decks in this binder"
-              >
-                + DECK
-              </button>
-              <button
-                type="button"
-                className="slip-btn import"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  haptic('open');
-                  setImportOpen(true);
-                }}
-                title="Import cards into this binder"
-              >
-                IMPORT
-              </button>
-              {/* SHOW / HIDE STATS sits on the same row as + DECK and IMPORT (Guillermo, Nov 13): one line of controls */}
-              <button
-                type="button"
-                className="statfold"
-                aria-expanded={cstats !== 'hide'}
-                onClick={() => (haptic('select'), setCstats(cstats === 'hide' ? 'show' : 'hide'))}
-                title={cstats === 'hide' ? 'Show the collection stats' : 'Hide the collection stats'}
-              >
-                {cstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
-              </button>
-            </div>
           </div>
           {value > 0 && <span className="stamp">APPRAISED</span>}
         </div>
         <TopWidget entries={entries} cards={cards} />
       </section>
+      )}
+
+      {/* Collection analytics (roadmap P2.5): built from what's already stored, saves nothing. The tab is the fold now,
+          so there is no second ANALYTICS button to press. */}
+      {ctab === 'analytics' && (
+        <Suspense fallback={<p className="small">Working out your numbers…</p>}>
+          <Analytics entries={entries} cards={cards} decks={deckRows} binder={name} />
+        </Suspense>
+      )}
 
       {/* Pop-up modal for import cards */}
       {importOpen && (
@@ -501,6 +505,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
       )}
 
       {/* Binders and Lists Ribbon */}
+      {ctab === 'cards' && (
       <section className="coll-listbar" aria-label="Binder lists navigation">
         <div className="list-tabs" role="tablist">
           <button
@@ -608,8 +613,10 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           )}
         </div>
       </section>
+      )}
 
-      <section>
+      {ctab === 'cards' && (
+      <section id="cpane-cards" role="tabpanel" aria-labelledby="ctab-cards">
         <CardsView
           entries={shown}
           cards={cards}
@@ -674,6 +681,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           }
         />
       </section>
+      )}
     </main>
     </>
   );
