@@ -93,3 +93,15 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The Midnight Override look (colours, type, zine marks) is kept exactly as it is through UX work: nothing visual changes unless Guillermo asks (his words, Nov 14: "remember our original graphic design… I don't wanna lose it").
 - Collection filters add mana value, price per copy and foil, in the same Filter sheet with removable chips. Price bands are ≈CA$ per copy at your own printing and finish (under 1, 1 to 5, 5 to 20, 20 and up); a card without a price never passes a price band. Rarity waits: storing it changes the saved card data, so it needs his OK first.
 
+
+## 2026-11-14: Header links and the OPTIONS tag (Guillermo)
+
+- Outside links (EDHREC, COMBOS, ARCHIDEKT) stay together as one group, in that order, on their own row at the end of the
+  header line, on the commander page and on every saved deck.
+- The ⋯ OPTIONS tag "should be and act like the price tag in the collection": same yellow torn tape and type as
+  Collection's price, same peel. Nov 15 he placed it: smaller, on the commander card's corner, usually hidden,
+  showing when the card is pointed at or selected. This replaces "hang under the card" (Nov 13); the tag sits above the
+  corner so only the card's outer border is under it (the card's text stays uncovered). Later the same day: top-left
+  corner, typewriter gritty font (Special Elite).
+- Deck strip on phones: deck cost first, TO BUY on its own row, BEST FOR MY CARDS and FORGE side by side as equals.
+- Saved-deck hero: underscores in a deck name show as spaces in the ransom title; ACTIVE sits under the name, off the slash.
