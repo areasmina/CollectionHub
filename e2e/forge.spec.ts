@@ -104,7 +104,8 @@ test('ONLY: price bands and Game Changers filter the deck', async ({ page }) => 
   // above 700px ONLY is a quick segment on the bar; on phones it stays in ⋮
   const wide = page.viewportSize()!.width > 700;
   const seg = page.locator('.lists > .tbar .qsegs[aria-label="Ownership filter"]');
-  const only = async (v: string, label: RegExp) => (wide ? seg.getByRole('button', { name: label }).click() : (await opts(page)).locator('select:has(option[value="over20"])').selectOption(v));
+  // wide screens have the ownership buttons on the bar; a phone has the same choices as the sheet's ONLY chip row
+  const only = async (v: string, label: RegExp) => (wide ? seg.getByRole('button', { name: label }).click() : (await opts(page)).locator('.sheetshow').getByRole('radio', { name: label }).click());
   await only('over20', /CA\$20 AND UP/);
   await expect(page.locator('.lists [data-card]')).toHaveCount(1);
   await expect(page.locator('.lists [data-card="Rhystic Study"]')).toHaveCount(1);

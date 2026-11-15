@@ -50,11 +50,12 @@ test('Commander page: hints read in full, ⋮ is not cut, chips are one 44px row
   }
 
   // more chips: still one row on a phone, each 44px, Clear all on screen
-  for (const [sel, value] of [['.show-pick select', 'owned'], ['select:has(option[value="under5"])', 'under5']] as const) {
+  // every setting in the sheet is a chip now (Nov 15 round 5); SHOW only appears there where the bar has no room for it
+  for (const [chip, quick] of [['OWNED ONLY', 'OWNED'], ['UNDER CA$5', 'UNDER CA$5']] as const) {
     const dd = await opts(page, '.lists');
-    const box = dd.locator(sel).first();
-    if (await box.isVisible()) await box.selectOption(value);
-    else await page.locator('.lists .tquick').getByRole('button', { name: value === 'owned' ? 'OWNED' : 'UNDER CA$5', exact: true }).click();
+    const pick = dd.getByRole('radio', { name: chip, exact: true }).first();
+    if (await pick.isVisible()) await pick.click();
+    else await page.locator('.lists .tquick').getByRole('button', { name: quick, exact: true }).click();
     await closeOpts(page);
   }
   await expect(chips.locator('.fchip')).toHaveCount(3);

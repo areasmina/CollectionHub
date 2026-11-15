@@ -388,6 +388,26 @@ export function snapTick(e: React.UIEvent<HTMLElement>) {
   }
 }
 
+/**
+ * One setting as a side-scrolling line of chips (Guillermo, Nov 15: the sheet's bottom row of dropdowns repeated the
+ * bar's own buttons and read as a different app). Inside the options sheet every setting now speaks one language —
+ * the chip — so THEME, GEAR, SHOW, SORT and ONLY scan as one panel instead of five widgets. The row scrolls sideways
+ * rather than wrapping, which keeps each setting exactly one line tall.
+ */
+export function ChipPick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
+  return (
+    <OptRow label={label}>
+      <div className="chiprow" role="radiogroup" aria-label={label} onScroll={snapTick}>
+        {options.map(([v, t]) => (
+          <button key={v} type="button" role="radio" className="u-chip" aria-checked={value === v} aria-pressed={value === v} onClick={() => (haptic('select'), onChange(v))}>
+            {t}
+          </button>
+        ))}
+      </div>
+    </OptRow>
+  );
+}
+
 /** Dropdown in the Discover SORT-box style: black tab label, select, red arrow. */
 export function Pick<T extends string>({ label, value, options, onChange, className }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void; className?: string }) {
   return (
@@ -797,7 +817,7 @@ export function SearchBox({ q, setQ, placeholder = 'name or rules text_', ariaLa
  * which opens the options (power, budget, sort, show, view, size, grouping). On wider screens the bar also names the
  * options in use. Kept class names (.dtools / .fsheet / .fbody) so the old hooks still find it.
  */
-export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: ReactNode; quick?: ReactNode; extra?: ReactNode; label?: string; children: ReactNode }) {
+export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, foot, label = 'Cards: search and options', children }: { q: string; setQ: (v: string) => void; placeholder?: string; searchLabel?: string; now?: ReactNode; quick?: ReactNode; extra?: ReactNode; foot?: ReactNode; label?: string; children: ReactNode }) {
   const ref = useRef<HTMLDetailsElement>(null);
   // a tap outside the open options closes them
   useEffect(() => {
@@ -815,7 +835,23 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
       <details
         className="fsheet tbmore"
         ref={ref}
-        onToggle={(e) => (e.currentTarget.open && haptic('open'), document.documentElement.classList.toggle('sheet-open', !!document.querySelector('details.tbmore[open]')))}
+        onToggle={(e) => {
+          if (e.currentTarget.open) {
+            haptic('open');
+            // On wide screens the options hang under the bar, so a bar sitting low on the screen pushed the panel's
+            // own APPLY button off the bottom. Opening them pins the bar to the top first, which gives the panel the
+            // whole screen under it. On phones the sheet is fixed to the bottom edge already, so nothing moves.
+            const panel = e.currentTarget.querySelector('.fbody');
+            if (panel && matchMedia('(min-width: 701px)').matches) {
+              requestAnimationFrame(() => {
+                const r = panel.getBoundingClientRect();
+                const over = r.bottom - (innerHeight - 12);
+                if (over > 0) scrollBy({ top: Math.min(over, Math.max(0, r.top - 72)), behavior: 'smooth' });
+              });
+            }
+          }
+          document.documentElement.classList.toggle('sheet-open', !!document.querySelector('details.tbmore[open]'));
+        }}
         onClick={(e) => e.target === e.currentTarget && e.currentTarget.removeAttribute('open')}
       >
         <summary aria-label="Options" title="Options">
@@ -836,6 +872,9 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
             </button>
           </div>
           {children}
+          {/* The sheet's one commit button lives here, pinned to the bottom edge, never beside a field (Guillermo,
+              Nov 15: "the apply button is positioned awkwardly"). It stays on screen while the options scroll. */}
+          {foot && <div className="sheetfoot">{foot}</div>}
         </div>
       </details>
       <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />

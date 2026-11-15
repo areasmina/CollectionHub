@@ -167,3 +167,20 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   says what it is rather than only how many.
 - **Every search reads name, type line and rules text, reminder text included.** Collection, deck pages, the Forge and
   the swap picker already did; Discover's commander search matched names only and now matches the same three.
+
+## Nov 15, round 5 (the options sheet and the Collection top)
+
+- **The options sheet is one panel in one language.** The row of three dropdowns at its foot (SORT / SHOW / ONLY) spoke
+  a different language from the chips and tiles above it and repeated controls that are already on the bar. Every
+  setting in the sheet is now a line of chips that scrolls sideways, so the panel reads top to bottom as one list.
+- **A setting is never in two places at once.** SHOW (ALL / OWNED / MISSING) is the bar's own buttons wherever the bar
+  has room for them, and appears in the sheet only on a phone, where those buttons are hidden. The deck page's ONLY
+  follows the same rule. SORT and ONLY on the commander page were the settings that lived nowhere else; they stayed.
+- **APPLY is the sheet's footer, not a button beside a field.** It sits on the bottom edge, the width of the panel,
+  and stays there while the options scroll; CLEAR sits beside it when there is something to clear. On wide screens,
+  opening the options first pins the bar to the top, so the panel always has the whole screen under it.
+- **The Collection top is four lanes of one height**: tabs with + DECK / IMPORT, the list ribbon, the search, the tool
+  row — flush inside the one frame, hairlines between them, and the sort takes the empty end of the tool row so its
+  words read in full. The cards start about 38px higher again, which is ManaBox's density.
+- **The first-run swipe tag has its own strip.** With the lanes flush it had nowhere to hang without covering IMPORT,
+  so while it shows, the tabs lane opens a 22px strip for it; the strip goes with the tag, for good, after one use.

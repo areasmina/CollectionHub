@@ -21,7 +21,7 @@ test('Phone round: card is its own swap button, % in the burst, one FILTERS butt
   const sheet = page.locator('.fsheet');
   await expect(sheet.locator('.sbox').first()).toBeHidden();
   await sheet.locator('summary').click();
-  await expect(sheet.locator('.sbox')).toHaveCount(5);
+  await expect(sheet.locator('.sbox')).toHaveCount(2); // PIN and WITHOUT; sort and show are chip rows (Nov 15 round 5)
   await expect(sheet.locator('.sbox').first()).toBeVisible();
   await fits(page, ['.fsheet']);
   await sheet.locator('summary').click();

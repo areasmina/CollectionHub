@@ -38,7 +38,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -105,43 +105,13 @@ const GROUPINGS: [Grouping, string][] = [
   ['none', 'NO GROUPS'],
 ];
 
-/** GROUP box: how sections are split, plus a "show only" filter in the same picker (one less box). */
+/** GROUP and SHOW as the sheet's own chip rows (Nov 15 round 5): the panel holds no dropdown any more. */
 function GroupPick({ grouping, show, onGroup, onShow }: { grouping: Grouping; show: Show; onGroup: (g: Grouping) => void; onShow: (v: Show) => void }) {
-  const tag = show === 'owned' ? ' · OWNED' : show === 'missing' ? ' · MISSING' : '';
   return (
-    <label className="sbox pick">
-      <span className="tab">GROUP</span>
-      <select
-        value={grouping}
-        aria-label={`Group by, and which cards to show${tag ? `: ${show} only` : ''}`}
-        onChange={(e) => {
-          haptic('select');
-          const v = e.target.value;
-          if (v.startsWith('show:')) onShow(v.slice(5) as Show);
-          else onGroup(v as Grouping);
-        }}
-      >
-        <optgroup label="Group by">
-          {GROUPINGS.map(([v, t]) => (
-            <option key={v} value={v}>
-              {t}
-              {tag}
-            </option>
-          ))}
-        </optgroup>
-        <optgroup label="Show">
-          {SHOWS.map(([v, t]) => (
-            <option key={v} value={`show:${v}`}>
-              {show === v ? '✓ ' : '\u2003'}
-              {t}
-            </option>
-          ))}
-        </optgroup>
-      </select>
-      <span className="arrow" aria-hidden="true">
-        <span>▼</span>
-      </span>
-    </label>
+    <>
+      <ChipPick label="GROUP" value={grouping} options={GROUPINGS} onChange={onGroup} />
+      <ChipPick label="SHOW" value={show} options={SHOWS} onChange={onShow} />
+    </>
   );
 }
 
@@ -1003,8 +973,12 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               }
             >
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
-              <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
-              <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
+              {/* Same chip language as the commander's sheet (Guillermo, Nov 15): no dropdowns beside chip rows. ONLY
+                  is also the bar's own buttons, so it only shows here where the bar has no room for them. */}
+              <ChipPick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+              <div className="sheetshow">
+                <ChipPick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
+              </div>
             </ToolBar>
             <SetChips
               chips={[

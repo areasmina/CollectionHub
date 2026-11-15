@@ -36,7 +36,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, ChipPick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -950,6 +950,29 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       ))}
                   </>
                 }
+                foot={
+                  <>
+                    <button type="submit" form="cfilter-form" className="cf-apply-btn" title="Apply card pins">
+                      APPLY
+                    </button>
+                    {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                      <button
+                        type="button"
+                        className="cf-clear-btn"
+                        onClick={() => {
+                          haptic('undo');
+                          if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
+                          if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
+                          setCf({ inc: [], exc: [] });
+                          setCfDraft({ inc: '', exc: '' });
+                        }}
+                        title="Clear card filters"
+                      >
+                        CLEAR
+                      </button>
+                    )}
+                  </>
+                }
                 quick={
                   <>
                     <div className="qsegs" role="group" aria-label="Quick filter">
@@ -994,6 +1017,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               >
                 {/* 1. Pin and without cards selection */}
                 <form
+                  id="cfilter-form"
                   className="cfilter"
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1101,25 +1125,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         </div>
                       )}
                     </div>
-                    <button type="submit" className="cf-apply-btn" title="Apply card pins">
-                      APPLY
-                    </button>
-                    {(cf.inc.length > 0 || cf.exc.length > 0) && (
-                      <button
-                        type="button"
-                        className="cf-clear-btn"
-                        onClick={() => {
-                          haptic('undo');
-                          if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
-                          if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
-                          setCf({ inc: [], exc: [] });
-                          setCfDraft({ inc: '', exc: '' });
-                        }}
-                        title="Clear card filters"
-                      >
-                        CLEAR
-                      </button>
-                    )}
                   </div>
                   <datalist id="cfnames">
                     {[...recCard.values()].slice(0, 300).map((c) => (
@@ -1199,11 +1204,14 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
                   </OptRow>
                 )}
-                <div className="pickgrid">
-                  <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                  <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} className="show-pick" />
-                  <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
+                {/* The bottom row of three dropdowns is gone (Guillermo, Nov 15). SHOW is the bar's own ALL / OWNED /
+                    MISSING buttons, so it only appears here on the phone, where the bar has no room for them; SORT and
+                    ONLY were the two settings that lived nowhere else, and they now speak the sheet's own chip language. */}
+                <div className="sheetshow">
+                  <ChipPick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
                 </div>
+                <ChipPick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                <ChipPick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
               </ToolBar>
               <SetChips
                 chips={[

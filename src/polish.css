@@ -2572,3 +2572,127 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     min-height: 44px;
   }
 }
+
+/* ── ROUND 5 · ONE PANEL, ONE LANGUAGE (Guillermo, Nov 15) ─────────────────────────────────────────────
+   The options sheet ended in a row of three dropdowns that repeated the bar's own buttons and spoke a
+   different visual language from everything above them. The dropdowns are gone. Every setting in the sheet
+   is now a line of chips that scrolls sideways, so the panel reads as one list of choices top to bottom,
+   and the sheet's one commit button sits on a fixed footer instead of floating beside a text field. */
+.tbar .fbody .chiprow {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  gap: 6px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x proximity !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 1px 0 !important;
+  min-width: 0 !important;
+}
+.tbar .fbody .chiprow::-webkit-scrollbar { display: none; }
+/* the same fade the theme row uses, so a row that runs past the edge says so */
+.tbar .fbody .chiprow { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); padding-right: 24px !important; }
+.tbar .fbody .chiprow > .u-chip {
+  flex: 0 0 auto !important;
+  scroll-snap-align: start;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  background: #151518 !important;
+  border: 1px solid #33333e !important;
+  color: #b8b8c6 !important;
+  font: 800 11.5px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.06em !important;
+  white-space: nowrap !important;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.tbar .fbody .chiprow > .u-chip:hover { border-color: #55555f !important; color: #ffffff !important; }
+/* the chosen one is the only loud thing in the row: red tape, black letters */
+.tbar .fbody .chiprow > .u-chip[aria-checked='true'] {
+  background: var(--u-red, #e60012) !important;
+  border-color: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+}
+/* on a phone every chip is still a full thumb target (the sheet's own rule) */
+@media (max-width: 699px) {
+  .tbar .fbody .chiprow > .u-chip { height: 44px !important; min-height: 44px !important; padding: 0 14px !important; font-size: 12.5px !important; }
+}
+/* SHOW is the bar's ALL / OWNED / MISSING buttons wherever the bar has room for them: there it is not repeated here */
+@media (min-width: 701px) { .tbar .fbody .sheetshow { display: none !important; } }
+
+/* The footer: always on the bottom edge of the sheet, APPLY taking the width it deserves */
+.tbar .fbody .sheetfoot {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 3 !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  margin: 2px -14px -12px !important;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom)) !important;
+  background: linear-gradient(to bottom, rgba(10, 10, 12, 0.86), var(--bg, #0a0a0c) 40%) !important;
+  border-top: 1px solid #2a2a33 !important;
+}
+.tbar .fbody .sheetfoot > .cf-apply-btn { flex: 1 1 auto !important; height: 44px !important; font-size: 13px !important; }
+.tbar .fbody .sheetfoot > .cf-clear-btn { flex: 0 0 auto !important; height: 44px !important; }
+@media (min-width: 701px) {
+  .tbar .fbody .sheetfoot { margin: 2px -12px -10px !important; padding: 10px 12px !important; }
+  .tbar .fbody .sheetfoot > .cf-apply-btn { height: 38px !important; }
+  .tbar .fbody .sheetfoot > .cf-clear-btn { height: 38px !important; }
+}
+/* the PIN / WITHOUT fields now own their row entirely, one under the other */
+.tbar .fbody .cf-row { flex-wrap: wrap !important; }
+.tbar .fbody .cf-row > .cglance-wrap { flex: 1 1 100% !important; }
+
+/* ── ROUND 5 · THE COLLECTION TOP IS ONE BLOCK, NOT FIVE (Guillermo, Nov 15) ───────────────────────────
+   The circled area: tabs, + DECK / IMPORT, the list ribbon, the search and the tool row each kept their own
+   air, so the binder began a third of the way down the screen. They are now four lanes of the same height
+   inside the one frame, divided by hairlines instead of gaps, and the lane that was empty on the right of
+   the tools (the sort) takes that space so its words read in full. Nothing moved out of reach. */
+@media (max-width: 700px) {
+  .coll .chead2 { margin-bottom: 0 !important; padding: 2px 0 4px !important; }
+  .coll .chead2 .titlewrap { padding-top: 6px !important; padding-bottom: 4px !important; }
+  .coll .ctabs { margin: 4px 0 0 !important; padding: 3px 4px !important; gap: 4px !important; }
+  .coll .ctab { min-height: 44px !important; padding: 0 9px !important; font-size: 13.5px !important; }
+  .coll .ctab-acts { gap: 4px !important; }
+  .coll .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 9px !important; font-size: 13px !important; }
+  .coll .coll-listbar { padding: 3px 6px !important; }
+  .coll .coll-listbar .list-tab { min-height: 44px !important; padding: 0 10px !important; }
+  .dpage.coll .collbar { padding-top: 2px !important; padding-bottom: 2px !important; }
+  .dpage.coll .collbar > .dtools.tbar { gap: 2px !important; }
+  .coll .dtools.tbar > .tsearch { min-height: 44px !important; }
+  /* the tool lane: view, size, ⋮, filter, then the sort taking the rest of the line */
+  .coll .dtools.tbar > .tquick { padding: 0 2px !important; gap: 6px !important; }
+  .coll .dtools.tbar > .sortsel { flex: 1 1 0 !important; min-width: 88px !important; }
+  .coll .dtools.tbar > .sortsel select { width: 100% !important; font-size: 13px !important; }
+}
+/* The lanes are flush now, so the first-run tag can't hang on a seam without covering a control: while it shows,
+   the tabs lane opens a strip of its own for it, at every width, and that strip goes away with the tag. */
+.coll.swipehint .ctabs { padding-bottom: 24px !important; }
+.coll .ctab-hint { left: 10px; right: auto; bottom: 4px; }
+
+/* The GEAR and BUY UNDER tiles kept the full-size segmented control's 58px frame while their buttons were shrunk to
+   28px inside the sheet, which left an empty white band under each one. The frame now takes the height of the tiles. */
+.tbar .fbody .segs { height: auto !important; align-items: stretch !important; border-width: 2px !important; }
+.tbar .fbody .segs button { height: 36px !important; min-height: 36px !important; }
+.tbar .fbody .segs button + button { border-left-width: 2px !important; }
+@media (max-width: 699px) {
+  .tbar .fbody .segs button { height: 44px !important; min-height: 44px !important; }
+}
+
+/* Tablet and desktop keep the same four flush lanes; only the air inside them is larger than a phone's. */
+@media (min-width: 701px) {
+  .coll .chead2 { margin-bottom: 0 !important; }
+  .coll .ctabs { margin: 8px 0 0 !important; padding: 5px 6px !important; }
+  .coll .coll-listbar { padding: 5px 8px !important; }
+  .dpage.coll .collbar { padding-top: 4px !important; padding-bottom: 4px !important; }
+}
+
+/* A panel longer than the screen scrolls inside itself, with its footer riding the bottom edge, rather than running
+   off the window (the options sheet gained rows when the dropdowns became chip lines). */
+@media (min-width: 701px) {
+  .dtools.tbar > .tbmore > .fbody { max-height: min(calc(100dvh - 120px), 660px) !important; overflow-y: auto !important; }
+}
