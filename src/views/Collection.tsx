@@ -1,7 +1,7 @@
 import { haptic } from '../lib/haptics';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { lazy, memo, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { importCollection, importDeck, resetProfile, type ImportResult } from '../lib/actions';
 import { parseImport } from '../lib/importers';
 import { SAMPLE_COLLECTION } from '../lib/sample';
@@ -23,6 +23,8 @@ import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
+
+const Analytics = lazy(() => import('./Analytics'));
 import { manageBinderLists, UNASSIGNED_NAME, UNASSIGNED_PROFILE } from '../lib/deckedit';
 import { firstPerKey } from '../lib/topn';
 
@@ -167,6 +169,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   // HIDE STATS (audit roadmap, phase 3): the tiles stay as they are; they start folded (Guillermo, Nov 13), which puts cards on the
   // first phone screen. Same control as My Decks, remembered on this device.
   const [cstats, setCstats] = useStored<'show' | 'hide'>('ch:collstats', 'hide', ['show', 'hide']);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   useEffect(() => {
     if (list !== undefined && list.length === 0) setImportOpen(true);
   }, [list?.length]);
@@ -411,6 +414,27 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
         </div>
         <TopWidget entries={entries} cards={cards} />
       </section>
+
+      {/* Analytics sits under the stats on its own strip, so the + DECK · IMPORT · HIDE STATS row stays one line
+          (Guillermo, Nov 13). It goes with the stats: hidden stats, hidden analytics. */}
+      {cstats !== 'hide' && (
+        <button
+          type="button"
+          className="abtn"
+          aria-expanded={showAnalytics}
+          onClick={() => (haptic('open'), setShowAnalytics((v) => !v))}
+          title="What your binder is made of, and what it has been worth"
+        >
+          {showAnalytics ? 'HIDE ANALYTICS ▴' : 'ANALYTICS ▾'}
+        </button>
+      )}
+
+      {/* Collection analytics (roadmap P2.5): built from what's already stored, saves nothing. */}
+      {cstats !== 'hide' && showAnalytics && (
+        <Suspense fallback={<p className="small">Working out your numbers…</p>}>
+          <Analytics entries={entries} cards={cards} decks={deckRows} binder={name} onClose={() => setShowAnalytics(false)} />
+        </Suspense>
+      )}
 
       {/* Pop-up modal for import cards */}
       {importOpen && (

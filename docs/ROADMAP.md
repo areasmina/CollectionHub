@@ -123,7 +123,9 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
    `is:gamechanger`, cached a week), mass land denial, extra turns, tutors; floor II, never V; reasons shown.
    Two-card combos (Commander Spellbook) ⬜.
 4. ⬜ Advanced collection search (Scryfall-style fields we actually store; no full query language).
-5. ⬜ Collection analytics + daily value snapshots (history starts at the first snapshot) — in the ≡ menu.
+5. 🟡 Collection analytics: the ANALYTICS panel on the Collection ribbon (worth over time from the daily snapshots, deck
+   use, colours, curve, types, sets). Missing: rarity (not stored yet), and anything older than the two weeks of
+   snapshots kept.
 6. ⬜ Deck Simulator (opening hands, mulligans, draws, exact hypergeometric odds, Monte Carlo with a seed) — in ≡.
 7. 🟡 Tests: importers, ownership, substitutes, salt. Missing: allocation, valuation, currency, deck validation,
    bracket, simulator.

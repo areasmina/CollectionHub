@@ -1702,3 +1702,218 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   justify-content: flex-start;
 }
 
+
+/* ---------- Collection analytics (roadmap P2.5): same zine frame as the rest — torn cards, Anton numbers,
+   typewriter labels. Quiet content, loud frame ---------- */
+.apanel {
+  margin: 0 0 var(--s4, 16px);
+  padding: 14px;
+  background: #0c0c0e;
+  border: 2px solid var(--u-text, #fff);
+  box-shadow: 6px 6px 0 #000;
+}
+.apanel .ahead {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed #3a3a46;
+}
+.apanel .ahead h2 {
+  margin: 0;
+  font: 400 26px/1 var(--an, Anton, sans-serif);
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--u-red, #e60012);
+  padding: 4px 10px;
+  transform: rotate(-1.2deg);
+}
+.apanel .ahead small {
+  font: 400 12px var(--se, monospace);
+  color: #b5b5b5;
+}
+.apanel .aclose {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid #4a4a5a;
+  color: #cfcfe0;
+  font: 400 12px var(--u-mono, monospace);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.apanel .aclose:hover {
+  border-color: var(--u-red, #e60012);
+  color: #fff;
+}
+.apanel .asum {
+  margin: 0 0 12px;
+  font: 400 13px/1.5 var(--se, monospace);
+  color: #b5b5b5;
+}
+.apanel .asum b {
+  font-family: var(--an, Anton, sans-serif);
+  font-size: 17px;
+  font-weight: 400;
+  color: #fff;
+}
+.apanel .agrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.apanel .acard {
+  padding: 12px;
+  background: #121216;
+  border: 1px solid #2c2c3a;
+  min-width: 0;
+}
+.apanel .acard.awide {
+  grid-column: 1 / -1;
+}
+.apanel .acard h3 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+  font: 400 15px/1 var(--an, Anton, sans-serif);
+  letter-spacing: 0.06em;
+  color: #fff;
+}
+.apanel .acard h3 small {
+  font: 400 11px var(--se, monospace);
+  letter-spacing: 0;
+  color: #8a8a9a;
+  text-transform: none;
+}
+.apanel .abars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.apanel .abar {
+  display: grid;
+  grid-template-columns: minmax(66px, auto) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+}
+.apanel .alabel {
+  font: 400 12px var(--se, monospace);
+  color: #cfcfe0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.apanel .atrack {
+  height: 12px;
+  background: #1e1e26;
+  border: 1px solid #2c2c3a;
+}
+.apanel .afill {
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  min-width: 2px;
+  background: repeating-linear-gradient(135deg, #e60012 0 6px, #b3000e 6px 12px);
+}
+.apanel .abar.good .afill {
+  background: repeating-linear-gradient(135deg, #39ff88 0 6px, #22cc66 6px 12px);
+}
+.apanel .abar.col .afill {
+  background: repeating-linear-gradient(135deg, #ffcc00 0 6px, #e0a800 6px 12px);
+}
+.apanel .acount {
+  font: 400 13px var(--an, Anton, sans-serif);
+  color: #fff;
+  min-width: 3ch;
+  text-align: right;
+}
+.apanel .avalue {
+  font: 400 11px var(--u-mono, monospace);
+  color: #8a8a9a;
+  min-width: 7ch;
+  text-align: right;
+}
+.apanel .atrend {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.apanel .atrend b {
+  font: 400 30px/1 var(--an, Anton, sans-serif);
+  color: #fff;
+}
+.apanel .atrend span {
+  font: 400 12px var(--se, monospace);
+  color: #b5b5b5;
+}
+.apanel .atrend.up span {
+  color: #39ff88;
+}
+.apanel .atrend.down span {
+  color: #ff7777;
+}
+.apanel .aline {
+  display: block;
+  width: 100%;
+  height: 110px;
+  background: #0c0c0e;
+  border: 1px solid #2c2c3a;
+}
+.apanel .apath {
+  fill: none;
+  stroke: #39ff88;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.apanel .aarea {
+  fill: rgba(57, 255, 136, 0.12);
+  stroke: none;
+}
+.apanel .afoot,
+.apanel .anone {
+  margin: 8px 0 0;
+  font: 400 11px/1.5 var(--se, monospace);
+  color: #8a8a9a;
+}
+@media (max-width: 700px) {
+  .apanel .agrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .apanel .abar {
+    grid-template-columns: minmax(58px, auto) minmax(0, 1fr) auto auto;
+  }
+}
+
+/* The ANALYTICS fold: its own full-width strip under the stats, so the + DECK · IMPORT · HIDE STATS row stays one line */
+.coll .abtn {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 14px;
+  background: #0a0a0a;
+  border: 1px solid #3a3a3a;
+  color: #b5b5b5;
+  font: 400 13px var(--u-display, 'Anton', sans-serif);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transform: rotate(-0.4deg);
+}
+.coll .abtn:hover,
+.coll .abtn:focus-visible {
+  color: #fff;
+  border-color: #e60012;
+}
+.coll .abtn {
+  margin: 0 0 var(--s3, 12px);
+}
