@@ -843,8 +843,6 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   return (
     <>
       <main className="dpage forgemain">
-        <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
-
         {/* THE OVERHAUL, saved deck: the same hero → strip → toolbar → cards as the commander page. The hero is the loud
             frame (ransom name, one red slash) and holds the match %; the strip holds what the deck costs and what it lacks. */}
         <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
@@ -922,6 +920,10 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
+
+        {/* The FORGE bar sits directly above the deck tabs (Guillermo, Nov 15: "bar breaks when you move up"):
+            with nothing between them the two pin as one block, and the hero scrolls away behind it. */}
+        <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 
         <ForgeCube grid={cubeRef} buyCount={buyItems.reduce((n, c) => n + c.qty, 0)} />
         <div ref={cubeRef} className={`deckgrid after-sw forge-split${!anExpanded ? ' an-contracted' : ''}${!sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>

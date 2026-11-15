@@ -137,3 +137,22 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The deck header closes up a notch around the ACTIVE badge: name, badge, facts and links read as one block.
 - My Decks: SIZE joins the filter row instead of floating over the decks, a deck tile keeps its facts and its owned
   mark on one line, tags to one line, and NOT LEGAL becomes a tape on the card's corner.
+
+## Nov 15, round 3 (Guillermo's five screenshots)
+
+- **The Forge bar and the deck tabs pin as one block.** The bar used to pin the moment you scrolled while the tabs
+  pinned later, so for a few pixels of travel the deck's cost line slid through the window between them, which read as
+  a broken second bar. The cost line now sits above the bar and scrolls away behind it.
+- **No play rate under a card, in any view.** The number still orders the page and still shows where it is the point
+  (the swap picker, TO BUY). A card's own line is just its copies.
+- **The card ⋮ is opaque and sits at the card's right border**, just noticeable: three dots on a 22px strip of ink, with
+  the full 44px tap area kept.
+- **Collection opens as one block, ManaBox style.** On a phone the ransom title takes the size the screen can spare and
+  the binder tag moves up beside it (the word BINDER above it only said the same thing twice); the tabs, the list
+  ribbon and the search / view rows share one frame divided by hairlines. Every control stayed; the cards start higher.
+- **The two faces of Collection swipe**, the same move as the Forge's. A swipe is a shortcut, never the only way: both
+  tabs stay on screen, and the first time a binder opens on a device the tabs lean once and say "swipe". A tap on
+  either tab, or one swipe, and the hint never comes back. Crossing gives the usual select tick.
+- **The island is really glass now**, and the sync panel is a bubble of the same glass with a tail into the bar: the nav
+  and each docked shape no longer paint solid black behind the frosted pane.
+- **The section rail floats over the cards**: no reserved lane, see-through, and barely there until the list moves.

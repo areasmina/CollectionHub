@@ -169,6 +169,73 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   // CARDS | ANALYTICS (Guillermo, Nov 15): the binder is the promise of this page, so cards are what opens, every time.
   // The stat tiles, Top 3 and the charts live on the second tab, which replaces the old SHOW / HIDE STATS fold.
   const [ctab, setCtab] = useState<'cards' | 'analytics'>('cards');
+  // On a phone the ransom title takes the size the screen can spare, so the binder starts near the top (ManaBox).
+  const [phone, setPhone] = useState(() => (typeof matchMedia === 'function' ? matchMedia('(max-width: 700px)').matches : window.innerWidth <= 700));
+  // Swipe between the two faces, the same move as the Forge's (Guillermo, Nov 15). A swipe is a shortcut, never the
+  // only way: the two tabs stay on screen. The first time a binder is opened on a device the block nudges once and
+  // says "swipe", so the move is shown rather than hidden; after that the hint never comes back.
+  const page = useRef<HTMLElement>(null);
+  const [hint, setHint] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('ch:collswipe')) return;
+    } catch {
+      return;
+    }
+    const t = setTimeout(() => setHint(true), 700);
+    const off = setTimeout(() => setHint(false), 3400);
+    return () => (clearTimeout(t), clearTimeout(off));
+  }, []);
+  const seenSwipe = () => {
+    setHint(false);
+    try {
+      localStorage.setItem('ch:collswipe', '1');
+    } catch {
+      /* a device that keeps nothing simply sees the hint again */
+    }
+  };
+  useEffect(() => {
+    const el = page.current;
+    if (!el) return;
+    let x0 = 0;
+    let y0 = 0;
+    let id = -1;
+    const skip = (t: EventTarget | null) =>
+      !!(t as Element)?.closest?.('input, select, textarea, button, a, details, .list-tabs, .tquick, .agrid, .cwheel, [role="dialog"]');
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' || skip(e.target)) return;
+      x0 = e.clientX;
+      y0 = e.clientY;
+      id = e.pointerId;
+    };
+    const up = (e: PointerEvent) => {
+      if (e.pointerId !== id) return;
+      id = -1;
+      const dx = e.clientX - x0;
+      const dy = e.clientY - y0;
+      if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      const next = dx < 0 ? 'analytics' : 'cards';
+      seenSwipe();
+      if (next === ctab) return;
+      haptic('select');
+      setCtab(next);
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    return () => {
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('pointerup', up);
+      el.removeEventListener('pointercancel', up);
+    };
+  }, [ctab]);
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia('(max-width: 700px)');
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   useEffect(() => {
     if (list !== undefined && list.length === 0) setImportOpen(true);
   }, [list?.length]);
@@ -325,11 +392,11 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           rot: 6,
         }}
       />
-      <main className="dpage coll">
+      <main className={`dpage coll${hint ? ' swipehint' : ''}`} ref={page}>
       <section className="chead2">
         {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
             control (switch, add, rename, reset, delete, plus sync and haptics). */}
-        <Title text="COLLECTION" label="Collection" size={60} seed={21} after={<BinderMenu profile={profile} name={name} count={total} binders={binders} onPick={onPick} sync={sync} />} />
+        <Title text="COLLECTION" label="Collection" size={phone ? 24 : 60} seed={21} after={<BinderMenu profile={profile} name={name} count={total} binders={binders} onPick={onPick} sync={sync} />} />
       </section>
 
       {/* The two faces of a binder: your cards, and what they add up to. + DECK and IMPORT stay on the row, so they are
@@ -345,13 +412,18 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
               aria-selected={ctab === v}
               aria-controls={`cpane-${v}`}
               className={`ctab${ctab === v ? ' on' : ''}`}
-              onClick={() => (haptic('select'), setCtab(v))}
+              onClick={() => (haptic('select'), seenSwipe(), setCtab(v))}
             >
               {label}
               {v === 'cards' && <span className="ctab-n">{total.toLocaleString()}</span>}
             </button>
           ))}
         </div>
+        {hint && (
+          <span className="ctab-hint" role="status">
+            swipe ⇄
+          </span>
+        )}
         <div className="ctab-acts">
           <button type="button" className="slip-btn deck" onClick={() => (haptic('open'), openDeckList())} title="View and build decks in this binder">
             + DECK

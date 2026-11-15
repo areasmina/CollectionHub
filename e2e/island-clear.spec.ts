@@ -71,7 +71,7 @@ test('Island docked top: never on the Forge bar\'s name or ✕ LEAVE', async ({ 
   // moves: from 1100px wide the Forge scrolls inside its own panes and the island rests in the bar's empty middle.)
   if ((page.viewportSize()?.width ?? 0) >= 1100) return;
   await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 3}px`)); // room to scroll
-  await page.mouse.wheel(0, 500);
+  await page.mouse.wheel(0, 1000); // past the deck hero: the bar pins once the hero above it has scrolled away
   await expect(page.locator('.pillnav.away')).toHaveCount(1);
   await settle(page);
   expect(Math.round((await page.locator('.forgetop').boundingBox())!.y)).toBe(0);

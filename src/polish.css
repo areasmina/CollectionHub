@@ -547,9 +547,12 @@
     order: 1;
     margin: 0 !important;
   }
+  /* In the Forge the cost line parks behind the opaque FORGE bar (z 40) rather than pinning below the header,
+     so the bar and the deck tabs meet as one block with nothing sliding through between them. */
   html.forging .dstrip {
-    position: relative !important;
-    top: auto !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
   }
   .dstrip > .dacts:empty {
     display: none;
@@ -1951,7 +1954,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    Icons instead of CRE / INS / SOR, a narrower lane so the cards get the width back (reading the cards is what matters
    while building), see-through so a card never disappears behind it, and dormant until the list moves: it comes up on
    scroll, on hover and on focus, then fades back. Height stays a full tap target. */
-.lists:has(> .jrail-wrap) { padding-right: 30px; }
+/* Round 3: no lane at all. The rail floats over the cards, see-through enough to read a card through it, and is
+   barely there until the list moves, so the full width belongs to the cards. */
+.lists:has(> .jrail-wrap) { padding-right: 0 !important; }
 .lists > .jrail-wrap { width: 26px; }
 .jrail {
   width: 26px;
@@ -1959,7 +1964,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   border-color: rgba(255, 255, 255, 0.14);
-  opacity: 0.34;
+  opacity: 0.16;
   transition: opacity 0.3s ease;
 }
 .jrail-wrap.awake > .jrail,
@@ -1984,7 +1989,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 @media (max-width: 700px) {
   .deckgrid > .lists:has(> .jrail-wrap),
-  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) { padding-right: 32px !important; }
+  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) { padding-right: 0 !important; }
 }
 
 /* ── Collection: lists, search and view controls as one block (Guillermo, Nov 15) ──
@@ -2210,4 +2215,304 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   z-index: 2;
   background: #0c0c0e;
   box-shadow: -10px 0 10px -6px #0c0c0e;
+}
+
+/* ── The ⋮ on a card tile (Guillermo, Nov 15) ──
+   The three dots stay where they are, on the art's right edge, but they no longer wait to be found: they sit on a
+   narrow opaque strip hard against the card's border, quiet enough to ignore while reading the card and solid enough
+   to see on any art. */
+.ztile > .morebtn,
+.ztile .tacts > .morebtn,
+.ztile:not(.ctile) .tacts > .morebtn,
+.ztile.ctile > .morebtn {
+  opacity: 0.72;
+  right: 0;
+  background: none;
+  text-shadow: none;
+  font-size: 22px;
+  isolation: isolate;
+}
+/* the dark strip is only as wide as the dots; the button itself stays a full 44px to tap */
+.ztile > .morebtn::before,
+.ztile .tacts > .morebtn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 1px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 38px;
+  border-radius: 3px;
+  background: #0b0b0d;
+  z-index: -1;
+}
+.ztile:hover > .morebtn,
+.ztile:focus-within > .morebtn,
+.ztile:hover .tacts > .morebtn,
+.ztile:focus-within .tacts > .morebtn {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    opacity: 0.72;
+    transform: none;
+  }
+}
+
+/* ---------- Forge, phones (Guillermo, Nov 15: "bar breaks when you move up looks bad") ----------
+   The FORGE bar pins at the top the moment you scroll, but the CARDS · ANALYSIS · TO BUY tabs only pin once they
+   reach the bar's underside. For those few pixels of travel a window opened between the two, and the deck's cost
+   line slid through it, which read as a broken second bar. The cost line now parks behind the bar instead, so the
+   two bars meet as one block and nothing passes between them. */
+@media (max-width: 700px) {
+  html.forging .forgetop {
+    margin-bottom: 0 !important;
+  }
+  html.forging .fcube {
+    margin-top: 0 !important;
+  }
+}
+
+/* ── Collection: one cohesive top block, ManaBox style (Guillermo, Nov 15) ──
+   "The menu and boxes there should be more cohesive… that marked area is using space we can use for our cards."
+   The tabs, the list ribbon and the search/view row were three framed boxes with gaps between them, and the title
+   took a third of a phone screen before the binder even started. They are now one panel: a single frame around the
+   stack, hairlines instead of three borders, and everything a notch tighter, so the cards start near the top the way
+   they do in ManaBox. Nothing was removed: every control is still on the same screen. */
+.coll .ctabs:has(+ .coll-listbar) {
+  margin-bottom: 0;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.coll .ctabs:has(+ .coll-listbar) + .coll-listbar {
+  margin: 0 !important;
+  border-top: 1px solid #2a2a33;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.dpage.coll .ctabs:has(+ .coll-listbar) ~ #cpane-cards .collbar {
+  border: 2px solid var(--u-text, #fff);
+  border-top: 1px solid #2a2a33;
+  box-shadow: 5px 5px 0 #000;
+}
+@media (max-width: 700px) {
+  /* The title keeps its ransom letters, at the size a phone can spare, and the binder tag moves up beside them
+     instead of taking a line of its own. */
+  .coll .chead2 .titlewrap {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px !important;
+    padding-bottom: 8px !important;
+  }
+  .coll .chead2 .titlewrap > .ztitle {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .coll .chead2 .titlewrap > .bindermenu {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0 !important;
+  }
+  .coll .chead2 .titlewrap > .bindermenu .bmbtn {
+    max-width: 44vw;
+    padding-left: 10px;
+    padding-right: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* The tag names the binder; the word BINDER above it only said the same thing twice. */
+  .coll .chead2 .titlewrap > .bindermenu .bmbtn .lbl {
+    display: none;
+  }
+  /* The tag now sits at the right end of the title, so its menu hangs from that end and stays on the screen. */
+  .coll .chead2 .titlewrap > .bindermenu .bmenu {
+    left: auto !important;
+    right: 12px !important;
+  }
+  .coll .ctabs {
+    margin: 6px 0 0;
+    padding: 5px;
+    gap: 6px;
+  }
+  .coll .ctab {
+    min-height: 44px;
+    padding: 0 11px;
+  }
+  .coll .coll-listbar {
+    padding: 5px 8px !important;
+  }
+  .dpage.coll .collbar {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+  .dpage.coll .collbar > .dtools.tbar {
+    gap: 6px !important;
+  }
+}
+
+/* ── Collection: swipe between CARDS and ANALYTICS (Guillermo, Nov 15) ──
+   "How will people know they can do that?" The tabs stay on screen, so the swipe is only ever a shortcut; and the
+   first time a binder opens on a device the block leans once and says swipe, which shows the move instead of hiding
+   it in a help page. A tap on either tab, or one swipe, and the hint never returns. */
+.coll .ctabs {
+  position: relative;
+}
+.coll .ctab-hint {
+  position: absolute;
+  right: 8px;
+  bottom: -14px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--u-red, #e60012);
+  color: #fff;
+  font: 400 11px var(--u-mono, monospace);
+  letter-spacing: 0.1em;
+  transform: rotate(-1.5deg);
+  animation: collhintin 0.3s ease both;
+}
+@keyframes collhintin {
+  from {
+    opacity: 0;
+    transform: rotate(-1.5deg) translateX(-6px);
+  }
+}
+.coll.swipehint .ctabset {
+  animation: collnudge 1.5s 0.1s ease-in-out 2 both;
+}
+@keyframes collnudge {
+  0%,
+  62%,
+  100% {
+    transform: translateX(0);
+  }
+  22% {
+    transform: translateX(-14px);
+  }
+  44% {
+    transform: translateX(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coll.swipehint .ctabset,
+  .coll .ctab-hint {
+    animation: none;
+  }
+}
+
+/* ── The island really is glass now, and its panel is a bubble of the same stuff (Guillermo, Nov 15) ──
+   "I don't see frosted glass applied, looks black still": the bar itself and each docked shape were still painting
+   solid black behind the frosted pane, so the blur had nothing to show. The nav is clear, every dock shares one
+   frosted membrane, and the sync panel is that same glass with a little tail pointing back at the island, so the two
+   read as one thing rather than a black box floating near a black bar. */
+.pillnav {
+  background: transparent !important;
+}
+.pillnav.dock-top .island-membrane,
+.pillnav.dock-bottom .island-membrane,
+.pillnav.dock-left .island-membrane,
+.pillnav.dock-right .island-membrane,
+.pillnav.floating .island-membrane,
+.pillnav.collapsed .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 44%, rgba(0, 0, 0, 0.14)),
+    rgba(12, 12, 14, 0.56) !important;
+}
+.pillnav.open.dock-top .island-membrane,
+.pillnav.open.dock-bottom .island-membrane,
+.pillnav.open.dock-left .island-membrane,
+.pillnav.open.dock-right .island-membrane,
+.pillnav.open.floating .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.16)),
+    rgba(10, 10, 12, 0.82) !important;
+}
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .pillnav .island-membrane,
+  .pillnav.dock-top .island-membrane,
+  .pillnav.dock-bottom .island-membrane,
+  .pillnav.dock-left .island-membrane,
+  .pillnav.dock-right .island-membrane,
+  .pillnav.floating .island-membrane,
+  .pillnav.collapsed .island-membrane,
+  .pillnav.open .island-membrane {
+    background: rgba(13, 13, 15, 0.94) !important;
+  }
+}
+/* The panel: the island's own glass, a hair denser because it holds words, with a tail into the bar. */
+.island-drawer {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.18)),
+    rgba(12, 12, 14, 0.74) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.island-drawer::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  background: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+.pillnav.dock-bottom .island-drawer {
+  bottom: calc(100% + 7px);
+}
+.pillnav.dock-bottom .island-drawer::after {
+  bottom: -9px;
+  transform: translateX(-50%) rotate(45deg);
+  border-top: 0;
+  border-left: 0;
+}
+.pillnav.dock-top .island-drawer {
+  top: calc(100% + 7px);
+}
+.pillnav.dock-top .island-drawer::after {
+  top: -9px;
+  transform: translateX(-50%) rotate(45deg);
+  border-bottom: 0;
+  border-right: 0;
+}
+.pillnav.dock-left .island-drawer::after,
+.pillnav.dock-right .island-drawer::after,
+.pillnav.floating .island-drawer::after {
+  display: none;
+}
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .island-drawer {
+    background: rgba(13, 13, 15, 0.96) !important;
+  }
+}
+/* The docked shapes and the two corner "ears" painted their own black, which is what the glass was sitting on. */
+.pillnav.dock-top,
+.pillnav.dock-bottom,
+.pillnav.dock-left,
+.pillnav.dock-right,
+.pillnav.floating,
+.pillnav.collapsed {
+  background: transparent !important;
+}
+.pillnav.dock-top::before {
+  background: radial-gradient(circle at 0 16px, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+.pillnav.dock-top::after {
+  background: radial-gradient(circle at 16px 16px, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+.pillnav.dock-bottom::before {
+  background: radial-gradient(circle at 0 0, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+.pillnav.dock-bottom::after {
+  background: radial-gradient(circle at 16px 0, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
 }

@@ -108,14 +108,17 @@ test('While the page moves the island turns see-through, then solid again at res
   await open(page, 'top', 'collection');
   await page.waitForSelector('.timg');
   await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 3}px`));
-  const bg = () => page.locator('.pillnav').evaluate((e) => getComputedStyle(e).backgroundColor);
-  expect(await bg()).toBe('rgb(0, 0, 0)');
+  // Since Nov 15 the island is frosted glass rather than pure black, so its own pane is what thins out and fills in.
+  const bg = () => page.locator('.pillnav .island-membrane').evaluate((e) => getComputedStyle(e).backgroundColor);
+  const alpha = (c: string) => Number(c.match(/rgba?\(([^)]+)\)/)?.[1].split(',')[3] ?? 1);
+  expect(alpha(await bg())).toBeGreaterThan(0.3); // at rest: glass you cannot read through
+  expect(alpha(await bg())).toBeLessThan(1); // but never solid black again
   // keep the page moving while we look (a slow machine could otherwise let it come to rest between two looks)
   const moving = () => page.evaluate(() => (window.scrollBy(0, 8), document.documentElement.classList.contains('scrolling')));
   await expect.poll(moving).toBe(true);
-  await expect.poll(async () => (await moving(), bg()), { intervals: [100] }).toBe('rgba(0, 0, 0, 0.5)');
+  await expect.poll(async () => (await moving(), alpha(await bg())), { intervals: [100] }).toBe(0);
   await expect(page.locator('html.scrolling')).toHaveCount(0, { timeout: 2000 });
-  await expect.poll(bg).toBe('rgb(0, 0, 0)');
+  await expect.poll(async () => alpha(await bg())).toBeGreaterThan(0.3);
 });
 
 test('Detach and attach: the island glides from the finger to its new edge instead of jumping', async ({ page }) => {

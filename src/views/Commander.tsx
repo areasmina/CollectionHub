@@ -60,7 +60,6 @@ const AGGRESSION_OF: Record<string, 'patient' | 'hungry' | 'lethal'> = { '': 'hu
 const SHOW_AS_COMMANDER = false;
 type View = 'grid' | 'list' | 'compact';
 
-const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
 
 /** Tags shown before "+N MORE": EDHREC's biggest archetypes. */
@@ -737,7 +736,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
 
         {/* The one strip: POWER · what the deck needs and costs · short / TO BUY / FORGE. Everything else is behind ⋮.
             It stays while a new power or theme loads (no jump), saying so in its status line. */}
@@ -918,6 +916,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
           <>
+          {/* The FORGE bar sits directly above the deck tabs (Guillermo, Nov 15: "bar breaks when you move up"):
+              with nothing between them the two pin as one block, and the strip scrolls away behind it. */}
+  {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
           {forging && <ForgeCube grid={cubeRef} buyCount={missing.length} />}
           <div ref={cubeRef} className={`deckgrid after-sw${forging ? ' forge-split' : ''}${forging && !anExpanded ? ' an-contracted' : ''}${forging && !sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
@@ -1263,10 +1264,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                               const now = repl ?? c.name;
                               const pin = pinOf(pins, now);
                               const mark = repl ? `${slot!.why === 'pin' ? 'PIN' : slot!.why === 'never' ? 'NEVER' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? 'always in' : pin === 'out' ? 'no card fits' : undefined;
-                              // EDHREC inclusion: the card's own numbers, or (average deck cards carry none) the commander page's for the card shown
-                              const incl = c.potential ? (c.decks ?? 0) / c.potential : recInfo.get(norm(now))?.incl;
-                              const many = c.qty && c.qty > 1 ? `×${c.qty}` : '';
-                              const stat = incl !== undefined ? `${pct(incl)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}${many ? ` · ${many}` : ''}` : many;
+                              // No play rate under a card, in any view (Guillermo, Nov 15): it repeated itself down the
+                              // whole page and added noise. The number still decides the order, and still shows where
+                              // it is the point: the swap picker and TO BUY. A card's own line is just its copies.
+                              const stat = c.qty && c.qty > 1 ? `×${c.qty}` : '';
                               return (
                                 <Item
                                   key={c.name}

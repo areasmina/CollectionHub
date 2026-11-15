@@ -1,27 +1,29 @@
 import { expect, test } from '@playwright/test';
-import { fits, mockWorld, seed } from './mock';
+import { mockWorld, seed } from './mock';
 
-/** EDHREC inclusion % per card (roadmap P2.1): the average deck shows how many EDHREC decks play each card. */
-test('Average deck cards show EDHREC inclusion, basics keep their count', async ({ page }) => {
+/**
+ * No play rate under a card (Guillermo, Nov 15): "remove bottom text showing a percentage not needed".
+ * The number still orders the page and still shows in the swap picker and TO BUY, where it is the point.
+ */
+test('Average deck cards carry no play rate, in any view; basics keep their count', async ({ page }) => {
   await mockWorld(page); // the commander page: every top card in 1000 of 4000 decks
   await seed(page);
   await page.locator('.ccard').first().click();
   const tile = (n: string) => page.locator('.ztile', { has: page.locator('.tname', { hasText: n }) }).first();
-  await expect(tile('Lotus Cobra').locator('.tnote')).toHaveText('25% of decks');
-  await expect(tile('Sol Ring').locator('.tnote')).toHaveText('25% of decks');
-  await expect(tile('Forest').locator('.tnote')).toHaveText('×10'); // not on the commander page: just the copies
-  await fits(page, ['.ztile .tnote']);
+  await expect(tile('Lotus Cobra').locator('.tnote')).toHaveCount(0);
+  await expect(tile('Sol Ring').locator('.tnote')).toHaveCount(0);
+  await expect(tile('Forest').locator('.tnote')).toHaveText('\u00d710'); // the copies you need are not a play rate
+  await expect(page.locator('.ztile .tnote', { hasText: 'of decks' })).toHaveCount(0);
 });
 
-test('Compact list: the inclusion line sits under the name and never squeezes it', async ({ page }) => {
-  await mockWorld(page);
-  await seed(page);
-  await page.evaluate(() => localStorage.setItem('ch:cardview', 'compact'));
-  await page.reload();
-  await page.locator('.ccard').first().click();
-  const row = page.locator('ul.zcompact li.zrow', { has: page.locator('.nm', { hasText: 'Lotus Cobra' }) }).first();
-  await expect(row.locator('.note')).toHaveText('25% of decks');
-  const nm = row.locator('.nm');
-  expect(await nm.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true); // the name is not cut off
-  await fits(page, ['ul.zcompact li.zrow .note']);
-});
+for (const view of ['list', 'compact'] as const) {
+  test(`${view} view: no play rate under a card either`, async ({ page }) => {
+    await mockWorld(page);
+    await seed(page);
+    await page.evaluate((v) => localStorage.setItem('ch:cardview', v), view);
+    await page.reload();
+    await page.locator('.ccard').first().click();
+    await expect(page.locator('.zrow .nm', { hasText: 'Lotus Cobra' }).first()).toBeVisible();
+    await expect(page.getByText('of decks')).toHaveCount(0);
+  });
+}
