@@ -1442,22 +1442,21 @@ export function Decks(s: Shared) {
                 ))}
               </div>
             )}
+            {/* SIZE joins the filters row (Guillermo, Nov 15): it used to float alone over the decks */}
+            {decks.length > 0 && (
+              <button
+                type="button"
+                className="u-btn ghost qzoom-btn dsize"
+                title={dzoom === 's' ? 'Size: Small (3 across on phones). Tap for Medium' : dzoom === 'm' ? 'Size: Medium. Tap for Large' : 'Size: Large. Tap for Small'}
+                aria-label={`Deck size ${dzoom.toUpperCase()}: tap to cycle size`}
+                onClick={() => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's'))}
+              >
+                SIZE {dzoom.toUpperCase()}
+              </button>
+            )}
           </div>
         </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
-        {decks.length > 0 && (
-          <div className="dsizebar">
-            <button
-              type="button"
-              className="u-btn ghost qzoom-btn"
-              title={dzoom === 's' ? 'Size: Small (3 across on phones). Tap for Medium' : dzoom === 'm' ? 'Size: Medium. Tap for Large' : 'Size: Large. Tap for Small'}
-              aria-label={`Deck size ${dzoom.toUpperCase()}: tap to cycle size`}
-              onClick={() => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's'))}
-            >
-              SIZE {dzoom.toUpperCase()}
-            </button>
-          </div>
-        )}
         <ul className="dgrid cgrid" data-zoom={dzoom}>
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
@@ -1545,7 +1544,7 @@ export function Decks(s: Shared) {
                     {broken && (
                       <span className="dlegal" title={broken.says}>
                         <span aria-hidden="true">
-                          <i>NOT LEGAL ·</i> <i>{broken.label}</i>
+                          <i>NOT LEGAL</i> <i>· {broken.label}</i>
                         </span>
                         <span className="vh">{broken.says}</span>
                       </span>

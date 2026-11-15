@@ -131,3 +131,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   rather than pure black. Its shape, moves and content are unchanged.
 - The Forge section rail is ManaBox-like: icons instead of CRE / INS / SOR, a narrower lane, see-through, and dormant
   until the list moves (it wakes on scroll, hover or focus, then fades). The letters stay for screen readers.
+- The Forge toolbar takes the shape it has on phones whenever the card list shares the width: ⋮ · search · sort on one
+  row, the chips, view buttons and SIZE on a quiet row under it that slides sideways, with a soft edge where it carries
+  on. Nothing overlaps the ⋮ or the search any more.
+- The deck header closes up a notch around the ACTIVE badge: name, badge, facts and links read as one block.
+- My Decks: SIZE joins the filter row instead of floating over the decks, a deck tile keeps its facts and its owned
+  mark on one line, tags to one line, and NOT LEGAL becomes a tape on the card's corner.

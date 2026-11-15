@@ -2057,3 +2057,157 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   letter-spacing: 0.04em;
   color: #cfcfe0;
 }
+
+/* ── The Forge toolbar, one cohesive bar (Guillermo, Nov 15) ──
+   In the Forge the card list shares the width with ANALYSIS and SUGGESTIONS, so the one bar had more in it than it
+   could hold: the ownership chips spilled over the ⋮ button, the search box was squeezed to a sliver (its magnifier
+   ended up sitting on the sort menu) and nothing lined up. It now takes the shape it already takes on phones: a first
+   row of ⋮ · search · sort, and one quiet row under it for the chips, the view buttons and SIZE, which slides
+   sideways when there is more than fits. */
+@media (min-width: 701px) {
+  .deckgrid.forge-split .lists > .dtools.tbar {
+    flex-wrap: wrap !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .deckgrid.forge-split .lists > .dtools.tbar > .tbmore { order: 1; flex: none; }
+  .deckgrid.forge-split .lists > .dtools.tbar > .tsearch {
+    order: 2;
+    flex: 1 1 140px !important;
+    min-width: 120px !important;
+  }
+  .deckgrid.forge-split .lists > .dtools.tbar > .sortsel {
+    order: 3;
+    flex: 0 1 auto;
+    max-width: 48%;
+  }
+  html.forging .deckgrid.forge-split .lists > .dtools.tbar > .tquick,
+  html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .lists > .dtools.tbar > .tquick,
+  .deckgrid.forge-split .lists > .dtools.tbar > .tquick {
+    order: 4;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 48px;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    gap: 8px !important;
+    padding: 5px 8px !important;
+    border: 0 !important;
+    border-top: 1px solid var(--u-line2, #2a2a36) !important;
+  }
+  .deckgrid.forge-split .lists > .dtools.tbar > .tquick::-webkit-scrollbar { display: none; }
+  /* a soft edge says there is more to the right, instead of a label cut in half */
+  .deckgrid.forge-split .lists > .dtools.tbar > .tquick {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent 100%);
+  }
+  .deckgrid.forge-split .lists > .dtools.tbar > .tquick > * { flex: 0 0 auto !important; }
+}
+
+/* ── The deck header: tighter around the ACTIVE badge (Guillermo, Nov 15) ──
+   The name, the ACTIVE badge, the facts line and the links stood a full step apart, which left a band of dead space
+   beside the badge and made the four lines read as four separate things instead of one header. They close up by a
+   notch each: still four lines, one block. */
+.forgemain .vhero .vname,
+.dhero .vname {
+  gap: 6px !important;
+}
+.dhero .vinfo {
+  gap: var(--s2, 8px);
+}
+.dhero .vmeta {
+  gap: 6px 14px;
+}
+.dhero .vmatch {
+  margin-top: 2px;
+}
+
+/* ── My Decks: a calmer deck tile and one control row (Guillermo, Nov 15) ──
+   The tile said the same deck five times over: name, match, tags, facts, ALL OWNED, NOT LEGAL, each on a line of its
+   own. Now the facts and the owned mark share one line, the tags keep to one line, and NOT LEGAL is a tape on the
+   card's corner where the warning belongs — the picture gets the room back. SIZE joins the filter row instead of
+   floating over the decks. */
+.dlist .dfilters {
+  align-items: center;
+}
+.dlist .dfilters > .dsize {
+  margin-left: auto;
+  flex: none;
+}
+.dgrid .dtile .cfoot {
+  flex-wrap: nowrap;
+  min-width: 0;
+  justify-content: space-between;
+}
+.dgrid .dtile .cfoot > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+.dgrid .dtile .cfoot .cstate {
+  flex: none;
+  font-size: 10px;
+  padding: 2px 5px;
+  letter-spacing: 0.04em;
+}
+.dgrid .dtile .cfoot {
+  gap: 6px;
+}
+.dgrid .dtile .dtags {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
+}
+.dgrid .dtile .dtags > * {
+  flex: 0 0 auto;
+}
+/* NOT LEGAL moves onto the card's corner: a tape, like COMMANDER on a collection card */
+.dgrid .dtile {
+  position: relative;
+}
+.dgrid .dtile .dlegal {
+  position: absolute;
+  top: 6px;
+  left: -4px;
+  z-index: 3;
+  margin: 0;
+  max-width: calc(100% - 12px);
+  font-size: 10px;
+  padding: 2px 7px;
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* On a phone the deck tiles are three across, so the facts line gets its own row again rather than being cut, and the
+   NOT LEGAL tape keeps just the warning (the reason is still read out and shown on a press). */
+@media (max-width: 700px) {
+  .dgrid .dtile .cfoot {
+    flex-wrap: wrap;
+  }
+  .dgrid .dtile .cfoot > span:first-child {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .dgrid .dtile .dlegal i + i {
+    display: none;
+  }
+}
+/* SIZE stays in reach while the status and tag chips slide under it */
+.dlist .dfilters > .dsize {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: #0c0c0e;
+  box-shadow: -10px 0 10px -6px #0c0c0e;
+}

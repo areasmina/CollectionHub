@@ -71,6 +71,9 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Collection tabs: the page opens on CARDS (cards on the first screen, every time), with the tiles, Top 3 and charts on ANALYTICS; + DECK and IMPORT on the tab row. Replaces the SHOW / HIDE STATS fold | In review | this PR | `e2e/collection-tabs.spec.ts` (3 sizes) |
 | Rarity filter: Common / Uncommon / Rare / Mythic in the Collection filter sheet, with its own chip | In review | this PR | `src/lib/collfilter.test.ts`, `e2e/rarity-filter.spec.ts` (3 sizes) |
 | Forge section rail: icons instead of letters, see-through, narrower, dormant until the list moves | In review | this PR | `e2e/jump-rail.spec.ts` (3 sizes) |
+| Forge toolbar: ⋮ · search · sort on one row, chips / views / SIZE on a sliding row under it, nothing overlapping | In review | this PR | `e2e/forge.spec.ts`, `e2e/view-on-bar.spec.ts` (3 sizes) |
+| My Decks: SIZE in the filter row, calmer deck tiles (facts and owned mark on one line, NOT LEGAL as a corner tape) | In review | this PR | `e2e/workbench-features.spec.ts`, `e2e/deck-legal.spec.ts` (3 sizes) |
+| Deck colour wheel: one rainbow circle in the deck menu, arrow keys turn the hue | In review | this PR | `src/lib/deckcolor.test.ts`, `e2e/workbench-features.spec.ts` |
 | Dynamic Island: frosted glass by default (semi-transparent, matte, one soft gloss), not pure black | In review | this PR | `e2e/island-*.spec.ts` (3 sizes) |
 
 ## Decks and the Forge
