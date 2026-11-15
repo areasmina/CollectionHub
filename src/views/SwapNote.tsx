@@ -24,6 +24,13 @@ export interface SwapOption {
 function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; missing: SubCard; notes?: { text: string; warn?: boolean }[]; onPick: () => void; onLook: (src?: string) => void }) {
   const timer = useRef<number>(undefined);
   const held = useRef(false);
+  // The swap list reads at a glance (Guillermo, Nov 15): lift and inclusion as numbers, then at most two reasons in words.
+  // The numbers and "you own" have their own spots, so they're not repeated among the reasons.
+  const signal = o.sub.lift ?? undefined;
+  const lift = signal !== undefined ? `${signal.toFixed(1)}× lift` : o.sub.synergy ? `${o.sub.synergy > 0 ? '+' : ''}${Math.round(o.sub.synergy * 100)}% synergy` : undefined;
+  const why = reasonsFor(missing, o.sub, o.owned)
+    .filter((r) => !/x lift$| synergy$|^In \d+% of decks$|^You own/.test(r))
+    .slice(0, 2);
   return (
     <li>
       <button
@@ -42,18 +49,29 @@ function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; mis
         onPointerCancel={() => (clearTimeout(timer.current), showPreview(null))}
       >
         {o.img && <img src={o.img} alt="" loading="lazy" />}
-        <span>
-          <b>{o.sub.name}</b>
-          <span className="whys">
-            {notes.map((n) => (
-              <span key={n.text} className={n.warn ? 'cwarn' : 'cgain'}>
-                {n.text}
-              </span>
-            ))}
-            {reasonsFor(missing, o.sub, o.owned).map((r) => (
-              <span key={r}>{r}</span>
-            ))}
+        <span className="obody">
+          <span className="ohead">
+            <b>{o.sub.name}</b>
+            {o.owned > 1 && <small className="oown">×{o.owned}</small>}
           </span>
+          {/* EDHREC's two numbers first: how much more this commander's decks play it (lift) and how many play it */}
+          {(lift !== undefined || o.sub.incl !== undefined) && (
+            <span className="ostats">
+              {lift !== undefined && <i className={`olift${(signal ?? 0) >= 1.25 || (o.sub.synergy ?? 0) >= 0.05 ? ' hi' : ''}`}>{lift}</i>}
+              {o.sub.incl !== undefined && <i className="oincl">{Math.round(o.sub.incl * 100)}% of decks</i>}
+            </span>
+          )}
+          {/* then one plain line of why it fits (the two strongest reasons), and combo notes when there are any */}
+          {why.length > 0 && <span className="owhy">{why.join(' · ')}</span>}
+          {notes.length > 0 && (
+            <span className="whys">
+              {notes.map((n) => (
+                <span key={n.text} className={n.warn ? 'cwarn' : 'cgain'}>
+                  {n.text}
+                </span>
+              ))}
+            </span>
+          )}
           {o.inUse && (
             <span className="inchip" style={o.inUse.colour ? ({ '--dc': o.inUse.colour } as React.CSSProperties) : undefined}>
               <i aria-hidden="true" />

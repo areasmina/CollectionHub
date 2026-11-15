@@ -860,6 +860,9 @@ html.forging .vhero {
   ul.zcompact > li.zrow .zrow-missing-badge,
   ul.zcompact > li.zrow .swap-lbl { display: none !important; }
   ul.zcompact > li.zrow .zrow-sub:not(:has(.swapmark, .bannedtag, .tagother, .note)) { display: none !important; }
+  /* EDHREC inclusion ("25% of decks") goes under the name, so the name keeps the row's full width */
+  ul.zcompact > li.zrow .info:has(.zrow-sub .note) { flex-direction: column !important; align-items: stretch !important; gap: 2px !important; }
+  ul.zcompact > li.zrow .info:has(.zrow-sub .note) .zrow-sub { line-height: 1.1 !important; }
   ul.zcompact > li.zrow .acts { display: flex !important; align-items: center !important; gap: 4px !important; }
   ul.zcompact > li.zrow .acts .swapbtn,
   ul.zcompact > li.zrow .acts .morebtn { width: 34px !important; min-width: 34px !important; height: 40px !important; min-height: 40px !important; padding: 0 !important; }
@@ -1636,3 +1639,66 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 @media (max-width: 700px) {
   .vhero .vname { align-self: start; padding-top: 6px; }
 }
+
+/* ---------- Collection stats on phones (Guillermo, Nov 15): cards · unique · commanders as one even row of three,
+   no full-width red banner, no dead space ---------- */
+@media (max-width: 700px) {
+  .coll .stats {
+    gap: 10px !important;
+  }
+  .coll .stats > .stat {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 10px 10px 8px !important;
+  }
+  .coll .stats > .stat b {
+    font-size: clamp(26px, 8vw, 34px) !important;
+  }
+  .coll .stats > .stat span:not(.worn, .spray) {
+    font-size: 12px !important;
+    margin-top: 2px !important;
+    line-height: 1.15 !important;
+  }
+  .coll .stats > :not(.stat) {
+    flex: 1 1 100% !important;
+  }
+}
+
+/* ---------- Swap list (Guillermo, Nov 15): easy to read at a glance. Name, then EDHREC's lift and inclusion as two
+   numbers (lift on the same yellow tape as prices when it's strong), then one plain line of why ---------- */
+.swapnote li button .obody { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
+.swapnote li button .ohead { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.swapnote li button .ohead b { margin: 0 !important; font: 400 16px/1.15 var(--u-display, sans-serif) !important; letter-spacing: 0.02em !important; overflow-wrap: anywhere; }
+.swapnote li button .oown { flex: none; font: 400 11px/1 var(--u-mono, monospace); color: #39ff88; }
+.swapnote li button .ostats { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.swapnote li button .ostats i { font: 700 12px/1 var(--u-mono, monospace); font-style: normal; color: #cfcfe0; }
+.swapnote li button .ostats .olift { padding: 3px 6px; border: 1px solid #4a4a5a; color: #cfcfe0; }
+.swapnote li button .ostats .olift.hi { background: #ffcc00; border-color: #ffcc00; color: #141414; transform: rotate(-1.5deg); }
+.swapnote li button .ostats .oincl { color: #9a9aac; font-weight: 400; }
+.swapnote li button .owhy { font: 400 11px/1.35 var(--u-mono, monospace); color: #9a9aac; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.swapnote li button .whys { margin-top: 0 !important; }
+
+/* ---------- Commander header (Guillermo, Nov 15): the salt list opens over the links and tiles, never under them;
+   READINESS · BRACKET FIT · SALT LEVEL are three equal tiles, same size whatever their text ---------- */
+.vhero .vmeta:has(details[open]) {
+  position: relative;
+  z-index: 60;
+}
+.vhero .vtiles {
+  display: grid !important;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+.vhero .vtile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.vhero .vtile > summary {
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  justify-content: flex-start;
+}
+

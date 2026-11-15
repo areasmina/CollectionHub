@@ -1263,7 +1263,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                               const now = repl ?? c.name;
                               const pin = pinOf(pins, now);
                               const mark = repl ? `${slot!.why === 'pin' ? 'PIN' : slot!.why === 'never' ? 'NEVER' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? 'always in' : pin === 'out' ? 'no card fits' : undefined;
-                              const stat = c.potential ? `${pct((c.decks ?? 0) / c.potential)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}` : c.qty && c.qty > 1 ? `×${c.qty}` : '';
+                              // EDHREC inclusion: the card's own numbers, or (average deck cards carry none) the commander page's for the card shown
+                              const incl = c.potential ? (c.decks ?? 0) / c.potential : recInfo.get(norm(now))?.incl;
+                              const many = c.qty && c.qty > 1 ? `×${c.qty}` : '';
+                              const stat = incl !== undefined ? `${pct(incl)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}${many ? ` · ${many}` : ''}` : many;
                               return (
                                 <Item
                                   key={c.name}

@@ -115,8 +115,8 @@ EDHREC JSON (commander, average-deck, salt pages), Frankfurter/ECB (USD→CAD). 
 
 ## Priority 2: data quality and analysis
 
-1. 🟡 EDHREC attribution: deck counts shown on commander pages; timestamp, archetype size and inclusion % per card not
-   shown.
+1. 🟡 EDHREC attribution: deck counts shown on commander pages; inclusion % per card shown on every average-deck card
+   (PR #85). Timestamp and archetype size not shown.
 2. 🟡 Pricing: provider (TCGplayer via Scryfall), rate (ECB, date), method and fetch dates shown. Missing: Scryfall's
    own update time (not in its API), original USD next to CA$.
 3. 🟡 Salt ✅ (EDHREC). Bracket estimate ✅ on the deck page (`bracketOf`, tested): Game Changers (Scryfall
