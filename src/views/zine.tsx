@@ -6,12 +6,16 @@ const frac = (x: number) => x - Math.floor(x);
 /** Ransom-note title ("What can I build?" reference): seeded cut-out letters, cream ~62% / black ~38%, never two black in a row,
  * halftone dots fading in from one edge of each tile. */
 /** `swap`: words (by index) drawn as something else, e.g. the eye standing in for "I" in WHAT CAN I BUILD?. */
-export function Ransom({ text, size: wanted, seed, breakWords, swap }: { text: string; size: number; seed: number; breakWords?: boolean; swap?: Record<number, React.ReactNode> }) {
+/** The width a phone hero's name has beside the 112px card: the screen less its gutters, the card and the gap. */
+export const heroRoom = () => window.innerWidth - 32 - 112 - 20;
+
+export function Ransom({ text, size: wanted, seed, breakWords, swap, room }: { text: string; size: number; seed: number; breakWords?: boolean; swap?: Record<number, React.ReactNode>; room?: number }) {
   // Unless words may break (commander banner), shrink until the longest word fits the screen (each tile is ~1× size wide).
   // Breaking mid-word reads well on wide screens only; phones keep whole words.
   breakWords = breakWords && window.innerWidth > 700;
   const longest = breakWords ? 9 : Math.max(...text.split(' ').map((w) => w.length));
-  const size = Math.max(18, Math.min(wanted, Math.floor((window.innerWidth - 64) / (longest * 1.02))));
+  // room: the width the name really has (a phone hero shares its row with the card); the screen less its gutters otherwise
+  const size = Math.max(18, Math.min(wanted, Math.floor((room ?? window.innerWidth - 64) / (longest * 1.02))));
   const words = useMemo(() => {
     const rnd = (n: number) => frac(Math.sin(n * 12.9898 + seed * 78.233) * 43758.5453);
     // Halftone dots fading in from one edge of each tile (authentic print artifact)

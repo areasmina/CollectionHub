@@ -48,7 +48,7 @@ import { AGGRESSION } from '../brain/win';
 import { deckStats } from '../lib/deckstats';
 import { CardMenu, type Toast } from './CardMenu';
 import { JumpRail, jumpId } from './JumpRail';
-import { CompactIcon, Pips, Ransom, RiseBars, GridIcon, ListIcon } from './zine';
+import { CompactIcon, Pips, Ransom, heroRoom, RiseBars, GridIcon, ListIcon } from './zine';
 import { Menu, Meter, Sheet } from './parts';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
@@ -701,7 +701,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             <div className="vname">
               <span className="vslash" aria-hidden="true" />
               <h1 aria-label={label}>
-                <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 26 : 32) : label.length > 28 ? 40 : 52} seed={11} />
+                <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 26 : 32) : label.length > 28 ? 40 : 52} seed={11} room={narrow ? heroRoom() : undefined} />
               </h1>
             </div>
             {/* the quiet monospace line: colours · rank · decks · salt · your decks with this commander; then EDHREC · COMBOS · ARCHIDEKT */}

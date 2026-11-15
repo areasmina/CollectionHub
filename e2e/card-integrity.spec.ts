@@ -7,15 +7,24 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-test('Commander and deck pages: the ⋯ OPTIONS tag hangs under the commander card, never on it', async ({ page }) => {
+test('Commander and deck pages: the ⋯ OPTIONS tag hides at rest and shows on the card\'s top-right corner, over its border only', async ({ page }) => {
+  // Owner's call (Nov 15): OPTIONS is a small tag on the card's top-right corner, hidden until the card is pointed at or
+  // selected, like Collection's price tag. It replaced "hang under the card" (Nov 13); the card's text stays uncovered.
   const check = async () => {
     const btn = page.locator('.cmdrbtn').first();
+    const tag = btn.locator('.cmdrmore');
     await expect(btn).toBeVisible();
-    // both boxes in one read: the page can still be scrolling into place after a load, and two separate reads would
-    // measure the card and the tag at different scroll positions
-    const [imgBottom, tagTop] = await btn.evaluate((b) => [b.querySelector('img')!.getBoundingClientRect().bottom, b.querySelector('.cmdrmore')!.getBoundingClientRect().top]);
-    expect(tagTop).toBeGreaterThanOrEqual(imgBottom - 1); // below the card's bottom edge
+    await page.mouse.move(0, 0);
+    await expect(tag).toHaveCSS('opacity', '0'); // hidden at rest
+    await btn.focus(); // selected (a tap or the keyboard)
+    await expect(tag).toHaveCSS('opacity', '1');
+    // both boxes in one read: the page can still be scrolling into place after a load
+    const [img, t] = await btn.evaluate((b) => [b.querySelector('img')!.getBoundingClientRect().toJSON(), b.querySelector('.cmdrmore')!.getBoundingClientRect().toJSON()]);
+    expect(t.right).toBeGreaterThan(img.right - 2); // on the right-hand corner
+    expect(t.top).toBeLessThan(img.top); // starts above the card
+    expect(t.bottom).toBeLessThanOrEqual(img.top + 8); // and covers no more than the card's outer border
     await expect(btn.locator('.cmdrhint')).toHaveCount(0); // the old tape over the rules text is gone
+    await btn.blur();
   };
   await page.locator('.ccard').first().click();
   await check();

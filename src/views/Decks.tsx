@@ -39,7 +39,7 @@ import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
 import { CardLine, CardTile, CmdrCard, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
-import { CompactIcon, Pips, Ransom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
+import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
 import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
@@ -833,7 +833,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <div className="vname">
               <span className="vslash" aria-hidden="true" />
               <h1 aria-label={deck.name} {...heroPress}>
-                <Ransom text={deck.name.toUpperCase().slice(0, 48)} size={narrow ? (deck.name.length > 16 ? 22 : 28) : deck.name.length > 28 ? 34 : 46} seed={33} />
+                {/* underscores read as spaces in the ransom name (Obeka_B_Max_Power), so a long file-style name wraps by word */}
+                <Ransom text={deck.name.replace(/_+/g, ' ').trim().toUpperCase().slice(0, 48)} size={narrow ? (deck.name.length > 16 ? 22 : 28) : deck.name.length > 28 ? 34 : 46} seed={33} room={narrow && cmdr?.img ? heroRoom() : undefined} />
               </h1>
               {/* Active / off sits at the end of the name, in the deck's own colour */}
               <DeckLight deck={deck} />

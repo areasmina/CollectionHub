@@ -23,6 +23,7 @@ test('EDHREC, COMBOS and ARCHIDEKT sit together on the commander page and the de
   await expect(meta.locator('.vlinks a')).toHaveText(['EDHREC ↗', 'COMBOS ↗', 'ARCHIDEKT ↗']);
   // the OPTIONS tag under the commander card is Collection's price tape: yellow, torn ends, the price tag's type
   const tag = page.locator('.cmdrbtn .cmdrmore').first();
+  await page.locator('.cmdrbtn').first().focus(); // the tag shows when the card is selected
   await expect(tag).toHaveCSS('background-color', 'rgb(255, 204, 0)');
   await expect(tag).not.toHaveCSS('clip-path', 'none');
   const priceFont = await page.evaluate(() => {
