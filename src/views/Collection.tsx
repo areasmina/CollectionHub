@@ -88,11 +88,6 @@ const TopWidget = memo(function TopWidget({ entries, cards }: { entries: Entry[]
           TOP 3 · {p.title}
         </span>
         <small>{p.sub}</small>
-        <span className="twdots" aria-hidden="true">
-          {panels.map((x, j) => (
-            <i key={x.key} className={j === i % panels.length ? 'on' : ''} />
-          ))}
-        </span>
       </div>
       <ul key={p.key} aria-live="polite">
         {p.rows.length ? (

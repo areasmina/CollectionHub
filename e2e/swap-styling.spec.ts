@@ -28,11 +28,13 @@ test('Swap window: dark neo-brutalist styling, clean composition, refined undo b
   const pickItem = note.locator('.picks button', { hasText: 'Arcane Signet' }).first();
   await expect(pickItem).toBeVisible();
 
-  // Check reason badges are not stark white
-  const whys = pickItem.locator('.whys > span');
-  await expect(whys.first()).toBeVisible();
-  const badgeBg = await whys.first().evaluate((el) => window.getComputedStyle(el).backgroundColor);
-  expect(badgeBg).not.toBe('rgb(255, 255, 255)');
+  // Each pick reads at a glance (Guillermo, Nov 15): EDHREC's lift and play rate as numbers, then one plain line of why,
+  // nothing on a stark white badge
+  await expect(pickItem.locator('.ostats .olift')).toHaveText(/(× lift|% synergy)$/);
+  await expect(pickItem.locator('.ostats .oincl')).toHaveText('20% of decks');
+  await expect(pickItem.locator('.owhy')).toBeVisible();
+  expect(await pickItem.locator('.owhy').evaluate((el) => el.textContent!.split(' · ').length)).toBeLessThanOrEqual(2);
+  for (const sel of ['.olift', '.owhy']) expect(await pickItem.locator(sel).evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgb(255, 255, 255)');
 
   // Take screenshot of standard swap window
   await page.screenshot({

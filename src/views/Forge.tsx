@@ -56,8 +56,21 @@ function useForgeKeys(onLeave: () => void, onUndo?: () => void) {
 /** The Forge's own top bar: FORGE stamp, the deck, the last undo, SAVE (commander page) and ✕ LEAVE. */
 export function ForgeTop({ label, sub, undo, onLeave, onSave, saving, reserved }: { label: string; sub?: string; undo?: { text: string; run: () => void }; onLeave: () => void; onSave?: () => void; saving?: boolean; reserved?: boolean }) {
   useForgeKeys(onLeave, undo?.run);
+  // The bar's real height (two rows on a phone, so the whole deck name fits) is what the sticky deck tabs sit under.
+  const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el || typeof ResizeObserver !== 'function') return;
+    const root = document.documentElement.style;
+    const ro = new ResizeObserver(() => root.setProperty('--forgetop-h', `${Math.round(el.getBoundingClientRect().height)}px`));
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.removeProperty('--forgetop-h');
+    };
+  }, []);
   return (
-    <div className="forgetop" role="toolbar" aria-label="Forge">
+    <div className="forgetop" role="toolbar" aria-label="Forge" ref={bar}>
       <span className="fstamp" aria-hidden="true">
         FORGE
       </span>
@@ -169,11 +182,6 @@ export function ForgeCube({ grid, buyCount }: { grid: { current: HTMLElement | n
           {label === 'TO BUY' && buyCount ? <small>{buyCount}</small> : null}
         </button>
       ))}
-      <span className="fcube-dots" aria-hidden="true">
-        {FACES.map((_, i) => (
-          <i key={i} className={face === i ? 'on' : ''} />
-        ))}
-      </span>
     </div>
   );
 }

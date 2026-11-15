@@ -105,3 +105,11 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   corner, typewriter gritty font (Special Elite).
 - Deck strip on phones: deck cost first, TO BUY on its own row, BEST FOR MY CARDS and FORGE side by side as equals.
 - Saved-deck hero: underscores in a deck name show as spaces in the ransom title; ACTIVE sits under the name, off the slash.
+
+## 2026-11-15: Header tiles, collection stats, swap list, Forge bar (Guillermo)
+
+- READINESS, BRACKET FIT and SALT LEVEL are always three equal tiles. Dropdowns (salt list) open above everything.
+- Collection stats on phones: cards, unique and commanders as one even row of three; no full-width banner.
+- No carousel diamonds (Forge CARDS · ANALYSIS · TO BUY tabs, Collection highlights): the labels already say where you are.
+- Swap window picks: name, then EDHREC lift and play rate as numbers, then at most two reasons in words. Combo notes stay.
+- The Forge bar shows the whole deck name (it wraps; on phones the buttons take a second row). Never truncated.
