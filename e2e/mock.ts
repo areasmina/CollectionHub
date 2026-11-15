@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 /** Small fake Scryfall / EDHREC world: a few cards, one commander, prices, an exchange rate. */
 type C = { name: string; type: string; cmc: number; mana: string; text: string; ci: string[]; usd: string; rarity: string };
@@ -122,13 +122,13 @@ export const openImport = async (page: Page) => {
  * still fold behind SHOW STATS. Either way, this puts them on screen.
  */
 export const showStats = async (page: Page) => {
-  const tab = page.locator('.coll .ctab:not(.on)', { hasText: 'ANALYTICS' });
+  const tab = page.locator('.coll .ctab', { hasText: 'ANALYTICS' });
+  const fold = page.locator('.dlist .dfold');
+  await expect(tab.or(fold).first()).toBeVisible();
   if (await tab.count()) {
-    await tab.click();
+    if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
     await page.locator('.coll .stats > .stat').first().waitFor();
     return;
   }
-  const fold = page.locator('.dlist .dfold').first();
-  await fold.waitFor();
-  if ((await fold.getAttribute('aria-expanded')) === 'false') await fold.click();
+  if ((await fold.first().getAttribute('aria-expanded')) === 'false') await fold.first().click();
 };

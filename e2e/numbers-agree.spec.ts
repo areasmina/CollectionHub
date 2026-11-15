@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockWorld, seed } from './mock';
+import { mockWorld, seed, showStats } from './mock';
 
 /** One fact, one number: the same thing is counted the same way on every screen that shows it. */
 test.beforeEach(async ({ page }) => {
@@ -10,10 +10,13 @@ test.beforeEach(async ({ page }) => {
 test('Collection: the list tabs count copies, like the "cards" tile (not printings)', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
-  const tile = page.locator('.stats .stat', { hasText: /^\s*[\d,]+\s*cards/ }).first().locator('b');
-  await expect(tile).toHaveText('20'); // 8 printings, 20 copies
+  // the list tabs are on the CARDS tab, the "cards" tile on ANALYTICS: both count copies, not printings
   await expect(page.getByRole('tab', { name: /^ALL/ }).locator('.tab-count')).toHaveText('20');
   await expect(page.getByRole('tab', { name: /^UNLISTED/ }).locator('.tab-count')).toHaveText('20');
+  await expect(page.locator('.coll .ctab', { hasText: 'CARDS' }).locator('.ctab-n')).toHaveText('20');
+  await showStats(page);
+  const tile = page.locator('.stats .stat', { hasText: /^\s*[\d,]+\s*cards/ }).first().locator('b');
+  await expect(tile).toHaveText('20'); // 8 printings, 20 copies
 });
 
 test('My Decks: "avg power" uses the Game Changers list, so it agrees with the bracket on the deck page', async ({ page }) => {

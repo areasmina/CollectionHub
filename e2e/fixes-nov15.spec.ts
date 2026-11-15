@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockWorld, seed } from './mock';
+import { mockWorld, seed, showStats } from './mock';
 
 /** Guillermo's Nov 15 screenshots: overlapping salt list, uneven tiles, loose collection stats, stray diamonds, cut deck name. */
 test.beforeEach(async ({ page }) => {

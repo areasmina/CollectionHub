@@ -1091,10 +1091,7 @@ html.forging .vhero {
   .cardmenu li.using .deck-chip { height: 44px !important; min-height: 44px !important; padding: 0 12px !important; }
   .swapnote .close, .note-pop .close, .importbox-pop .close { min-width: 44px !important; min-height: 44px !important; }
   .bindermenu button { min-height: 44px !important; }
-  .deckmenu .swatches { gap: 8px !important; flex-wrap: wrap !important; }
-  .deckmenu .swatches button { width: 44px !important; height: 44px !important; min-width: 44px !important; }
-  .deckmenu .custom-color-label { min-height: 44px !important; align-items: center !important; }
-  .deckmenu .custom-color-label input[type='color'] { min-height: 36px !important; }
+  .deckmenu .cwheel { width: 112px !important; height: 112px !important; }
 }
 /* My Decks keeps its SHOW / HIDE STATS fold; Collection's became the CARDS | ANALYTICS tab (Nov 15). */
 .dlist .dribbon > .dribbon-acts > .dfold {
@@ -2011,4 +2008,52 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .coll #cpane-cards > * > .dtools.tbar,
 .coll #cpane-cards .dtools.tbar {
   margin-top: 0;
+}
+
+/* ── Deck colour: one rainbow wheel (Guillermo, Nov 15) ──
+   The block of swatches and the separate CUSTOM SHADE box are gone. The circle is the whole control: hue round the
+   rim, white in the middle, the deck's current colour as the dot at its centre, and its hex underneath so a colour can
+   be read back. Big enough to hit with a thumb at every width. */
+.deckmenu .colourrow .cwheel-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.deckmenu .cwheel {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex: none;
+  border-radius: 50%;
+  cursor: crosshair;
+  touch-action: none;
+  border: 2px solid var(--ink, #0a0a0a);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 2px 2px 0 rgba(0, 0, 0, 0.45);
+  background:
+    radial-gradient(circle at 50% 50%, #fff 0%, rgba(255, 255, 255, 0) 70%),
+    conic-gradient(
+      from 0deg,
+      #f00 0deg, #ff0 60deg, #0f0 120deg, #0ff 180deg, #00f 240deg, #f0f 300deg, #f00 360deg
+    );
+}
+.deckmenu .cwheel:focus-visible {
+  outline: 3px solid var(--u-yellow, #ffcc00);
+  outline-offset: 3px;
+}
+.deckmenu .cwheel-now {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  border: 2px solid #0a0a0a;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+.deckmenu .cwheel-val {
+  font: 400 12px var(--u-mono, monospace);
+  letter-spacing: 0.04em;
+  color: #cfcfe0;
 }
