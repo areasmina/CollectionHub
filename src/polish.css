@@ -366,9 +366,9 @@
     margin: 0 !important;
     padding-top: var(--s3) !important;
   }
-  /* the bottom sheet's peek: just its tabs, no extra rows sticking up over the cards */
+  /* the bottom sheet's peek: one row, the tabs, with the pull handle on it (Nov 15: it was a thick empty band) */
   html.forging .fsugg {
-    max-height: 92px !important;
+    max-height: 56px !important;
   }
   html.forging .fsugg.up {
     max-height: 82vh !important;
@@ -2515,4 +2515,60 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 .pillnav.dock-bottom::after {
   background: radial-gradient(circle at 16px 0, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+
+/* ── The Forge bar and the suggestions tab, slimmer (Guillermo, Nov 15) ──
+   Both were thick bands of mostly empty ink across a phone screen. The bar is now as tall as the buttons it holds,
+   and the suggestions sheet lost its empty pull strip: the handle moved onto the tab row itself (still a 44px pull
+   area, in the gap between SUGGESTIONS and TO BUY), with a small arrow when the sheet is down so it is plain that
+   there is a panel to pull up. Everything they held is still there. */
+.forgetop {
+  min-height: 48px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+@media (max-width: 700px) {
+  .forgetop {
+    min-height: 46px !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  html.forging .fsugg .fgrab {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    width: 150px;
+    height: 44px;
+    min-height: 44px !important;
+    margin: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+  }
+  html.forging .fsugg:not(.up) .fgrab::after {
+    content: '▲';
+    font: 400 9px var(--u-mono, monospace);
+    color: var(--u-muted, #b8b8c0);
+  }
+  html.forging .fsugg.up .fgrab::after {
+    content: '▼';
+    font: 400 9px var(--u-mono, monospace);
+    color: var(--u-muted, #b8b8c0);
+  }
+  html.forging .fsugg > .fsugg-header {
+    min-height: 44px;
+    margin-top: 0;
+  }
+  html.forging .fsugg .fpanes {
+    margin-bottom: 0;
+  }
+  html.forging .fsugg .fpanes button {
+    min-height: 44px;
+  }
 }

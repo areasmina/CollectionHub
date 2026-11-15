@@ -156,3 +156,6 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Collection: swipe between CARDS and ANALYTICS, with a one-time "swipe" hint on each device and a tick when the face turns; the tabs stay the plain way to do it | Live | #87 | `e2e/collection-swipe.spec.ts` |
 | Dynamic Island: frosted glass on every dock, and the sync panel is a bubble of the same glass with a tail into the bar | Live | #87 | `e2e/island-lane.spec.ts` |
 | Forge section rail floats over the cards: no reserved lane, see-through, dormant until the list moves | Live | #87 | `e2e/jump-rail.spec.ts` |
+| Forge bar and suggestions tab slimmer: the bar is as tall as its buttons (46px on a phone), the suggestions sheet peeks as one row with the pull handle on it | Live | #87 | `e2e/slim-bars.spec.ts` |
+| Suggestions are cards you own only (no ALL / OWNED / NOT OWNED tabs); the line says "N of your cards fit" | Live | #87 | `e2e/slim-bars.spec.ts`, `e2e/forge.spec.ts` |
+| Search by name, type line and rules text (reminder text included) everywhere, Discover's commander search included | Live | #87 | `e2e/search-oracle.spec.ts`, `lib/search.test.ts` |

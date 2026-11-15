@@ -156,3 +156,14 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - **The island is really glass now**, and the sync panel is a bubble of the same glass with a tail into the bar: the nav
   and each docked shape no longer paint solid black behind the frosted pane.
 - **The section rail floats over the cards**: no reserved lane, see-through, and barely there until the list moves.
+
+## Nov 15, round 4 (the Forge bar and the suggestions)
+
+- **The Forge bar is as tall as the buttons it holds** (46px on a phone, 48 elsewhere), not a band of empty ink.
+- **The suggestions sheet peeks as one row.** The empty pull strip is gone: the handle sits on the tab row itself, in
+  the gap between SUGGESTIONS and TO BUY, still a 44px pull, with a small arrow saying which way it goes.
+- **Suggestions are cards you own, full stop.** The ALL / OWNED / NOT OWNED tabs are gone: the Forge builds from your
+  binder, and what you don't own is TO BUY's job. The line under the title says "N of your cards fit", so the panel
+  says what it is rather than only how many.
+- **Every search reads name, type line and rules text, reminder text included.** Collection, deck pages, the Forge and
+  the swap picker already did; Discover's commander search matched names only and now matches the same three.
