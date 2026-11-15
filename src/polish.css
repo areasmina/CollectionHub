@@ -1390,20 +1390,17 @@ ul.zgrid .ztile .misstape {
   margin: 0 !important; top: auto !important; left: auto !important;
 }
 
-/* ── Collection grid: COMMANDER tape (Guillermo, Nov 13) ── a card that can lead a deck wears a yellow tape on its
-   top-left, on the same line as the price sticker on the top-right (same top, same type, mirrored tilt). Always shown,
-   so commanders can be spotted while scrolling. The ⋮ button moves down a little under it. */
-.ctile .cart > .cmdtape {
-  position: absolute; top: -12px; left: -8px; z-index: 3; pointer-events: none;
-  padding: 1px 8px; background: #ffcc00; color: #0a0a0a;
-  font: 400 11px/1.5 var(--u-display, 'Anton', sans-serif); letter-spacing: 0.08em;
-  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.35); transform: rotate(-3deg); white-space: nowrap;
+/* ── The commander mark is a crown on the price sticker (Guillermo, Nov 15) ──
+   The yellow COMMANDER tape is retired: Discover already lists the commanders you own, and the tape spent a corner of
+   the art saying it again. The crown rides inside the price tape, so the card gains a mark and loses a label. */
+.price .pcrown {
+  width: 11px;
+  height: 9px;
+  margin-right: 4px;
+  vertical-align: -1px;
+  fill: currentColor;
 }
-@media (max-width: 700px) {
-  /* phone cards are too narrow for the word next to the price: the tape carries a crown instead */
-  .ctile .cart > .cmdtape { font-size: 0; padding: 0 6px; left: -4px; }
-  .ctile .cart > .cmdtape::before { content: '♛'; font: 400 13px/1.5 system-ui, sans-serif; }
-}
+.ctile .cart > .price .pcrown { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25)); }
 
 /* ── Search that stays in reach (ManaBox benchmark, Nov 14) ──
    1. Collection and Discover: the bar was sticky only inside its own wrapper (.collbar / form.dfind), which is exactly
@@ -2695,4 +2692,347 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    off the window (the options sheet gained rows when the dropdowns became chip lines). */
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody { max-height: min(calc(100dvh - 120px), 660px) !important; overflow-y: auto !important; }
+}
+
+/* ── ROUND 6 · THE TITLE BAND CARRIES THE PAGE'S OWN BUTTONS (Guillermo, Nov 15) ──────────────────────
+   "Make those buttons part of My Decks, like the binder button in Collection." The ransom band is wide and
+   mostly empty on a desktop, so the page's own actions ride it: Collection's CARDS / ANALYTICS and
+   + DECK / IMPORT, and My Decks' + NEW BLANK DECK / IMPORT DECK / SHOW STATS. Each page gets a whole row
+   back. On a phone there is no room beside the letters, so Collection keeps its own lane there. */
+.titlewrap .titleacts {
+  position: relative; /* the red band is absolutely placed, so the buttons must be painted over it */
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: 18px;
+  vertical-align: middle;
+}
+.titlewrap > .titleacts :is(.u-btn, .slip-btn, .dfold, .ctab) {
+  min-height: 36px;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+}
+/* the title line becomes one row: letters on the left, buttons after them, everything on the band */
+.dlist .decksbar .titlewrap,
+.coll .chead2 .titlewrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.dlist .decksbar .titlewrap > .ztitle,
+.coll .chead2 .titlewrap > .ztitle { flex: 0 0 auto; }
+.dlist .decksbar .titlewrap > .titleacts { margin-left: auto; }
+@media (max-width: 700px) {
+  /* a phone reads the title first and the buttons under it, still inside the band */
+  .titlewrap .titleacts { margin-left: 0; gap: 6px; }
+  .dlist .decksbar .titlewrap > .titleacts { margin-left: 0; flex: 1 1 100%; }
+  .titlewrap > .titleacts :is(.u-btn, .slip-btn, .dfold) { min-height: 44px; font-size: 12px; }
+}
+
+/* On the red band the buttons read as taped labels, not as buttons on a dark page: ink for the loud one, paper for
+   the quiet ones, so every word keeps its contrast against the red. */
+.titlewrap > .titleacts { flex-wrap: nowrap; }
+.titlewrap > .titleacts .u-btn.primary,
+.titlewrap > .titleacts .ctab.on {
+  background: #0a0a0a !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45) !important;
+}
+.titlewrap > .titleacts :is(.u-btn, .slip-btn, .dfold, .ctab):not(.primary):not(.on) {
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #0a0a0a !important;
+  border: 2px solid #0a0a0a !important;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35) !important;
+}
+.titlewrap > .titleacts > * + *,
+.titlewrap > .titleacts .ctabset { gap: 6px; }
+.titlewrap > .titleacts .ctab { transform: none; }
+.titlewrap > .titleacts .ctab .ctab-n { background: var(--u-red, #e60012); color: #fff; }
+.titlewrap > .titleacts .ctab.on .ctab-n { background: #ffffff; color: #0a0a0a; }
+
+/* The white outline around the Collection block goes (Guillermo, Nov 15, image 3): with the tabs and the buttons on
+   the band, the frame was drawing a box around a toolbar. The lanes keep their hairlines and their ink. */
+@media (min-width: 701px) {
+  .coll .ctabs:has(+ .coll-listbar) + .coll-listbar,
+  .coll .coll-listbar,
+  .dpage.coll .ctabs:has(+ .coll-listbar) ~ #cpane-cards .collbar,
+  .dpage.coll #cpane-cards .collbar {
+    border: 0 !important;
+    border-top: 1px solid #23232a !important;
+    box-shadow: none !important;
+    background: #0d0d10 !important;
+  }
+  .coll .coll-listbar { border-top: 0 !important; border-radius: 6px 6px 0 0 !important; }
+  .dpage.coll #cpane-cards .collbar { border-radius: 0 0 6px 6px !important; }
+}
+
+/* ── ROUND 6 · THE SYNC BUBBLE READS LIKE THE ISLAND (Guillermo, Nov 15: "the font here is hard to read") ──
+   The sync drawer already used the island's two faces, but at 10–12px in four shades of grey, so the sentences in it
+   (last synced, what the code is for, what sync does) were the quietest text in the app. Same faces, same ink, one
+   step up in size and contrast: display for the things you press, mono for the things you read. Nothing moves. */
+.id-sync-status-title {
+  font-size: 13px !important;
+  letter-spacing: 0.06em !important;
+}
+.id-sync-status-sub {
+  font-size: 12.5px !important;
+  line-height: 1.35 !important;
+  color: #c9c9d4 !important;
+}
+.id-sync-desc {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #d4d4de !important;
+}
+.id-sync-code-label {
+  font-size: 11.5px !important;
+  color: #c2c2d0 !important;
+}
+.id-sync-privacy {
+  font-size: 11px !important;
+  color: #8f8f9e !important;
+}
+.id-code-mono {
+  font-size: 15px !important;
+}
+.id-sync-divider span,
+.id-sync-conflict-box p,
+.id-sync-msg {
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+  color: #cccdd8 !important;
+}
+
+/* ── ROUND 6 · THE DECK HEADER LOSES ITS BLACK BAR ──────────────────────────────────────────────
+   Guillermo, Nov 15: "price value can be moved below to the squares… remove black bar… we can move the forge bar
+   to where the price bar is now, we can save some space that way."
+   The stand-ins count and the deck's price are now a fourth square beside READINESS · BRACKET FIT · SALT LEVEL,
+   so the full-width ink band under the hero is gone and everything below it — the Forge bar included — rises into
+   its place. The strip itself stays (it still carries TO BUY, BEST FOR MY CARDS and FORGE) but it is now just a row
+   of buttons on the page, with no band, no borders and no height of its own. */
+.vhero .vtile.vnote {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-height: var(--tap, 44px);
+  padding: var(--s1, 6px) var(--s3, 12px);
+  border: 1px solid var(--u-line2, #2c2c34);
+  border-left: 3px solid var(--u-line2, #2c2c34);
+  background: transparent;
+}
+.vhero .vtile.vnote .lbl {
+  font: 400 11px var(--u-mono, monospace);
+  letter-spacing: 0.04em;
+  color: var(--u-muted, #9a9aa6);
+}
+.vhero .vtile.vnote b {
+  font: 400 15px/1.2 var(--u-display, sans-serif);
+  letter-spacing: 0.04em;
+  color: var(--u-text, #fff);
+}
+.vhero .vtile.vnote small {
+  font: 400 11px var(--u-mono, monospace);
+  color: var(--u-muted, #9a9aa6);
+}
+@media (min-width: 900px) {
+  .vhero .vtiles.hasnote {
+    grid-auto-flow: row !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(230px, 1.25fr) !important;
+    max-width: 1000px !important;
+  }
+}
+@media (max-width: 899px) {
+  .vhero .vtiles.hasnote {
+    grid-auto-flow: row !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .vhero .vtiles.hasnote > .vnote {
+    grid-column: 1 / -1 !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    gap: 8px !important;
+  }
+}
+/* the band is gone: no ink, no rules, no fixed height, and nothing to stick to */
+.dstrip {
+  background: transparent !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  position: static !important;
+  padding: 8px 0 0 !important;
+}
+.dstrip > .dstatus:empty,
+.dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *)) {
+  display: none !important;
+}
+
+/* ── ROUND 6 · THE TWO SIDE PANELS, OPEN AND CLOSED ─────────────────────────────────────────────
+   Guillermo, Nov 15: "expand and contract buttons… where they are positioned are messing up with the value and info
+   in the charts"; "when contracted it is hard to read or understand at all".
+   Open: the title keeps its own line with the button beside it, and the number (MATCH 61%, how many cards fit) drops
+   to the line under it, so nothing is ever printed on top of a value.
+   Closed: the rail is wide enough to read — a stack of labelled numbers, not squeezed display letters. */
+.fmeters.expanded .fmeters-header,
+.fsugg.expanded .fsugg-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  column-gap: 10px !important;
+  row-gap: 2px !important;
+}
+.fmeters.expanded .fmeters-header h3,
+.fsugg.expanded .fsugg-header h3 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+.fmeters.expanded .fmeters-header h3 .fmatch,
+.fsugg.expanded .fsugg-header h3 small {
+  margin: 0 !important;
+  font: 400 11px var(--u-mono, monospace) !important;
+  letter-spacing: 0.04em !important;
+  color: var(--u-muted, #9a9aa6) !important;
+}
+.fmeters.expanded .fmeters-header .fexp-btn,
+.fsugg.expanded .fsugg-header .fexp-btn {
+  align-self: start !important;
+  white-space: nowrap !important;
+  min-height: 28px !important;
+}
+
+/* the closed rail: wide enough for words, and quiet */
+@media (min-width: 1100px) {
+  html.forging .deckgrid.forge-split.an-contracted {
+    grid-template-columns: 168px minmax(0, 1fr) 350px !important;
+  }
+  html.forging .deckgrid.forge-split.sug-contracted {
+    grid-template-columns: 320px minmax(0, 1fr) 168px !important;
+  }
+  html.forging .deckgrid.forge-split.an-contracted.sug-contracted {
+    grid-template-columns: 168px minmax(0, 1fr) 168px !important;
+  }
+}
+.fmeters.contracted .fmeters-header h3,
+.fsugg.contracted .fsugg-header h3 {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 2px !important;
+  font-size: 15px !important;
+  line-height: 1.1 !important;
+}
+.fmeters.contracted .fmeters-header h3 .fmatch,
+.fsugg.contracted .fsugg-header h3 small {
+  font: 400 11px var(--u-mono, monospace) !important;
+  letter-spacing: 0.04em !important;
+  color: var(--u-muted, #9a9aa6) !important;
+  white-space: nowrap !important;
+}
+.fmeters.contracted .fexp-btn,
+.fsugg.contracted .fexp-btn {
+  min-height: 32px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+}
+.fmeters.contracted .fm-mini-chip,
+.fsugg.contracted .fsugg-mini-label {
+  font-size: 12px !important;
+}
+.fsugg.contracted .mini-card-name {
+  font-size: 11.5px !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+}
+.fsugg.contracted .mini-role-pill {
+  font-size: 11px !important;
+  min-height: 28px !important;
+}
+
+/* the combo lines under the meters: the deck's own text, quiet, two to a line at most */
+.fm-combo-sec {
+  margin-top: 10px;
+}
+.fm-sec-title.sub {
+  margin-top: 8px;
+  opacity: 0.85;
+}
+.fm-combos {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fm-combos li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font: 400 12px/1.3 var(--u-mono, monospace);
+  color: var(--u-text, #fff);
+  border-left: 2px solid var(--u-line2, #2c2c34);
+  padding-left: 8px;
+}
+.fm-combos li.early {
+  border-left-color: var(--hazard, #ffcc00);
+}
+.fm-combos li small {
+  font: 400 10.5px var(--u-mono, monospace);
+  color: var(--u-muted, #9a9aa6);
+  white-space: nowrap;
+}
+.fm-combos.near li b {
+  font-weight: 700;
+  color: var(--good, #39ff88);
+}
+.fm-combo-none,
+.fm-combo-more {
+  margin: 4px 0 0;
+  font: 400 11.5px var(--u-mono, monospace);
+  color: var(--u-muted, #9a9aa6);
+  list-style: none;
+}
+/* "your decks:" never runs past one line, however many you keep with this commander */
+.vhero .vmeta .mydecks {
+  display: inline;
+}
+.vhero .vmeta .mydecks-more {
+  margin-left: 6px;
+  padding: 2px 6px;
+  min-height: 0;
+  background: transparent;
+  border: 1px dashed var(--u-line2, #2c2c34);
+  border-radius: 3px;
+  color: var(--u-muted, #9a9aa6);
+  font: 400 11px var(--u-mono, monospace);
+  cursor: pointer;
+}
+.vhero .vmeta .mydecks-more:hover {
+  color: var(--u-text, #fff);
+  border-color: var(--u-text, #fff);
+}
+.fsugg.contracted .fpanes {
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+.fsugg.contracted .fpanes button {
+  width: 100% !important;
+  justify-content: space-between !important;
+  min-height: 30px !important;
+  font-size: 11.5px !important;
 }

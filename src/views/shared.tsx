@@ -88,10 +88,11 @@ export function PreviewLayer() {
 /** Shows / hides the big card preview (press and hold on touch). */
 export const showPreview = (src: string | null) => setPreview(src ? { src, tap: false } : null);
 
-/** Card image: 1 s hover preview; click opens Scryfall (mouse) or the preview with a Scryfall link (touch).
+/** Card image: click opens Scryfall (mouse) or a big preview with a Scryfall link (touch).
+ *  The old one-second hover preview is gone (Guillermo, Nov 15): the card size control makes a card readable where it
+ *  sits, so a panel that covered its neighbours every time the mouse rested was in the way rather than useful.
  *  `onPick` replaces the click (missing cards open their swap note instead). */
 export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: string; className?: string; name?: string; onPick?: () => void }) {
-  const timer = useRef<number>(undefined);
   if (!src) return <span className={className} aria-hidden="true" />;
   const big = src.replace('/small/', '/normal/').replace('/art_crop/', '/normal/');
   const href = name ? scryfallUrl(name) : undefined;
@@ -109,15 +110,8 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
         src={src}
         alt=""
         loading="lazy"
-        onMouseEnter={() => (timer.current = window.setTimeout(() => setPreview({ src: big, tap: false }), 1000))}
-        onMouseLeave={() => {
-          clearTimeout(timer.current);
-          setPreview(null);
-        }}
         onClick={(e) => {
           e.stopPropagation();
-          clearTimeout(timer.current);
-          setPreview(null);
           if (onPick) return onPick();
           if (href && canHover()) return void window.open(href, '_blank', 'noopener');
           haptic('open');
@@ -129,18 +123,27 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
   );
 }
 /** Yellow price sticker; links to TCGplayer when Scryfall gives a link. */
-export function PriceLink({ card, plain, tape }: { card?: Card; plain?: boolean; tape?: string }) {
+export function PriceLink({ card, plain, tape, crown }: { card?: Card; plain?: boolean; tape?: string; crown?: boolean }) {
   // tape: a seed (e.g. card id) picks one of 5 yellow shades x 4 textures, so a grid of prices doesn't look samey.
   let h = 0;
   for (const ch of tape ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const cls = `price${plain ? ' plain' : ''}${tape ? ` tapey y${h % 5} t${(h >> 3) % 4}` : ''}`;
+  // A card that can lead a deck wears a small crown on the same sticker (Guillermo, Nov 15): the COMMANDER tape said
+  // the same thing in a whole label of its own, and Discover already lists the commanders you own.
+  const mark = crown ? (
+    <svg className="pcrown" viewBox="0 0 24 20" aria-hidden="true" focusable="false">
+      <path d="M2 16 L1 4 L7 10 L12 2 L17 10 L23 4 L22 16 Z" />
+    </svg>
+  ) : null;
   if (!card?.usd) return null; // basics and unpriced cards: no "≈CA$—"
   return card.buy ? (
-    <a className={cls} href={card.buy} target="_blank" rel="noreferrer" title={rateNote()} onClick={(e) => e.stopPropagation()}>
+    <a className={cls} href={card.buy} target="_blank" rel="noreferrer" title={crown ? `${rateNote()} · can be your commander` : rateNote()} onClick={(e) => e.stopPropagation()}>
+      {mark}
       {usd(card)}
     </a>
   ) : (
-    <span className={cls} title={rateNote()}>
+    <span className={cls} title={crown ? `${rateNote()} · can be your commander` : rateNote()}>
+      {mark}
       {usd(card)}
     </span>
   );

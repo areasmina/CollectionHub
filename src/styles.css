@@ -3003,38 +3003,62 @@ ul.popnote .small {
   color: #ff6cc0;
   transform: rotate(-8deg) scale(1.08);
 }
+/* Changing the count is the same pill as the resting diamonds (Guillermo, Nov 15): same ink, same border, same
+   diamonds, with − and + on its ends. It used to turn into a cyan-and-pink box that belonged to another app. */
 .tstep {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  padding: 3px;
-  background: #0a0a0a;
-  border: 2px dashed #19d3e6;
-  box-shadow: 3px 3px 0 #ff2fa0;
-  transform: rotate(-3deg);
+  padding: 0 4px;
+  min-height: 32px;
+  background: var(--ink);
+  border: 2px solid var(--white);
+  border-radius: 16px;
+  box-shadow: 2px 2px 0 #000;
   animation: drop 0.15s ease-out;
 }
 .tstep button {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   background: none;
   border: 0;
-  color: #19d3e6;
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 22px;
+  color: var(--white);
+  font-family: var(--an);
+  font-size: 20px;
+  line-height: 1;
   display: grid;
   place-items: center;
+  cursor: pointer;
+}
+.tstep button:hover {
+  color: var(--hazard);
 }
 .tstep button.bin {
-  color: #ff4a55;
+  color: var(--accent);
 }
-.tstep b {
-  min-width: 30px;
-  text-align: center;
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 22px;
-  color: #fff;
-  text-shadow: 0 0 6px #ff2fa0, 2px 2px 0 #ff2fa0;
+.tstep .tmarks {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+}
+.tstep .tmarks i {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border: 1.5px solid #8a8a8a;
+  background: transparent;
+}
+.tstep .tmarks i.on {
+  background: var(--hazard);
+  border-color: var(--hazard);
+  box-shadow: 0 0 5px rgba(255, 204, 0, 0.6);
+}
+.tstep .tmarks small {
+  font-family: var(--an);
+  font-size: 13px;
+  margin-left: 2px;
+  color: var(--hazard);
 }
 @media (prefers-reduced-motion: reduce) {
   .tstep {
@@ -7477,7 +7501,11 @@ ul.zcompact > li.zrow .price.tapey {
 /* 1. Desktop (1200px+): wider stage, denser commander grid, multi-column open card categories, scrollable workbench */
 @media (min-width: 1200px) {
   main {
-    max-width: 1640px;
+    /* The stage follows the screen instead of stopping at a fixed column: never narrower than the old 1640px frame,
+       otherwise the viewport minus a 56px breathing gutter on each side, capped at 2280px so a 4K screen does not
+       stretch a row past reading comfort. The decorative sheets and sprays sit behind this (main is z-index 1), so
+       they cost no usable space. (Guillermo, Nov 15: "we need to ensure maximum space capabilities in any type of screen".) */
+    max-width: max(1640px, min(calc(100vw - 112px), 2280px));
     padding: 0 32px calc(var(--sp6, 32px) + 96px);
   }
 
@@ -7702,3 +7730,17 @@ ul.zcompact > li.zrow .price.tapey {
 
 /* MY DECKS top header bar + instant actions */
 
+
+/* Said aloud, never drawn: the live copy count inside the quantity pill (the diamonds carry it on screen). */
+.u-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

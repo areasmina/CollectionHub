@@ -6,7 +6,8 @@ import { norm } from '../lib/names';
 import { searchByText } from '../lib/search';
 import type { NotOffered } from '../lib/collsearch';
 import { BASICS } from '../lib/compare';
-import { isLand, roleOf, type DeckStats, type Role } from '../lib/deckstats';
+import { isEarly, isLand, roleOf, type DeckStats, type Role } from '../lib/deckstats';
+import { deckCombos, nearCombos } from '../brain/combos';
 import type { SubCard } from '../lib/subs';
 import type { CardFilter } from '../lib/edhrec';
 import { themeOf } from '../brain/themes';
@@ -250,12 +251,18 @@ export function ForgeMeters({
   match,
   expanded: controlledExpanded,
   onToggleExpand,
+  names,
+  isOwned,
 }: {
   st: DeckStats;
   range: Range;
   match?: number;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  /** The deck as it stands right now, so the combo lines below move with every swap (Guillermo, Nov 15:
+      "the analytics chart on the left should be live and active to our swaps… combos in depth"). */
+  names?: string[];
+  isOwned?: (name: string) => boolean;
 }) {
   const [localExpanded, setLocalExpanded] = useState(() => {
     try {
@@ -332,6 +339,14 @@ export function ForgeMeters({
     ['Planeswalkers', st.groups?.get('Planeswalkers') ?? 0],
     ['Lands', st.lands],
   ].filter(([, count]) => (count as number) > 0) as [string, number][];
+
+  // Live with the deck: what it can already do, and what one card would unlock. Both read the current card list,
+  // so a swap changes them on the spot — no extra fetch, the combo index is already in the brain's data.
+  const have = useMemo(() => (names && names.length ? deckCombos(names) : []), [names?.join('|')]); // eslint-disable-line react-hooks/exhaustive-deps
+  const near = useMemo(
+    () => (names && names.length ? nearCombos(names, new Set()).filter((n) => !isOwned || isOwned(n.add)).slice(0, 3) : []),
+    [names?.join('|'), isOwned] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   return (
     <section className={`fmeters ${expanded ? 'expanded' : 'contracted mini'}`} aria-label="Forge analysis">
@@ -467,6 +482,40 @@ export function ForgeMeters({
                   </span>
                 ))}
               </div>
+            </div>
+          )}
+
+          {(have.length > 0 || near.length > 0) && (
+            <div className="fm-combo-sec" aria-live="polite">
+              <div className="fm-sec-title">COMBOS</div>
+              {have.length > 0 ? (
+                <ul className="fm-combos">
+                  {have.slice(0, 3).map((c) => (
+                    <li key={c.id} className={isEarly(c) ? 'early' : ''}>
+                      <span className="fm-combo-cards">{c.cards.join(' + ')}</span>
+                      <small>{isEarly(c) ? `early · ${c.mv} mana` : `${c.mv} mana`}</small>
+                    </li>
+                  ))}
+                  {have.length > 3 && <li className="fm-combo-more">+{have.length - 3} more in this deck</li>}
+                </ul>
+              ) : (
+                <p className="fm-combo-none">No two-card combo finished yet.</p>
+              )}
+              {near.length > 0 && (
+                <>
+                  <div className="fm-sec-title sub">ONE CARD AWAY · FROM YOUR BINDER</div>
+                  <ul className="fm-combos near">
+                    {near.map((n) => (
+                      <li key={n.combo.id}>
+                        <span className="fm-combo-cards">
+                          <b>{n.add}</b> + {n.combo.cards.find((x) => norm(x) !== norm(n.add)) ?? ''}
+                        </span>
+                        <small>{isEarly(n.combo) ? 'early' : `${n.combo.mv} mana`}</small>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           )}
 
@@ -674,15 +723,16 @@ export function ForgeSuggest({
     tops.current = next;
   }, [order]);
 
+  // No "owned" tag and no "✓ yours" price (Guillermo, Nov 15): every suggestion here is already a card of yours,
+  // so saying it on each row is noise. The row says what the card does for the deck, and nothing else.
   const reasons = (r: Row) => {
-    const own = r.owned ? ['owned'] : [];
     const top = r.parts
       .filter((p) => p.label !== 'owned' && p.value !== 0)
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
       .slice(0, 3)
       .map((p) => p.label.replace(/^fills (\S+(?: \S+)?) \(deck has (\d+), \w+ wants (\d+)–\d+\)$/, (_, w, h, lo) => `fills: ${w} (${Number(lo) - Number(h)} short)`))
       .map((t) => t.replace(/^([\d.]+)x lift$/, (_, x) => `+${Math.round((Number(x) - 1) * 100)}% lift`));
-    return [...top, ...own];
+    return top;
   };
 
   return (
@@ -733,7 +783,8 @@ export function ForgeSuggest({
         </button>
       </div>
 
-      {onJustBuild && (
+      {/* The big BUILD 100 banner belongs to the open panel (Guillermo, Nov 15: "too big" when the panel is a rail) */}
+      {onJustBuild && expanded && (
         <div className="just-build-banner sugg-top-action">
           <button
             type="button"
@@ -765,7 +816,7 @@ export function ForgeSuggest({
               return (
                 <div
                   key={r.c.name}
-                  className={`fsugg-mini-card${r.owned > 0 ? ' owned' : ''}${placing === r.c.name ? ' placing' : ''}`}
+                  className={`fsugg-mini-card${placing === r.c.name ? ' placing' : ''}`}
                   title={`${r.c.name}${lift ? ` (${lift})` : ''} · Click to place/swap`}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -910,10 +961,10 @@ export function ForgeSuggest({
                 <span className="fbody">
                   <b>{r.c.name}</b>
                   <span className="whys">
-                    {r.blocked ? <span className="cwarn">▲ {r.blocked}</span> : reasons(r).map((t) => <span key={t} className={t.startsWith('fills') ? 'cgain' : t.startsWith('fits ') ? 'cfit' : t === 'owned' ? 'cown' : ''}>{t}</span>)}
+                    {r.blocked ? <span className="cwarn">▲ {r.blocked}</span> : reasons(r).map((t) => <span key={t} className={t.startsWith('fills') ? 'cgain' : t.startsWith('fits ') ? 'cfit' : ''}>{t}</span>)}
                   </span>
                 </span>
-                <span className="fprice">{r.owned ? '✓ yours' : usd(r.card)}</span>
+                {!r.owned && <span className="fprice">{usd(r.card)}</span>}
               </button>
               {onAdd && (
                 <button className="fadd" aria-label={`Add ${r.c.name} to the deck`} onClick={() => (haptic('success'), onAdd(r.c.name))}>

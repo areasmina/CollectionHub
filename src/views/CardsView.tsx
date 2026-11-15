@@ -150,6 +150,9 @@ function Tally({ e }: { e: Entry }) {
   return (
     <span ref={ref} className={`tally${edit ? ' editing' : ''}`} onClick={(ev) => ev.stopPropagation()}>
       {edit ? (
+        /* Changing the count keeps the diamonds (Guillermo, Nov 15: the editor used to swap them for a different
+           widget in another palette, which broke the look of the card). The same ink pill, the same diamonds, with
+           − and + on its ends; at one copy the − becomes the bin. */
         <span className="tstep">
           {e.qty > 1 ? (
             <button aria-label={`One less ${e.name}`} onClick={() => set(e.qty - 1)}>
@@ -162,7 +165,15 @@ function Tally({ e }: { e: Entry }) {
               </svg>
             </button>
           )}
-          <b aria-live="polite">{e.qty}</b>
+          <span className="tmarks">
+            {[0, 1, 2, 3].map((i) => (
+              <i key={i} className={i < e.qty ? 'on' : ''} />
+            ))}
+            {e.qty > 4 && <small>+{e.qty - 4}</small>}
+            <b className="u-sr" aria-live="polite">
+              {e.qty} {e.qty === 1 ? 'copy' : 'copies'}
+            </b>
+          </span>
           <button aria-label={`One more ${e.name}`} onClick={() => set(e.qty + 1)}>
             +
           </button>
@@ -219,13 +230,9 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
             </span>
             <span className="cart">
               <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
-              {/* Can lead a deck: a yellow tape on the card's top-left, on the same line as the price sticker (top-right) */}
-              {cmd(e) && (
-                <span className="cmdtape" title="Can be your commander">
-                  COMMANDER
-                </span>
-              )}
-              <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} />
+              {/* Can lead a deck: a crown on the price sticker, nothing else (Guillermo, Nov 15 — the COMMANDER tape
+                  repeated what Discover already tells you, and took a corner of the art to say it) */}
+              <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} crown={cmd(e)} />
               {useMark(e)}
               <Tally e={e} />
             </span>

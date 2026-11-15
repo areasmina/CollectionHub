@@ -391,6 +391,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
   const [openSearch, setOpenSearch] = useState(0); // + MY CARDS: opens the Forge on its search of your own cards
   const changes = Object.keys(swapsOk).length;
   const forging = kind === 'average' && (changes > 0 || manualForge);
+  const [allMine, setAllMine] = useState(false); // "your decks:" shows three, then a count
   const [anExpanded, setAnExpanded] = useState(() => {
     try {
       return localStorage.getItem('ch:forge:an_expanded') !== 'false';
@@ -710,14 +711,21 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} decks</span>
               {page && <SaltStat names={names} />}
               {mine.length > 0 && !saved && (
+                /* Three names, then a count (Guillermo, Nov 15: "what if I have 20 or more?"): the line stays one line
+                   however many decks you keep with this commander, and the rest are one tap away. */
                 <span className="mydecks">
                   your deck{mine.length > 1 ? 's' : ''}:{' '}
-                  {mine.map((d, i) => (
+                  {(allMine ? mine : mine.slice(0, 3)).map((d, i) => (
                     <span key={d.id}>
                       {i > 0 && ', '}
                       <DeckLink name={d.name} />
                     </span>
                   ))}
+                  {mine.length > 3 && (
+                    <button type="button" className="mydecks-more" onClick={() => (haptic('select'), setAllMine(!allMine))}>
+                      {allMine ? 'fewer' : `+${mine.length - 3} more`}
+                    </button>
+                  )}
                 </span>
               )}
               <OutsideLinks commander={name} edhrecPath={path} />
@@ -732,7 +740,27 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 </small>
               </span>
             </div>
-            {ready && <ReadyTiles ready={ready} fit={fit} bracket={bracket} onBracketChange={setBracket} brackets={BRACKETS} cardNames={names} />}
+            {ready && (
+              <ReadyTiles
+                ready={ready}
+                fit={fit}
+                bracket={bracket}
+                onBracketChange={setBracket}
+                brackets={BRACKETS}
+                cardNames={names}
+                note={
+                  kind === 'average' && (covText || (pricesIn && deckCost > 0)) ? (
+                    <>
+                      <span className="lbl">FROM YOUR BINDER</span>
+                      <b title={pricesIn && deckCost > 0 ? `What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}` : undefined}>
+                        {covText || (pricesIn && deckCost > 0 ? `deck ≈${cad(deckCost)}` : '—')}
+                      </b>
+                      {covText && pricesIn && deckCost > 0 && <small>deck ≈{cad(deckCost)}</small>}
+                    </>
+                  ) : undefined
+                }
+              />
+            )}
           </div>
         </section>
 
@@ -747,12 +775,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 <span>loading EDHREC data…</span>
               ) : kind === 'average' ? (
                 <>
-                  {covText && <span className="coverage">{covText}</span>}
-                  {pricesIn && deckCost > 0 && (
-                    <span className="dcost" title={`What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}`}>
-                      deck ≈{cad(deckCost)}
-                    </span>
-                  )}
+                  {/* The stand-ins count and the deck's price now ride with the stat squares in the hero
+                      (Guillermo, Nov 15), so this line only carries what the squares cannot: why the suggestions changed. */}
                   {filtered?.pins && <span className="cmode">suggestions from {filtered.page.numDecks?.toLocaleString()} EDHREC decks that fit your pins</span>}
                 </>
               ) : (
@@ -930,6 +954,8 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   match={sum.pct}
                   expanded={anExpanded}
                   onToggleExpand={toggleAn}
+                  names={names}
+                  isOwned={(n) => statusOf(n, s.mine) === 'owned'}
                 />
               </div>
             )}

@@ -184,3 +184,29 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   words read in full. The cards start about 38px higher again, which is ManaBox's density.
 - **The first-run swipe tag has its own strip.** With the lanes flush it had nowhere to hang without covering IMPORT,
   so while it shows, the tabs lane opens a 22px strip for it; the strip goes with the tag, for good, after one use.
+
+## Nov 15, round 6 (desktop: the space, the deck header, the two side panels)
+
+- **The stage follows the screen.** Above 1200px the page is no longer pinned to a 1640px column: it takes the viewport
+  minus a 56px gutter on each side, up to 2280px. A 1920 screen gains about 170px of usable width and a row of the
+  binder fits ten cards instead of nine; a 2560 screen gains 640px and fits thirteen. Phones and tablets are untouched.
+  The decorative sheets, sprays and sprues sit behind the page, so they cost no usable space.
+- **Changing a copy count keeps the card's own look.** The − / + editor is the same ink pill with the same diamonds,
+  never another widget in another palette.
+- **A commander in the binder is a crown on the price sticker**, not a yellow COMMANDER tape across the art: Discover
+  already tells you which commanders you own, and the tape took a corner of every card to repeat it.
+- **Section buttons live in the ransom title band.** Collection's CARDS / ANALYTICS and + DECK / IMPORT, and My Decks'
+  NEW BLANK DECK / IMPORT DECK / SHOW STATS, ride beside the title the way the binder button already did. The white
+  frame around Collection is gone with them on wide screens.
+- **No hover preview.** Card size is a control now, so a card that grows under the pointer only got in the way.
+- **The sync drawer is read, not deciphered**: same two island faces, one step up in size and contrast.
+- **The deck page has no black bar.** What the deck takes from your binder and what it costs is a fourth square beside
+  READINESS · BRACKET FIT · SALT LEVEL, and everything below — the Forge bar included — rises into the freed row.
+- **A panel's open/close control never sits on a value.** The title keeps its own line with CONTRACT / EXPAND beside it
+  and the number drops under the title. Closed, a panel is a 168px rail with labelled numbers that can be read, and the
+  BUILD 100 banner belongs to the open panel only.
+- **Suggestions say what a card does, not that you own it.** Every suggestion is already a card of yours, so the green
+  "✓ yours" price and the "owned" tag are gone.
+- **The analysis panel says what the deck can do, live.** Under the meters: the two-card combos the deck already
+  finishes, and the ones one card from your binder away. Both move with every swap.
+- **"your decks:" shows three and a count.** With twenty decks on one commander the line still reads as one line.

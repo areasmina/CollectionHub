@@ -1296,7 +1296,35 @@ export function Decks(s: Shared) {
       <main className="dpage dlist">
         {/* THE OVERHAUL, my decks: loud title → one ribbon of facts → flat deck tiles → the add form. */}
         <div className="decksbar">
-          <Title text="MY DECKS" label="My decks" size={narrow ? 44 : 64} seed={33} />
+          {/* The three things you do to this page ride the title band, the way the binder tag does on Collection
+              (Guillermo, Nov 15), so the deck tiles start a row higher. NEW BLANK DECK stays the loud one. */}
+          <Title
+            text="MY DECKS"
+            label="My decks"
+            size={narrow ? 44 : 64}
+            seed={33}
+            after={
+              <span className="titleacts decksactions">
+                <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+                  + NEW BLANK DECK
+                </button>
+                <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
+                  IMPORT DECK
+                </button>
+                {decks.length > 0 && (
+                  <button
+                    type="button"
+                    className="dfold"
+                    aria-expanded={dstats !== 'hide'}
+                    onClick={() => (haptic('select'), setDstats(dstats === 'hide' ? 'show' : 'hide'))}
+                    title={dstats === 'hide' ? 'Show the deck stats' : 'Hide the deck stats'}
+                  >
+                    {dstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
+                  </button>
+                )}
+              </span>
+            }
+          />
         </div>
         <ShortAlert items={short} />
         <div className="dribbonwrap">
@@ -1339,26 +1367,6 @@ export function Decks(s: Shared) {
             </section>
             </>
           )}
-          {/* Start a deck from scratch, or bring one in from a list or file (Arena, MTGO, Moxfield, Archidekt, CSV). */}
-          <span className="decksactions dribbon-acts">
-            <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-              + NEW BLANK DECK
-            </button>
-            <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
-              IMPORT DECK
-            </button>
-            {decks.length > 0 && (
-            <button
-              type="button"
-              className="dfold"
-              aria-expanded={dstats !== 'hide'}
-              onClick={() => (haptic('select'), setDstats(dstats === 'hide' ? 'show' : 'hide'))}
-              title={dstats === 'hide' ? 'Show the deck stats' : 'Hide the deck stats'}
-            >
-              {dstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
-            </button>
-            )}
-          </span>
           </div>
         </div>
         {/* Decks Workbench Toolbar (ManaBox-style, Nov 14): row 1 is the search and the sort, row 2 one sliding row of
