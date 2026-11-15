@@ -112,4 +112,4 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Collection stats on phones: cards, unique and commanders as one even row of three; no full-width banner.
 - No carousel diamonds (Forge CARDS · ANALYSIS · TO BUY tabs, Collection highlights): the labels already say where you are.
 - Swap window picks: name, then EDHREC lift and play rate as numbers, then at most two reasons in words. Combo notes stay.
-- The Forge bar shows the whole deck name (it wraps; on phones the buttons take a second row). Never truncated.
+- The Forge bar has no deck name: one clean line, FORGE · UNDO · SAVE · LEAVE (the page already names the deck).

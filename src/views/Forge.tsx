@@ -70,19 +70,17 @@ export function ForgeTop({ label, sub, undo, onLeave, onSave, saving, reserved }
     };
   }, []);
   return (
-    <div className="forgetop" role="toolbar" aria-label="Forge" ref={bar}>
+    <div className="forgetop" role="toolbar" aria-label={`Forge: ${label}`} ref={bar}>
       <span className="fstamp" aria-hidden="true">
         FORGE
       </span>
+      {/* No deck name here (Guillermo, Nov 15): the page already shows it, so the bar stays one clean line */}
       <span className="ftitle">
-        <b>
-          {label}
-          {reserved && (
-            <span className="fres" title="This deck holds its copies: other decks can't use them">
-              RESERVED
-            </span>
-          )}
-        </b>
+        {reserved && (
+          <span className="fres" title="This deck holds its copies: other decks can't use them">
+            RESERVED
+          </span>
+        )}
         {sub && <small>{sub}</small>}
       </span>
       {undo && (

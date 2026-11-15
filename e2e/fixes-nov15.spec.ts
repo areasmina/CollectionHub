@@ -43,13 +43,13 @@ test('Collection: cards, unique and commanders sit as one even row; no carousel 
   await expect(page.locator('.twdots')).toHaveCount(0);
 });
 
-test('Forge bar: the whole deck name, buttons together, no tab diamonds', async ({ page }) => {
+test('Forge bar: one clean line with no deck name, buttons together, no tab diamonds', async ({ page }) => {
   await page.locator('.ccard').first().click();
   await page.locator('.dstrip .forge').click();
-  const name = page.locator('.forgetop .ftitle b');
-  await expect(name).toContainText('Tatyova, Benthic Druid');
-  expect(await name.evaluate((e) => e.scrollWidth <= e.clientWidth + 1 && getComputedStyle(e).textOverflow !== 'ellipsis')).toBe(true);
-  const btns = await box(page, '.forgetop > button');
-  for (const b of btns) expect(Math.abs(b.top - btns[0].top)).toBeLessThanOrEqual(1);
+  const bar = page.locator('.forgetop');
+  await expect(bar).toBeVisible();
+  await expect(bar).not.toContainText('Tatyova'); // the page already says which deck (Guillermo, Nov 15)
+  const parts = await box(page, '.forgetop .fstamp, .forgetop > button');
+  for (const p of parts) expect(Math.abs(p.top + p.height / 2 - (parts[0].top + parts[0].height / 2))).toBeLessThanOrEqual(4); // one line
   await expect(page.locator('.fcube-dots')).toHaveCount(0);
 });

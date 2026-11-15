@@ -1702,37 +1702,3 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   justify-content: flex-start;
 }
 
-/* ---------- Forge bar on phones (Guillermo, Nov 15): the whole deck name, never "Rhys th…". Row one: FORGE and the
-   name; row two: UNDO · SAVE · LEAVE as equals. The sticky deck tabs sit under the bar's real height ---------- */
-@media (max-width: 700px) {
-  .forgetop {
-    flex-wrap: wrap !important;
-    row-gap: 6px !important;
-    padding-top: 8px !important;
-    padding-bottom: 8px !important;
-  }
-  .forgetop .ftitle {
-    flex: 1 1 calc(100% - 90px) !important;
-    overflow: visible !important;
-  }
-  .forgetop .ftitle b {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    overflow-wrap: anywhere;
-    line-height: 1.1 !important;
-  }
-  .forgetop .fundo,
-  .forgetop .forge,
-  .forgetop .fleave {
-    flex: 1 1 28% !important; /* too wide to share row one, so all of them drop to row two together */
-    justify-content: center;
-  }
-}
-/* ...and on every screen: a long deck name wraps rather than being cut */
-.forgetop .ftitle b {
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  overflow-wrap: anywhere;
-}
