@@ -48,8 +48,9 @@ for (const [tab, sel] of [
     await page.evaluate((t) => localStorage.setItem('ch:tab', t), tab);
     await page.reload();
     await page.locator(sel).waitFor();
-    // keep scrolling down until the page has gone well past the bar (Discover fills in as EDHREC answers)
-    await page.waitForFunction(() => (scrollBy(0, 400), scrollY > 1200));
+    // keep scrolling down until the page has gone well past the bar, or has reached its end (Discover fills in as
+    // EDHREC answers; the decks page is shorter now that a deck tile holds its facts on one line)
+    await page.waitForFunction(() => (scrollBy(0, 400), scrollY > 1200 || (scrollY > 400 && scrollY + innerHeight >= document.documentElement.scrollHeight - 2)));
     await page.waitForTimeout(400); // the island and the bar finish moving
     await inReach(page, sel);
     // scrolling back up brings a top-docked island back: the bar steps below it rather than being covered
