@@ -36,7 +36,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, Pick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, ChipPick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -60,7 +60,6 @@ const AGGRESSION_OF: Record<string, 'patient' | 'hungry' | 'lethal'> = { '': 'hu
 const SHOW_AS_COMMANDER = false;
 type View = 'grid' | 'list' | 'compact';
 
-const pct = (n: number) => `${Math.round(n * 100)}%`;
 const ids = (p: EdhPage | null) => [p?.card?.id, ...(p?.lists.flatMap((l) => l.cards.map((c) => c.id)) ?? [])].filter(Boolean) as string[];
 
 /** Tags shown before "+N MORE": EDHREC's biggest archetypes. */
@@ -737,7 +736,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
           </div>
         </section>
 
-        {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
 
         {/* The one strip: POWER · what the deck needs and costs · short / TO BUY / FORGE. Everything else is behind ⋮.
             It stays while a new power or theme loads (no jump), saying so in its status line. */}
@@ -918,6 +916,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
         {!page && !error && <CardSpin label="Loading EDHREC data…" />}
         {page && (
           <>
+          {/* The FORGE bar sits directly above the deck tabs (Guillermo, Nov 15: "bar breaks when you move up"):
+              with nothing between them the two pin as one block, and the strip scrolls away behind it. */}
+  {forging && <ForgeTop label={label} sub={changes ? `${changes} ${changes === 1 ? 'swap' : 'swaps'} · leave and we’ll ask to save` : 'Forge mode · tap or drag cards to tune'} undo={undoLast} onLeave={changes === 0 && manualForge ? () => { setManualForge(false); window.scrollTo(0, 0); } : onBack} onSave={() => saveDeck()} saving={saving} />}
           {forging && <ForgeCube grid={cubeRef} buyCount={missing.length} />}
           <div ref={cubeRef} className={`deckgrid after-sw${forging ? ' forge-split' : ''}${forging && !anExpanded ? ' an-contracted' : ''}${forging && !sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
             {menuFor && <div className="backdrop" onClick={() => setMenuFor(null)} />}
@@ -947,6 +948,29 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                       .map((t) => (
                         <span key={t} className="fnchip">{` · ${t}`}</span>
                       ))}
+                  </>
+                }
+                foot={
+                  <>
+                    <button type="submit" form="cfilter-form" className="cf-apply-btn" title="Apply card pins">
+                      APPLY
+                    </button>
+                    {(cf.inc.length > 0 || cf.exc.length > 0) && (
+                      <button
+                        type="button"
+                        className="cf-clear-btn"
+                        onClick={() => {
+                          haptic('undo');
+                          if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
+                          if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
+                          setCf({ inc: [], exc: [] });
+                          setCfDraft({ inc: '', exc: '' });
+                        }}
+                        title="Clear card filters"
+                      >
+                        CLEAR
+                      </button>
+                    )}
                   </>
                 }
                 quick={
@@ -993,6 +1017,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
               >
                 {/* 1. Pin and without cards selection */}
                 <form
+                  id="cfilter-form"
                   className="cfilter"
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1100,25 +1125,6 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                         </div>
                       )}
                     </div>
-                    <button type="submit" className="cf-apply-btn" title="Apply card pins">
-                      APPLY
-                    </button>
-                    {(cf.inc.length > 0 || cf.exc.length > 0) && (
-                      <button
-                        type="button"
-                        className="cf-clear-btn"
-                        onClick={() => {
-                          haptic('undo');
-                          if (cf.inc[0] && pins.in.includes(cf.inc[0])) void setPin(cf.inc[0], 'in');
-                          if (cf.exc[0] && pins.out.includes(cf.exc[0])) void setPin(cf.exc[0], 'out');
-                          setCf({ inc: [], exc: [] });
-                          setCfDraft({ inc: '', exc: '' });
-                        }}
-                        title="Clear card filters"
-                      >
-                        CLEAR
-                      </button>
-                    )}
                   </div>
                   <datalist id="cfnames">
                     {[...recCard.values()].slice(0, 300).map((c) => (
@@ -1198,11 +1204,14 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
                   </OptRow>
                 )}
-                <div className="pickgrid">
-                  <Pick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
-                  <Pick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} className="show-pick" />
-                  <Pick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
+                {/* The bottom row of three dropdowns is gone (Guillermo, Nov 15). SHOW is the bar's own ALL / OWNED /
+                    MISSING buttons, so it only appears here on the phone, where the bar has no room for them; SORT and
+                    ONLY were the two settings that lived nowhere else, and they now speak the sheet's own chip language. */}
+                <div className="sheetshow">
+                  <ChipPick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
                 </div>
+                <ChipPick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
+                <ChipPick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
               </ToolBar>
               <SetChips
                 chips={[
@@ -1263,10 +1272,10 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                               const now = repl ?? c.name;
                               const pin = pinOf(pins, now);
                               const mark = repl ? `${slot!.why === 'pin' ? 'PIN' : slot!.why === 'never' ? 'NEVER' : slot!.why === 'auto' ? '≈' : '↔'} for ${c.name}` : pin === 'in' ? 'always in' : pin === 'out' ? 'no card fits' : undefined;
-                              // EDHREC inclusion: the card's own numbers, or (average deck cards carry none) the commander page's for the card shown
-                              const incl = c.potential ? (c.decks ?? 0) / c.potential : recInfo.get(norm(now))?.incl;
-                              const many = c.qty && c.qty > 1 ? `×${c.qty}` : '';
-                              const stat = incl !== undefined ? `${pct(incl)} of decks${c.lift ? ` · ${c.lift.toFixed(1)}x lift` : ''}${many ? ` · ${many}` : ''}` : many;
+                              // No play rate under a card, in any view (Guillermo, Nov 15): it repeated itself down the
+                              // whole page and added noise. The number still decides the order, and still shows where
+                              // it is the point: the swap picker and TO BUY. A card's own line is just its copies.
+                              const stat = c.qty && c.qty > 1 ? `×${c.qty}` : '';
                               return (
                                 <Item
                                   key={c.name}

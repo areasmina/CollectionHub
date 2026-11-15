@@ -13,9 +13,10 @@ test.beforeEach(async ({ page }) => {
 /** Sets SHOW or ONLY the way that screen offers it: the box inside ⋮, or the quick buttons on the bar when the box is hidden. */
 const pick = async (page: Page, value: string, quick: string) => {
   const d = await opts(page, '.lists');
-  const box = d.locator(value === 'owned' ? '.show-pick select' : 'select:has(option[value="under5"])').first();
-  const inSheet = await box.isVisible();
-  if (inSheet) await box.selectOption(value);
+  // every setting inside the sheet is a chip (Nov 15 round 5); SHOW is there only where the bar has no room for it
+  const chip = d.getByRole('radio', { name: value === 'owned' ? 'OWNED ONLY' : 'UNDER CA$5', exact: true }).first();
+  const inSheet = await chip.isVisible();
+  if (inSheet) await chip.click();
   await page.keyboard.press('Escape');
   await expect(page.locator('.tbmore[open]')).toHaveCount(0);
   // The quick buttons live on the bar, under the ⋮ sheet, so the sheet closes before they are pressed.
@@ -45,8 +46,10 @@ test('Commander page: SHOW and ONLY appear as chips; each chip removes its setti
   await expect(chips).toHaveCount(0);
   // the settings really went back, not just the chips
   const d = await opts(page, '.lists');
-  await expect(d.locator('.show-pick select').first()).toHaveValue('all');
-  await expect(d.locator('select:has(option[value="under5"])').first()).toHaveValue('all');
+  await expect(d.getByRole('radio', { name: 'EVERY CARD', exact: true }).first()).toHaveAttribute('aria-checked', 'true');
+  const showRow = d.locator('.sheetshow').getByRole('radio', { name: 'ALL CARDS', exact: true });
+  if (await showRow.isVisible()) await expect(showRow).toHaveAttribute('aria-checked', 'true');
+  else await expect(page.locator('.lists .tquick').getByRole('button', { name: 'ALL', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('Deck page: ONLY appears as a chip and the chip removes it', async ({ page }) => {

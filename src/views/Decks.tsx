@@ -38,7 +38,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, Pick, DeckLight, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -105,43 +105,13 @@ const GROUPINGS: [Grouping, string][] = [
   ['none', 'NO GROUPS'],
 ];
 
-/** GROUP box: how sections are split, plus a "show only" filter in the same picker (one less box). */
+/** GROUP and SHOW as the sheet's own chip rows (Nov 15 round 5): the panel holds no dropdown any more. */
 function GroupPick({ grouping, show, onGroup, onShow }: { grouping: Grouping; show: Show; onGroup: (g: Grouping) => void; onShow: (v: Show) => void }) {
-  const tag = show === 'owned' ? ' · OWNED' : show === 'missing' ? ' · MISSING' : '';
   return (
-    <label className="sbox pick">
-      <span className="tab">GROUP</span>
-      <select
-        value={grouping}
-        aria-label={`Group by, and which cards to show${tag ? `: ${show} only` : ''}`}
-        onChange={(e) => {
-          haptic('select');
-          const v = e.target.value;
-          if (v.startsWith('show:')) onShow(v.slice(5) as Show);
-          else onGroup(v as Grouping);
-        }}
-      >
-        <optgroup label="Group by">
-          {GROUPINGS.map(([v, t]) => (
-            <option key={v} value={v}>
-              {t}
-              {tag}
-            </option>
-          ))}
-        </optgroup>
-        <optgroup label="Show">
-          {SHOWS.map(([v, t]) => (
-            <option key={v} value={`show:${v}`}>
-              {show === v ? '✓ ' : '\u2003'}
-              {t}
-            </option>
-          ))}
-        </optgroup>
-      </select>
-      <span className="arrow" aria-hidden="true">
-        <span>▼</span>
-      </span>
-    </label>
+    <>
+      <ChipPick label="GROUP" value={grouping} options={GROUPINGS} onChange={onGroup} />
+      <ChipPick label="SHOW" value={show} options={SHOWS} onChange={onShow} />
+    </>
   );
 }
 
@@ -843,8 +813,6 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   return (
     <>
       <main className="dpage forgemain">
-        <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
-
         {/* THE OVERHAUL, saved deck: the same hero → strip → toolbar → cards as the commander page. The hero is the loud
             frame (ransom name, one red slash) and holds the match %; the strip holds what the deck costs and what it lacks. */}
         <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
@@ -922,6 +890,10 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
+
+        {/* The FORGE bar sits directly above the deck tabs (Guillermo, Nov 15: "bar breaks when you move up"):
+            with nothing between them the two pin as one block, and the hero scrolls away behind it. */}
+        <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 
         <ForgeCube grid={cubeRef} buyCount={buyItems.reduce((n, c) => n + c.qty, 0)} />
         <div ref={cubeRef} className={`deckgrid after-sw forge-split${!anExpanded ? ' an-contracted' : ''}${!sugExpanded ? ' sug-contracted' : ''}`} data-zoom={zoom}>
@@ -1001,8 +973,12 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               }
             >
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
-              <Pick label="SORT" value={sort} options={SORTS} onChange={setSort} />
-              <Pick label="ONLY" value={only} options={ONLYS} onChange={setOnly} className="show-pick" />
+              {/* Same chip language as the commander's sheet (Guillermo, Nov 15): no dropdowns beside chip rows. ONLY
+                  is also the bar's own buttons, so it only shows here where the bar has no room for them. */}
+              <ChipPick label="SORT" value={sort} options={SORTS} onChange={setSort} />
+              <div className="sheetshow">
+                <ChipPick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
+              </div>
             </ToolBar>
             <SetChips
               chips={[

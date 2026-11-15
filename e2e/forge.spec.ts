@@ -22,15 +22,16 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   await expect(page.locator('.pillnav')).toBeVisible(); // Dynamic Island stays accessible in the Forge
   await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/dynamic-island-in-forge-${info.project.name}.png` });
   const sugg = page.locator('.fsugg');
-  // on phones the sheet peeks at 92px; pull it up so sorts, radios and tabs are visible
+  // on phones the sheet peeks as one row; pull it up so sorts, radios and chips are visible
   if (await sugg.locator('.fgrab').isVisible()) await sugg.locator('.fgrab').click();
   await expect(sugg.getByRole('radio')).toHaveText(['OUR PICK', 'EDHREC LIFT', 'POPULAR']);
   await expect(page.locator('.fmeters')).toBeVisible();
 
-  // Verify ftabs: strictly title only, no price on NOT OWNED
-  const ftabs = sugg.locator('.ftabs button');
-  await expect(ftabs).toHaveText(['ALL', 'OWNED', 'NOT OWNED']);
-  await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/not-owned-tab-title-${info.project.name}.png` });
+  // Nov 15: the suggestions are cards you own, full stop — no ALL / OWNED / NOT OWNED tabs, and nothing missing in the
+  // list. What you don't own is TO BUY's job.
+  await expect(sugg.locator('.ftabs')).toHaveCount(0);
+  expect(await sugg.locator('.frows li').count()).toBeGreaterThan(0);
+  await expect(sugg.locator('.frows li:not(.own)')).toHaveCount(0);
   // the suggestion: an owned card EDHREC plays here, with its reasons
   const row = sugg.locator('.frows li', { hasText: 'Arcane Signet' });
   await expect(row).toHaveClass(/own/);
@@ -103,7 +104,8 @@ test('ONLY: price bands and Game Changers filter the deck', async ({ page }) => 
   // above 700px ONLY is a quick segment on the bar; on phones it stays in ⋮
   const wide = page.viewportSize()!.width > 700;
   const seg = page.locator('.lists > .tbar .qsegs[aria-label="Ownership filter"]');
-  const only = async (v: string, label: RegExp) => (wide ? seg.getByRole('button', { name: label }).click() : (await opts(page)).locator('select:has(option[value="over20"])').selectOption(v));
+  // wide screens have the ownership buttons on the bar; a phone has the same choices as the sheet's ONLY chip row
+  const only = async (v: string, label: RegExp) => (wide ? seg.getByRole('button', { name: label }).click() : (await opts(page)).locator('.sheetshow').getByRole('radio', { name: label }).click());
   await only('over20', /CA\$20 AND UP/);
   await expect(page.locator('.lists [data-card]')).toHaveCount(1);
   await expect(page.locator('.lists [data-card="Rhystic Study"]')).toHaveCount(1);

@@ -299,17 +299,17 @@ test('Deck names open the deck: commander page and the copies warning', async ({
   await expect(page.locator('.dhero h1')).toHaveAttribute('aria-label', 'Tatyova Lands (copy)');
 });
 
-test('Deck page: GROUP holds the show-only filter; Analysis folds on phones and tablets', async ({ page }, info) => {
+test('Deck page: GROUP and SHOW are chip rows in the options; Analysis folds on phones and tablets', async ({ page }, info) => {
   await go(page, 'decks');
   await page.locator('.dcard').first().click();
-  await expect(page.locator('.dtools .sbox')).toHaveCount(4); // search + three filters (in the ⋮ options)
+  await expect(page.locator('.dtools .sbox')).toHaveCount(1); // the search box; every setting is a chip row now
   await fits(page, ['.lists > .dtools']);
-  await opts(page);
-  const group = page.locator('.dtools select').first();
-  await group.selectOption('show:missing'); // every seeded card is owned
+  const d = await opts(page);
+  const showRow = d.locator('.optrow:has(.chiprow)').filter({ has: page.locator('.lbl', { hasText: /^SHOW$/ }) });
+  await showRow.getByRole('radio', { name: 'MISSING ONLY', exact: true }).click(); // every seeded card is owned
   await expect(page.locator('details.cat')).toHaveCount(0);
-  await expect(group.locator('option:checked')).toHaveText('CARD TYPE · MISSING');
-  await group.selectOption('show:all');
+  await expect(showRow.getByRole('radio', { name: 'MISSING ONLY', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await showRow.getByRole('radio', { name: 'ALL CARDS', exact: true }).click();
   await expect(page.locator('details.cat').first()).toBeVisible();
   await closeOpts(page);
   const curve = page.locator('.dpanel .curve, .dpanel .dsec').first();
@@ -381,7 +381,7 @@ test('Commander page (Discover): sections in order with count + cost, grid/list 
   await expect(page.locator('details.cat > summary .gval')).toHaveCount(6);
   await expect(page.locator('details.cat').first().locator('.gval')).toContainText('CA$');
   // two filter boxes above the cards, grid / list in the first section
-  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(6); // search first, then the filters (in the ⋮ options)
+  await expect(page.locator('.lists > .dtools .sbox')).toHaveCount(3); // search first, then PIN and WITHOUT in the ⋮ options; the settings are chip rows
   await fits(page, ['.lists > .dtools']);
   await viewTo(page, 'list');
   await expect(page.locator('ul.zlist').first()).toBeVisible();
@@ -719,7 +719,7 @@ test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, n
   // filter to OWNED cards via toolbar search bar quick segment
   // (quick segments show above 700px; on phones the same filter is SHOW in ⋮)
   if (page.viewportSize()!.width > 700) await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
-  else await (await opts(page)).locator('.show-pick select').selectOption('owned');
+  else await (await opts(page)).locator('.sheetshow').getByRole('radio', { name: 'OWNED ONLY', exact: true }).click();
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('OWNED');
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();

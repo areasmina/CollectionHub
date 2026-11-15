@@ -1,4 +1,5 @@
 import { haptic } from '../lib/haptics';
+import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { CardSpin } from './CardSpin';
@@ -219,8 +220,12 @@ export function Discover(s: Shared) {
     price: byNum(price, 1),
     added: byNum((c) => c.added, -1),
   };
+  // The search reads a commander's name, its type line and its rules text, reminder text included (Guillermo, Nov 15:
+  // "we should be able to find cards by name and oracle text and reminder text"), the same as every other search here.
+  // The chosen order still decides the order; the search only decides who is shown.
+  const matches = new Set(searchByText(commanders, q, (c) => ({ name: c.name, type: c.type, text: c.text })).map((c) => c.key));
   const shown = commanders
-    .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()))
+    .filter((c) => matches.has(c.key))
     .filter((c) => colours.every((col) => c.ci.includes(col)))
     .sort((a, b) => cmp[sort](a, b) || a.name.localeCompare(b.name));
   const empty = commanders.length === 0; // nothing to sort or filter yet

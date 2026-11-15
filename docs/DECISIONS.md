@@ -137,3 +137,50 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The deck header closes up a notch around the ACTIVE badge: name, badge, facts and links read as one block.
 - My Decks: SIZE joins the filter row instead of floating over the decks, a deck tile keeps its facts and its owned
   mark on one line, tags to one line, and NOT LEGAL becomes a tape on the card's corner.
+
+## Nov 15, round 3 (Guillermo's five screenshots)
+
+- **The Forge bar and the deck tabs pin as one block.** The bar used to pin the moment you scrolled while the tabs
+  pinned later, so for a few pixels of travel the deck's cost line slid through the window between them, which read as
+  a broken second bar. The cost line now sits above the bar and scrolls away behind it.
+- **No play rate under a card, in any view.** The number still orders the page and still shows where it is the point
+  (the swap picker, TO BUY). A card's own line is just its copies.
+- **The card ⋮ is opaque and sits at the card's right border**, just noticeable: three dots on a 22px strip of ink, with
+  the full 44px tap area kept.
+- **Collection opens as one block, ManaBox style.** On a phone the ransom title takes the size the screen can spare and
+  the binder tag moves up beside it (the word BINDER above it only said the same thing twice); the tabs, the list
+  ribbon and the search / view rows share one frame divided by hairlines. Every control stayed; the cards start higher.
+- **The two faces of Collection swipe**, the same move as the Forge's. A swipe is a shortcut, never the only way: both
+  tabs stay on screen, and the first time a binder opens on a device the tabs lean once and say "swipe". A tap on
+  either tab, or one swipe, and the hint never comes back. Crossing gives the usual select tick.
+- **The island is really glass now**, and the sync panel is a bubble of the same glass with a tail into the bar: the nav
+  and each docked shape no longer paint solid black behind the frosted pane.
+- **The section rail floats over the cards**: no reserved lane, see-through, and barely there until the list moves.
+
+## Nov 15, round 4 (the Forge bar and the suggestions)
+
+- **The Forge bar is as tall as the buttons it holds** (46px on a phone, 48 elsewhere), not a band of empty ink.
+- **The suggestions sheet peeks as one row.** The empty pull strip is gone: the handle sits on the tab row itself, in
+  the gap between SUGGESTIONS and TO BUY, still a 44px pull, with a small arrow saying which way it goes.
+- **Suggestions are cards you own, full stop.** The ALL / OWNED / NOT OWNED tabs are gone: the Forge builds from your
+  binder, and what you don't own is TO BUY's job. The line under the title says "N of your cards fit", so the panel
+  says what it is rather than only how many.
+- **Every search reads name, type line and rules text, reminder text included.** Collection, deck pages, the Forge and
+  the swap picker already did; Discover's commander search matched names only and now matches the same three.
+
+## Nov 15, round 5 (the options sheet and the Collection top)
+
+- **The options sheet is one panel in one language.** The row of three dropdowns at its foot (SORT / SHOW / ONLY) spoke
+  a different language from the chips and tiles above it and repeated controls that are already on the bar. Every
+  setting in the sheet is now a line of chips that scrolls sideways, so the panel reads top to bottom as one list.
+- **A setting is never in two places at once.** SHOW (ALL / OWNED / MISSING) is the bar's own buttons wherever the bar
+  has room for them, and appears in the sheet only on a phone, where those buttons are hidden. The deck page's ONLY
+  follows the same rule. SORT and ONLY on the commander page were the settings that lived nowhere else; they stayed.
+- **APPLY is the sheet's footer, not a button beside a field.** It sits on the bottom edge, the width of the panel,
+  and stays there while the options scroll; CLEAR sits beside it when there is something to clear. On wide screens,
+  opening the options first pins the bar to the top, so the panel always has the whole screen under it.
+- **The Collection top is four lanes of one height**: tabs with + DECK / IMPORT, the list ribbon, the search, the tool
+  row — flush inside the one frame, hairlines between them, and the sort takes the empty end of the tool row so its
+  words read in full. The cards start about 38px higher again, which is ManaBox's density.
+- **The first-run swipe tag has its own strip.** With the lanes flush it had nowhere to hang without covering IMPORT,
+  so while it shows, the tabs lane opens a 22px strip for it; the strip goes with the tag, for good, after one use.

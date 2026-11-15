@@ -366,9 +366,9 @@
     margin: 0 !important;
     padding-top: var(--s3) !important;
   }
-  /* the bottom sheet's peek: just its tabs, no extra rows sticking up over the cards */
+  /* the bottom sheet's peek: one row, the tabs, with the pull handle on it (Nov 15: it was a thick empty band) */
   html.forging .fsugg {
-    max-height: 92px !important;
+    max-height: 56px !important;
   }
   html.forging .fsugg.up {
     max-height: 82vh !important;
@@ -547,9 +547,12 @@
     order: 1;
     margin: 0 !important;
   }
+  /* In the Forge the cost line parks behind the opaque FORGE bar (z 40) rather than pinning below the header,
+     so the bar and the deck tabs meet as one block with nothing sliding through between them. */
   html.forging .dstrip {
-    position: relative !important;
-    top: auto !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
   }
   .dstrip > .dacts:empty {
     display: none;
@@ -1951,7 +1954,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    Icons instead of CRE / INS / SOR, a narrower lane so the cards get the width back (reading the cards is what matters
    while building), see-through so a card never disappears behind it, and dormant until the list moves: it comes up on
    scroll, on hover and on focus, then fades back. Height stays a full tap target. */
-.lists:has(> .jrail-wrap) { padding-right: 30px; }
+/* Round 3: no lane at all. The rail floats over the cards, see-through enough to read a card through it, and is
+   barely there until the list moves, so the full width belongs to the cards. */
+.lists:has(> .jrail-wrap) { padding-right: 0 !important; }
 .lists > .jrail-wrap { width: 26px; }
 .jrail {
   width: 26px;
@@ -1959,7 +1964,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   border-color: rgba(255, 255, 255, 0.14);
-  opacity: 0.34;
+  opacity: 0.16;
   transition: opacity 0.3s ease;
 }
 .jrail-wrap.awake > .jrail,
@@ -1984,7 +1989,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 @media (max-width: 700px) {
   .deckgrid > .lists:has(> .jrail-wrap),
-  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) { padding-right: 32px !important; }
+  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) { padding-right: 0 !important; }
 }
 
 /* ── Collection: lists, search and view controls as one block (Guillermo, Nov 15) ──
@@ -2210,4 +2215,484 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   z-index: 2;
   background: #0c0c0e;
   box-shadow: -10px 0 10px -6px #0c0c0e;
+}
+
+/* ── The ⋮ on a card tile (Guillermo, Nov 15) ──
+   The three dots stay where they are, on the art's right edge, but they no longer wait to be found: they sit on a
+   narrow opaque strip hard against the card's border, quiet enough to ignore while reading the card and solid enough
+   to see on any art. */
+.ztile > .morebtn,
+.ztile .tacts > .morebtn,
+.ztile:not(.ctile) .tacts > .morebtn,
+.ztile.ctile > .morebtn {
+  opacity: 0.72;
+  right: 0;
+  background: none;
+  text-shadow: none;
+  font-size: 22px;
+  isolation: isolate;
+}
+/* the dark strip is only as wide as the dots; the button itself stays a full 44px to tap */
+.ztile > .morebtn::before,
+.ztile .tacts > .morebtn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 1px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 38px;
+  border-radius: 3px;
+  background: #0b0b0d;
+  z-index: -1;
+}
+.ztile:hover > .morebtn,
+.ztile:focus-within > .morebtn,
+.ztile:hover .tacts > .morebtn,
+.ztile:focus-within .tacts > .morebtn {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn {
+    opacity: 0.72;
+    transform: none;
+  }
+}
+
+/* ---------- Forge, phones (Guillermo, Nov 15: "bar breaks when you move up looks bad") ----------
+   The FORGE bar pins at the top the moment you scroll, but the CARDS · ANALYSIS · TO BUY tabs only pin once they
+   reach the bar's underside. For those few pixels of travel a window opened between the two, and the deck's cost
+   line slid through it, which read as a broken second bar. The cost line now parks behind the bar instead, so the
+   two bars meet as one block and nothing passes between them. */
+@media (max-width: 700px) {
+  html.forging .forgetop {
+    margin-bottom: 0 !important;
+  }
+  html.forging .fcube {
+    margin-top: 0 !important;
+  }
+}
+
+/* ── Collection: one cohesive top block, ManaBox style (Guillermo, Nov 15) ──
+   "The menu and boxes there should be more cohesive… that marked area is using space we can use for our cards."
+   The tabs, the list ribbon and the search/view row were three framed boxes with gaps between them, and the title
+   took a third of a phone screen before the binder even started. They are now one panel: a single frame around the
+   stack, hairlines instead of three borders, and everything a notch tighter, so the cards start near the top the way
+   they do in ManaBox. Nothing was removed: every control is still on the same screen. */
+.coll .ctabs:has(+ .coll-listbar) {
+  margin-bottom: 0;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.coll .ctabs:has(+ .coll-listbar) + .coll-listbar {
+  margin: 0 !important;
+  border-top: 1px solid #2a2a33;
+  border-bottom: 0;
+  box-shadow: none;
+}
+.dpage.coll .ctabs:has(+ .coll-listbar) ~ #cpane-cards .collbar {
+  border: 2px solid var(--u-text, #fff);
+  border-top: 1px solid #2a2a33;
+  box-shadow: 5px 5px 0 #000;
+}
+@media (max-width: 700px) {
+  /* The title keeps its ransom letters, at the size a phone can spare, and the binder tag moves up beside them
+     instead of taking a line of its own. */
+  .coll .chead2 .titlewrap {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px !important;
+    padding-bottom: 8px !important;
+  }
+  .coll .chead2 .titlewrap > .ztitle {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .coll .chead2 .titlewrap > .bindermenu {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0 !important;
+  }
+  .coll .chead2 .titlewrap > .bindermenu .bmbtn {
+    max-width: 44vw;
+    padding-left: 10px;
+    padding-right: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* The tag names the binder; the word BINDER above it only said the same thing twice. */
+  .coll .chead2 .titlewrap > .bindermenu .bmbtn .lbl {
+    display: none;
+  }
+  /* The tag now sits at the right end of the title, so its menu hangs from that end and stays on the screen. */
+  .coll .chead2 .titlewrap > .bindermenu .bmenu {
+    left: auto !important;
+    right: 12px !important;
+  }
+  .coll .ctabs {
+    margin: 6px 0 0;
+    padding: 5px;
+    gap: 6px;
+  }
+  .coll .ctab {
+    min-height: 44px;
+    padding: 0 11px;
+  }
+  .coll .coll-listbar {
+    padding: 5px 8px !important;
+  }
+  .dpage.coll .collbar {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+  .dpage.coll .collbar > .dtools.tbar {
+    gap: 6px !important;
+  }
+}
+
+/* ── Collection: swipe between CARDS and ANALYTICS (Guillermo, Nov 15) ──
+   "How will people know they can do that?" The tabs stay on screen, so the swipe is only ever a shortcut; and the
+   first time a binder opens on a device the block leans once and says swipe, which shows the move instead of hiding
+   it in a help page. A tap on either tab, or one swipe, and the hint never returns. */
+.coll .ctabs {
+  position: relative;
+}
+.coll .ctab-hint {
+  position: absolute;
+  right: 8px;
+  bottom: -14px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--u-red, #e60012);
+  color: #fff;
+  font: 400 11px var(--u-mono, monospace);
+  letter-spacing: 0.1em;
+  transform: rotate(-1.5deg);
+  animation: collhintin 0.3s ease both;
+}
+@keyframes collhintin {
+  from {
+    opacity: 0;
+    transform: rotate(-1.5deg) translateX(-6px);
+  }
+}
+.coll.swipehint .ctabset {
+  animation: collnudge 1.5s 0.1s ease-in-out 2 both;
+}
+@keyframes collnudge {
+  0%,
+  62%,
+  100% {
+    transform: translateX(0);
+  }
+  22% {
+    transform: translateX(-14px);
+  }
+  44% {
+    transform: translateX(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coll.swipehint .ctabset,
+  .coll .ctab-hint {
+    animation: none;
+  }
+}
+
+/* ── The island really is glass now, and its panel is a bubble of the same stuff (Guillermo, Nov 15) ──
+   "I don't see frosted glass applied, looks black still": the bar itself and each docked shape were still painting
+   solid black behind the frosted pane, so the blur had nothing to show. The nav is clear, every dock shares one
+   frosted membrane, and the sync panel is that same glass with a little tail pointing back at the island, so the two
+   read as one thing rather than a black box floating near a black bar. */
+.pillnav {
+  background: transparent !important;
+}
+.pillnav.dock-top .island-membrane,
+.pillnav.dock-bottom .island-membrane,
+.pillnav.dock-left .island-membrane,
+.pillnav.dock-right .island-membrane,
+.pillnav.floating .island-membrane,
+.pillnav.collapsed .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 44%, rgba(0, 0, 0, 0.14)),
+    rgba(12, 12, 14, 0.56) !important;
+}
+.pillnav.open.dock-top .island-membrane,
+.pillnav.open.dock-bottom .island-membrane,
+.pillnav.open.dock-left .island-membrane,
+.pillnav.open.dock-right .island-membrane,
+.pillnav.open.floating .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.16)),
+    rgba(10, 10, 12, 0.82) !important;
+}
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .pillnav .island-membrane,
+  .pillnav.dock-top .island-membrane,
+  .pillnav.dock-bottom .island-membrane,
+  .pillnav.dock-left .island-membrane,
+  .pillnav.dock-right .island-membrane,
+  .pillnav.floating .island-membrane,
+  .pillnav.collapsed .island-membrane,
+  .pillnav.open .island-membrane {
+    background: rgba(13, 13, 15, 0.94) !important;
+  }
+}
+/* The panel: the island's own glass, a hair denser because it holds words, with a tail into the bar. */
+.island-drawer {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.18)),
+    rgba(12, 12, 14, 0.74) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.island-drawer::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  background: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+.pillnav.dock-bottom .island-drawer {
+  bottom: calc(100% + 7px);
+}
+.pillnav.dock-bottom .island-drawer::after {
+  bottom: -9px;
+  transform: translateX(-50%) rotate(45deg);
+  border-top: 0;
+  border-left: 0;
+}
+.pillnav.dock-top .island-drawer {
+  top: calc(100% + 7px);
+}
+.pillnav.dock-top .island-drawer::after {
+  top: -9px;
+  transform: translateX(-50%) rotate(45deg);
+  border-bottom: 0;
+  border-right: 0;
+}
+.pillnav.dock-left .island-drawer::after,
+.pillnav.dock-right .island-drawer::after,
+.pillnav.floating .island-drawer::after {
+  display: none;
+}
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .island-drawer {
+    background: rgba(13, 13, 15, 0.96) !important;
+  }
+}
+/* The docked shapes and the two corner "ears" painted their own black, which is what the glass was sitting on. */
+.pillnav.dock-top,
+.pillnav.dock-bottom,
+.pillnav.dock-left,
+.pillnav.dock-right,
+.pillnav.floating,
+.pillnav.collapsed {
+  background: transparent !important;
+}
+.pillnav.dock-top::before {
+  background: radial-gradient(circle at 0 16px, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+.pillnav.dock-top::after {
+  background: radial-gradient(circle at 16px 16px, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+.pillnav.dock-bottom::before {
+  background: radial-gradient(circle at 0 0, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+.pillnav.dock-bottom::after {
+  background: radial-gradient(circle at 16px 0, transparent 16px, rgba(12, 12, 14, 0.62) 16px);
+}
+
+/* ── The Forge bar and the suggestions tab, slimmer (Guillermo, Nov 15) ──
+   Both were thick bands of mostly empty ink across a phone screen. The bar is now as tall as the buttons it holds,
+   and the suggestions sheet lost its empty pull strip: the handle moved onto the tab row itself (still a 44px pull
+   area, in the gap between SUGGESTIONS and TO BUY), with a small arrow when the sheet is down so it is plain that
+   there is a panel to pull up. Everything they held is still there. */
+.forgetop {
+  min-height: 48px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+@media (max-width: 700px) {
+  .forgetop {
+    min-height: 46px !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  html.forging .fsugg .fgrab {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    width: 150px;
+    height: 44px;
+    min-height: 44px !important;
+    margin: 0 !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+  }
+  html.forging .fsugg:not(.up) .fgrab::after {
+    content: '▲';
+    font: 400 9px var(--u-mono, monospace);
+    color: var(--u-muted, #b8b8c0);
+  }
+  html.forging .fsugg.up .fgrab::after {
+    content: '▼';
+    font: 400 9px var(--u-mono, monospace);
+    color: var(--u-muted, #b8b8c0);
+  }
+  html.forging .fsugg > .fsugg-header {
+    min-height: 44px;
+    margin-top: 0;
+  }
+  html.forging .fsugg .fpanes {
+    margin-bottom: 0;
+  }
+  html.forging .fsugg .fpanes button {
+    min-height: 44px;
+  }
+}
+
+/* ── ROUND 5 · ONE PANEL, ONE LANGUAGE (Guillermo, Nov 15) ─────────────────────────────────────────────
+   The options sheet ended in a row of three dropdowns that repeated the bar's own buttons and spoke a
+   different visual language from everything above them. The dropdowns are gone. Every setting in the sheet
+   is now a line of chips that scrolls sideways, so the panel reads as one list of choices top to bottom,
+   and the sheet's one commit button sits on a fixed footer instead of floating beside a text field. */
+.tbar .fbody .chiprow {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  gap: 6px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-snap-type: x proximity !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 1px 0 !important;
+  min-width: 0 !important;
+}
+.tbar .fbody .chiprow::-webkit-scrollbar { display: none; }
+/* the same fade the theme row uses, so a row that runs past the edge says so */
+.tbar .fbody .chiprow { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); padding-right: 24px !important; }
+.tbar .fbody .chiprow > .u-chip {
+  flex: 0 0 auto !important;
+  scroll-snap-align: start;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  background: #151518 !important;
+  border: 1px solid #33333e !important;
+  color: #b8b8c6 !important;
+  font: 800 11.5px/1 var(--u-display, sans-serif) !important;
+  letter-spacing: 0.06em !important;
+  white-space: nowrap !important;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.tbar .fbody .chiprow > .u-chip:hover { border-color: #55555f !important; color: #ffffff !important; }
+/* the chosen one is the only loud thing in the row: red tape, black letters */
+.tbar .fbody .chiprow > .u-chip[aria-checked='true'] {
+  background: var(--u-red, #e60012) !important;
+  border-color: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+}
+/* on a phone every chip is still a full thumb target (the sheet's own rule) */
+@media (max-width: 699px) {
+  .tbar .fbody .chiprow > .u-chip { height: 44px !important; min-height: 44px !important; padding: 0 14px !important; font-size: 12.5px !important; }
+}
+/* SHOW is the bar's ALL / OWNED / MISSING buttons wherever the bar has room for them: there it is not repeated here */
+@media (min-width: 701px) { .tbar .fbody .sheetshow { display: none !important; } }
+
+/* The footer: always on the bottom edge of the sheet, APPLY taking the width it deserves */
+.tbar .fbody .sheetfoot {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 3 !important;
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  margin: 2px -14px -12px !important;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom)) !important;
+  background: linear-gradient(to bottom, rgba(10, 10, 12, 0.86), var(--bg, #0a0a0c) 40%) !important;
+  border-top: 1px solid #2a2a33 !important;
+}
+.tbar .fbody .sheetfoot > .cf-apply-btn { flex: 1 1 auto !important; height: 44px !important; font-size: 13px !important; }
+.tbar .fbody .sheetfoot > .cf-clear-btn { flex: 0 0 auto !important; height: 44px !important; }
+@media (min-width: 701px) {
+  .tbar .fbody .sheetfoot { margin: 2px -12px -10px !important; padding: 10px 12px !important; }
+  .tbar .fbody .sheetfoot > .cf-apply-btn { height: 38px !important; }
+  .tbar .fbody .sheetfoot > .cf-clear-btn { height: 38px !important; }
+}
+/* the PIN / WITHOUT fields now own their row entirely, one under the other */
+.tbar .fbody .cf-row { flex-wrap: wrap !important; }
+.tbar .fbody .cf-row > .cglance-wrap { flex: 1 1 100% !important; }
+
+/* ── ROUND 5 · THE COLLECTION TOP IS ONE BLOCK, NOT FIVE (Guillermo, Nov 15) ───────────────────────────
+   The circled area: tabs, + DECK / IMPORT, the list ribbon, the search and the tool row each kept their own
+   air, so the binder began a third of the way down the screen. They are now four lanes of the same height
+   inside the one frame, divided by hairlines instead of gaps, and the lane that was empty on the right of
+   the tools (the sort) takes that space so its words read in full. Nothing moved out of reach. */
+@media (max-width: 700px) {
+  .coll .chead2 { margin-bottom: 0 !important; padding: 2px 0 4px !important; }
+  .coll .chead2 .titlewrap { padding-top: 6px !important; padding-bottom: 4px !important; }
+  .coll .ctabs { margin: 4px 0 0 !important; padding: 3px 4px !important; gap: 4px !important; }
+  .coll .ctab { min-height: 44px !important; padding: 0 9px !important; font-size: 13.5px !important; }
+  .coll .ctab-acts { gap: 4px !important; }
+  .coll .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 9px !important; font-size: 13px !important; }
+  .coll .coll-listbar { padding: 3px 6px !important; }
+  .coll .coll-listbar .list-tab { min-height: 44px !important; padding: 0 10px !important; }
+  .dpage.coll .collbar { padding-top: 2px !important; padding-bottom: 2px !important; }
+  .dpage.coll .collbar > .dtools.tbar { gap: 2px !important; }
+  .coll .dtools.tbar > .tsearch { min-height: 44px !important; }
+  /* the tool lane: view, size, ⋮, filter, then the sort taking the rest of the line */
+  .coll .dtools.tbar > .tquick { padding: 0 2px !important; gap: 6px !important; }
+  .coll .dtools.tbar > .sortsel { flex: 1 1 0 !important; min-width: 88px !important; }
+  .coll .dtools.tbar > .sortsel select { width: 100% !important; font-size: 13px !important; }
+}
+/* The lanes are flush now, so the first-run tag can't hang on a seam without covering a control: while it shows,
+   the tabs lane opens a strip of its own for it, at every width, and that strip goes away with the tag. */
+.coll.swipehint .ctabs { padding-bottom: 24px !important; }
+.coll .ctab-hint { left: 10px; right: auto; bottom: 4px; }
+
+/* The GEAR and BUY UNDER tiles kept the full-size segmented control's 58px frame while their buttons were shrunk to
+   28px inside the sheet, which left an empty white band under each one. The frame now takes the height of the tiles. */
+.tbar .fbody .segs { height: auto !important; align-items: stretch !important; border-width: 2px !important; }
+.tbar .fbody .segs button { height: 36px !important; min-height: 36px !important; }
+.tbar .fbody .segs button + button { border-left-width: 2px !important; }
+@media (max-width: 699px) {
+  .tbar .fbody .segs button { height: 44px !important; min-height: 44px !important; }
+}
+
+/* Tablet and desktop keep the same four flush lanes; only the air inside them is larger than a phone's. */
+@media (min-width: 701px) {
+  .coll .chead2 { margin-bottom: 0 !important; }
+  .coll .ctabs { margin: 8px 0 0 !important; padding: 5px 6px !important; }
+  .coll .coll-listbar { padding: 5px 8px !important; }
+  .dpage.coll .collbar { padding-top: 4px !important; padding-bottom: 4px !important; }
+}
+
+/* A panel longer than the screen scrolls inside itself, with its footer riding the bottom edge, rather than running
+   off the window (the options sheet gained rows when the dropdowns became chip lines). */
+@media (min-width: 701px) {
+  .dtools.tbar > .tbmore > .fbody { max-height: min(calc(100dvh - 120px), 660px) !important; overflow-y: auto !important; }
 }

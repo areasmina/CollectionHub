@@ -41,9 +41,9 @@ test('Saved deck: + MY CARDS finds a card of yours the app does not suggest, pas
   await page.reload();
   await page.locator('.dcard').first().click();
   const sugg = page.locator('.fsugg');
-  // narrow the suggestions first: NOT OWNED hides every card of yours
+  // narrow the suggestions first: one role chip, so only the cards for that job are suggested
   if (await sugg.locator('.fgrab').isVisible()) await sugg.locator('.fgrab').click();
-  await sugg.locator('.ftabs button', { hasText: 'NOT OWNED' }).click();
+  await sugg.locator('.fchips button').first().click();
   if (await sugg.locator('.fgrab[aria-expanded="true"]').isVisible()) await sugg.locator('.fgrab').click(); // lower it again: the bar is under it
   const q = await openSearch(page);
   await q.fill('opt thou');

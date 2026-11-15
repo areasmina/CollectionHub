@@ -487,7 +487,6 @@ const SORTS: [ForgeSort, string, string][] = [
   ['lift', 'EDHREC LIFT', 'How much more this commander’s decks play the card than decks in general (EDHREC lift)'],
   ['pop', 'POPULAR', 'How many of this commander’s EDHREC decks play the card'],
 ];
-type Tab = 'all' | 'owned' | 'missing';
 /** How many of your matching cards a search lists at once (the suggestions list stops at 60 too). */
 const SEARCH_MAX = 60;
 const OWN_W = 0.1; // a card you own is a card you can play tonight: a small, stated nudge
@@ -506,7 +505,8 @@ interface Row {
 /**
  * The live suggestions list. Sources: EDHREC's cards for this commander (or the theme picked) plus every card you own
  * in its colours. Sort OUR PICK · EDHREC LIFT · POPULAR; search your own cards; chips for what the deck needs, themes
- * and EDHREC's With / Without card filter; tabs ALL · OWNED · TO BUY. Prices are shown and never change the order.
+ * and EDHREC's With / Without card filter. Only cards you own are suggested; TO BUY holds the rest. Prices are
+ * shown and never change the order.
  */
 export function ForgeSuggest({
   profile,
@@ -589,7 +589,6 @@ export function ForgeSuggest({
   const brain = useLiveQuery(() => db.profiles.get(profile), [profile])?.brain;
   const aggression = (dial ?? brain?.aggression ?? 'hungry') as Aggression;
   const [sort, setSort] = useState<ForgeSort>('ours');
-  const [tab, setTab] = useState<Tab>('all');
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role | ''>('');
   const [more, setMore] = useState(false);
@@ -643,14 +642,15 @@ export function ForgeSuggest({
   const short = shortOf(needs.stats, needs.range);
   const searching = q.trim().length >= 2;
   const value = (r: Row) => (sort === 'ours' ? r.total : sort === 'lift' ? (r.c.lift ?? (r.c.synergy != null ? 1 + r.c.synergy : 0)) : (r.c.incl ?? 0));
-  let list = rows.filter((r) => (tab === 'owned' ? r.owned > 0 : tab === 'missing' ? r.owned === 0 : true) && (!role || r.roles.includes(role)) && (!focus || r.fits));
+  // Only cards you own (Guillermo, Nov 15): the Forge builds from your binder, and what you don't have is TO BUY's job.
+  let list = rows.filter((r) => r.owned > 0 && (!role || r.roles.includes(role)) && (!focus || r.fits));
   // The search covers every card of yours that can go in this deck (in the commander's colours, not already in it):
-  // name, rules text, type line. It looks past the OWNED / NOT OWNED tab, the role chip and the theme chip, which only
-  // narrow the suggestions: a card you own is found even when the app would not have suggested it.
+  // name, rules text, type line. It looks past the role chip and the theme chip, which only narrow the suggestions:
+  // a card you own is found even when the app would not have suggested it.
   if (searching) list = searchByText(rows.filter((r) => r.owned > 0), q, (r) => ({ name: r.c.name, type: r.card?.type ?? r.c.type, text: r.card?.text }));
   else list = [...list].sort((a, b) => Number(!!a.blocked) - Number(!!b.blocked) || value(b) - value(a) || a.c.name.localeCompare(b.c.name));
   const shown = list.slice(0, searching ? SEARCH_MAX : more ? 60 : 20);
-  const narrowed = tab !== 'all' || !!role || !!focus;
+  const narrowed = !!role || !!focus;
   const not = searching && whyNot ? whyNot(q) : undefined;
 
   // Rows that change place slide to it (FLIP) with a green flash, so you see what the last change moved.
@@ -714,7 +714,8 @@ export function ForgeSuggest({
           ) : (
             <h3>
               SUGGESTIONS
-              <small>{loading ? 'asking EDHREC…' : `${list.length} ${list.length === 1 ? 'card' : 'cards'}`}</small>
+              {/* The line says what the panel is for, not just a number (Guillermo, Nov 15): these are your own cards. */}
+              <small>{loading ? 'asking EDHREC…' : `${list.length} of your cards fit`}</small>
             </h3>
           )}
         </div>
@@ -876,19 +877,6 @@ export function ForgeSuggest({
         </details>
       )}
       {cfNote && <p className="small fcfnote" role="status">{cfNote}</p>}
-      <div className="ftabs" role="tablist" aria-label="Which cards">
-        {(
-          [
-            ['all', 'ALL'],
-            ['owned', 'OWNED'],
-            ['missing', 'NOT OWNED'],
-          ] as [Tab, string][]
-        ).map(([v, t]) => (
-          <button key={v} role="tab" aria-selected={tab === v} onClick={() => (haptic('select'), setTab(v))}>
-            {t}
-          </button>
-        ))}
-      </div>
       {placing && (
         <p className="fplace" role="status">
           Tap a deck card to swap in <b>{placing}</b>

@@ -39,7 +39,9 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   await expect(cfRow).toBeVisible();
   await expect(cfRow.locator('.tab', { hasText: 'PIN' })).toBeVisible();
   await expect(cfRow.locator('.tab', { hasText: 'WITHOUT' })).toBeVisible();
-  await expect(cfRow.locator('.cf-apply-btn')).toBeVisible();
+  // APPLY is no longer squeezed between the fields: it is the sheet's own footer (Nov 15 round 5)
+  await expect(cfRow.locator('.cf-apply-btn')).toHaveCount(0);
+  await expect(fbody.locator('.sheetfoot .cf-apply-btn')).toBeVisible();
 
   // 2. THEME chips below
   const themeRow = fbody.locator('.optrow:has(.themes)');
@@ -49,9 +51,11 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   const gearRow = fbody.locator('.optrow', { hasText: 'GEAR' });
   await expect(gearRow).toBeVisible();
 
-  // 5. Pickgrid (SORT / SHOW / ONLY)
-  const pickgrid = fbody.locator('.pickgrid');
-  await expect(pickgrid).toBeVisible();
+  // 5. SORT and ONLY as chip rows, in the sheet's one language; no dropdown is left in the panel
+  await expect(fbody.locator('.pickgrid')).toHaveCount(0);
+  await expect(fbody.locator('.sbox.pick')).toHaveCount(0);
+  await expect(fbody.locator('.optrow:has(.chiprow)').filter({ has: page.locator('.lbl', { hasText: /^SORT$/ }) })).toBeVisible();
+  await expect(fbody.locator('.optrow:has(.chiprow)').filter({ has: page.locator('.lbl', { hasText: /^ONLY$/ }) })).toBeVisible();
 
   await page.waitForTimeout(300);
 

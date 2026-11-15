@@ -87,10 +87,11 @@ test('Options sheet keeps every choice it had as a dropdown (commander page)', a
   await expect(d.getByRole('button', { name: 'APPLY' })).toBeVisible();
   await expect(d.locator('.themes')).toBeVisible();
   await expect(d.getByRole('radiogroup', { name: 'Gear' })).toBeVisible();
-  await expect(d.locator('.sbox')).toHaveCount(5);
+  await expect(d.locator('.sbox')).toHaveCount(2); // PIN and WITHOUT: the sheet holds no dropdown any more
   // a choice made in the sheet takes effect and the sheet stays open for the next one
-  await d.locator('.show-pick select').selectOption('owned');
-  await expect(d.locator('.show-pick select')).toHaveValue('owned');
+  const owned = d.locator('.sheetshow').getByRole('radio', { name: 'OWNED ONLY', exact: true });
+  await owned.click();
+  await expect(owned).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('.tbmore[open]')).toHaveCount(1);
   await closeOpts(page);
 });
