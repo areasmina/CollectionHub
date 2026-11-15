@@ -63,7 +63,10 @@ test('Deck page: the sheet lost its dropdowns too', async ({ page }) => {
 test('Collection opens as one block: four lanes, no gaps between them, cards near the top', async ({ page }, info) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
-  const lanes = ['.coll .ctabs', '.coll .coll-listbar', '.coll .collbar'];
+  // Since Nov 15 the tabs ride the ransom title band above 700px, so there the block is the list ribbon and the tools
+  const phone = info.project.name === 'phone';
+  if (!phone) await expect(page.locator('.coll .titleacts .ctab').first()).toBeVisible();
+  const lanes = phone ? ['.coll .ctabs', '.coll .coll-listbar', '.coll .collbar'] : ['.coll .coll-listbar', '.coll .collbar'];
   const boxes = [];
   for (const sel of lanes) {
     const b = (await page.locator(sel).boundingBox())!;
@@ -71,11 +74,12 @@ test('Collection opens as one block: four lanes, no gaps between them, cards nea
     boxes.push(b);
   }
   // the lanes touch: no empty band between the tabs, the list ribbon and the tools
-  for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i].y - (boxes[i - 1].y + boxes[i - 1].height)), 'a gap opened between the lanes').toBeLessThanOrEqual(1);
+  // (neighbouring lanes share their 2px rule, so a 2px overlap is that rule, not a gap)
+  for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i].y - (boxes[i - 1].y + boxes[i - 1].height)), 'a gap opened between the lanes').toBeLessThanOrEqual(3);
   // the binder starts near the top, not a third of the way down
   const first = (await page.locator('#cpane-cards .zgrid, #cpane-cards .clist').first().boundingBox())!;
   // a phone's ransom title is small, so the cards sit right under it; wider screens keep the big title's full height
-  const limit = info.project.name === 'phone' ? 340 : 460;
+  const limit = phone ? 340 : 460;
   expect(first.y, 'the cards start too far down the screen').toBeLessThanOrEqual(limit);
   // and nothing of the block hangs off the side
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'the page scrolls sideways').toBe(true);

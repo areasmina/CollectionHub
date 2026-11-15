@@ -2709,21 +2709,35 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   margin-left: 18px;
   vertical-align: middle;
 }
+/* SHOW STATS is a real button up here: ui.css turns .dfold inert on wide screens for the deck panel's static
+   DETAILS label, and the overview's button used to be rescued by a .dribbon rule it no longer sits inside. */
+.titlewrap > .titleacts .dfold {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
 .titlewrap > .titleacts :is(.u-btn, .slip-btn, .dfold, .ctab) {
-  min-height: 36px;
+  min-height: 44px; /* the app's tap target, band or no band */
   font-size: 12.5px;
   letter-spacing: 0.06em;
 }
-/* the title line becomes one row: letters on the left, buttons after them, everything on the band */
-.dlist .decksbar .titlewrap,
-.coll .chead2 .titlewrap {
+/* the title line becomes one row: letters on the left, buttons after them, everything on the band.
+   Collection only moves its tabs and buttons up there above 700px, so a phone's title block keeps its own layout. */
+.dlist .decksbar .titlewrap {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 10px;
 }
-.dlist .decksbar .titlewrap > .ztitle,
-.coll .chead2 .titlewrap > .ztitle { flex: 0 0 auto; }
+@media (min-width: 701px) {
+  .coll .chead2 .titlewrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+  .coll .chead2 .titlewrap > .ztitle { flex: 0 0 auto; }
+}
+.dlist .decksbar .titlewrap > .ztitle { flex: 0 0 auto; }
 .dlist .decksbar .titlewrap > .titleacts { margin-left: auto; }
 @media (max-width: 700px) {
   /* a phone reads the title first and the buttons under it, still inside the band */
@@ -2859,8 +2873,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     gap: 8px !important;
   }
 }
-/* the band is gone: no ink, no rules, no fixed height, and nothing to stick to */
-.dstrip {
+/* the band is gone on the commander's deck page: no ink, no rules, no fixed height, and nothing to stick to.
+   A saved deck's own page keeps its strip for now: its price and shortage lines still live there. */
+main.dpage:not(.forgemain) .dstrip {
   background: transparent !important;
   border-top: 0 !important;
   border-bottom: 0 !important;
@@ -2869,8 +2884,8 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   position: static !important;
   padding: 8px 0 0 !important;
 }
-.dstrip > .dstatus:empty,
-.dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *)) {
+/* nothing in the row at all (the Forge hides the buttons and the status line is empty): no row */
+main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *)) {
   display: none !important;
 }
 
@@ -3007,9 +3022,12 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   color: var(--u-muted, #9a9aa6);
   list-style: none;
 }
-/* "your decks:" never runs past one line, however many you keep with this commander */
+/* "your decks:" never runs past one line, however many you keep with this commander. The names wrap rather than
+   running off a phone's screen, so the +N more button is always reachable. */
 .vhero .vmeta .mydecks {
   display: inline;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
 }
 .vhero .vmeta .mydecks-more {
   margin-left: 6px;

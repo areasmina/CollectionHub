@@ -15,6 +15,7 @@ test('Changing a copy count keeps the diamonds and the card\'s own look', async 
   await page.reload();
   const tile = page.locator('#cpane-cards .ctile').first();
   await tile.scrollIntoViewIfNeeded();
+  await tile.focus(); // the tally only shows on hover or focus
 
   const resting = tile.locator('.tally .marks');
   const look = await resting.evaluate((el) => {
@@ -43,5 +44,5 @@ test('Changing a copy count keeps the diamonds and the card\'s own look', async 
   // + really adds a copy, and the diamonds say so
   await step.getByRole('button', { name: /One more/ }).click();
   await expect(step.locator('.tmarks i.on')).toHaveCount(litBefore + 1);
-  await expect(step.locator('.u-sr')).toContainText('2 copies');
+  await expect(step.locator('.u-sr')).toHaveText(/2 copies/);
 });

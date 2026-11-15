@@ -77,14 +77,14 @@ test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes
   await expect(page.locator('.vhero .vmatch .num')).toHaveText('100%');
   // say it once: the match % appears in one place on the page
   expect(await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => !e.children.length && /^\d+%$/.test(e.textContent!.trim())).length)).toBe(1);
-  // strip: POWER · status with the deck cost (only here) · PULL / TO BUY · FORGE (the one red slab)
+  // the deck's cost is said once, in the hero's fourth square (Nov 15: the black strip under the hero is gone)
   const strip = page.locator('.dstrip');
-  // power dropdown merged into BRACKET FIT tile
-  await expect(strip.locator('.dcost')).toContainText('deck ≈CA$');
-  await expect(page.locator('.dcost')).toHaveCount(1);
+  await expect(page.locator('.vhero .vtile.vnote')).toContainText('deck ≈CA$');
+  expect(await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => !e.children.length && /^deck ≈CA\$/.test(e.textContent!.trim())).length)).toBe(1);
   await expect(strip.locator('.u-btn.primary')).toHaveText(/FORGE/);
   await expect(page.locator('.u-btn.primary')).toHaveCount(1);
-  if (info.project.name !== 'phone') expect(Math.round((await strip.boundingBox())!.height)).toBe(56);
+  // and the strip is no longer a 56px band of ink
+  expect(await strip.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   // BRACKET FIT opens its menu; picking a bracket changes the target bracket
   const fitTile = page.locator('.vtile.fit');
   await expect(fitTile.locator('summary')).toContainText(/FITS/);
@@ -144,9 +144,10 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   await expect(t.locator('.price')).toHaveCSS('opacity', '1');
   // the tally strip opens and changes the quantity
   await t.locator('.tally .marks').click();
-  const n = Number(await t.locator('.tstep b').innerText());
+  // the editor keeps the card's diamonds (Nov 15): the lit ones are the count
+  const n = await t.locator('.tstep .tmarks i.on').count();
   await t.locator('.tstep button').last().click();
-  await expect(t.locator('.tstep b')).toHaveText(String(n + 1));
+  await expect(t.locator('.tstep .tmarks i.on')).toHaveCount(n + 1);
   await fits(page, ['.ctile']);
 });
 
@@ -407,7 +408,7 @@ test('Reload: commander stats come back from the device, no EDHREC requests', as
 
 test('Commander page: an old saved page shows at once even when EDHREC is down', async ({ page }) => {
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.dstrip .dcost')).toBeVisible(); // its EDHREC pages are saved by now
+  await expect(page.locator('.vhero .vtile.vnote')).toBeVisible(); // its EDHREC pages are saved by now
   // Age every saved page past a day, cut EDHREC off, reopen.
   await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
@@ -420,7 +421,7 @@ test('Commander page: an old saved page shows at once even when EDHREC is down',
   await page.reload();
   await page.locator('.ccard').first().click();
   await expect(page.locator('.vhero h1')).toBeVisible();
-  await expect(page.locator('.dstrip .dcost')).toBeVisible();
+  await expect(page.locator('.vhero .vtile.vnote')).toBeVisible();
 });
 
 test('Swap window: every card swaps, search your binder, undo, pins', async ({ page }, info) => {
@@ -731,7 +732,7 @@ test('OWNED ONLY is gone: a device that had it saved builds with PREFER OWNED', 
   await page.evaluate(() => localStorage.setItem('ch:own', 'owned'));
   await page.reload();
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.dstrip .dstatus')).toBeVisible();
+  await expect(page.locator('.dstrip .dacts')).toBeVisible();
   await expect(page.locator('.dstrip .cmode', { hasText: 'owned only' })).toHaveCount(0);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Cards' })).toHaveCount(0);

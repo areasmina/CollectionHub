@@ -170,9 +170,9 @@ function Tally({ e }: { e: Entry }) {
               <i key={i} className={i < e.qty ? 'on' : ''} />
             ))}
             {e.qty > 4 && <small>+{e.qty - 4}</small>}
-            <b className="u-sr" aria-live="polite">
+            <span className="u-sr" aria-live="polite">
               {e.qty} {e.qty === 1 ? 'copy' : 'copies'}
-            </b>
+            </span>
           </span>
           <button aria-label={`One more ${e.name}`} onClick={() => set(e.qty + 1)}>
             +

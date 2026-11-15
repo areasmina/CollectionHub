@@ -55,12 +55,15 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
 
   expect(heroBox).not.toBeNull();
   expect(forgeBox).not.toBeNull();
-  expect(stripBox).not.toBeNull();
 
-  // Hero, then the deck's status line, then the FORGE bar: the bar sits directly on top of the deck tabs so the two
-  // pin as one block (Guillermo, Nov 15: the bar used to break apart when you scrolled back up).
-  expect(stripBox!.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height - 10);
-  expect(forgeBox!.y).toBeGreaterThanOrEqual(stripBox!.y + stripBox!.height - 10);
+  // Hero, then the FORGE bar, which sits directly on top of the deck tabs so the two pin as one block (Guillermo,
+  // Nov 15: the bar used to break apart when you scrolled back up). The status strip holds nothing while forging
+  // since its cost line moved up into the hero's squares, so it takes no room between them.
+  expect(forgeBox!.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height - 10);
+  if (stripBox) {
+    expect(stripBox.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height - 10);
+    expect(forgeBox!.y).toBeGreaterThanOrEqual(stripBox.y + stripBox.height - 10);
+  }
 
   // 4. Verify JUST BUILD IT button is on top of suggestions right panel
   const sugg = page.locator('.fsugg');

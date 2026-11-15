@@ -45,9 +45,9 @@ test.describe('Collection & Decks Workbench Features', () => {
     // Redundant horizontal shelf row is removed from Decks
     await expect(page.locator('.shelfhead, .shelfrow')).toHaveCount(0);
 
-    // Zine styled overview ribbon is visible
-    const ribbon = page.locator('.dribbon');
-    await expect(ribbon).toBeVisible();
+    // The deck buttons ride the ransom title band since Nov 15 (they used to sit on the overview ribbon)
+    await expect(page.locator('.dlist .decksbar .titleacts .u-btn.primary')).toBeVisible();
+    await expect(page.locator('.dribbon')).toHaveCount(1);
 
     // Decks toolbar is visible with search, sort, and filters
     const toolbar = page.locator('.decktoolbar');
@@ -92,7 +92,7 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(foldBtn).toContainText(/SHOW STATS/i);
     await expect(stats).toBeHidden();
     const row = async (sel: string) => { const b = (await page.locator(sel).first().boundingBox())!; return b.y + b.height / 2; };
-    expect(Math.abs((await row('.dfold')) - (await row('.dribbon-acts > .u-btn')))).toBeLessThanOrEqual(3);
+    expect(Math.abs((await row('.dfold')) - (await row('.titleacts.decksactions > .u-btn')))).toBeLessThanOrEqual(3);
     expect((await foldBtn.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 
     // one tap shows them, another folds them again

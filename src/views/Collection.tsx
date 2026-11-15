@@ -437,6 +437,11 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
               {!phone && (
                 <span className="titleacts">
                   {tabset}
+                  {hint && (
+                    <span className="ctab-hint" role="status">
+                      swipe ⇄
+                    </span>
+                  )}
                   {collacts}
                 </span>
               )}

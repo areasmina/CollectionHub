@@ -35,7 +35,9 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   // the suggestion: an owned card EDHREC plays here, with its reasons
   const row = sugg.locator('.frows li', { hasText: 'Arcane Signet' });
   await expect(row).toHaveClass(/own/);
-  await expect(row.locator('.whys')).toContainText('owned');
+  // no "owned" tag on the row since Nov 15: every suggestion is a card of yours, so the row only says what it does
+  await expect(row.locator('.whys')).not.toContainText('owned');
+  await expect(row.locator('.fprice')).toHaveCount(0);
   // themes are EDHREC's tags read as rules-text tests: Landfall filters the list to cards whose text fits
   await sugg.getByRole('button', { name: '#landfall' }).click();
   await expect(sugg.getByRole('button', { name: '#landfall' })).toHaveAttribute('aria-pressed', 'true');

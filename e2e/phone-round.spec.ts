@@ -72,7 +72,7 @@ test('One slim bar: search + ⋮ (GEAR inside, POWER in Bracket Fit), groups sta
   await page.screenshot({ path: `test-results/bar-open-${info.project.name}.png` });
   await o.locator('summary').click();
   await expect(page.locator('.vhero .vmeta')).toContainText('decks');
-  expect(await page.locator('.dstrip .dcost').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  expect(await page.locator('.vhero .vtile.vnote').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   expect(await page.locator('.cat > summary .gval').first().evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   // every group is its own full-width row, collapsed or not, and its header is one line
   const sums = page.locator('details.cat > summary');

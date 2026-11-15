@@ -68,7 +68,11 @@ test('"your decks" shows three and a count when a commander has more', async ({ 
       r.onsuccess = () => ok(r.result);
     });
     const first = all[0];
-    for (let i = 2; i <= 5; i++) tx.objectStore('decks').put({ ...first, id: undefined, name: `${first.name} ${i}`, updated: Date.now() });
+    for (let i = 2; i <= 5; i++) {
+      const copy = { ...(first as Record<string, unknown>), name: `${first.name} ${i}`, updated: Date.now() };
+      delete copy.id;
+      tx.objectStore('decks').put(copy);
+    }
     await new Promise((ok) => (tx.oncomplete = ok));
   });
   await page.evaluate(() => localStorage.setItem('ch:tab', 'discover'));
@@ -77,10 +81,10 @@ test('"your decks" shows three and a count when a commander has more', async ({ 
 
   const line = page.locator('.vhero .vmeta .mydecks');
   await expect(line).toBeVisible();
-  await expect(line.locator('a')).toHaveCount(3);
+  await expect(line.locator('.decklink')).toHaveCount(3);
   const more = line.locator('.mydecks-more');
   await expect(more).toHaveText('+2 more');
   await more.click();
-  await expect(line.locator('a')).toHaveCount(5);
+  await expect(line.locator('.decklink')).toHaveCount(5);
   await expect(more).toHaveText('fewer');
 });
