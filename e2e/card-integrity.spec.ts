@@ -7,20 +7,21 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-test('Commander and deck pages: the ⋯ OPTIONS tag hides at rest and shows on the card\'s top-right corner, over its border only', async ({ page }) => {
-  // Owner's call (Nov 15): OPTIONS is a small tag on the card's top-right corner, hidden until the card is pointed at or
+test('Commander and deck pages: the ⋯ OPTIONS tag hides at rest and shows on the card\'s top-left corner, over its border only', async ({ page }) => {
+  // Owner's call (Nov 15): OPTIONS is a small tag on the card's top-left corner, hidden until the card is pointed at or
   // selected, like Collection's price tag. It replaced "hang under the card" (Nov 13); the card's text stays uncovered.
   const check = async () => {
     const btn = page.locator('.cmdrbtn').first();
     const tag = btn.locator('.cmdrmore');
     await expect(btn).toBeVisible();
+    await expect(tag).toHaveCSS('font-family', /Special Elite/); // the typewriter face
     await page.mouse.move(0, 0);
     await expect(tag).toHaveCSS('opacity', '0'); // hidden at rest
     await btn.focus(); // selected (a tap or the keyboard)
     await expect(tag).toHaveCSS('opacity', '1');
     // both boxes in one read: the page can still be scrolling into place after a load
     const [img, t] = await btn.evaluate((b) => [b.querySelector('img')!.getBoundingClientRect().toJSON(), b.querySelector('.cmdrmore')!.getBoundingClientRect().toJSON()]);
-    expect(t.right).toBeGreaterThan(img.right - 2); // on the right-hand corner
+    expect(t.left).toBeLessThan(img.left + 2); // on the left-hand corner
     expect(t.top).toBeLessThan(img.top); // starts above the card
     expect(t.bottom).toBeLessThanOrEqual(img.top + 8); // and covers no more than the card's outer border
     await expect(btn.locator('.cmdrhint')).toHaveCount(0); // the old tape over the rules text is gone

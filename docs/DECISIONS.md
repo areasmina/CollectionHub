@@ -99,8 +99,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Outside links (EDHREC, COMBOS, ARCHIDEKT) stay together as one group, in that order, on their own row at the end of the
   header line, on the commander page and on every saved deck.
 - The ⋯ OPTIONS tag "should be and act like the price tag in the collection": same yellow torn tape and type as
-  Collection's price, same peel. Nov 15 he placed it: smaller, on the commander card's top-right corner, usually hidden,
+  Collection's price, same peel. Nov 15 he placed it: smaller, on the commander card's corner, usually hidden,
   showing when the card is pointed at or selected. This replaces "hang under the card" (Nov 13); the tag sits above the
-  corner so only the card's outer border is under it (the card's text stays uncovered).
+  corner so only the card's outer border is under it (the card's text stays uncovered). Later the same day: top-left
+  corner, typewriter gritty font (Special Elite).
 - Deck strip on phones: deck cost first, TO BUY on its own row, BEST FOR MY CARDS and FORGE side by side as equals.
 - Saved-deck hero: underscores in a deck name show as spaces in the ransom title; ACTIVE sits under the name, off the slash.

@@ -891,14 +891,14 @@ html.forging .vhero {
    to sit on the mana cost, and the one-time "tap for options" tape covered the rules text and collector line). */
 .cmdrbtn { position: relative; }
 .cmdrbtn .cmdrmore {
-  /* Guillermo, Nov 15: OPTIONS is a small tag on the card's top-right corner, hidden until you point at the card or
+  /* Guillermo, Nov 15: OPTIONS is a small tag on the card's top-left corner (where Collection's COMMANDER tape sits), hidden until you point at the card or
      select it, exactly like Collection's price tag: same yellow torn tape (.price.tapey.t0), same type, same spot
      hanging off the corner (so it covers only the card's outer edge), same springy peel. */
   position: absolute !important;
   z-index: 5;
-  top: -14px; /* the tag sits above the corner: only the card's outer border is under it, never the mana cost */
-  right: -8px;
-  left: auto;
+  top: -14px; /* the tag sits above the corner: only the card's outer border is under it, never the card's name */
+  left: -8px;
+  right: auto;
   bottom: auto;
   display: inline-flex !important;
   align-items: center;
@@ -913,24 +913,27 @@ html.forging .vhero {
   background: #ffcc00;
   clip-path: polygon(0 8%, 5% 0, 3% 30%, 6% 55%, 2% 80%, 5% 100%, 95% 92%, 98% 70%, 94% 45%, 99% 22%, 96% 0);
   color: #141414;
+  /* typewriter, gritty (Guillermo, Nov 15): Special Elite with a faint ink bleed, like a label typed on the tape */
   font-family: var(--se);
-  font-size: 12px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-shadow: 0.4px 0 0 rgba(20, 20, 20, 0.55), 0 0.5px 0 rgba(20, 20, 20, 0.35);
   box-shadow: none;
   opacity: 0;
   pointer-events: none;
-  transform-origin: 100% 50%;
-  transform: perspective(240px) rotate(4deg) rotateY(-95deg);
+  transform-origin: 0 50%;
+  transform: perspective(240px) rotate(-4deg) rotateY(95deg);
   transition: transform 0.32s cubic-bezier(0.2, 1.4, 0.4, 1), opacity 0.1s linear;
 }
 .cmdrbtn:is(:hover, :focus, :focus-visible, :active) .cmdrmore {
   opacity: 1;
-  transform: perspective(240px) rotate(4deg) rotateY(0deg);
+  transform: perspective(240px) rotate(-4deg) rotateY(0deg);
 }
-.cmdrbtn .cmdrmore b { max-width: none !important; font: inherit; letter-spacing: 0.04em; }
+.cmdrbtn .cmdrmore b { max-width: none !important; font: inherit; letter-spacing: inherit; }
 @media (hover: none) {
   /* phones: a tap selects the card (and opens its menu); the tag shows while it is selected, as the price does */
   .cmdrbtn:hover .cmdrmore { opacity: 0; }
-  .cmdrbtn:is(:focus, :active) .cmdrmore { opacity: 1; transform: rotate(4deg); }
+  .cmdrbtn:is(:focus, :active) .cmdrmore { opacity: 1; transform: rotate(-4deg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .cmdrbtn .cmdrmore { transition: opacity 0.1s linear; }
