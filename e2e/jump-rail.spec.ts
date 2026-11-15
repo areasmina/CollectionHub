@@ -21,7 +21,12 @@ test('Deck page: the jump rail lists the sections, fits the screen, and a tap la
     await page.locator('.lists > .tbar').first().evaluate((e) => e.scrollIntoView({ block: 'start' }));
   }
   await expect(rail).toBeVisible();
-  await expect(rail.getByRole('button')).toHaveText(['CRE', 'INS', 'SOR', 'ART', 'ENC', 'LND']);
+  await expect(rail.getByRole('button')).toHaveText(['CRE', 'INS', 'SOR', 'ART', 'ENC', 'LND']); // heard, not seen
+  // Nov 15: each known section shows an icon, the letters are for screen readers only, and the rail is see-through
+  await expect(rail.locator('button > svg.jicon')).toHaveCount(6);
+  await expect(rail.locator('button').first().locator('.sr')).toHaveText('CRE');
+  expect(await rail.evaluate((el) => getComputedStyle(el).backgroundColor)).toMatch(/rgba\(/);
+  expect(await rail.evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(28);
   await fits(page, ['.jrail']);
   // The rail sits beside the cards, never on top of them.
   const railBox = (await rail.boundingBox())!;

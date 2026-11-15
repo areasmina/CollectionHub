@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
 import { ManaIcon, Ransom } from './zine';
-import { COLOURS, COLOUR_NAME, FINISH_LABEL, MVS, PRICES, PRICE_LABEL, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Finish, type Show } from '../lib/collfilter';
+import { COLOURS, COLOUR_NAME, FINISH_LABEL, MVS, PRICES, PRICE_LABEL, RARITIES, RARITY_LABEL, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Finish, type Show } from '../lib/collfilter';
 
 /** The Filter button of the control strip: a count when something narrows the list, and a sheet with the choices.
  *  The sheet sits at the bottom of the screen on a phone (thumb reach) and as a panel on wider screens. */
@@ -85,6 +85,16 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
                   {PRICES.map((v) => (
                     <button key={v} type="button" className="u-chip" aria-pressed={filter.prices.includes(v)} onClick={() => pick('prices', v)}>
                       {PRICE_LABEL[v]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="fs-group">
+                <span className="lbl">Rarity</span>
+                <div className="fs-row rarities">
+                  {RARITIES.map((v) => (
+                    <button key={v} type="button" className={`u-chip r-${v}`} aria-pressed={filter.rarities.includes(v)} onClick={() => pick('rarities', v)}>
+                      {RARITY_LABEL[v]}
                     </button>
                   ))}
                 </div>

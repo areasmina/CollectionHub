@@ -5,9 +5,7 @@ import { fits, mockWorld, seed } from './mock';
 const open = async (page: import('@playwright/test').Page) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
-  const fold = page.locator('.statfold');
-  if ((await fold.textContent())?.includes('SHOW')) await fold.click();
-  await page.locator('.coll .abtn').click();
+  await page.locator('.coll .ctab', { hasText: 'ANALYTICS' }).click();
   return page.locator('.apanel');
 };
 
@@ -16,7 +14,7 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-test('Analytics opens from the ribbon and shows what the binder is made of', async ({ page }) => {
+test('the ANALYTICS tab shows what the binder is made of', async ({ page }) => {
   const a = await open(page);
   await expect(a).toBeVisible();
   for (const h of ['WORTH OVER TIME', 'IN YOUR DECKS', 'COLOURS', 'MANA CURVE', 'CARD TYPES', 'BIGGEST SETS']) await expect(a.getByRole('heading', { name: new RegExp(h) })).toBeVisible();
@@ -28,8 +26,11 @@ test('Analytics opens from the ribbon and shows what the binder is made of', asy
   // no history until a day has been recorded, and the panel says so rather than drawing an empty chart
   await expect(a.locator('.anone')).toContainText('Prices are saved once a day');
   await fits(page, ['.apanel', '.apanel .abar']);
-  await a.getByRole('button', { name: 'Close analytics' }).click();
+  // the tab is the only way in and out: CARDS brings the binder back, with no second close button inside the panel
+  await expect(a.getByRole('button', { name: /close/i })).toHaveCount(0);
+  await page.locator('.coll .ctab', { hasText: 'CARDS' }).click();
   await expect(a).toHaveCount(0);
+  await expect(page.locator('.coll .ctile').first()).toBeVisible();
 });
 
 test('Analytics draws the line once days have been recorded', async ({ page }) => {

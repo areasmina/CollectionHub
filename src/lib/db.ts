@@ -19,7 +19,9 @@ export interface Card {
   cmc?: number;
   buy?: string; // TCGplayer link from Scryfall
   legal: boolean;
-  pv?: number; // card-data version: 2 = has usdFoil
+  /** Scryfall rarity: 'common' | 'uncommon' | 'rare' | 'mythic' (also 'special', 'bonus'). Filled in from pv 3. */
+  rarity?: string;
+  pv?: number; // card-data version: 2 = has usdFoil, 3 = has rarity
   at?: number; // fetched at (ms)
 }
 /** One printing in a binder. */

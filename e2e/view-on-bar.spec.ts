@@ -140,7 +140,7 @@ for (const w of [320, 360]) {
   });
 }
 
-test('MISSING sits under the card, never on its picture; the pin chips get their own row', async ({ page }) => {
+test('a missing card carries no MISSING label, only the grey picture; the pin chips get their own row', async ({ page }) => {
   // give away Counterspell so one card in the deck is missing
   await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
@@ -154,8 +154,10 @@ test('MISSING sits under the card, never on its picture; the pin chips get their
   await page.locator('.ccard').first().click();
   const tile = page.locator('ul.zgrid > li.ztile.missing').first();
   await expect(tile).toBeVisible();
-  const [img, tape] = await Promise.all([tile.locator('.timg').boundingBox(), tile.locator('.misstape').boundingBox()]);
-  expect(tape!.y).toBeGreaterThanOrEqual(img!.y + img!.height - 1); // below the picture: art, type line and rules text stay clear
+  // Nov 15: no label at all — the tile is black and white and dimmed, which says it already (and no label can cover the art)
+  await expect(tile.locator('.misstape')).toHaveCount(0);
+  await expect(tile.locator('.tname')).toContainText('(missing)'); // screen readers still hear it
+  expect(await tile.locator('.timg').evaluate((el) => getComputedStyle(el).filter)).toContain('grayscale');
   // a pin shows as a chip under the bar, on a row of its own (not beside the first section)
   await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click({ position: { x: 12, y: 12 } });
   await page.getByRole('dialog', { name: 'Swap Sol Ring' }).getByRole('button', { name: /ALWAYS IN/ }).click();

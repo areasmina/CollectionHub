@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { allSnapshots, analyse, type Slice } from '../lib/analytics';
 import type { Card, Deck, Entry } from '../lib/db';
-import { haptic } from '../lib/haptics';
 import { cad, toCad } from '../lib/prices';
 
 /**
@@ -92,23 +91,15 @@ function History({ points }: { points: { day: string; usd: number }[] }) {
   );
 }
 
-export function Analytics({ entries, cards, decks, binder, onClose }: { entries: Entry[]; cards: Map<string, Card>; decks: Deck[]; binder: string; onClose: () => void }) {
+export function Analytics({ entries, cards, decks, binder }: { entries: Entry[]; cards: Map<string, Card>; decks: Deck[]; binder: string }) {
   const [snaps, setSnaps] = useState<Awaited<ReturnType<typeof allSnapshots>>>([]);
   useEffect(() => void allSnapshots().then(setSnaps).catch(() => {}), []);
   const a = useMemo(() => analyse(entries, cards, decks, snaps), [entries, cards, decks, snaps]);
   const of = a.unique || 1;
   return (
+    // No heading and no totals line here (Guillermo, Nov 15): the ANALYTICS tab names the panel and the stat tiles
+    // right above already say how many cards, how many different ones and what they are worth.
     <section className="apanel" aria-label={`Analytics for ${binder}`}>
-      <div className="ahead">
-        <h2>ANALYTICS</h2>
-        <small>{binder}</small>
-        <button type="button" className="aclose" onClick={() => (haptic('tap'), onClose())} aria-label="Close analytics">
-          ✕ CLOSE
-        </button>
-      </div>
-      <p className="asum">
-        <b>{a.cards.toLocaleString()}</b> copies · <b>{a.unique.toLocaleString()}</b> different cards · worth about <b>{money(a.usd)}</b>
-      </p>
       <div className="agrid">
         <History points={a.history} />
         <section className="acard">

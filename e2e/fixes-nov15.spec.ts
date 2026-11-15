@@ -32,8 +32,7 @@ test('Commander header: equal tiles, and the salt list opens on top of everythin
 test('Collection: cards, unique and commanders sit as one even row; no carousel diamonds', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
-  const fold = page.locator('.statfold');
-  if ((await fold.textContent())?.includes('SHOW')) await fold.click();
+  await showStats(page); // the tiles live on the ANALYTICS tab since Nov 15
   await expect(page.locator('.coll .stats > .stat')).toHaveCount(3);
   const s = await box(page, '.coll .stats > .stat');
   for (const t of s) {

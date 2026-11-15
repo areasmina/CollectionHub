@@ -113,3 +113,21 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - No carousel diamonds (Forge CARDS · ANALYSIS · TO BUY tabs, Collection highlights): the labels already say where you are.
 - Swap window picks: name, then EDHREC lift and play rate as numbers, then at most two reasons in words. Combo notes stay.
 - The Forge bar has no deck name: one clean line, FORGE · UNDO · SAVE · LEAVE (the page already names the deck).
+
+## 2026-11-15 (later): Collection opens on the cards, and less of everything else (Guillermo)
+
+- **Collection is the promise of the app, so the cards come first.** The page opens on a CARDS tab, every time; the
+  stat tiles, Top 3 and the charts live on an ANALYTICS tab beside it. + DECK and IMPORT sit on the tab row, reachable
+  from either tab. This replaces the SHOW / HIDE STATS fold (Nov 13): the tab is the fold now, and there is no second
+  ANALYTICS button inside it.
+- The analytics cards wear the same frame as the stat tiles: ink, halftone dots, hard shadow, a slight tilt, Anton
+  headings on a red rule. No heading or totals line inside the panel, because the tab and the tiles already say both.
+- The list ribbon (ALL / UNLISTED / + NEW LIST), the search bar and the view row are one block, not three.
+- **No redundancy unless it earns its place.** A missing card in a deck carries no MISSING label: it is already black
+  and white and dimmed. Screen readers still hear "(missing)".
+- Rarity joins the Collection filter sheet (Common, Uncommon, Rare, Mythic). A card cached before rarity was stored
+  simply is not placed yet; it fills in on its next price refresh, and no card ever leaves the binder.
+- The Dynamic Island is frosted glass by default: semi-transparent, matte, a single soft gloss along the top edge,
+  rather than pure black. Its shape, moves and content are unchanged.
+- The Forge section rail is ManaBox-like: icons instead of CRE / INS / SOR, a narrower lane, see-through, and dormant
+  until the list moves (it wakes on scroll, hover or focus, then fades). The letters stay for screen readers.

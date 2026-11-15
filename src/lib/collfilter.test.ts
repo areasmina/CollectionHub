@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { Card, Entry } from './db';
 import { applyFilter, filterChips, filterCount, matches, mvOf, noFilter, priceBand, toggled, type FilterEnv } from './collfilter';
 
-const card = (name: string, type: string, ci: string[]): Card => ({ id: name, name, key: name.toLowerCase(), type, text: '', ci, pv: 2, at: 1 } as Card);
+const card = (name: string, type: string, ci: string[], rarity?: string): Card => ({ id: name, name, key: name.toLowerCase(), type, text: '', ci, rarity, pv: 3, at: 1 } as Card);
 const cards = new Map<string, Card>([
-  ['Tatyova', card('Tatyova', 'Legendary Creature — Merfolk Druid', ['G', 'U'])],
-  ['Sol Ring', card('Sol Ring', 'Artifact', [])],
-  ['Cultivate', card('Cultivate', 'Sorcery', ['G'])],
+  ['Tatyova', card('Tatyova', 'Legendary Creature — Merfolk Druid', ['G', 'U'], 'rare')],
+  ['Sol Ring', card('Sol Ring', 'Artifact', [], 'uncommon')],
+  ['Cultivate', card('Cultivate', 'Sorcery', ['G'], 'common')],
   ['Wurmcoil', card('Wurmcoil', 'Artifact Creature — Phyrexian Wurm', [])],
 ]);
 const e = (name: string): Entry => ({ profile: 1, cardId: name, name, qty: 1 });
@@ -34,6 +34,14 @@ describe('binder filters', () => {
     expect(names({ ...noFilter(), show: 'commanders' })).toEqual(['Tatyova']);
     expect(names({ ...noFilter(), show: 'indeck' })).toEqual(['Sol Ring']);
     expect(names({ ...noFilter(), show: 'free' })).toEqual(['Tatyova', 'Cultivate', 'Wurmcoil', 'Unknown']);
+  });
+  it('rarity: any picked rarity matches; a card with no rarity yet is left out', () => {
+    expect(names({ ...noFilter(), rarities: ['rare'] })).toEqual(['Tatyova']);
+    expect(names({ ...noFilter(), rarities: ['common', 'uncommon'] })).toEqual(['Sol Ring', 'Cultivate']);
+    expect(names({ ...noFilter(), rarities: ['mythic'] })).toEqual([]); // Wurmcoil's data predates rarity, Unknown has none
+    expect(filterCount({ ...noFilter(), rarities: ['rare'] })).toBe(1);
+    expect(filterChips({ ...noFilter(), rarities: ['mythic'] })[0]).toMatchObject({ kind: 'rarities', value: 'mythic', label: 'Mythic' });
+    expect(toggled({ ...noFilter(), rarities: ['rare'] }, 'rarities', 'rare').rarities).toEqual([]);
   });
   it('a card whose data is missing is left out only when a colour or type is asked for', () => {
     expect(matches(e('Unknown'), { ...noFilter(), colours: ['G'] }, env)).toBe(false);

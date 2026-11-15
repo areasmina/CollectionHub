@@ -1096,27 +1096,7 @@ html.forging .vhero {
   .deckmenu .custom-color-label { min-height: 44px !important; align-items: center !important; }
   .deckmenu .custom-color-label input[type='color'] { min-height: 36px !important; }
 }
-/* ── Collection: HIDE STATS (audit roadmap, phase 3) ── the tiles, the appraisal and Top 3 fold away so cards reach the
-   first phone screen; + DECK and IMPORT stay. Same button as My Decks' fold, with a full 44px tap height. */
-.coll .statfold {
-  display: block; margin: 0 0 var(--s2, 8px) auto; padding: 4px 12px; min-height: 44px; cursor: pointer;
-  background: #0a0a0a; border: 1px solid #3a3a3a; color: #b5b5b5;
-  font: 400 12px var(--u-display, 'Anton', sans-serif); letter-spacing: 0.1em; transform: rotate(-1deg);
-}
-.coll .statfold:hover, .coll .statfold:focus-visible { color: #fff; border-color: #e60012; }
-.coll .stats.folded > .stat, .coll .stats.folded > .topwidget,
-.coll .stats.folded .slip-val, .coll .stats.folded .slip > .warn, .coll .stats.folded .slip > .stamp { display: none !important; }
-.coll .stats.folded > .slip { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; min-height: 0 !important; transform: none !important; }
-.coll .stats.folded > .slip::before, .coll .stats.folded > .slip::after { display: none !important; }
-.coll .stats.folded { margin-bottom: var(--s2, 8px) !important; }
-/* ── Collection and My Decks: SHOW / HIDE STATS shares the row of + DECK / IMPORT (Guillermo, Nov 13) ──
-   One line of controls instead of a lone button above the tiles; it sits right after them, same height as its
-   neighbours. The tiles start folded on both pages. */
-.coll .slip-acts > .statfold {
-  display: inline-flex; align-items: center; margin: 0; transform: none; white-space: nowrap; flex: none;
-}
-.coll .slip-acts { flex-wrap: wrap; align-items: stretch !important; }
-.coll .stats.folded > .slip { width: 100% !important; grid-column: 1 / -1 !important; }
+/* My Decks keeps its SHOW / HIDE STATS fold; Collection's became the CARDS | ANALYTICS tab (Nov 15). */
 .dlist .dribbon > .dribbon-acts > .dfold {
   display: inline-flex; align-items: center; justify-content: center; margin: 0; transform: none;
   white-space: nowrap; min-height: 44px; flex: none !important; width: auto !important; max-width: max-content;
@@ -1707,69 +1687,33 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    typewriter labels. Quiet content, loud frame ---------- */
 .apanel {
   margin: 0 0 var(--s4, 16px);
-  padding: 14px;
-  background: #0c0c0e;
-  border: 2px solid var(--u-text, #fff);
-  box-shadow: 6px 6px 0 #000;
-}
-.apanel .ahead {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 2px dashed #3a3a46;
-}
-.apanel .ahead h2 {
-  margin: 0;
-  font: 400 26px/1 var(--an, Anton, sans-serif);
-  letter-spacing: 0.04em;
-  color: #fff;
-  background: var(--u-red, #e60012);
-  padding: 4px 10px;
-  transform: rotate(-1.2deg);
-}
-.apanel .ahead small {
-  font: 400 12px var(--se, monospace);
-  color: #b5b5b5;
-}
-.apanel .aclose {
-  margin-left: auto;
-  min-height: 44px;
-  padding: 0 12px;
-  background: transparent;
-  border: 1px solid #4a4a5a;
-  color: #cfcfe0;
-  font: 400 12px var(--u-mono, monospace);
-  letter-spacing: 0.06em;
-  cursor: pointer;
-}
-.apanel .aclose:hover {
-  border-color: var(--u-red, #e60012);
-  color: #fff;
-}
-.apanel .asum {
-  margin: 0 0 12px;
-  font: 400 13px/1.5 var(--se, monospace);
-  color: #b5b5b5;
-}
-.apanel .asum b {
-  font-family: var(--an, Anton, sans-serif);
-  font-size: 17px;
-  font-weight: 400;
-  color: #fff;
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
 }
 .apanel .agrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 .apanel .acard {
-  padding: 12px;
-  background: #121216;
-  border: 1px solid #2c2c3a;
+  position: relative;
+  padding: 14px 16px 12px;
   min-width: 0;
+  /* the same ink box, halftone dots and hard shadow as the stat tiles above (Guillermo, Nov 15) */
+  background: var(--ink, #0a0a0a);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px);
+  background-size: 5px 5px;
+  border: 2px solid var(--u-text, #fff);
+  box-shadow: 4px 4px 0 #000;
+  transform: rotate(-0.5deg);
+}
+.apanel .acard:nth-child(even) {
+  transform: rotate(0.55deg);
+}
+.apanel .acard.awide {
+  transform: rotate(-0.25deg);
 }
 .apanel .acard.awide {
   grid-column: 1 / -1;
@@ -1779,9 +1723,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0 0 10px;
-  font: 400 15px/1 var(--an, Anton, sans-serif);
-  letter-spacing: 0.06em;
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--u-red, #e60012);
+  font: 400 16px/1 var(--an, Anton, sans-serif);
+  letter-spacing: 0.08em;
   color: #fff;
 }
 .apanel .acard h3 small {
@@ -1850,7 +1796,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   margin: 0 0 10px;
 }
 .apanel .atrend b {
-  font: 400 30px/1 var(--an, Anton, sans-serif);
+  font: 400 clamp(30px, 4vw, 42px)/1 var(--an, Anton, sans-serif);
   color: #fff;
 }
 .apanel .atrend span {
@@ -1895,25 +1841,174 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   }
 }
 
-/* The ANALYTICS fold: its own full-width strip under the stats, so the + DECK · IMPORT · HIDE STATS row stays one line */
-.coll .abtn {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  padding: 4px 14px;
+/* ---------- Collection: CARDS | ANALYTICS tabs (Guillermo, Nov 15) ----------
+   The binder is what this page promises, so cards open first and nothing pushes them down the screen. The tab bar is
+   one torn strip: two stamps on the left, + DECK and IMPORT on the right, all on one line at every width. */
+.coll .ctabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 12px;
+  padding: 6px;
   background: #0a0a0a;
-  border: 1px solid #3a3a3a;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.6px);
+  background-size: 5px 5px;
+  border: 2px solid var(--u-text, #fff);
+  box-shadow: 5px 5px 0 #000;
+}
+.coll .ctabset {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+.coll .ctab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid #3a3a46;
   color: #b5b5b5;
-  font: 400 13px var(--u-display, 'Anton', sans-serif);
-  letter-spacing: 0.1em;
+  font: 400 15px var(--an, 'Anton', sans-serif);
+  letter-spacing: 0.08em;
   cursor: pointer;
-  transform: rotate(-0.4deg);
+  transform: rotate(-0.5deg);
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
-.coll .abtn:hover,
-.coll .abtn:focus-visible {
+.coll .ctab + .ctab {
+  transform: rotate(0.6deg);
+}
+.coll .ctab:hover,
+.coll .ctab:focus-visible {
   color: #fff;
-  border-color: #e60012;
+  border-color: var(--u-red, #e60012);
 }
-.coll .abtn {
-  margin: 0 0 var(--s3, 12px);
+.coll .ctab.on {
+  background: #fff;
+  border-color: #fff;
+  color: #0a0a0a;
+  box-shadow: 3px 3px 0 #000;
+}
+.coll .ctab .ctab-n {
+  font: 400 11px var(--u-mono, monospace);
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  background: var(--u-red, #e60012);
+  color: #fff;
+}
+.coll .ctab:not(.on) .ctab-n {
+  background: #1a1a20;
+  color: #8a8a9a;
+}
+.coll .ctab-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+@media (max-width: 420px) {
+  .coll .ctab {
+    padding: 0 10px;
+    font-size: 14px;
+  }
+  .coll .ctab-acts .slip-btn {
+    padding: 0 10px;
+  }
+}
+
+/* ── Dynamic Island: frosted glass by default (Guillermo, Nov 15) ──
+   Not pure black any more: a matte, slightly glossy pane you can see the page through, so the island reads as a thing
+   floating over the cards rather than a hole punched in them. The gloss is one soft highlight along the top edge and a
+   hairline rim; where a browser cannot blur behind an element, it falls back to near-solid ink so the text stays
+   readable. Everything else about the island (its shape, its moves, its dock, its content) is untouched. */
+.pillnav .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 44%, rgba(0, 0, 0, 0.14)),
+    rgba(12, 12, 14, 0.56) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  backdrop-filter: blur(18px) saturate(1.35);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+/* Open (a panel with words in it) leans denser, so reading never fights the page behind it. */
+.pillnav.open .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.16)),
+    rgba(10, 10, 12, 0.82) !important;
+}
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .pillnav .island-membrane,
+  .pillnav.open .island-membrane {
+    background: rgba(13, 13, 15, 0.94) !important;
+  }
+}
+
+/* ── The section rail, ManaBox style (Guillermo, Nov 15) ──
+   Icons instead of CRE / INS / SOR, a narrower lane so the cards get the width back (reading the cards is what matters
+   while building), see-through so a card never disappears behind it, and dormant until the list moves: it comes up on
+   scroll, on hover and on focus, then fades back. Height stays a full tap target. */
+.lists:has(> .jrail-wrap) { padding-right: 30px; }
+.lists > .jrail-wrap { width: 26px; }
+.jrail {
+  width: 26px;
+  background: rgba(10, 10, 12, 0.42);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border-color: rgba(255, 255, 255, 0.14);
+  opacity: 0.34;
+  transition: opacity 0.3s ease;
+}
+.jrail-wrap.awake > .jrail,
+.jrail:hover,
+.jrail:focus-within {
+  opacity: 1;
+}
+.jrail > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top-color: rgba(255, 255, 255, 0.1);
+  font-size: 9px;
+}
+.jrail > button > .jicon {
+  width: 15px;
+  height: 15px;
+  display: block;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jrail { transition: none; }
+}
+@media (max-width: 700px) {
+  .deckgrid > .lists:has(> .jrail-wrap),
+  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) { padding-right: 32px !important; }
+}
+
+/* ── Collection: lists, search and view controls as one block (Guillermo, Nov 15) ──
+   The ALL / UNLISTED / + NEW LIST ribbon used to float on its own, with a gap before the search bar and another before
+   the view row: three separate things doing one job. They now share a frame, divided by hairlines, so the eye reads
+   one control panel and the cards start higher up the screen. */
+.coll .coll-listbar {
+  margin: 0 0 -2px !important;
+  padding: 8px 10px !important;
+  background: #0c0c0e;
+  border: 2px solid var(--text, #fff);
+  border-radius: 0;
+  box-shadow: none;
+}
+.coll #cpane-cards {
+  margin-top: 0;
+}
+.dpage.coll .collbar {
+  margin-top: 0 !important;
+}
+.coll #cpane-cards > * > .dtools.tbar,
+.coll #cpane-cards .dtools.tbar {
+  margin-top: 0;
 }
