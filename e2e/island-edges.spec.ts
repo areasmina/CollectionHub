@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockWorld, seed } from './mock';
+import { mockWorld, seed, settled } from './mock';
 
 /**
  * Dynamic Island, phase 4 step 1: the island only stays put where its own edge has room. A top-docked island used to
@@ -51,6 +51,7 @@ test('Island docked top: at the end of Collection it is not sitting on + DECK or
   test.skip(info.project.name === 'phone', 'phones dock at the bottom by default; the top dock on phones is covered by the test above');
   await open(page, 'top', 'collection');
   await page.waitForSelector('.timg');
+  await settled(page); // measure the island, not a page still laying out
   await toEnd(page);
   await page.waitForTimeout(500);
   if (await page.evaluate(() => scrollY >= 80)) expect(await covered(page)).toEqual([]); // scrolled past the start: nothing tappable under it

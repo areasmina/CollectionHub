@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, showStats } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, settled, steady, showStats } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -184,7 +184,7 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   // on phones .dpanel lives in the cube's ANALYSIS face (off-screen by default); navigate there first
   if (info.project.name === 'phone') {
     await page.getByRole('tab', { name: 'ANALYSIS' }).click();
-    await page.waitForTimeout(400); // wait for the smooth scroll animation
+    await steady(page, '.dpanel'); // the cube scrolls smoothly to the face: measure once it has arrived
     await fits(page, ['.dhero', '.dpanel']);
   } else {
     await fits(page, ['.dhero', '.dtools', '.dpanel']);
@@ -490,12 +490,13 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
 
 test('One card menu: ⋯ / right-click on commander page and Collection cards, same items', async ({ page }) => {
   await page.locator('.ccard').first().click();
+  await settled(page); // a page still growing scrolls under the menu, and a scroll closes it
   await page.getByRole('button', { name: 'More for Sol Ring' }).click();
   const m = page.getByRole('menu', { name: 'Sol Ring options' });
   await expect(m.getByRole('button', { name: /SWAP…/i })).toBeVisible();
   await expect(m.getByRole('button', { name: 'NEVER USE' })).toBeVisible();
   await expect(m.getByText('also in:')).toBeVisible();
-  await page.waitForTimeout(300); // the menu drops in with a small tilt first
+  await steady(page, '.cardmenu'); // the menu drops in with a small tilt first
   await fits(page, ['.cardmenu']);
   await m.getByRole('button', { name: /SWAP…/i }).click();
   await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();

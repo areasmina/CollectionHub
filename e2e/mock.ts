@@ -132,3 +132,27 @@ export const showStats = async (page: Page) => {
   }
   if ((await fold.first().getAttribute('aria-expanded')) === 'false') await fold.first().click();
 };
+
+/** Wait until the page has stopped growing or shrinking (card pictures and brain data land after the first paint).
+ *  A measurement taken mid-layout is not a design fault, and a shrink under a reader's scroll position fires a scroll
+ *  event of its own, which closes menus and brings the island back: settle first, then measure. */
+export const settled = async (page: Page, tries = 40) => {
+  let last = -1;
+  for (let i = 0; i < tries; i++) {
+    const h = await page.evaluate(() => document.documentElement.scrollHeight);
+    if (h === last) return;
+    last = h;
+    await page.waitForTimeout(120);
+  }
+};
+
+/** Wait until one element has stopped moving (the phone cube scrolls smoothly between its faces). */
+export const steady = async (page: Page, sel: string, tries = 40) => {
+  let last = '';
+  for (let i = 0; i < tries; i++) {
+    const now = await page.locator(sel).first().evaluate((e) => { const r = e.getBoundingClientRect(); return `${Math.round(r.left)}:${Math.round(r.top)}:${Math.round(r.width)}`; });
+    if (now === last) return;
+    last = now;
+    await page.waitForTimeout(120);
+  }
+};
