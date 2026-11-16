@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, settled, steady, showStats } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, settled, showStats, steady, toFace } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -183,11 +183,7 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   expect(menu!.x + menu!.width).toBeLessThanOrEqual(vw);
   // on phones .dpanel lives in the cube's ANALYSIS face (off-screen by default); navigate there first
   if (info.project.name === 'phone') {
-    await page.keyboard.press('Escape'); // the card menu is still open: its backdrop would swallow the tab tap
-    await expect(page.locator('.cardmenu')).toHaveCount(0);
-    await page.getByRole('tab', { name: 'ANALYSIS' }).click();
-    await expect(page.locator('.dpanel')).toBeInViewport({ ratio: 0.3 });
-    await steady(page, '.dpanel'); // the cube scrolls smoothly to the face: measure once it has arrived
+    await toFace(page, 'ANALYSIS', '.dpanel');
     await fits(page, ['.dhero', '.dpanel']);
   } else {
     await fits(page, ['.dhero', '.dtools', '.dpanel']);
@@ -657,8 +653,7 @@ test('Saved deck (overhaul): same hero and strip as the commander page, each fac
   expect(shadow).toBe('none');
   // on phones .dpanel lives in the cube's ANALYSIS face; navigate there before the bounds check
   if (page.viewportSize()!.width <= 500) {
-    await page.getByRole('tab', { name: 'ANALYSIS' }).click();
-    await page.waitForTimeout(400); // smooth scroll to the face takes ~400ms
+    await toFace(page, 'ANALYSIS', '.dpanel');
     await fits(page, ['.dhero', '.dstrip', '.dpanel']);
   } else {
     await fits(page, ['.dhero', '.dstrip', '.dpanel']);

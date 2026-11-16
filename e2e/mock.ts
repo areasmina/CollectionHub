@@ -156,3 +156,13 @@ export const steady = async (page: Page, sel: string, tries = 40) => {
     await page.waitForTimeout(120);
   }
 };
+
+/** Phones show the deck as a cube of faces (CARDS · ANALYSIS · TO BUY). Move to one and wait until it has really
+ *  arrived: an open card menu would swallow the tap, and the slide between faces takes a moment. */
+export const toFace = async (page: Page, tab: string, sel: string) => {
+  await page.keyboard.press('Escape'); // any open menu's backdrop would take the tap instead of the tab
+  await page.locator('.cardmenu').waitFor({ state: 'detached' }).catch(() => {});
+  await page.getByRole('tab', { name: tab }).click();
+  await page.locator(sel).first().waitFor({ state: 'visible' });
+  await steady(page, sel);
+};
