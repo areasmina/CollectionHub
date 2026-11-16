@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
   await expect(page.locator('.tbar')).toBeVisible();
+  await expect(page.locator('.coll .ctile').first()).toBeVisible(); // the binder's cards, not just its frame
 });
 
 const names = async (page: import('@playwright/test').Page) =>
