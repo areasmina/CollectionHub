@@ -67,15 +67,29 @@ export const scryfallUrl = (name: string) => `https://scryfall.com/search?q=${en
 const canHover = () => typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 // Large card preview: one overlay for the whole app (PreviewLayer in App).
-type Preview = { src: string; tap: boolean; href?: string };
+type Preview = { src: string; tap: boolean; href?: string; back?: string };
 let setPreview: (p: Preview | null) => void = () => {};
 export function PreviewLayer() {
   const [p, set] = useState<Preview | null>(null);
+  const [flipped, setFlipped] = useState(false);
   useEffect(() => void (setPreview = set), []);
+  useEffect(() => setFlipped(false), [p?.src]);
   if (!p) return null;
+  // A card that transforms can be turned over here too, big enough to read either side (Guillermo, Nov 16).
+  const shown = flipped && p.back ? p.back : p.src;
   return (
     <div className={`preview${p.tap ? ' tap' : ''}`} onClick={() => set(null)} role="dialog" aria-label="Card preview (tap to close)">
-      <img src={p.src} alt="" />
+      <img src={shown} alt="" />
+      {p.back && (
+        <button
+          type="button"
+          className="btn ink flipbig"
+          aria-pressed={flipped}
+          onClick={(e) => (e.stopPropagation(), haptic('select'), setFlipped(!flipped))}
+        >
+          ⟳ {flipped ? 'FRONT' : 'BACK'}
+        </button>
+      )}
       {p.tap && p.href && (
         <a className="btn ink scry" href={p.href} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
           OPEN ON SCRYFALL ↗
@@ -88,13 +102,29 @@ export function PreviewLayer() {
 /** Shows / hides the big card preview (press and hold on touch). */
 export const showPreview = (src: string | null) => setPreview(src ? { src, tap: false } : null);
 
+/** Opens a card big enough to read, with its Scryfall link and, for a card that transforms, its back (Nov 16). */
+export const openCard = (src: string, name?: string, back?: string) =>
+  setPreview({
+    src: src.replace('/small/', '/normal/').replace('/art_crop/', '/normal/'),
+    tap: true,
+    href: name ? scryfallUrl(name) : undefined,
+    back: back?.replace('/small/', '/normal/'),
+  });
+
 /** Card image: click opens Scryfall (mouse) or a big preview with a Scryfall link (touch).
  *  The old one-second hover preview is gone (Guillermo, Nov 15): the card size control makes a card readable where it
  *  sits, so a panel that covered its neighbours every time the mouse rested was in the way rather than useful.
  *  `onPick` replaces the click (missing cards open their swap note instead). */
-export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: string; className?: string; name?: string; onPick?: () => void }) {
+export function Thumb({ src, className = 'thumb xart', name, back, onPick }: { src?: string; className?: string; name?: string; back?: string; onPick?: () => void }) {
+  // Two-faced cards (transform, modal DFC) turn over where they sit: the control sits on the frame under the art,
+  // never over it, and the card keeps its name, its count and its price, which all belong to the front (Nov 16).
+  const [flipped, setFlipped] = useState(false);
   if (!src) return <span className={className} aria-hidden="true" />;
-  const big = src.replace('/small/', '/normal/').replace('/art_crop/', '/normal/');
+  // the back comes from Scryfall at the small size: show it at whatever size this picture is shown at
+  const sized = (u: string) => (src.includes('/normal/') ? u.replace('/small/', '/normal/') : src.includes('/art_crop/') ? u : u);
+  const face = flipped && back ? sized(back) : src;
+  const big = face.replace('/small/', '/normal/').replace('/art_crop/', '/normal/');
+  const bigBack = back ? back.replace('/small/', '/normal/') : undefined;
   const href = name ? scryfallUrl(name) : undefined;
   // Foil: the glare follows the pointer (mouse or finger) while it's over the card.
   const foil = className.includes('foil');
@@ -105,9 +135,9 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
     e.currentTarget.classList.add('tracking');
   };
   return (
-    <span className={className} onPointerMove={foil ? track : undefined} onPointerLeave={foil ? (e) => e.currentTarget.classList.remove('tracking') : undefined}>
+    <span className={`${className}${back ? ' twoface' : ''}${flipped ? ' flipped' : ''}`} onPointerMove={foil ? track : undefined} onPointerLeave={foil ? (e) => e.currentTarget.classList.remove('tracking') : undefined}>
       <img
-        src={src}
+        src={face}
         alt=""
         loading="lazy"
         onClick={(e) => {
@@ -115,9 +145,22 @@ export function Thumb({ src, className = 'thumb xart', name, onPick }: { src?: s
           if (onPick) return onPick();
           if (href && canHover()) return void window.open(href, '_blank', 'noopener');
           haptic('open');
-          setPreview({ src: big, tap: true, href });
+          setPreview({ src: big, tap: true, href, back: flipped ? src.replace('/small/', '/normal/') : bigBack });
         }}
       />
+      {back && (
+        <button
+          type="button"
+          className="flipbtn"
+          aria-pressed={flipped}
+          aria-label={flipped ? `Show the front of ${name ?? 'this card'}` : `Show the back of ${name ?? 'this card'}`}
+          title={flipped ? 'Show the front' : 'Show the back'}
+          onClick={(e) => (e.stopPropagation(), haptic('select'), setFlipped(!flipped))}
+        >
+          <span aria-hidden="true">⟳</span>
+          <span className="fliplbl" aria-hidden="true">{flipped ? 'FRONT' : 'BACK'}</span>
+        </button>
+      )}
       <span className="pen" aria-hidden="true" />
     </span>
   );
@@ -247,7 +290,7 @@ export function CardLine({
 
   return (
     <li className={`zrow ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} {...press} {...dragProps(name, drag)}>
-      <Thumb src={card?.img ?? img} className={`thumb xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      <Thumb src={card?.img ?? img} back={card?.back} className={`thumb xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       <span className="info">
         <span className="zrow-head">
           <span className="nm">{name}</span>
@@ -316,7 +359,7 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
   const press = useMenuPress(onMenu);
   return (
     <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} tabIndex={onOpen ? undefined : 0} {...press} {...dragProps(name, drag)}>
-      <Thumb src={src} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      <Thumb src={src} back={card?.back} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       {/* No MISSING label on a tile (Guillermo, Nov 15): the card is already black and white and dimmed, so the
           label only repeated it. Screen readers still hear "(missing)" next to the name below. */}
       {card?.legal === false && (
@@ -357,6 +400,43 @@ export function CardTile({ name, img, card, s, note, marker, markText, quiet, on
       <PriceLink card={card} tape={name} />
       {children}
     </li>
+  );
+}
+
+/**
+ * One bar button that steps through its choices, the way SIZE does (Guillermo, Nov 16: "those menus can fit in the
+ * same button just like the sizing one, we do not need to see them all at once"). It says where you are now, and a
+ * tap moves to the next choice; the same choices stay in the options sheet for picking one straight off.
+ */
+export function CycleBtn<T extends string>({
+  name,
+  value,
+  options,
+  onChange,
+  icons,
+  cls,
+}: {
+  name: string;
+  value: T;
+  options: [T, string][];
+  onChange: (v: T) => void;
+  icons?: Partial<Record<T, ReactNode>>;
+  cls?: string;
+}) {
+  const i = Math.max(0, options.findIndex(([v]) => v === value));
+  const label = options[i][1];
+  const next = options[(i + 1) % options.length];
+  return (
+    <button
+      type="button"
+      className={`u-btn ghost qcycle-btn${cls ? ` ${cls}` : ''}`}
+      title={`${name}: ${label}. Tap for ${next[1]}`}
+      aria-label={`${name} ${label}: tap for ${next[1]}`}
+      onClick={() => (haptic('select'), onChange(next[0]))}
+    >
+      {icons?.[value]}
+      <span className="qc-lbl">{label}</span>
+    </button>
   );
 }
 
@@ -832,7 +912,6 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
   }, []);
   return (
     <div className="dtools tbar" role="toolbar" aria-label={label}>
-      {quick && <div className="tquick">{quick}</div>}
       {/* On phones the options open as the one bottom sheet (same shape as Collection's filter sheet); a tap on the
           dimmed page behind it (the details' own ::before) closes it. Wider screens keep the popover under the button. */}
       <details
@@ -880,6 +959,7 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
           {foot && <div className="sheetfoot">{foot}</div>}
         </div>
       </details>
+      {quick && <div className="tquick">{quick}</div>}
       <SearchBox q={q} setQ={setQ} placeholder={placeholder} ariaLabel={searchLabel} />
       {extra}
     </div>

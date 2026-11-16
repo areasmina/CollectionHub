@@ -213,3 +213,14 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - **No white outlines on the phone either.** The frame around the Collection block and the outline on the analytics
   chart cards are gone at every width: a chart is read, not framed. The cards keep the ink, the halftone dots, the
   hard shadow and the tilt that tie them to the stat tiles; the three stat tiles and TOP 3 keep their white frames.
+- **A card that transforms can be turned over wherever it is.** The FLIP tab sits in the card's top-left corner, clear
+  of the ⋮, the price tape and the copy pips, and the card's name, count and price always belong to the front.
+- **The ⋮ options button is the first thing on every tool bar** (Guillermo: "should be a world rule in the app"), and
+  its panel opens from the bar's left edge.
+- **A card's ⋮ is almost invisible until you point at it.** On a touch screen, where there is no pointer, it stays
+  half-lit so it can still be found.
+- **Settings that used to be a row of segments are one stepping button**, the way SIZE already worked: the bar shows
+  what is on, a tap moves to the next, and the whole list stays in ⋮ to pick from.
+- **A Forge panel opens and closes from a red corner flag** with + and −, not from a word in the header, and a closed
+  panel is a 218px rail.
+

@@ -38,7 +38,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
-import { CardLine, CardTile, CmdrCard, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, CycleBtn, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
@@ -932,24 +932,17 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               }
               quick={
                 <>
-                  <div className="qsegs" role="group" aria-label="Ownership filter">
-                    {ONLYS.map(([v, l]) => (
-                      <button key={v} type="button" aria-pressed={only === v} onClick={() => (haptic('select'), setOnly(v))}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="qsegs qviews" role="group" aria-label="Quick view">
-                    <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                      <GridIcon />
-                    </button>
-                    <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                      <ListIcon />
-                    </button>
-                    <button type="button" aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
-                      <CompactIcon />
-                    </button>
-                  </div>
+                  {/* One stepping button each, like SIZE (Guillermo, Nov 16). ONLY's five choices are long, so the
+                      bar shows the one that is on and the options sheet keeps the whole list to pick from. */}
+                  <CycleBtn name="Only" cls="qonly-btn" value={only} options={ONLYS} onChange={setOnly} />
+                  <CycleBtn
+                    name="View"
+                    cls="qview-btn"
+                    value={view}
+                    options={[['grid', 'GRID'], ['list', 'LIST'], ['compact', 'COMPACT']] as [typeof view, string][]}
+                    onChange={setView}
+                    icons={{ grid: <GridIcon />, list: <ListIcon />, compact: <CompactIcon /> }}
+                  />
                   {view === 'grid' && (
                     <button
                       type="button"
@@ -974,11 +967,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             >
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               {/* Same chip language as the commander's sheet (Guillermo, Nov 15): no dropdowns beside chip rows. ONLY
-                  is also the bar's own buttons, so it only shows here where the bar has no room for them. */}
+                  is one stepping button on the bar now (Nov 16); the full list stays here to pick from. */}
               <ChipPick label="SORT" value={sort} options={SORTS} onChange={setSort} />
-              <div className="sheetshow">
-                <ChipPick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
-              </div>
+              <ChipPick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
             </ToolBar>
             <SetChips
               chips={[

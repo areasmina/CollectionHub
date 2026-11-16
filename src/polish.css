@@ -3085,3 +3085,627 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 .pillnav.dock-bottom.away { transform: translate(-50%, calc(100% + 24px)) !important; }
 .pillnav.dock-left.away { transform: translate(calc(-100% - 24px), -50%) !important; }
 .pillnav.dock-right.away { transform: translate(calc(100% + 24px), -50%) !important; }
+
+/* ==========================================================================
+   ROUND 7 (Guillermo, Nov 16): one cohesive zine surface, no white frames.
+   The shouting stays where the design system puts it — the hero, the tape, the spray, the red — and everything a
+   reader works with (search, filters, menus, tabs, the stat tiles, the TOP 3 box, the charts) is carbon paper with a
+   hairline edge. White outlines around furniture are gone at every width.
+   ========================================================================== */
+:root {
+  --edge: #23232a; /* hairline on carbon */
+  --edge2: #2c2c34; /* a frame that should read as an edge, not a line */
+}
+
+/* The chosen tab stays a white paper slab (a cut-out tab, not a frame round the content); only the list tabs lose
+   their white outline. */
+.list-tab.active {
+  border-color: var(--accent, #e60012) !important;
+}
+
+/* The one tool bar: search, view, filter and sort are divided by hairlines, not white rules. */
+:is(.dtools, .collbar, .tbar) :is(.fbtn, .sortsel, .tquick, .vpill, .tsearch),
+:is(.dtools, .collbar, .tbar) > button {
+  border-color: var(--edge) !important;
+}
+
+/* Filter sheet, its chips and its pips. */
+.fsheet2 { border-color: var(--edge2) !important; }
+.fs-foot { border-top-color: var(--edge2) !important; }
+.fs-row .pip,
+.fchip,
+.fclear,
+.u-chip.mana-filter-btn {
+  border-color: var(--edge2) !important;
+}
+.fs-row .pip[aria-pressed='true'],
+.u-chip.mana-filter-btn[aria-pressed='true'],
+.u-chip.mana-filter-btn.on {
+  border-color: var(--accent, #e60012) !important;
+}
+
+/* Menus and pop-ups: carbon paper with a hairline, like every other panel. */
+.cardmenu,
+.fbody,
+.sheet2,
+.estate {
+  border-color: var(--edge2) !important;
+}
+
+/* The stat tiles (Collection and My Decks are the same tiles, so they look the same): ink, halftone, a hairline frame
+   and a flat black drop. The red tile keeps red, the money tile keeps its yellow. */
+:is(.coll, .dlist) .stats .stat,
+.dlist .dstats > .stat {
+  border-color: var(--edge2) !important;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55) !important;
+}
+:is(.coll, .dlist) .stats .stat + .stat {
+  border-left-color: var(--edge2) !important;
+}
+:is(.coll, .dlist) .stats .stat.red,
+.dlist .dstats > .stat.red {
+  border-color: var(--accent, #e60012) !important;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55) !important;
+}
+:is(.coll, .dlist) .stats .stat.red + .stat {
+  border-left-color: var(--accent, #e60012) !important;
+}
+@media (min-width: 701px) {
+  /* joined ticket: the punch notches stay, the dashed divider turns to a hairline */
+  :is(.coll, .dlist) .stats .stat + .stat { border-left-style: dashed !important; }
+}
+
+/* TOP 3: the same carbon paper as the tiles, its pen frame drawn in the hairline colour, its title on yellow tape. */
+.topwidget {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.2px, transparent 1.6px) !important;
+  background-size: 5px 5px !important;
+}
+.topwidget > .pen {
+  border-color: var(--edge2) !important;
+}
+
+/* The analytics cards sit in the same family. */
+.apanel .acard,
+.acard {
+  border-color: var(--edge2) !important;
+}
+
+/* The last white edges on the furniture: the chosen tab, the view segment, the first stat tile's left edge, and the
+   colour pips on a deck tile. */
+.qsegs.qviews > button {
+  border-color: var(--edge) !important;
+}
+:is(.coll, .dlist) .stats .stat:first-child,
+.dlist .dstats > .stat:first-child {
+  border-left-color: var(--edge2) !important;
+}
+.pips > .pip {
+  border-color: var(--edge2) !important;
+}
+
+/* A tile is a torn scrap of the same zine: the big number, a short red rule under it like the chart titles use, and
+   the quiet label below. Nothing shouts but the red. */
+:is(.coll, .dlist) .stats .stat > b::after,
+.dlist .dstats > .stat > b::after {
+  content: '';
+  display: block;
+  width: 26px;
+  height: 3px;
+  margin: 2px 0 4px;
+  background: var(--accent, #e60012);
+}
+:is(.coll, .dlist) .stats .stat.red > b::after,
+.dlist .dstats > .stat.red > b::after {
+  background: #0a0a0a;
+}
+
+/* ==========================================================================
+   ROUND 7b (Guillermo, Nov 16, three marked screenshots): spacing and composition.
+   Nothing stretches to fill a wide screen any more. Each block is as wide as it needs to be, the row keeps one
+   rhythm, and the colour count sits at the right of the deck row where he reads it.
+   ========================================================================== */
+
+/* SHOW STATS is one of the three buttons on the band, so it is lettered like them (it used to inherit the band's
+   own type and read as a different font). */
+.titlewrap > .titleacts .dfold {
+  width: auto !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 0 14px !important;
+  font: 400 12.5px/1 var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.06em !important;
+  text-align: center !important;
+}
+
+/* My Decks: the four facts take the width they need, and the colour count keeps its size at the right. */
+@media (min-width: 701px) {
+  .dlist .dstats {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    align-items: stretch !important;
+  }
+  .dlist .dstats > .stat {
+    flex: 0 1 auto !important;
+    min-width: 150px !important;
+    max-width: 260px !important;
+    padding: 10px 16px !important;
+  }
+  .dlist .dstats > .stat.dcols {
+    margin-left: auto !important;
+    min-width: 190px !important;
+    max-width: none !important;
+  }
+}
+
+/* Collection: the appraised slip is a receipt, not a banner — it stops at a readable width so the row keeps its
+   rhythm, and TOP 3 takes the space that is left. */
+@media (min-width: 701px) {
+  .coll .slip {
+    flex: 0 1 460px !important;
+    max-width: 460px !important;
+  }
+  .coll .topwidget {
+    flex: 1 1 320px !important;
+    max-width: 560px !important;
+  }
+}
+
+/* The charts: worth over time is a chart, not a field. It takes two columns, not the whole row, and its line keeps
+   a readable height instead of a tall empty box. */
+@media (min-width: 1000px) {
+  .apanel .acard.awide {
+    grid-column: span 2 !important;
+  }
+}
+.apanel .aline {
+  height: 132px !important;
+}
+
+/* Each chart is only as tall as what it says: the grid stops stretching a short card to match a tall neighbour,
+   which is where most of the empty space in the marked screenshot came from. */
+.apanel .agrid {
+  align-items: start !important;
+}
+/* TOP 3 holds three cards, so its frame stops after them instead of leaving an empty fourth slot. */
+@media (min-width: 701px) {
+  .coll .topwidget {
+    flex: 0 1 420px !important;
+    max-width: 420px !important;
+  }
+}
+
+/* The search box itself: a hairline, like the bar it sits in (it still had a white outline on phones). */
+.sbox {
+  border-color: var(--edge) !important;
+}
+.sbox:focus-within {
+  border-color: var(--accent, #e60012) !important;
+}
+/* the phone tool bar's own divider under the search line (a high-specificity rule from the row work) */
+.dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch,
+.dtools.tbar > .fbtn,
+.dtools.tbar > .sortsel {
+  border-color: var(--edge) !important;
+}
+
+/* ── Round 7c (Guillermo, Nov 16) ── */
+
+/* 1. The rail paints over the cards, not under them ("the bar it seems here goes behind teh cards instead of goibng
+   over them"). The lane is absolute with no stacking order of its own, so any card tile that makes its own layer
+   (tilt, hover lift) was drawn on top of it. A low z-index on the lane and the rail itself puts it above the cards
+   and still far below the options sheets (1008) and the island (1010). */
+.lists > .jrail-wrap { z-index: 6; }
+.jrail { z-index: 6; }
+
+/* 2. The ⋮ on a card is almost gone while you read the card, and clear the moment you point at it
+   ("should be less noticable a lot more opaque but when hoovered over they are more noticable"). On a touch screen
+   there is no pointer to hover with, so it keeps enough presence to be found. */
+.ztile > .morebtn,
+.ztile .tacts > .morebtn,
+.ztile:not(.ctile) .tacts > .morebtn,
+.ztile.ctile > .morebtn {
+  opacity: 0.2;
+  transition: opacity 0.18s ease;
+}
+.ztile > .morebtn::before,
+.ztile .tacts > .morebtn::before {
+  opacity: 0.55;
+  transition: opacity 0.18s ease;
+}
+.ztile:hover > .morebtn,
+.ztile:focus-within > .morebtn,
+.ztile:hover .tacts > .morebtn,
+.ztile:focus-within .tacts > .morebtn,
+.ztile > .morebtn:focus-visible,
+.ztile .tacts > .morebtn:focus-visible {
+  opacity: 1;
+}
+.ztile:hover > .morebtn::before,
+.ztile:focus-within > .morebtn::before,
+.ztile:hover .tacts > .morebtn::before,
+.ztile:focus-within .tacts > .morebtn::before {
+  opacity: 1;
+}
+@media (hover: none), (max-width: 700px) {
+  .ztile > .morebtn,
+  .ztile .tacts > .morebtn,
+  .ztile:not(.ctile) .tacts > .morebtn,
+  .ztile.ctile > .morebtn {
+    opacity: 0.5;
+  }
+  .ztile > .morebtn::before,
+  .ztile .tacts > .morebtn::before {
+    opacity: 0.8;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ztile > .morebtn,
+  .ztile > .morebtn::before { transition: none; }
+}
+
+/* 3. World rule: the ⋮ options button is the first thing on every tool bar, whatever else the bar carries
+   ("lets ensure 3 dot menu option is always to the far left shoudl be a world rule in the app"). The button now comes
+   first in the markup too, so the keyboard reaches it in the same order the eye does; this keeps the Forge's split
+   bar, which had pushed it after the quick pills, in line with the rest. */
+.dtools.tbar > .tbmore { order: -1 !important; }
+.deckgrid.forge-split .lists > .dtools.tbar > .tbmore { order: -1 !important; }
+
+/* ── Two-faced cards (Guillermo, Nov 16: "cards that are flippable because they transform") ──
+   A card with a real back wears a small FLIP tab on the bottom-left of its frame, off the art and clear of the ⋮ on
+   the right. It is steady, not a hover secret: you can see at a glance which cards have another side. */
+.xart.twoface > .flipbtn {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  z-index: 6; /* above the copy pips and the "in N decks" line, which come up on hover in the same half of the card */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--edge2, #2c2c34);
+  border-radius: 3px;
+  background: rgba(8, 8, 10, 0.88);
+  color: #f2f2f4;
+  font: 400 10px/1 var(--u-mono, 'Space Mono', monospace);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.xart.twoface > .flipbtn:hover,
+.xart.twoface > .flipbtn:focus-visible {
+  opacity: 1;
+  border-color: var(--accent, #e60012);
+}
+.xart.twoface.flipped > .flipbtn {
+  background: var(--accent, #e60012);
+  border-color: var(--accent, #e60012);
+  color: #fff;
+}
+/* a small picture (a list row's thumb) keeps the glyph alone: the word would not fit */
+.thumb.twoface > .flipbtn > .fliplbl,
+.thand.twoface > .flipbtn > .fliplbl {
+  display: none;
+}
+.thumb.twoface > .flipbtn,
+.thand.twoface > .flipbtn {
+  min-height: 22px;
+  padding: 0 5px;
+  left: 2px;
+  top: 2px;
+}
+@media (max-width: 700px) {
+  /* a finger needs 44px, but the card does not need a 44px badge: the button is a full tap target and the pill it
+     shows is drawn inside it */
+  .xart.twoface > .flipbtn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 8px;
+    background: none;
+    border: 0;
+    left: 0;
+    top: 0;
+  }
+  .xart.twoface > .flipbtn::before {
+    content: '';
+    position: absolute;
+    inset: 8px 4px;
+    z-index: -1;
+    border: 1px solid var(--edge2, #2c2c34);
+    border-radius: 3px;
+    background: rgba(8, 8, 10, 0.88);
+  }
+  .xart.twoface.flipped > .flipbtn::before {
+    background: var(--accent, #e60012);
+    border-color: var(--accent, #e60012);
+  }
+}
+/* the big preview: turn it over there too, beside the Scryfall link */
+.preview > .flipbig {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-120%);
+  z-index: 2;
+}
+.preview:not(.tap) > .flipbig { display: none; }
+
+/* ── Forge panels: a red corner flag instead of a word, and a roomier closed rail (Guillermo, Nov 16) ──
+   "instead of having the word we can have a red triangle in the top right corner with plus to expand and minus to
+   contract… a subtle way to do it." The flag is a triangle cut from the panel's own top-right corner; the sign sits
+   on it. Nothing else in the header moves, so the panel's text and composition stay as they are. */
+.fmeters .fmeters-header,
+.fsugg .fsugg-header {
+  position: relative;
+}
+.fexp-btn.corner {
+  position: absolute !important;
+  top: -8px !important;
+  right: -8px !important;
+  z-index: 4 !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #fff !important;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fexp-btn.corner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent, #e60012);
+  clip-path: polygon(100% 0, 100% 100%, 0 0);
+  transition: filter 0.15s ease;
+}
+.fexp-btn.corner:hover::before,
+.fexp-btn.corner:focus-visible::before {
+  filter: brightness(1.25);
+}
+.fexp-btn.corner > .fexp-sign {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  font: 700 17px/1 var(--u-display, 'Anton', sans-serif);
+  color: #fff;
+  pointer-events: none;
+}
+/* the header keeps room for the flag so a long title never runs under it. Phones have no corner flag (the sheet is
+   pulled up by its own handle there), so nothing is reserved and the tabs keep their full width. */
+@media (min-width: 701px) {
+  .fmeters .fmeters-header > h3,
+  .fsugg .fsugg-header > .fpanes-wrap,
+  .fsugg .fsugg-header > h3 {
+    padding-right: 34px !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fexp-btn.corner::before { transition: none; }
+}
+
+/* The closed rail about a third wider (Guillermo, Nov 16: "the minimized version can be a little bigger maybe 30%
+   so we can see more while having a compact plug in there"): 168px → 218px. */
+@media (min-width: 1100px) {
+  html.forging .deckgrid.forge-split.an-contracted {
+    grid-template-columns: 218px minmax(0, 1fr) 350px !important;
+  }
+  html.forging .deckgrid.forge-split.sug-contracted {
+    grid-template-columns: 320px minmax(0, 1fr) 218px !important;
+  }
+  html.forging .deckgrid.forge-split.an-contracted.sug-contracted {
+    grid-template-columns: 218px minmax(0, 1fr) 218px !important;
+  }
+}
+
+/* ── One stepping button instead of a row of segments (Guillermo, Nov 16) ──
+   SHOW, ONLY and VIEW wear the same shape as SIZE, so the bar reads as one short row of settings rather than three
+   groups competing for the eye. The icon stays for VIEW, since a picture reads faster than the word. */
+.qcycle-btn {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  font: 700 12px/1 var(--u-mono, monospace) !important;
+  letter-spacing: 0.05em !important;
+  background: #141416 !important;
+  color: var(--u-text, #ffffff) !important;
+  border: 1px solid var(--edge2, #2c2c34) !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+.qcycle-btn:hover {
+  background: #202026 !important;
+  border-color: #ffd400 !important;
+  color: #ffd400 !important;
+}
+.qcycle-btn:active { transform: scale(0.97) !important; }
+.qcycle-btn > svg { width: 15px; height: 15px; flex: 0 0 auto; }
+/* a setting that is on, not at rest, says so in the app's one accent */
+.qcycle-btn.qshow-btn:not([aria-label^='Show ALL']),
+.qcycle-btn.qonly-btn:not([aria-label^='Only EVERY CARD']) {
+  border-color: var(--accent, #e60012) !important;
+  color: #fff !important;
+}
+@media (max-width: 700px) {
+  .qcycle-btn { height: 44px !important; min-height: 44px !important; padding: 0 10px !important; font-size: 11.5px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qcycle-btn { transition: none !important; }
+}
+
+/* ── The options sheet reads easily (Guillermo, Nov 16: "in blue circled are where the font is hard to read") ──
+   The row labels and the typed-in boxes were 10–11px grey on near-black. Same layout, a size up and a lighter ink. */
+.dtools.tbar > .tbmore .fbody .optrow > .lbl,
+.dtools.tbar > .tbmore .fbody .chiprow ~ .lbl,
+.dtools.tbar > .tbmore .fbody .cf-row .lbl {
+  font-size: 12px !important;
+  letter-spacing: 0.08em !important;
+  color: #d6d6dc !important;
+}
+.dtools.tbar > .tbmore .fbody input[type='text'],
+.dtools.tbar > .tbmore .fbody input:not([type]),
+.dtools.tbar > .tbmore .fbody input::placeholder {
+  font-size: 13px !important;
+}
+.dtools.tbar > .tbmore .fbody input::placeholder { color: #9a9aa6 !important; opacity: 1 !important; }
+.dtools.tbar > .tbmore .fbody .u-chip,
+.dtools.tbar > .tbmore .fbody .segs > button {
+  font-size: 12.5px !important;
+  letter-spacing: 0.05em !important;
+}
+.dtools.tbar > .tbmore .fbody .u-chip > small,
+.dtools.tbar > .tbmore .fbody .chiprow .cnt {
+  font-size: 11px !important;
+  color: #a8a8b2 !important;
+}
+
+/* ── The HIDDEN GEM row, laid out (Guillermo, Nov 16) ──
+   "I love that you show the card but it is hard to read… the text on the left sits awkwardly… the buttons to the far
+   right are dope but they can be designed better." The row is now three parts on one line: the tag and the card, the
+   card's case for itself, and the three answers. The empty middle is gone: the text uses it. */
+.dpage .wildcard {
+  align-items: stretch !important;
+  gap: 14px 18px !important;
+  padding: 14px 16px !important;
+}
+.dpage .wildcard .wtag {
+  align-self: center !important;
+}
+.dpage .wildcard .wbody {
+  align-items: center !important;
+  gap: 14px !important;
+}
+/* the picture is a button: it says so, and it opens the card big enough to read */
+.dpage .wildcard .wthumb-btn {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+.dpage .wildcard .wthumb-btn > .wzoom {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(8, 8, 10, 0.86);
+  color: #fff824;
+  font: 400 9px/1 var(--u-mono, 'Space Mono', monospace);
+  letter-spacing: 0.08em;
+  opacity: 0.92;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.dpage .wildcard .wthumb-btn:hover > .wthumb,
+.dpage .wildcard .wthumb-btn:focus-visible > .wthumb {
+  border-color: #fff !important;
+}
+/* the text: the name leads, the evidence sits under it as one quiet line */
+.dpage .wildcard .wtxt {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+.dpage .wildcard .wtxt > .wname {
+  font: 400 19px/1.05 var(--u-display, 'Anton', sans-serif) !important;
+  letter-spacing: 0.02em !important;
+  color: #fff !important;
+}
+.dpage .wildcard .wmeta {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+.dpage .wildcard .wmeta > .wbadge {
+  background: rgba(255, 248, 36, 0.14) !important;
+  border: 1px solid rgba(255, 248, 36, 0.45) !important;
+  border-radius: 3px !important;
+  padding: 3px 8px !important;
+  color: #fff824 !important;
+  font: 400 11.5px/1.25 var(--u-mono, 'Space Mono', monospace) !important;
+  letter-spacing: 0.02em !important;
+}
+.dpage .wildcard .wmeta > .wfor {
+  color: #c9c9d2 !important;
+  font: 400 11.5px/1.25 var(--u-mono, 'Space Mono', monospace) !important;
+}
+/* the three answers: one straight row, same height, loudest first */
+.dpage .wildcard .wacts {
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  align-self: center !important;
+}
+.dpage .wildcard .wacts .btn {
+  height: 40px !important;
+  min-height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 14px !important;
+  transform: none !important;
+  box-shadow: 3px 3px 0 #0a0a0a !important;
+  font-size: 13px !important;
+}
+.dpage .wildcard .wacts .btn-swap-in {
+  min-width: 108px !important;
+  box-shadow: 3px 3px 0 #f4efe4 !important;
+}
+.dpage .wildcard .wacts .woff {
+  min-width: 56px !important;
+  padding: 0 10px !important;
+}
+.dpage .wildcard .wacts .btn:hover {
+  transform: translateY(-1px) !important;
+}
+@media (max-width: 700px) {
+  .dpage .wildcard .wacts { flex-wrap: wrap !important; width: 100% !important; }
+  .dpage .wildcard .wacts .btn-swap-in { flex: 1 1 140px !important; }
+  .dpage .wildcard .wacts .btn { height: 44px !important; min-height: 44px !important; }
+  .dpage .wildcard .wtxt > .wname { font-size: 17px !important; }
+}
+
+/* The options panel hangs from the bar's LEFT edge now that ⋮ is the first thing on the bar (Nov 16). Between phone
+   and desktop widths it used to hang from the right edge, which put it off the screen once the button moved. */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .lists > .dtools.tbar > .tbmore > .fbody {
+    left: 0 !important;
+    right: auto !important;
+  }
+}
+
+/* Small phones: the ⋮ now leads the bar, so it shares the top row with the search instead of taking a row of its own
+   (Nov 16). Same three rows of controls as before, one row shorter, so the cards start where they did. */
+@media (max-width: 430px) {
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tbmore { order: -2 !important; flex: 0 0 auto !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch {
+    order: -1 !important;
+    flex: 1 1 calc(100% - 56px) !important;
+  }
+}
+
+/* Phones: the cards start right under the tools (the one-block rule, Nov 15). With the ⋮ and the search sharing the
+   top row the block is one row shorter; this keeps the breathing space under it in proportion. */
+@media (max-width: 700px) {
+  .coll .collbar { margin-bottom: 8px !important; }
+  .coll .cgrid2 { padding-top: 8px !important; }
+}

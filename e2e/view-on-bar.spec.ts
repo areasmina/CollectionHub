@@ -3,6 +3,7 @@ import { fits, mockWorld, seed } from './mock';
 
 // Owner's call, Nov 13: cards open as a grid at every screen size, and the view (grid / list / compact) and SIZE controls
 // sit on the bar itself, on phones too. Twice they were moved into a menu on phones, and twice they read as lost.
+// Nov 16: on a deck's bar the three view pills became one stepping button, like SIZE — same place, one tap to the next.
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -25,9 +26,10 @@ test('Commander page: opens as a grid; view and SIZE are on the bar and work', a
   await page.locator('.ccard').first().click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await expect(page.locator('ul.zlist')).toHaveCount(0);
-  await reachable(page, '.dpage .lists > .tbar .qviews button', phone);
+  await reachable(page, '.dpage .lists > .tbar .qview-btn', phone);
   await reachable(page, '.dpage .lists > .tbar .qzoom-btn', phone);
-  await expect(page.locator('.dpage .lists > .tbar .qviews button')).toHaveCount(3);
+  const view = page.locator('.dpage .lists > .tbar .qview-btn');
+  await expect(view).toHaveText('GRID');
   await fits(page, ['.dpage .lists > .tbar', '.dpage .lists > .tbar input']);
   // SIZE steps the grid: on phones M = 3 across (ManaBox), L = 2, S = 4
   const size = page.locator('.dpage .lists > .tbar .qzoom-btn');
@@ -39,15 +41,16 @@ test('Commander page: opens as a grid; view and SIZE are on the bar and work', a
   await size.click();
   await expect(size).toHaveText('SIZE S');
   if (phone) expect(await cols(page, 'ul.zgrid')).toBe(4);
-  // the view pills switch and remember the choice
-  await page.getByRole('button', { name: 'Compact list' }).click();
-  await expect(page.locator('ul.zcompact').first()).toBeVisible();
-  await expect(size).toHaveCount(0); // SIZE is a grid control
-  await reachable(page, '.dpage .lists > .tbar .qviews button', phone);
-  expect(await page.evaluate(() => localStorage.getItem('ch:cardview'))).toBe('compact'); // remembered on this device
-  await page.getByRole('button', { name: 'List view' }).click();
+  // one button steps through the views and remembers the choice
+  await view.click(); // grid → list
   await expect(page.locator('ul.zlist:not(.zcompact)').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Grid view' }).click();
+  await expect(view).toHaveText('LIST');
+  await expect(size).toHaveCount(0); // SIZE is a grid control
+  await view.click(); // list → compact
+  await expect(page.locator('ul.zcompact').first()).toBeVisible();
+  await reachable(page, '.dpage .lists > .tbar .qview-btn', phone);
+  expect(await page.evaluate(() => localStorage.getItem('ch:cardview'))).toBe('compact'); // remembered on this device
+  await view.click(); // compact → grid again
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await page.screenshot({ path: `test-results/view-on-bar-cmdr-${info.project.name}.png` });
 });
@@ -58,9 +61,9 @@ test('Saved deck (Forge): opens as a grid; view and SIZE are on the bar', async 
   await page.reload();
   await page.locator('.dcard').first().click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
-  await reachable(page, '.lists > .tbar .qviews button', phone);
+  await reachable(page, '.lists > .tbar .qview-btn', phone);
   await reachable(page, '.lists > .tbar .qzoom-btn', phone);
-  await page.getByRole('button', { name: 'List view' }).click();
+  await page.locator('.lists > .tbar .qview-btn').click();
   await expect(page.locator('ul.zlist:not(.zcompact)').first()).toBeVisible();
   await page.screenshot({ path: `test-results/view-on-bar-deck-${info.project.name}.png` });
 });
@@ -127,7 +130,7 @@ for (const w of [320, 360]) {
     await page.setViewportSize({ width: w, height: 640 });
     await page.locator('.ccard').first().click();
     await expect(page.locator('ul.zgrid').first()).toBeVisible();
-    await reachable(page, '.dpage .lists > .tbar .qviews button', true);
+    await reachable(page, '.dpage .lists > .tbar .qview-btn', true);
     await reachable(page, '.dpage .lists > .tbar .qzoom-btn', true);
     await fits(page, ['.dpage .lists > .tbar', '.dpage .lists > .tbar input', '.dpage .lists > .tbar .tbmore > summary']);
     await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));

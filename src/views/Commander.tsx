@@ -36,7 +36,7 @@ import { ReadyTiles } from './Verdict';
 import { deckColour } from '../lib/deckcolor';
 import { inUseChip } from '../brain/chips';
 import { buyGroups, BUY_CAPS, coverage, coverageText, overCap, ownedOnly, type OwnMode } from '../brain/modes';
-import { CardLine, CardTile, CmdrCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, ChipPick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
+import { CardLine, CardTile, CmdrCard, CycleBtn, openCard, OutsideLinks, DeckLink, money, priceSum, Segs, SaltStat, ShortAlert, usd, ChipPick, ToolBar, OptRow, SetChips, VIEW_KEY, useBinder, useStored, type Shared } from './shared';
 import { shortfalls, takenBy } from '../lib/copies';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../lib/arrange';
 
@@ -852,14 +852,26 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
             {wild && !wildSet.off ? (
               <>
                 <div className="wbody">
+                  {/* The picture is a button: a thumbnail is too small to read, and a card you cannot read is a card
+                      you cannot say yes to (Guillermo, Nov 16). It opens big, with the back of a card that
+                      transforms and the Scryfall link. */}
                   {(cardByName(wild.name)?.img ?? imgOf(recCard.get(norm(wild.name))?.id)) && (
-                    <img src={cardByName(wild.name)?.img ?? imgOf(recCard.get(norm(wild.name))?.id)} alt="" className="wthumb" loading="lazy" />
+                    <button
+                      type="button"
+                      className="wthumb-btn"
+                      aria-label={`Read ${wild.name}`}
+                      title="Read this card"
+                      onClick={() => (haptic('open'), openCard((cardByName(wild.name)?.img ?? imgOf(recCard.get(norm(wild.name))?.id))!, wild.name, cardByName(wild.name)?.back))}
+                    >
+                      <img src={cardByName(wild.name)?.img ?? imgOf(recCard.get(norm(wild.name))?.id)} alt="" className="wthumb" loading="lazy" />
+                      <span className="wzoom" aria-hidden="true">⤢ READ</span>
+                    </button>
                   )}
                   <div className="wtxt">
-                    <b>{wild.name}</b>
+                    <b className="wname">{wild.name}</b>
                     <div className="wmeta">
                       <span className="wbadge">{wild.why}</span>
-                      <span>↔ for {wild.slot}</span>
+                      <span className="wfor">↔ for {wild.slot}</span>
                     </div>
                   </div>
                 </div>
@@ -1001,24 +1013,23 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                 }
                 quick={
                   <>
-                    <div className="qsegs" role="group" aria-label="Quick filter">
-                      {(['all', 'owned', 'missing'] as Show[]).map((v) => (
-                        <button key={v} type="button" aria-pressed={show === v} onClick={() => (haptic('select'), setShow(v), setMenuFor(null))}>
-                          {v === 'all' ? 'ALL' : v === 'owned' ? 'OWNED' : 'MISSING'}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="qsegs qviews" role="group" aria-label="Quick view">
-                      <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                        <GridIcon />
-                      </button>
-                      <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                        <ListIcon />
-                      </button>
-                      <button type="button" aria-pressed={view === 'compact'} aria-label="Compact list" title="Compact list" onClick={() => (haptic('select'), setView('compact'))}>
-                        <CompactIcon />
-                      </button>
-                    </div>
+                    {/* One button each, stepping through the choices like SIZE does (Guillermo, Nov 16): the bar
+                        carries what is on now, and the options sheet still lists them all to pick from. */}
+                    <CycleBtn
+                      name="Show"
+                      cls="qshow-btn"
+                      value={show}
+                      options={[['all', 'ALL'], ['owned', 'OWNED'], ['missing', 'MISSING']] as [Show, string][]}
+                      onChange={(v) => (setShow(v), setMenuFor(null))}
+                    />
+                    <CycleBtn
+                      name="View"
+                      cls="qview-btn"
+                      value={view}
+                      options={[['grid', 'GRID'], ['list', 'LIST'], ['compact', 'COMPACT']] as [typeof view, string][]}
+                      onChange={setView}
+                      icons={{ grid: <GridIcon />, list: <ListIcon />, compact: <CompactIcon /> }}
+                    />
                     {view === 'grid' && (
                       <button
                         type="button"
@@ -1230,12 +1241,9 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                     <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
                   </OptRow>
                 )}
-                {/* The bottom row of three dropdowns is gone (Guillermo, Nov 15). SHOW is the bar's own ALL / OWNED /
-                    MISSING buttons, so it only appears here on the phone, where the bar has no room for them; SORT and
-                    ONLY were the two settings that lived nowhere else, and they now speak the sheet's own chip language. */}
-                <div className="sheetshow">
-                  <ChipPick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
-                </div>
+                {/* The bottom row of three dropdowns is gone (Guillermo, Nov 15). SHOW is one stepping button on the
+                    bar now (Nov 16), and the sheet keeps the full list so a choice can be picked straight off. */}
+                <ChipPick label="SHOW" value={show} options={SHOWS} onChange={(v) => (setShow(v), setMenuFor(null))} />
                 <ChipPick label="SORT" value={sort} options={CSORTS} onChange={(v) => (setSort(v), setMenuFor(null))} />
                 <ChipPick label="ONLY" value={only} options={ONLYS} onChange={(v) => (setOnly(v), setMenuFor(null))} />
               </ToolBar>

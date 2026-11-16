@@ -355,9 +355,11 @@ export function ForgeMeters({
           ANALYSIS
           {match != null && <span className="fmatch">MATCH {match}%</span>}
         </h3>
+        {/* A red corner flag instead of a word (Guillermo, Nov 16): + opens the panel, − closes it. It sits in the
+            corner, out of the panel's own text and composition. */}
         <button
           type="button"
-          className="fexp-btn"
+          className="fexp-btn corner"
           title={expanded ? 'Contract analysis (compact animated curve)' : 'Expand analysis (veteran MTG breakdown)'}
           aria-label={expanded ? 'Contract analysis' : 'Expand analysis'}
           onClick={(e) => {
@@ -365,7 +367,7 @@ export function ForgeMeters({
             toggle();
           }}
         >
-          {expanded ? 'CONTRACT ◂' : 'EXPAND ⤢'}
+          <span className="fexp-sign" aria-hidden="true">{expanded ? '−' : '+'}</span>
         </button>
       </div>
 
@@ -771,7 +773,7 @@ export function ForgeSuggest({
         </div>
         <button
           type="button"
-          className="fexp-btn"
+          className="fexp-btn corner"
           title={expanded ? 'Contract suggestions (mini suggested cards dock)' : 'Expand suggestions (full list, search & reasons)'}
           aria-label={expanded ? 'Contract suggestions' : 'Expand suggestions'}
           onClick={(e) => {
@@ -779,7 +781,7 @@ export function ForgeSuggest({
             toggle();
           }}
         >
-          {expanded ? 'CONTRACT ▸' : 'EXPAND ⤢'}
+          <span className="fexp-sign" aria-hidden="true">{expanded ? '−' : '+'}</span>
         </button>
       </div>
 

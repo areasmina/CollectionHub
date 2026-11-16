@@ -17,6 +17,17 @@ const byName = new Map(cards.map((c) => [c.name.toLowerCase(), c]));
 const sc = (c: (typeof cards)[number]) => ({
   object: 'card', id: c.id, name: c.name, type_line: c.type, oracle_text: c.text, color_identity: c.ci, mana_cost: c.mana, cmc: c.cmc, rarity: c.rarity, set: 'tst', collector_number: '1',
   image_uris: { small: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg` }, prices: { usd: c.usd, usd_foil: (Number(c.usd) * 2).toFixed(2) }, legalities: { commander: 'legal' },
+  // One card in the fake world transforms, so the flip control has something to turn over. Everything else about it
+  // (name, text, price, count) stays on the front, exactly as Scryfall serves a double-faced card.
+  ...(c.name === 'Lotus Cobra'
+    ? {
+        layout: 'transform',
+        card_faces: [
+          { object: 'card_face', name: c.name, type_line: c.type, oracle_text: c.text, mana_cost: c.mana, image_uris: { small: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg` } },
+          { object: 'card_face', name: 'Lotus Cobra, Unfurled', type_line: 'Creature — Snake Avatar', oracle_text: 'Landfall — add two mana of any one color.', mana_cost: '', image_uris: { small: `https://cards.scryfall.io/small/back/0/0/${c.id}.jpg` } },
+        ],
+      }
+    : {}),
 });
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkqGcAAAIEAQAhVzR2AAAAAElFTkSuQmCC', 'base64');
 
@@ -58,7 +69,7 @@ export async function seed(page: Page) {
     });
     const tx = db.transaction(['entries', 'decks', 'cards'], 'readwrite');
     cs.forEach((c, i) => {
-      tx.objectStore('cards').put({ id: c.id, name: c.name, key: c.name.toLowerCase(), type: c.type, text: c.text, ci: c.ci, img: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg`, usd: c.usd, usdFoil: c.usd, mana: c.mana, cmc: c.cmc, rarity: c.rarity, legal: true, pv: 3, at: Date.now() });
+      tx.objectStore('cards').put({ id: c.id, name: c.name, key: c.name.toLowerCase(), type: c.type, text: c.text, ci: c.ci, img: `https://cards.scryfall.io/small/front/0/0/${c.id}.jpg`, back: c.name === 'Lotus Cobra' ? `https://cards.scryfall.io/small/back/0/0/${c.id}.jpg` : undefined, usd: c.usd, usdFoil: c.usd, mana: c.mana, cmc: c.cmc, rarity: c.rarity, legal: true, pv: 4, at: Date.now() });
       tx.objectStore('entries').put({ profile: 1, cardId: c.id, name: c.name, qty: (i % 4) + 1, set: 'tst', cn: String(i), foil: i === 3 });
     });
     tx.objectStore('decks').put({ profile: 1, name: 'Tatyova Lands', commander: cs[0].name, cards: cs.map((c) => ({ name: c.name, qty: c.type.startsWith('Basic') ? 20 : 1 })), updated: Date.now() });

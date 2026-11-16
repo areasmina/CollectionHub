@@ -21,7 +21,9 @@ export interface Card {
   legal: boolean;
   /** Scryfall rarity: 'common' | 'uncommon' | 'rare' | 'mythic' (also 'special', 'bonus'). Filled in from pv 3. */
   rarity?: string;
-  pv?: number; // card-data version: 2 = has usdFoil, 3 = has rarity
+  /** Two-faced cards (transform, modal DFC): the back face's picture. Only set when the back has a picture of its own. */
+  back?: string;
+  pv?: number; // card-data version: 2 = has usdFoil, 3 = has rarity, 4 = has the back face
   at?: number; // fetched at (ms)
 }
 /** One printing in a binder. */

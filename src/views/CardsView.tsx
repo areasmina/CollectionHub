@@ -229,7 +229,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
               {e.name}
             </span>
             <span className="cart">
-              <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
+              <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} back={cards.get(e.cardId)?.back} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
               {/* Can lead a deck: a crown on the price sticker, nothing else (Guillermo, Nov 15 — the COMMANDER tape
                   repeated what Discover already tells you, and took a corner of the art to say it) */}
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} crown={cmd(e)} />
@@ -253,7 +253,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
         {list.map((e) => (
           <MenuLi key={e.id} e={e} onMenu={onMenu} className="crow">
             <QtyEdit e={e} />
-            <Thumb src={cards.get(e.cardId)?.img} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} />
+            <Thumb src={cards.get(e.cardId)?.img} back={cards.get(e.cardId)?.back} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} />
             <span className="cn">
               <b>{e.name}</b>
               <span>{setLine(e)}</span>

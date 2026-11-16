@@ -6,12 +6,20 @@ test.beforeEach(async ({ page }) => {
   await seed(page);
 });
 
-/** Grid / list: the quick pills on the bar, at every screen width (phones too, since Nov 13). */
+/** Grid / list on the bar, at every screen width (phones too, since Nov 13). Collection keeps its two pills; a deck's
+ *  bar has one stepping button (Nov 16), so there we tap it until it reads the view we want. */
 const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
-  const sw = page.locator('.qviews').first();
-  await expect(sw).toBeVisible();
-  await fits(page, ['.qviews']);
-  await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
+  const pills = page.locator('.qviews').first();
+  if (await pills.count()) {
+    await expect(pills).toBeVisible();
+    await fits(page, ['.qviews']);
+    return void (await pills.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click());
+  }
+  const step = page.locator('.qview-btn').first();
+  await expect(step).toBeVisible();
+  await fits(page, ['.qview-btn']);
+  for (let i = 0; i < 3 && (await step.innerText()).trim() !== v.toUpperCase(); i++) await step.click();
+  expect((await step.innerText()).trim()).toBe(v.toUpperCase());
 };
 
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
@@ -718,8 +726,9 @@ test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, n
   const before = await cov.innerText();
   // filter to OWNED cards via toolbar search bar quick segment
   // (quick segments show above 700px; on phones the same filter is SHOW in ⋮)
-  if (page.viewportSize()!.width > 700) await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
-  else await (await opts(page)).locator('.sheetshow').getByRole('radio', { name: 'OWNED ONLY', exact: true }).click();
+  // SHOW is one stepping button on the bar at every width now (Nov 16): ALL → OWNED
+  await page.locator('.lists > .tbar .qshow-btn').click();
+  await expect(page.locator('.lists > .tbar .qshow-btn')).toHaveText('OWNED');
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('OWNED');
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();

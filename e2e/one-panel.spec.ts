@@ -26,11 +26,14 @@ test('The options sheet speaks one language: chips, no dropdowns, APPLY on a foo
     const tops = await row.locator('.chiprow .u-chip').evaluateAll((els) => [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))]);
     expect(tops.length, `${label} chips wrap to more than one line`).toBe(1);
   }
-  // SHOW repeats the bar's ALL / OWNED / MISSING buttons, so it only shows where those are hidden
-  const show = d.locator('.sheetshow');
-  const quick = page.locator('.lists .tquick .qsegs:not(.qviews)');
-  const quickShown = await quick.first().isVisible();
-  expect(await show.isVisible(), 'SHOW is in the sheet and on the bar at the same time').toBe(!quickShown);
+  // Nov 16: the bar carries one stepping SHOW button (what is on now) and the sheet keeps the whole list to pick
+  // from, so both are there on purpose and they always agree
+  const barShow = page.locator('.lists .tquick .qshow-btn').first();
+  await expect(barShow).toBeVisible();
+  const sheetShow = d.locator('.optrow:has(.chiprow)').filter({ has: page.locator('.lbl', { hasText: /^SHOW$/ }) });
+  await expect(sheetShow).toBeVisible();
+  const picked = await sheetShow.locator('[aria-checked="true"]').innerText();
+  expect(picked.replace(' CARDS', '').replace(' ONLY', '')).toBe((await barShow.innerText()).trim());
 
   // APPLY: on the footer, the width of the panel, and inside the screen without scrolling the sheet
   const apply = d.locator('.sheetfoot .cf-apply-btn');
