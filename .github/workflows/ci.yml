@@ -28,8 +28,8 @@ jobs:
   screens:
     # Playwright 1.56 can't install Chromium on ubuntu-latest (26.04); 24.04 is supported.
     runs-on: ubuntu-24.04
-    # The suite is 549 checks across three screen sizes; at the runner's default of 2 workers it ran past
-    # 20 minutes and the job was cancelled mid-run (Nov 15). Three workers on a 4-core runner, 35 minutes of room.
+    # The suite is ~560 checks across three screen sizes; at the runner's default of 2 workers it ran past 20 minutes
+    # and was cancelled mid-run with everything passing (Nov 15-16). Three workers on a 4-core runner, 35 minutes.
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4

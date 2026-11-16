@@ -8721,3 +8721,47 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
     position: static;
   }
 }
+
+/* ==========================================================================
+   Discover tile menu (right-click / press and hold a commander tile): the card menu's look (.cardmenu), plus the
+   tile's stat line under the name and the three outside sites on one row.
+   ========================================================================== */
+.disc .ccard {
+  -webkit-touch-callout: none; /* press and hold opens the tile menu, not the browser's image menu */
+  -webkit-user-select: none;
+  user-select: none;
+}
+.tilemenu .mh .mstat {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--u-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fffa55;
+}
+.tilemenu li > button:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+.tilemenu li > button:disabled:hover {
+  background: transparent !important;
+  color: #e0e0ea !important;
+}
+.tilemenu li.tlinks {
+  display: flex;
+  gap: 6px;
+}
+.tilemenu li.tlinks > a {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center !important;
+  gap: 4px;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+  border-color: #343444 !important;
+}
+.tilemenu li.tlinks > a .cmenu-main {
+  font-size: 12px !important;
+  letter-spacing: 0.01em !important;
+}
