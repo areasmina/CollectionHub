@@ -9,8 +9,9 @@ import { db, type Card } from '../lib/db';
 import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
-import { openCollection } from '../lib/nav';
-import { EmptyState, OptRow, Progress, ToolBar, usd, useStored, type Shared } from './shared';
+import { openCollection, openDeck } from '../lib/nav';
+import { EmptyState, OptRow, Progress, ToolBar, usd, useMenuPress, useStored, type Shared } from './shared';
+import { TileMenu, type TileToast } from './TileMenu';
 import { Pips, Ransom, Title, EyeDoodle, ManaIcon, PageDecor } from './zine';
 import { Meter } from './parts';
 
@@ -64,9 +65,27 @@ function Welcome({ empty }: { empty: boolean }) {
   );
 }
 
+/** A commander tile: the tap opens the commander page (unchanged); right-click or press and hold opens its menu. */
+function PressTile({ onMenu, children, ...props }: { onMenu: (x: number, y: number) => void } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const press = useMenuPress(onMenu);
+  return (
+    <button type="button" className="ccard" {...props} {...press}>
+      {children}
+    </button>
+  );
+}
+
 export function Discover(s: Shared) {
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
+  // The tile menu (right-click / press and hold) and the note it leaves behind (copied, saved + UNDO).
+  const [menu, setMenu] = useState<{ c: Cmdr; no: number; x: number; y: number } | null>(null);
+  const [toast, setToast] = useState<TileToast | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
   // Scrolling through commanders: a soft detent tick as each card comes into view (throttled in haptic()).
   const gridRef = useRef<HTMLUListElement>(null);
   useEffect(() => {
@@ -381,9 +400,8 @@ export function Discover(s: Shared) {
           const ready = st && st.missing === 0; // READY is kept for the build checks; this is ownership
           return (
             <li key={c.id}>
-              <button
-                type="button"
-                className="ccard"
+              <PressTile
+                onMenu={(x, y) => (warmCmdr(c.name), setMenu({ c, no: i + 1, x, y }))}
                 onPointerEnter={() => warmCmdr(c.name)}
                 onTouchStart={() => warmCmdr(c.name)}
                 onClick={() => (setOpenNo(i + 1), setOpen(c.name))}
@@ -408,11 +426,38 @@ export function Discover(s: Shared) {
                     {st && <span className={`cstate${ready ? ' ready' : ''}`}>{ready ? 'ALL OWNED' : `${st.missing} MISSING`}</span>}
                   </span>
                 </span>
-              </button>
+              </PressTile>
             </li>
           );
         })}
       </ul>
+      {menu && (
+        <TileMenu
+          name={menu.c.name}
+          at={menu}
+          profile={s.profile}
+          mine={s.mine}
+          stat={stats.get(menu.c.key)}
+          onOpen={() => (setOpenNo(menu.no), setOpen(menu.c.name))}
+          onClose={() => setMenu(null)}
+          onToast={setToast}
+        />
+      )}
+      {toast && (
+        <div className="toast" role="status">
+          <span>{toast.text}</span>
+          {toast.open && (
+            <button type="button" onClick={() => (haptic('open'), openDeck(toast.open!), setToast(null))}>
+              OPEN
+            </button>
+          )}
+          {toast.undo && (
+            <button type="button" onClick={() => (haptic('undo'), toast.undo!(), setToast(null))}>
+              UNDO
+            </button>
+          )}
+        </div>
+      )}
     </main>
     </>
   );
