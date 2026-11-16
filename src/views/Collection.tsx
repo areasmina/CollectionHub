@@ -95,7 +95,7 @@ const TopWidget = memo(function TopWidget({ entries, cards }: { entries: Entry[]
         {p.rows.length ? (
           p.rows.map(({ e, card, label, tone, why }, j) => (
             <li key={e.id} style={{ '--i': j - (p.rows.length - 1) / 2 } as React.CSSProperties} onClick={(ev) => ev.stopPropagation()}>
-              <Thumb src={card.img?.replace('/small/', '/normal/')} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
+              <Thumb src={card.img?.replace('/small/', '/normal/')} back={card.back} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
               <span className={`tw price tapey y${j} t${j}${tone ? ' ' + tone : ''}`} title={why}>
                 {label}
               </span>
@@ -381,6 +381,36 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
 
   // THE OVERHAUL, Collection: the loud frame (ransom title + binder tag) → one ribbon of facts and actions → the cards with
   // their one toolbar. Your decks and the import fold open under the ribbon.
+  const tabset = (
+    <div className="ctabset" role="tablist" aria-label="Collection view">
+      {([['cards', 'CARDS'], ['analytics', 'ANALYTICS']] as const).map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          role="tab"
+          id={`ctab-${v}`}
+          aria-selected={ctab === v}
+          aria-controls={`cpane-${v}`}
+          className={`ctab${ctab === v ? ' on' : ''}`}
+          onClick={() => (haptic('select'), seenSwipe(), setCtab(v))}
+        >
+          {label}
+          {v === 'cards' && <span className="ctab-n">{total.toLocaleString()}</span>}
+        </button>
+      ))}
+    </div>
+  );
+  const collacts = (
+    <div className="ctab-acts">
+      <button type="button" className="slip-btn deck" onClick={() => (haptic('open'), openDeckList())} title="View and build decks in this binder">
+        + DECK
+      </button>
+      <button type="button" className="slip-btn import" onClick={() => (haptic('open'), setImportOpen(true))} title="Import cards into this binder">
+        IMPORT
+      </button>
+    </div>
+  );
+
   return (
     <>
       <PageDecor
@@ -396,43 +426,44 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
       <section className="chead2">
         {/* The binder's name is part of the title (owner's call, Nov 6): a tag under the letters opens the one binder
             control (switch, add, rename, reset, delete, plus sync and haptics). */}
-        <Title text="COLLECTION" label="Collection" size={phone ? 24 : 60} seed={21} after={<BinderMenu profile={profile} name={name} count={total} binders={binders} onPick={onPick} sync={sync} />} />
+        <Title
+          text="COLLECTION"
+          label="Collection"
+          size={phone ? 24 : 60}
+          seed={21}
+          after={
+            <>
+              <BinderMenu profile={profile} name={name} count={total} binders={binders} onPick={onPick} sync={sync} />
+              {!phone && (
+                <span className="titleacts">
+                  {tabset}
+                  {hint && (
+                    <span className="ctab-hint" role="status">
+                      swipe ⇄
+                    </span>
+                  )}
+                  {collacts}
+                </span>
+              )}
+            </>
+          }
+        />
       </section>
 
-      {/* The two faces of a binder: your cards, and what they add up to. + DECK and IMPORT stay on the row, so they are
-          one tap away from either tab. */}
-      <nav className="ctabs" aria-label="Collection view">
-        <div className="ctabset" role="tablist" aria-label="Collection view">
-          {([['cards', 'CARDS'], ['analytics', 'ANALYTICS']] as const).map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              role="tab"
-              id={`ctab-${v}`}
-              aria-selected={ctab === v}
-              aria-controls={`cpane-${v}`}
-              className={`ctab${ctab === v ? ' on' : ''}`}
-              onClick={() => (haptic('select'), seenSwipe(), setCtab(v))}
-            >
-              {label}
-              {v === 'cards' && <span className="ctab-n">{total.toLocaleString()}</span>}
-            </button>
-          ))}
-        </div>
-        {hint && (
-          <span className="ctab-hint" role="status">
-            swipe ⇄
-          </span>
-        )}
-        <div className="ctab-acts">
-          <button type="button" className="slip-btn deck" onClick={() => (haptic('open'), openDeckList())} title="View and build decks in this binder">
-            + DECK
-          </button>
-          <button type="button" className="slip-btn import" onClick={() => (haptic('open'), setImportOpen(true))} title="Import cards into this binder">
-            IMPORT
-          </button>
-        </div>
-      </nav>
+      {/* The two faces of a binder, and the two things you do to a binder. On a wide screen both ride the title band
+          (Guillermo, Nov 15: "make those buttons part of the title, like the binder button"), which gives the cards a
+          whole row back. A phone has no room beside the ransom letters, so there they stay on their own lane. */}
+      {phone && (
+        <nav className="ctabs" aria-label="Collection view">
+          {tabset}
+          {hint && (
+            <span className="ctab-hint" role="status">
+              swipe ⇄
+            </span>
+          )}
+          {collacts}
+        </nav>
+      )}
 
       {/* Zine Soul Stats: orderly composition with punk texture, doodles, crown and appraised ticket */}
       {ctab === 'analytics' && (

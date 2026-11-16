@@ -1,17 +1,25 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, showStats } from './mock';
+import { addSignet, closeOpts, edhJson, fits, mockWorld, seed, opts, openImport, settled, showStats, steady, toFace } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
   await seed(page);
 });
 
-/** Grid / list: the quick pills on the bar, at every screen width (phones too, since Nov 13). */
+/** Grid / list on the bar, at every screen width (phones too, since Nov 13). Collection keeps its two pills; a deck's
+ *  bar has one stepping button (Nov 16), so there we tap it until it reads the view we want. */
 const viewTo = async (page: import('@playwright/test').Page, v: 'grid' | 'list') => {
-  const sw = page.locator('.qviews').first();
-  await expect(sw).toBeVisible();
-  await fits(page, ['.qviews']);
-  await sw.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click();
+  const pills = page.locator('.qviews').first();
+  if (await pills.count()) {
+    await expect(pills).toBeVisible();
+    await fits(page, ['.qviews']);
+    return void (await pills.getByRole('button', { name: v === 'list' ? 'List view' : 'Grid view' }).click());
+  }
+  const step = page.locator('.qview-btn').first();
+  await expect(step).toBeVisible();
+  await fits(page, ['.qview-btn']);
+  for (let i = 0; i < 3 && (await step.innerText()).trim() !== v.toUpperCase(); i++) await step.click();
+  expect((await step.innerText()).trim()).toBe(v.toUpperCase());
 };
 
 const go = async (page: import('@playwright/test').Page, tab: 'discover' | 'collection' | 'decks') => {
@@ -77,14 +85,14 @@ test('Deck page (overhaul): hero, one strip, one toolbar; each fact once; themes
   await expect(page.locator('.vhero .vmatch .num')).toHaveText('100%');
   // say it once: the match % appears in one place on the page
   expect(await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => !e.children.length && /^\d+%$/.test(e.textContent!.trim())).length)).toBe(1);
-  // strip: POWER · status with the deck cost (only here) · PULL / TO BUY · FORGE (the one red slab)
+  // the deck's cost is said once, in the hero's fourth square (Nov 15: the black strip under the hero is gone)
   const strip = page.locator('.dstrip');
-  // power dropdown merged into BRACKET FIT tile
-  await expect(strip.locator('.dcost')).toContainText('deck ≈CA$');
-  await expect(page.locator('.dcost')).toHaveCount(1);
+  await expect(page.locator('.vhero .vtile.vnote')).toContainText('deck ≈CA$');
+  expect(await page.evaluate(() => [...document.querySelectorAll('main *')].filter((e) => !e.children.length && /^deck ≈CA\$/.test(e.textContent!.trim())).length)).toBe(1);
   await expect(strip.locator('.u-btn.primary')).toHaveText(/FORGE/);
   await expect(page.locator('.u-btn.primary')).toHaveCount(1);
-  if (info.project.name !== 'phone') expect(Math.round((await strip.boundingBox())!.height)).toBe(56);
+  // and the strip is no longer a 56px band of ink
+  expect(await strip.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
   // BRACKET FIT opens its menu; picking a bracket changes the target bracket
   const fitTile = page.locator('.vtile.fit');
   await expect(fitTile.locator('summary')).toContainText(/FITS/);
@@ -144,9 +152,10 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   await expect(t.locator('.price')).toHaveCSS('opacity', '1');
   // the tally strip opens and changes the quantity
   await t.locator('.tally .marks').click();
-  const n = Number(await t.locator('.tstep b').innerText());
+  // the editor keeps the card's diamonds (Nov 15): the lit ones are the count
+  const n = await t.locator('.tstep .tmarks i.on').count();
   await t.locator('.tstep button').last().click();
-  await expect(t.locator('.tstep b')).toHaveText(String(n + 1));
+  await expect(t.locator('.tstep .tmarks i.on')).toHaveCount(n + 1);
   await fits(page, ['.ctile']);
 });
 
@@ -182,8 +191,7 @@ test('Deck page: header, toolbar, analysis and the card menu', async ({ page }, 
   expect(menu!.x + menu!.width).toBeLessThanOrEqual(vw);
   // on phones .dpanel lives in the cube's ANALYSIS face (off-screen by default); navigate there first
   if (info.project.name === 'phone') {
-    await page.getByRole('tab', { name: 'ANALYSIS' }).click();
-    await page.waitForTimeout(400); // wait for the smooth scroll animation
+    await toFace(page, 'ANALYSIS', '.dpanel');
     await fits(page, ['.dhero', '.dpanel']);
   } else {
     await fits(page, ['.dhero', '.dtools', '.dpanel']);
@@ -407,7 +415,7 @@ test('Reload: commander stats come back from the device, no EDHREC requests', as
 
 test('Commander page: an old saved page shows at once even when EDHREC is down', async ({ page }) => {
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.dstrip .dcost')).toBeVisible(); // its EDHREC pages are saved by now
+  await expect(page.locator('.vhero .vtile.vnote')).toBeVisible(); // its EDHREC pages are saved by now
   // Age every saved page past a day, cut EDHREC off, reopen.
   await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
@@ -420,7 +428,7 @@ test('Commander page: an old saved page shows at once even when EDHREC is down',
   await page.reload();
   await page.locator('.ccard').first().click();
   await expect(page.locator('.vhero h1')).toBeVisible();
-  await expect(page.locator('.dstrip .dcost')).toBeVisible();
+  await expect(page.locator('.vhero .vtile.vnote')).toBeVisible();
 });
 
 test('Swap window: every card swaps, search your binder, undo, pins', async ({ page }, info) => {
@@ -489,12 +497,13 @@ test('My decks in Collection + Forge: a swap starts the Forge, SAVE DECK opens t
 
 test('One card menu: ⋯ / right-click on commander page and Collection cards, same items', async ({ page }) => {
   await page.locator('.ccard').first().click();
+  await settled(page); // a page still growing scrolls under the menu, and a scroll closes it
   await page.getByRole('button', { name: 'More for Sol Ring' }).click();
   const m = page.getByRole('menu', { name: 'Sol Ring options' });
   await expect(m.getByRole('button', { name: /SWAP…/i })).toBeVisible();
   await expect(m.getByRole('button', { name: 'NEVER USE' })).toBeVisible();
   await expect(m.getByText('also in:')).toBeVisible();
-  await page.waitForTimeout(300); // the menu drops in with a small tilt first
+  await steady(page, '.cardmenu'); // the menu drops in with a small tilt first
   await fits(page, ['.cardmenu']);
   await m.getByRole('button', { name: /SWAP…/i }).click();
   await expect(page.getByRole('dialog', { name: 'Swap Sol Ring' })).toBeVisible();
@@ -652,8 +661,7 @@ test('Saved deck (overhaul): same hero and strip as the commander page, each fac
   expect(shadow).toBe('none');
   // on phones .dpanel lives in the cube's ANALYSIS face; navigate there before the bounds check
   if (page.viewportSize()!.width <= 500) {
-    await page.getByRole('tab', { name: 'ANALYSIS' }).click();
-    await page.waitForTimeout(400); // smooth scroll to the face takes ~400ms
+    await toFace(page, 'ANALYSIS', '.dpanel');
     await fits(page, ['.dhero', '.dstrip', '.dpanel']);
   } else {
     await fits(page, ['.dhero', '.dstrip', '.dpanel']);
@@ -718,8 +726,9 @@ test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, n
   const before = await cov.innerText();
   // filter to OWNED cards via toolbar search bar quick segment
   // (quick segments show above 700px; on phones the same filter is SHOW in ⋮)
-  if (page.viewportSize()!.width > 700) await page.locator('.lists > .tbar .qsegs').getByRole('button', { name: 'OWNED' }).click();
-  else await (await opts(page)).locator('.sheetshow').getByRole('radio', { name: 'OWNED ONLY', exact: true }).click();
+  // SHOW is one stepping button on the bar at every width now (Nov 16): ALL → OWNED
+  await page.locator('.lists > .tbar .qshow-btn').click();
+  await expect(page.locator('.lists > .tbar .qshow-btn')).toHaveText('OWNED');
   await expect(page.locator('.lists > .tbar .fnow')).toContainText('OWNED');
   const o = await opts(page);
   await o.getByRole('radiogroup', { name: 'Buy under' }).getByRole('radio', { name: 'ANY' }).click();
@@ -731,7 +740,7 @@ test('OWNED ONLY is gone: a device that had it saved builds with PREFER OWNED', 
   await page.evaluate(() => localStorage.setItem('ch:own', 'owned'));
   await page.reload();
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.dstrip .dstatus')).toBeVisible();
+  await expect(page.locator('.dstrip .dacts')).toBeVisible();
   await expect(page.locator('.dstrip .cmode', { hasText: 'owned only' })).toHaveCount(0);
   const o = await opts(page);
   await expect(o.getByRole('radiogroup', { name: 'Cards' })).toHaveCount(0);

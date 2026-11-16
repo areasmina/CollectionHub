@@ -28,8 +28,8 @@ jobs:
   screens:
     # Playwright 1.56 can't install Chromium on ubuntu-latest (26.04); 24.04 is supported.
     runs-on: ubuntu-24.04
-    # ~520 checks across three sizes now take a little over 20 minutes on GitHub's runner (Nov 16 runs were cut off at
-    # check ~360 with everything passing); 35 leaves room without letting a stuck run hang for long.
+    # The suite is ~560 checks across three screen sizes; at the runner's default of 2 workers it ran past 20 minutes
+    # and was cancelled mid-run with everything passing (Nov 15-16). Three workers on a 4-core runner, 35 minutes.
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
         # install the browser alone: the runner image already has what Chromium needs to start.
         run: npx playwright install --with-deps chromium || npx playwright install chromium
       - name: Browser checks
-        run: npx playwright test --trace off
+        run: npx playwright test --trace off --workers=3
       - name: Keep the report when a check fails
         if: failure()
         uses: actions/upload-artifact@v4

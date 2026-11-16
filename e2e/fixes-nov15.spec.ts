@@ -11,8 +11,9 @@ const box = (page: import('@playwright/test').Page, sel: string) => page.locator
 
 test('Commander header: equal tiles, and the salt list opens on top of everything', async ({ page }) => {
   await page.locator('.ccard').first().click();
-  await expect(page.locator('.vhero .vtile')).toHaveCount(3);
-  const tiles = await box(page, '.vhero .vtile > summary');
+  // the three stat squares (the fourth tile, since Nov 15, is the quiet binder/price note, not a square)
+  await expect(page.locator('.vhero .vtile:not(.vnote)')).toHaveCount(3);
+  const tiles = await box(page, '.vhero .vtile:not(.vnote) > summary');
   for (const t of tiles) {
     expect(Math.abs(t.height - tiles[0].height)).toBeLessThanOrEqual(1);
     expect(Math.abs(t.width - tiles[0].width)).toBeLessThanOrEqual(1);

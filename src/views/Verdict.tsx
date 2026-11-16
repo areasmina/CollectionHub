@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { BracketFit, Readiness } from '../brain/validate';
 import type { Why } from '../brain/why';
 import { haptic } from '../lib/haptics';
@@ -31,6 +31,7 @@ export function ReadyTiles({
   onBracketChange,
   brackets,
   cardNames,
+  note,
 }: {
   ready: Readiness;
   fit?: BracketFit;
@@ -38,6 +39,9 @@ export function ReadyTiles({
   onBracketChange?: (b: string) => void;
   brackets?: readonly (readonly [string, string, string?])[] | [string, string, string][];
   cardNames?: string[];
+  /** What the deck takes from your binder and what it costs: it rides with the squares instead of in a bar of its own
+      (Guillermo, Nov 15: "price value can be moved below to the squares… remove black bar"). */
+  note?: ReactNode;
 }) {
   const r = useOutside();
   const f = useOutside();
@@ -52,7 +56,7 @@ export function ReadyTiles({
   const sVerdict = sTotal < 15 ? 'LOW SALT' : sTotal < 35 ? 'MODERATE' : sTotal < 60 ? 'HIGH SALT' : 'SUPER SALTY';
   const sClass = sTotal < 15 ? 's-low' : sTotal < 35 ? 's-med' : sTotal < 60 ? 's-high' : 's-extreme';
   return (
-    <div className="vtiles">
+    <div className={`vtiles${note ? ' hasnote' : ''}`}>
       <details className={`vtile ready v-${ready.verdict.replace(' ', '-')}`} ref={r} onToggle={(e) => e.currentTarget.open && haptic('open')}>
         <summary aria-label={`Build readiness: ${ready.verdict}, ${ready.passed} of ${ready.checks.length} checks pass`}>
           <span className="lbl">READINESS</span>
@@ -206,6 +210,7 @@ export function ReadyTiles({
           </div>
         </details>
       )}
+      {note && <div className="vtile vnote">{note}</div>}
     </div>
   );
 }

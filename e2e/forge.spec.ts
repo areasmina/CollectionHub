@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { addSignet, edhJson, mockWorld, opts, seed } from './mock';
+import { addSignet, closeOpts, edhJson, mockWorld, opts, seed } from './mock';
 
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
@@ -35,7 +35,9 @@ test('Forge on a saved deck: focus mode, sorts, theme chips, own-card search, ta
   // the suggestion: an owned card EDHREC plays here, with its reasons
   const row = sugg.locator('.frows li', { hasText: 'Arcane Signet' });
   await expect(row).toHaveClass(/own/);
-  await expect(row.locator('.whys')).toContainText('owned');
+  // no "owned" tag on the row since Nov 15: every suggestion is a card of yours, so the row only says what it does
+  await expect(row.locator('.whys')).not.toContainText('owned');
+  await expect(row.locator('.fprice')).toHaveCount(0);
   // themes are EDHREC's tags read as rules-text tests: Landfall filters the list to cards whose text fits
   await sugg.getByRole('button', { name: '#landfall' }).click();
   await expect(sugg.getByRole('button', { name: '#landfall' })).toHaveAttribute('aria-pressed', 'true');
@@ -101,11 +103,12 @@ test('Pins drive EDHREC: suggestions come from decks with your 📌 cards and wi
 
 test('ONLY: price bands and Game Changers filter the deck', async ({ page }) => {
   await openDeck(page);
-  // above 700px ONLY is a quick segment on the bar; on phones it stays in ⋮
-  const wide = page.viewportSize()!.width > 700;
-  const seg = page.locator('.lists > .tbar .qsegs[aria-label="Ownership filter"]');
-  // wide screens have the ownership buttons on the bar; a phone has the same choices as the sheet's ONLY chip row
-  const only = async (v: string, label: RegExp) => (wide ? seg.getByRole('button', { name: label }).click() : (await opts(page)).locator('.sheetshow').getByRole('radio', { name: label }).click());
+  // Nov 16: ONLY is one stepping button on the bar (the whole list stays in ⋮, which is what we pick from here)
+  const only = async (_v: string, label: RegExp) => {
+    const d = await opts(page);
+    await d.getByRole('radio', { name: label }).click();
+    await closeOpts(page);
+  };
   await only('over20', /CA\$20 AND UP/);
   await expect(page.locator('.lists [data-card]')).toHaveCount(1);
   await expect(page.locator('.lists [data-card="Rhystic Study"]')).toHaveCount(1);
@@ -118,12 +121,15 @@ test('Every screen starts on the card grid; list and compact stay one tap away o
   await page.locator('.ccard').first().click();
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
   await expect(page.locator('ul.zcompact')).toHaveCount(0);
-  const qviews = page.locator('.dpage .qviews button');
-  await expect(qviews).toHaveCount(3);
-  await qviews.nth(2).click();
+  // one stepping button: grid → list → compact → grid (Nov 16)
+  const step = page.locator('.dpage .qview-btn').first();
+  await expect(step).toHaveText('GRID');
+  await step.click();
+  await step.click();
   await expect(page.locator('ul.zcompact').first()).toBeVisible();
-  await qviews.nth(0).click();
+  await step.click();
   await expect(page.locator('ul.zcompact')).toHaveCount(0);
+  await expect(page.locator('ul.zgrid').first()).toBeVisible();
 });
 
 test('TO BUY groups by EDHREC play rate, cheapest first, with subtotals', async ({ page }, info) => {

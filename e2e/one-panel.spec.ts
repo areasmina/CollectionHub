@@ -26,11 +26,14 @@ test('The options sheet speaks one language: chips, no dropdowns, APPLY on a foo
     const tops = await row.locator('.chiprow .u-chip').evaluateAll((els) => [...new Set(els.map((e) => Math.round(e.getBoundingClientRect().top)))]);
     expect(tops.length, `${label} chips wrap to more than one line`).toBe(1);
   }
-  // SHOW repeats the bar's ALL / OWNED / MISSING buttons, so it only shows where those are hidden
-  const show = d.locator('.sheetshow');
-  const quick = page.locator('.lists .tquick .qsegs:not(.qviews)');
-  const quickShown = await quick.first().isVisible();
-  expect(await show.isVisible(), 'SHOW is in the sheet and on the bar at the same time').toBe(!quickShown);
+  // Nov 16: the bar carries one stepping SHOW button (what is on now) and the sheet keeps the whole list to pick
+  // from, so both are there on purpose and they always agree
+  const barShow = page.locator('.lists .tquick .qshow-btn').first();
+  await expect(barShow).toBeVisible();
+  const sheetShow = d.locator('.optrow:has(.chiprow)').filter({ has: page.locator('.lbl', { hasText: /^SHOW$/ }) });
+  await expect(sheetShow).toBeVisible();
+  const picked = await sheetShow.locator('[aria-checked="true"]').innerText();
+  expect(picked.replace(' CARDS', '').replace(' ONLY', '')).toBe((await barShow.innerText()).trim());
 
   // APPLY: on the footer, the width of the panel, and inside the screen without scrolling the sheet
   const apply = d.locator('.sheetfoot .cf-apply-btn');
@@ -63,7 +66,10 @@ test('Deck page: the sheet lost its dropdowns too', async ({ page }) => {
 test('Collection opens as one block: four lanes, no gaps between them, cards near the top', async ({ page }, info) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
-  const lanes = ['.coll .ctabs', '.coll .coll-listbar', '.coll .collbar'];
+  // Since Nov 15 the tabs ride the ransom title band above 700px, so there the block is the list ribbon and the tools
+  const phone = info.project.name === 'phone';
+  if (!phone) await expect(page.locator('.coll .titleacts .ctab').first()).toBeVisible();
+  const lanes = phone ? ['.coll .ctabs', '.coll .coll-listbar', '.coll .collbar'] : ['.coll .coll-listbar', '.coll .collbar'];
   const boxes = [];
   for (const sel of lanes) {
     const b = (await page.locator(sel).boundingBox())!;
@@ -71,11 +77,12 @@ test('Collection opens as one block: four lanes, no gaps between them, cards nea
     boxes.push(b);
   }
   // the lanes touch: no empty band between the tabs, the list ribbon and the tools
-  for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i].y - (boxes[i - 1].y + boxes[i - 1].height)), 'a gap opened between the lanes').toBeLessThanOrEqual(1);
+  // (neighbouring lanes share their 2px rule, so a 2px overlap is that rule, not a gap)
+  for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i].y - (boxes[i - 1].y + boxes[i - 1].height)), 'a gap opened between the lanes').toBeLessThanOrEqual(3);
   // the binder starts near the top, not a third of the way down
   const first = (await page.locator('#cpane-cards .zgrid, #cpane-cards .clist').first().boundingBox())!;
   // a phone's ransom title is small, so the cards sit right under it; wider screens keep the big title's full height
-  const limit = info.project.name === 'phone' ? 340 : 460;
+  const limit = phone ? 340 : 460;
   expect(first.y, 'the cards start too far down the screen').toBeLessThanOrEqual(limit);
   // and nothing of the block hangs off the side
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'the page scrolls sideways').toBe(true);

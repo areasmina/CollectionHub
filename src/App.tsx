@@ -15,7 +15,7 @@ import { PreviewLayer } from './views/shared';
 import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
-import { islandRests } from './lib/island';
+import { islandScroll, type IslandScroll } from './lib/island';
 import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
 import { savedProfile } from './lib/ownership';
 import { startKeepOnScreen } from './lib/onscreen';
@@ -255,7 +255,7 @@ export default function App() {
   // end of a page, e.g. on Collection's + DECK and IMPORT.)
   const [navAway, setNavAway] = useState(false);
   useEffect(() => {
-    let last = window.scrollY;
+    let st: IslandScroll = { away: false, lastY: window.scrollY, up: 0 };
     // While the page moves, the island turns see-through (html.scrolling) so the cards it passes over stay visible.
     const root = document.documentElement;
     let still = 0;
@@ -263,11 +263,8 @@ export default function App() {
       root.classList.add('scrolling');
       clearTimeout(still);
       still = window.setTimeout(() => root.classList.remove('scrolling'), 450);
-      const y = window.scrollY;
-      if (islandRests(dock, y, window.innerHeight, document.documentElement.scrollHeight)) setNavAway(false);
-      else if (y > last + 6) setNavAway(true);
-      else if (y < last - 6) setNavAway(false);
-      if (Math.abs(y - last) > 6) last = y;
+      st = islandScroll(dock, st, window.scrollY, window.innerHeight, document.documentElement.scrollHeight);
+      setNavAway(st.away);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => (window.removeEventListener('scroll', onScroll), clearTimeout(still), root.classList.remove('scrolling'));

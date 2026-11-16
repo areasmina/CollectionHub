@@ -182,6 +182,14 @@ export function JumpRail({ headers }: { headers: string[] }) {
       typeof matchMedia === 'function' &&
       matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' });
+    // The section's cards are still being drawn, and on a slow phone that can move the page out from under the glide
+    // and leave the reader nowhere near the section they asked for. Check twice and put it right if it missed.
+    const land = () => {
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.top > innerHeight - 24) el.scrollIntoView({ block: 'start', behavior: 'auto' });
+    };
+    setTimeout(land, 450);
+    setTimeout(land, 1100);
     quietUntil.current = Date.now() + 1500;
     setAwake(true);
     setNow(h);

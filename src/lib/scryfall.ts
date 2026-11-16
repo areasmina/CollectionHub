@@ -58,6 +58,10 @@ export function toCard(c: any): Card {
     set: c.set ? String(c.set).toLowerCase() : undefined,
     cn: c.collector_number ? String(c.collector_number) : undefined,
     img: c.image_uris?.small ?? face?.image_uris?.small,
+    // A card that transforms (or a modal double-faced card) has a second face with a picture of its own: that is the
+    // back Guillermo can turn the card over to. Split, flip and adventure cards print both halves on one face, so
+    // they have no second picture and no flip control.
+    back: c.card_faces?.[1]?.image_uris?.small,
     usd: c.prices?.usd ?? c.prices?.usd_foil ?? c.prices?.usd_etched ?? undefined,
     usdFoil: c.prices?.usd_foil ?? c.prices?.usd_etched ?? undefined,
     eur: c.prices?.eur ?? c.prices?.eur_foil ?? undefined,
@@ -66,7 +70,7 @@ export function toCard(c: any): Card {
     buy: c.purchase_uris?.tcgplayer,
     legal: c.legalities?.commander === 'legal',
     rarity: typeof c.rarity === 'string' ? c.rarity : undefined,
-    pv: 3,
+    pv: 4,
     at: Date.now(),
   };
 }
@@ -79,8 +83,9 @@ export async function cardsByIds(ids: string[], maxAge = WEEK, onProgress?: (car
   const uniq = [...new Set(ids)];
   if (!uniq.length) return new Map();
   const out = new Map<string, Card>();
-  // pv 3 = has the foil price and the rarity: older cache entries are fetched again once (prices only; no card is lost).
-  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && (c.pv ?? 0) >= 3 && Date.now() - c.at < maxAge && out.set(c.id, c));
+  // pv 4 = has the foil price, the rarity and the back face: older cache entries are fetched again once
+  // (card data only, nothing of yours is touched; no card is lost).
+  (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && (c.pv ?? 0) >= 4 && Date.now() - c.at < maxAge && out.set(c.id, c));
   if (out.size) onProgress?.(new Map(out));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {

@@ -74,7 +74,10 @@ test('Island docked top: never on the Forge bar\'s name or ✕ LEAVE', async ({ 
   await page.mouse.wheel(0, 1000); // past the deck hero: the bar pins once the hero above it has scrolled away
   await expect(page.locator('.pillnav.away')).toHaveCount(1);
   await settle(page);
-  expect(Math.round((await page.locator('.forgetop').boundingBox())!.y)).toBe(0);
+  // the bar glides up into the lane the island leaves behind, so wait for it to arrive rather than catching it mid-way
+  await expect
+    .poll(() => page.locator('.forgetop').evaluate((e) => Math.round(e.getBoundingClientRect().y)), { timeout: 6000 })
+    .toBe(0);
   await page.mouse.wheel(0, -200);
   await expect(page.locator('.pillnav.away')).toHaveCount(0);
   await settle(page);

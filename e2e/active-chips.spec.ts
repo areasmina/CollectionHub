@@ -47,9 +47,8 @@ test('Commander page: SHOW and ONLY appear as chips; each chip removes its setti
   // the settings really went back, not just the chips
   const d = await opts(page, '.lists');
   await expect(d.getByRole('radio', { name: 'EVERY CARD', exact: true }).first()).toHaveAttribute('aria-checked', 'true');
-  const showRow = d.locator('.sheetshow').getByRole('radio', { name: 'ALL CARDS', exact: true });
-  if (await showRow.isVisible()) await expect(showRow).toHaveAttribute('aria-checked', 'true');
-  else await expect(page.locator('.lists .tquick').getByRole('button', { name: 'ALL', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(d.getByRole('radio', { name: 'ALL CARDS', exact: true }).first()).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.lists .tquick .qshow-btn')).toHaveText('ALL'); // and the bar's stepping button agrees
 });
 
 test('Deck page: ONLY appears as a chip and the chip removes it', async ({ page }) => {

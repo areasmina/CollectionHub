@@ -13,10 +13,10 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
   await page.locator('.ccard').first().click();
   await expect(page.locator('.vhero')).toBeVisible();
 
-  // .qviews is visible on the bar at every width (phones too, since Nov 13)
-  const qviews = page.locator('.dpage .qviews button');
-  await expect(qviews.first()).toBeVisible();
-  await expect(qviews).toHaveCount(3);
+  // the view control is on the bar at every width (phones too, since Nov 13); one stepping button since Nov 16
+  const view = page.locator('.dpage .qview-btn');
+  await expect(view.first()).toBeVisible();
+  await expect(view.first()).toHaveText(/GRID|LIST|COMPACT/);
 
   // Scroll toolbar to top of viewport so entire dropdown is framed inside the window
   const cmdrFilterSummary = page.locator('.dpage .tbmore summary');
@@ -79,9 +79,9 @@ test('Filter menu without redundant VIEW row in Commander and Deck Forge', async
 
   // Wide screen quick view check
   if ((page.viewportSize()?.width ?? 1280) > 700) {
-    const qviews = page.locator('.dpage .qviews button');
-    await expect(qviews.first()).toBeVisible();
-    await expect(qviews).toHaveCount(3);
+    const view = page.locator('.dpage .qview-btn');
+    await expect(view.first()).toBeVisible();
+    await expect(view.first()).toHaveText(/GRID|LIST|COMPACT/);
   }
 
   const deckFilterBtn = page.locator('.dpage .tbmore summary');
