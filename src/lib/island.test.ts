@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { islandRests } from './island';
+import { islandScroll, islandRests, type IslandScroll } from './island';
 
 describe('islandRests: the island only stays put where its own edge has room', () => {
   const view = 900;
@@ -25,5 +25,33 @@ describe('islandRests: the island only stays put where its own edge has room', (
   });
   it('a page too short to scroll keeps the island in view on every dock', () => {
     for (const d of ['top', 'bottom', 'left', 'right'] as const) expect(islandRests(d, 0, view, view)).toBe(true);
+  });
+});
+
+describe('islandScroll: away as you go down, back once you have really pulled up', () => {
+  const view = 900;
+  const page = 3000;
+  const at = (y: number, away = false, up = 0): IslandScroll => ({ away, lastY: y, up });
+  it('goes away going down and comes back on a move up', () => {
+    expect(islandScroll('top', at(1200), 1300, view, page).away).toBe(true);
+    expect(islandScroll('top', at(1300, true), 1100, view, page).away).toBe(false);
+  });
+  it('comes back on a smooth scroll made of small steps', () => {
+    let s = at(1300, true);
+    for (const y of [1280, 1260, 1240, 1220]) s = islandScroll('top', s, y, view, page);
+    expect(s.away).toBe(false); // 80px up in 20px steps
+  });
+  it('a nudge up and its nudge back down leave it away (no flicker at the end of a page)', () => {
+    let s = at(1300, true);
+    s = islandScroll('top', s, 1254, view, page); // the sticky bar goes: the view slides up 46px
+    expect(s.away).toBe(true);
+    s = islandScroll('top', s, 1300, view, page); // and comes back: the count starts again
+    expect(s.away).toBe(true);
+    s = islandScroll('top', s, 1254, view, page);
+    expect(s.away).toBe(true);
+  });
+  it('still shows where the page leaves room on its own edge', () => {
+    expect(islandScroll('top', at(1200, true), 10, view, page).away).toBe(false);
+    expect(islandScroll('bottom', at(1200, true), page - view, view, page).away).toBe(false);
   });
 });
