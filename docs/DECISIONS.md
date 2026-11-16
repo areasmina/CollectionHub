@@ -210,3 +210,6 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - **The analysis panel says what the deck can do, live.** Under the meters: the two-card combos the deck already
   finishes, and the ones one card from your binder away. Both move with every swap.
 - **"your decks:" shows three and a count.** With twenty decks on one commander the line still reads as one line.
+- **No white outlines on the phone either.** The frame around the Collection block and the outline on the analytics
+  chart cards are gone at every width: a chart is read, not framed. The cards keep the ink, the halftone dots, the
+  hard shadow and the tilt that tie them to the stat tiles; the three stat tiles and TOP 3 keep their white frames.

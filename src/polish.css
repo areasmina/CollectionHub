@@ -2768,8 +2768,21 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .titlewrap > .titleacts .ctab .ctab-n { background: var(--u-red, #e60012); color: #fff; }
 .titlewrap > .titleacts .ctab.on .ctab-n { background: #ffffff; color: #0a0a0a; }
 
-/* The white outline around the Collection block goes (Guillermo, Nov 15, image 3): with the tabs and the buttons on
-   the band, the frame was drawing a box around a toolbar. The lanes keep their hairlines and their ink. */
+/* The white outline around the Collection block goes (Guillermo, Nov 15, image 3, and again for phones on his
+   merge note: "I still see the white line charts in mobile"): the frame was drawing a box around a toolbar.
+   The lanes keep their hairlines and their ink, at every width. */
+@media (max-width: 700px) {
+  .coll .ctabs,
+  .coll .coll-listbar,
+  .dpage.coll #cpane-cards .collbar {
+    border: 0 !important;
+    border-top: 1px solid #23232a !important;
+    box-shadow: none !important;
+    background: #0d0d10 !important;
+  }
+  .coll .ctabs { border-top: 0 !important; border-radius: 6px 6px 0 0 !important; }
+  .dpage.coll #cpane-cards .collbar { border-radius: 0 0 6px 6px !important; }
+}
 @media (min-width: 701px) {
   .coll .ctabs:has(+ .coll-listbar) + .coll-listbar,
   .coll .coll-listbar,
@@ -3053,4 +3066,10 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
   justify-content: space-between !important;
   min-height: 30px !important;
   font-size: 11.5px !important;
+}
+
+/* The chart cards lose their white outline too (same note): a chart is read, not framed. They keep the ink, the
+   halftone dots, the hard shadow and the tilt that tie them to the stat tiles — only the white line goes. */
+.apanel .acard {
+  border-color: #2c2c34 !important;
 }

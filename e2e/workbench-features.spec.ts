@@ -141,8 +141,8 @@ test.describe('Collection & Decks Workbench Features', () => {
     const drawer = page.locator('.island-drawer');
     await expect(drawer).toBeVisible();
 
-    // Close by clicking scrim
-    await page.locator('.island-scrim').click();
+    // Close by clicking the scrim, up in the corner: the drawer itself covers the middle of the screen
+    await page.locator('.island-scrim').click({ position: { x: 8, y: 8 } });
     await expect(drawer).toHaveCount(0);
 
     // Island lip is decorative and does not open drawer. (It takes no taps of its own since the island's 44px tap areas,
