@@ -28,7 +28,9 @@ jobs:
   screens:
     # Playwright 1.56 can't install Chromium on ubuntu-latest (26.04); 24.04 is supported.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # ~520 checks across three sizes now take a little over 20 minutes on GitHub's runner (Nov 16 runs were cut off at
+    # check ~360 with everything passing); 35 leaves room without letting a stuck run hang for long.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
