@@ -3073,3 +3073,15 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 .apanel .acard {
   border-color: #2c2c34 !important;
 }
+
+/* An island that has gone away is see-through and slid off its edge, but a sliver of it stays inside the screen (it
+   rests a few px in from the edge). Invisible, it must not eat the tap meant for the button underneath it. */
+.pillnav.away,
+.pillnav.away * {
+  pointer-events: none !important;
+}
+/* …and it slides the whole way out, so no part of it is left inside the screen at all. */
+.pillnav.dock-top.away { transform: translate(-50%, calc(-100% - 24px)) !important; }
+.pillnav.dock-bottom.away { transform: translate(-50%, calc(100% + 24px)) !important; }
+.pillnav.dock-left.away { transform: translate(calc(-100% - 24px), -50%) !important; }
+.pillnav.dock-right.away { transform: translate(calc(100% + 24px), -50%) !important; }

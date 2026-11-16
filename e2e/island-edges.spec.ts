@@ -47,6 +47,19 @@ for (const dock of ['top', 'left', 'right'] as const)
     await expect(page.locator('.pillnav.away')).toHaveCount(0);
   });
 
+/** Every button in the title band can still be tapped where it is: nothing invisible sits in front of it. */
+const bandReachable = (page: Page) =>
+  page.evaluate(() => {
+    const blocked: string[] = [];
+    for (const b of document.querySelectorAll('.titlewrap button, .bmbtn')) {
+      const r = b.getBoundingClientRect();
+      if (r.width < 4 || r.top < 0 || r.bottom > innerHeight) continue;
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (!hit || (!b.contains(hit) && !hit.contains(b))) blocked.push(`${(b.textContent ?? '').trim().slice(0, 14)} ← ${hit ? `${hit.tagName.toLowerCase()}.${String((hit as HTMLElement).className).split(' ')[0]}` : 'nothing'}`);
+    }
+    return blocked;
+  });
+
 test('Island docked top: at the end of Collection it is not sitting on + DECK or IMPORT', async ({ page }, info) => {
   test.skip(info.project.name === 'phone', 'phones dock at the bottom by default; the top dock on phones is covered by the test above');
   await open(page, 'top', 'collection');
@@ -54,7 +67,11 @@ test('Island docked top: at the end of Collection it is not sitting on + DECK or
   await settled(page); // measure the island, not a page still laying out
   await toEnd(page);
   await page.waitForTimeout(500);
-  if (await page.evaluate(() => scrollY >= 80)) expect(await covered(page)).toEqual([]); // scrolled past the start: nothing tappable under it
+  if (!(await page.evaluate(() => scrollY >= 80))) return; // the page does not scroll past the island's rest zone
+  // Either the island has gone away (it slides off its edge and stops taking taps), or it is showing with nothing
+  // tappable under it. Both ways the band's buttons answer to a tap where they are.
+  if (!(await page.locator('.pillnav.away').count())) expect(await covered(page)).toEqual([]);
+  expect(await bandReachable(page)).toEqual([]);
 });
 
 test('Island docked bottom: shows at the top and the end of a page, away while going down, and the end has room for it', async ({ page }) => {
