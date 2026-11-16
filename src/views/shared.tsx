@@ -157,6 +157,11 @@ export function useMenuPress(onMenu?: (x: number, y: number) => void) {
     onContextMenu: (e: React.MouseEvent) => {
       e.preventDefault();
       cancel();
+      // The keyboard's menu key (or Shift+F10) has no pointer spot: open at the element instead of the screen's corner.
+      if (e.clientX === 0 && e.clientY === 0) {
+        const r = e.currentTarget.getBoundingClientRect();
+        return onMenu(r.left + r.width / 2, r.top + r.height / 2);
+      }
       onMenu(e.clientX, e.clientY);
     },
     onPointerDown: (e: React.PointerEvent) => {
