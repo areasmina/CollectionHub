@@ -171,9 +171,21 @@ export const steady = async (page: Page, sel: string, tries = 40) => {
 /** Phones show the deck as a cube of faces (CARDS · ANALYSIS · TO BUY). Move to one and wait until it has really
  *  arrived: an open card menu would swallow the tap, and the slide between faces takes a moment. */
 export const toFace = async (page: Page, tab: string, sel: string) => {
-  await page.keyboard.press('Escape'); // any open menu's backdrop would take the tap instead of the tab
+  await page.keyboard.press('Escape');
   await page.locator('.cardmenu').waitFor({ state: 'detached' }).catch(() => {});
   await page.getByRole('tab', { name: tab }).click();
   await page.locator(sel).first().waitFor({ state: 'visible' });
+  // the cube slides sideways: wait until the face has actually arrived on screen, not just until it stopped moving
+  // (a face that has not started moving yet is perfectly steady, off to the side)
+  await expect
+    .poll(
+      () =>
+        page.locator(sel).first().evaluate((e) => {
+          const r = e.getBoundingClientRect();
+          return r.left > -2 && r.right < innerWidth + 2;
+        }),
+      { timeout: 15000 },
+    )
+    .toBe(true);
   await steady(page, sel);
 };
