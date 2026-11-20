@@ -33,10 +33,14 @@ export type IslandScroll = { away: boolean; lastY: number; up: number };
 export function islandScroll(dock: IslandDock, s: IslandScroll, y: number, viewH: number, pageH: number): IslandScroll {
   const dy = y - s.lastY;
   if (islandRests(dock, y, viewH, pageH)) return { away: false, lastY: y, up: 0 };
-  if (dy > 6) return { away: true, lastY: y, up: 0 };
+  // Leaving the rest zone downward sends it away at once, however small the step (a late image or font can nudge the
+  // view a few px past the zone's edge, and the island would stay over the content there).
+  if (dy > 6 || (dy > 0 && islandRests(dock, s.lastY, viewH, pageH))) return { away: true, lastY: y, up: 0 };
+  // A small step down is kept from where the last one started, so a slow, steady scroll adds up and still sends it away.
+  if (dy > 0) return s;
   if (dy < 0) {
     const up = s.up - dy;
     return up >= ISLAND_BACK ? { away: false, lastY: y, up: 0 } : { ...s, lastY: y, up };
   }
-  return { ...s, lastY: y };
+  return s;
 }
