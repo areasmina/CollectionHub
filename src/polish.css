@@ -3790,3 +3790,14 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
   font-size: 11px !important;
   padding: 3px 6px !important;
 }
+
+/* ── OFFLINE PICTURES in the sync drawer (Phase 5B): a plain functional block (level 1), a hairline above it,
+   the same label row, text and buttons as the sync code block. */
+.id-sync-offline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}

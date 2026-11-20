@@ -4,6 +4,7 @@ import { changeCode, lastBackup, link, pull, push, turnOff, turnOn, undoPull } f
 import { codeLink, prettyCode } from '../lib/synccode';
 import { useSyncCode, useSyncState } from '../lib/syncstate';
 import { haptic } from '../lib/haptics';
+import { OfflinePics } from './OfflinePics';
 
 type Result = { cards: number; decks: number };
 
@@ -279,6 +280,8 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
           </div>
         </div>
       )}
+
+      <OfflinePics />
 
       {msg && (
         <div className="id-sync-msg-bar" role="status">
