@@ -262,3 +262,10 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Every pull, merge and restore first keeps this device's copy as a backup (last 5, `backup:<time>` in the cache
   table, restorable from BACKUPS in the sync drawer); DOWNLOAD BACKUP gives a file. The Worker and the snapshot format
   are unchanged, so no redeploy was needed.
+
+## 2026-11-20: Phase 5C own card list
+- Approved with the Phase 5 plan. A weekly GitHub job (`card-list.yml`) rebuilds `public/cards/oracle.json` from
+  Scryfall's Oracle Cards bulk file and opens a pull request, like the monthly brain data. One card per line, so a
+  week's change is a few lines. Merging it each week is optional: an older list still works.
+- The app uses the list only when Scryfall can't answer (imports, syncs): online imports still ask Scryfall, because
+  prices and exact printings come from there. Not precached; fetched by the app on Wi-Fi at most once a week.
