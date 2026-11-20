@@ -114,8 +114,16 @@ test('While the page moves the island turns see-through, then solid again at res
   expect(alpha(await bg())).toBeGreaterThan(0.3); // at rest: glass you cannot read through
   expect(alpha(await bg())).toBeLessThan(1); // but never solid black again
   // keep the page moving while we look (a slow machine could otherwise let it come to rest between two looks)
-  const moving = () => page.evaluate(() => (window.scrollBy(0, 8), document.documentElement.classList.contains('scrolling')));
-  await expect.poll(moving).toBe(true);
+  // The scroll event (and so html.scrolling) arrives a frame after scrollBy, and the class clears 450 ms after the last
+  // one: look after two frames, and keep looking every 100 ms (the default back-off reaches 1 s, long enough for a
+  // slow machine to see the page at rest between looks every time).
+  const moving = () =>
+    page.evaluate(async () => {
+      window.scrollBy(0, 8);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      return document.documentElement.classList.contains('scrolling');
+    });
+  await expect.poll(moving, { intervals: [100] }).toBe(true);
   await expect.poll(async () => (await moving(), alpha(await bg())), { intervals: [100] }).toBe(0);
   await expect(page.locator('html.scrolling')).toHaveCount(0, { timeout: 2000 });
   await expect.poll(async () => alpha(await bg())).toBeGreaterThan(0.3);
