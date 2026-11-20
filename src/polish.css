@@ -3709,3 +3709,19 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
   .coll .collbar { margin-bottom: 8px !important; }
   .coll .cgrid2 { padding-top: 8px !important; }
 }
+
+/* ── Big binders stay quick (Phase 5A, Nov 20). The phone used to draw every card in the grid, even thousands of
+   cards off screen, and a foil card's shine animated whether you could see it or not: past ~1,000 cards each
+   SHOW MORE took 10–40 s on a mid-range phone. Now a card far off screen is skipped until you scroll near it.
+   - aspect-ratio = a card's own shape (63 × 88 mm, the tile's real size at every width and SIZE), so a skipped card
+     holds its exact place and the page never jumps; `auto` then remembers each card's real size once drawn.
+   - the price tape, the copy counter and the ⋮ button reach a little past the card's edge: overflow-clip-margin
+     keeps that room. A browser that can't keep the room (older Safari) draws every card as before. */
+@supports (content-visibility: auto) and (overflow-clip-margin: 1px) {
+  .cgrid2 > .ctile {
+    content-visibility: auto;
+    contain-intrinsic-size: auto none;
+    aspect-ratio: 63 / 88;
+    overflow-clip-margin: 32px;
+  }
+}
