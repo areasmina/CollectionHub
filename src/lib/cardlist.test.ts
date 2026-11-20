@@ -50,6 +50,7 @@ describe('card list file (scripts/build-cardlist.mjs)', () => {
     expect(oracleEntry(catalog)).toBe(oracle);
     expect(() => oracleEntry({ object: 'list', data: [catalog.data[0]] })).toThrow(/oracle_cards.*default_cards/);
     expect(() => oracleEntry({ object: 'bulk_data', type: 'oracle_cards' })).toThrow(/none/);
+    expect(() => oracleEntry({ data: [{ type: 'oracle_cards', uri: 'u' }] })).toThrow(/no download_uri.*"uri":"u"/);
   });
   it('refuses a file in a format it does not know', () => {
     expect(() => parseCardList('{"v":2,"fields":[],"cards":[]}')).toThrow(/format/);

@@ -41,6 +41,7 @@ export function cardListFile(cards, at = new Date().toISOString()) {
 /** The "Oracle Cards" entry of Scryfall's bulk-data catalog (GET /bulk-data), or an error naming what came back. */
 export function oracleEntry(catalog) {
   const e = (catalog?.data ?? []).find((d) => d?.type === 'oracle_cards');
-  if (!e?.download_uri) throw new Error(`No "oracle_cards" file in Scryfall's bulk-data catalog (types: ${(catalog?.data ?? []).map((d) => d?.type).join(', ') || 'none'})`);
+  if (!e) throw new Error(`No "oracle_cards" file in Scryfall's bulk-data catalog (types: ${(catalog?.data ?? []).map((d) => d?.type).join(', ') || 'none'})`);
+  if (!e.download_uri) throw new Error(`Scryfall's "oracle_cards" entry has no download_uri (it has: ${JSON.stringify(e).slice(0, 600)})`);
   return e;
 }
