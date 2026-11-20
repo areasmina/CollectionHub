@@ -1191,6 +1191,16 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
+  // Phones (Nov 19): the theme and tag badges on a deck tile are plain labels. They were 18px buttons, too small for a
+  // thumb, and the TAGS row above the decks already filters by the same names, so a tap on the tile just opens the deck.
+  const [phone, setPhone] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches);
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia('(max-width: 700px)');
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   // DECKS | STATS, the same two faces as Collection's CARDS | ANALYTICS (Guillermo, Nov 19: "make the two sections look
   // cohesive"). The page always opens on the decks, so the stat tiles start out of the way every time, like Collection's.
   const [dtab, setDtab] = useState<'decks' | 'stats'>('decks');
@@ -1467,8 +1477,10 @@ export function Decks(s: Shared) {
                       <Meter pct={sum.pct} label={`${sum.pct}% owned`} tone="deck" />
                     </span>
                     {(d.tags?.length || autoThemes.length > 0) ? (
-                      <span className="dtags" onClick={(e) => e.stopPropagation()}>
-                        {autoThemes.map((th) => (
+                      <span className={`dtags${phone ? ' plain' : ''}`} onClick={phone ? undefined : (e) => e.stopPropagation()}>
+                        {phone && autoThemes.map((th) => <span key={th.label} className="themebadge">{th.label}</span>)}
+                        {phone && d.tags?.map((t) => <span key={t} className="tagbadge">#{t}</span>)}
+                        {!phone && autoThemes.map((th) => (
                           <span
                             key={th.label}
                             role="button"
@@ -1490,7 +1502,7 @@ export function Decks(s: Shared) {
                             {th.label}
                           </span>
                         ))}
-                        {d.tags?.map((t) => (
+                        {!phone && d.tags?.map((t) => (
                           <span
                             key={t}
                             role="button"

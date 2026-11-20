@@ -236,3 +236,5 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   per-card price change, and ManaBox's "count basics / look in other decks" ownership switches (ownership is counted one
   way everywhere, see above).
 
+
+- 2026-11-19: Top 3 on Collection lies flat (no fan tilt). Deck theme and tag badges are plain labels on phones. Keep the old Supabase sign-in (it may carry email log-ins later). Going public stays off for now.

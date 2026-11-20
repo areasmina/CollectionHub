@@ -135,6 +135,9 @@ test('Collection (overhaul): one ribbon says the facts once, grid tiles with tal
   await expect(page.locator('.stats .slip')).toBeVisible();
   await expect(page.locator('.stats .stat b').first()).toHaveText('20');
   await expect(page.locator('.topwidget')).toBeVisible(); // rotating top 3 highlights
+  // Top 3 lies flat (Nov 19): no card or price tag in it is turned
+  for (const t of await page.locator('.topwidget li, .topwidget .tw.price').evaluateAll((els) => els.map((el) => getComputedStyle(el).transform)))
+    expect(t).toBe('none');
   // IMPORT (on the tab row) opens the import pop-up from either tab
   await openImport(page);
   await expect(page.locator('.importbox textarea')).toBeVisible();

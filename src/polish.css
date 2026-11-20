@@ -3751,3 +3751,26 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
   bottom: auto;
   left: 0;
 }
+
+/* Top 3 lies flat (Guillermo, Nov 19): no fan tilt on the cards or their price tags, so each card reads straight.
+   The hover lift stays, without the turn. */
+.topwidget li,
+.topwidget .tw.price {
+  transform: none;
+}
+.topwidget li:hover {
+  transform: translateY(-4px) scale(1.05);
+}
+@media (prefers-reduced-motion: reduce) {
+  .topwidget li:hover {
+    transform: none;
+  }
+}
+
+/* Phones (Nov 19): deck theme and tag badges are read-only labels, a size you can read. A tap goes to the tile. */
+.dcard .dtags.plain .themebadge,
+.dcard .dtags.plain .tagbadge {
+  cursor: default !important;
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+}

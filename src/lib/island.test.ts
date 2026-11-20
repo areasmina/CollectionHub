@@ -50,6 +50,18 @@ describe('islandScroll: away as you go down, back once you have really pulled up
     s = islandScroll('top', s, 1254, view, page);
     expect(s.away).toBe(true);
   });
+  it('a few px down out of the rest zone sends it away (a late image nudging the view past the edge)', () => {
+    expect(islandScroll('top', at(78), 83, view, page).away).toBe(true);
+    expect(islandScroll('left', at(79), 81, view, page).away).toBe(true);
+  });
+  it('a slow scroll down in small steps adds up and sends it away', () => {
+    let s = at(1200);
+    for (const y of [1203, 1206, 1209]) s = islandScroll('top', s, y, view, page);
+    expect(s.away).toBe(true); // 9px down in 3px steps
+  });
+  it('one tiny step down mid-page alone does not hide it', () => {
+    expect(islandScroll('top', at(1200), 1204, view, page).away).toBe(false);
+  });
   it('still shows where the page leaves room on its own edge', () => {
     expect(islandScroll('top', at(1200, true), 10, view, page).away).toBe(false);
     expect(islandScroll('bottom', at(1200, true), page - view, view, page).away).toBe(false);
