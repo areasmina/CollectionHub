@@ -21,6 +21,7 @@ import { norm } from '../lib/names';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
+import { saveOwnedSoon } from '../lib/offlinepics';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
 
@@ -320,7 +321,11 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
   useEffect(() => {
     if (entries.length)
       cardsByIds(entries.map((e) => e.cardId), 864e5)
-        .then((m) => snapshot(entries, m))
+        .then((m) => {
+          // On Wi-Fi, keep the small picture of every card you own on this device, so the binder shows offline (5B).
+          void saveOwnedSoon([...m.values()].map((c) => c.img ?? ''));
+          return snapshot(entries, m);
+        })
         .catch(() => {});
   }, [entries.length]);
   // Filter by active list tab: 'all' = everything, 'unlisted' = no list tag, else specific list name

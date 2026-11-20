@@ -1,3 +1,4 @@
+import { smallOf } from '../lib/offlinepics';
 import { archidektUrl, spellbookUrl } from '../lib/links';
 import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
@@ -119,6 +120,9 @@ export function Thumb({ src, className = 'thumb xart', name, back, onPick }: { s
   // Two-faced cards (transform, modal DFC) turn over where they sit: the control sits on the frame under the art,
   // never over it, and the card keeps its name, its count and its price, which all belong to the front (Nov 16).
   const [flipped, setFlipped] = useState(false);
+  // Offline (Phase 5B): a big picture never seen on this device can't load, but the small one of a card you own is
+  // saved ahead: show that instead of a blank card. Remembered per picture, so a new card tries its big one again.
+  const [failed, setFailed] = useState('');
   if (!src) return <span className={className} aria-hidden="true" />;
   // the back comes from Scryfall at the small size: show it at whatever size this picture is shown at
   const sized = (u: string) => (src.includes('/normal/') ? u.replace('/small/', '/normal/') : src.includes('/art_crop/') ? u : u);
@@ -137,9 +141,10 @@ export function Thumb({ src, className = 'thumb xart', name, back, onPick }: { s
   return (
     <span className={`${className}${back ? ' twoface' : ''}${flipped ? ' flipped' : ''}`} onPointerMove={foil ? track : undefined} onPointerLeave={foil ? (e) => e.currentTarget.classList.remove('tracking') : undefined}>
       <img
-        src={face}
+        src={failed === face ? smallOf(face) : face}
         alt=""
         loading="lazy"
+        onError={() => failed !== face && smallOf(face) && smallOf(face) !== face && setFailed(face)}
         onClick={(e) => {
           e.stopPropagation();
           if (onPick) return onPick();
