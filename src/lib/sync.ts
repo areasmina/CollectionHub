@@ -1,6 +1,7 @@
 import { db, type Deck, type Entry, type Profile } from './db';
 import { resolveRows } from './scryfall';
 import { cleanCode, keysFor, newCode, seal, unseal, type Keys } from './synccode';
+import { mergeSync, type MergeReport, type SyncData } from './syncmerge';
 import { clearDirty, lastVersion, quietly, setLastVersion, setSyncCode, setSyncState, syncCode } from './syncstate';
 
 /** Device sync with a sync code (no account): this device's binders and decks go up as one encrypted snapshot to the
@@ -99,45 +100,101 @@ export async function push(opts: { base?: number; force?: boolean; code?: string
   if (!r.ok) throw await failed(r);
   const { v } = (await r.json()) as { v: number };
   setLastVersion(v);
+  await matched(v, snap);
   clearDirty(started);
   return { cards: snap.entries.length, decks: snap.decks.length, v };
 }
 
-/** This device's binders and decks as they were before the last Pull. */
-const BACKUP = 'backup:before-pull';
-export const lastBackup = async () => (await db.edhrec.get(BACKUP))?.at ?? null;
-export async function undoPull() {
-  const b = (await db.edhrec.get(BACKUP))?.data as { profiles: Profile[]; entries: Entry[]; decks: Deck[] } | undefined;
-  if (!b) throw new Error('No backup on this device.');
+// ---- the last copy this device and the cloud shared (the base a merge compares against) ----
+
+const BASE = 'sync:base';
+/** Remembers the copy this device and the cloud both hold at version `v`. */
+export async function matched(v: number, d: SyncData) {
+  const { profiles, entries, decks } = d;
+  await db.edhrec.put({ path: BASE, data: { v, profiles, entries, decks }, at: Date.now() });
+}
+/** The shared copy, only when it belongs to version `v` (the one this device last matched). */
+export async function baseFor(v: number): Promise<SyncData | null> {
+  const b = (await db.edhrec.get(BASE))?.data as (SyncData & { v: number }) | undefined;
+  return b && v && b.v === v ? b : null;
+}
+
+// ---- backups: this device's binders and decks before each Pull, merge or restore (the last 5 stay) ----
+
+const BACKUP = 'backup:'; // + time; the older single 'backup:before-pull' is listed with them
+const KEEP_BACKUPS = 5;
+export interface Backup {
+  path: string;
+  at: number;
+  why: string;
+  cards: number;
+  decks: number;
+}
+const local = async (): Promise<SyncData> => {
+  const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
+  return { profiles, entries, decks };
+};
+async function keepBackup(why: string, d?: SyncData) {
+  const data = d ?? (await local());
+  if (!data.entries.length && !data.decks.length) return; // an empty device has nothing to keep
+  const at = Date.now();
+  await db.edhrec.put({ path: `${BACKUP}${String(at).padStart(15, '0')}`, data: { ...data, why }, at });
+  const old = (await listBackups()).slice(KEEP_BACKUPS);
+  if (old.length) await db.edhrec.bulkDelete(old.map((b) => b.path));
+}
+/** Newest first. */
+export async function listBackups(): Promise<Backup[]> {
+  const rows = await db.edhrec.where('path').startsWith(BACKUP).toArray();
+  return rows
+    .map((r) => {
+      const d = r.data as SyncData & { why?: string };
+      return { path: r.path, at: r.at, why: d.why ?? 'pull', cards: d.entries?.length ?? 0, decks: d.decks?.length ?? 0 };
+    })
+    .sort((a, b) => b.at - a.at);
+}
+export const lastBackup = async () => (await listBackups())[0]?.at ?? null;
+async function replaceLocal(d: SyncData) {
   await db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
     await Promise.all([db.profiles.clear(), db.entries.clear(), db.decks.clear()]);
-    await db.profiles.bulkAdd(b.profiles);
-    await db.entries.bulkAdd(b.entries);
-    await db.decks.bulkAdd(b.decks);
+    await db.profiles.bulkAdd(d.profiles);
+    await db.entries.bulkAdd(d.entries);
+    await db.decks.bulkAdd(d.decks);
   });
+}
+/** Puts a backup back on this device (what is here now becomes a backup first, so a restore can be undone too). */
+export async function restoreBackup(path?: string) {
+  const pick = path ?? (await listBackups())[0]?.path;
+  const row = pick ? await db.edhrec.get(pick) : undefined;
+  const b = row?.data as SyncData | undefined;
+  if (!b) throw new Error('No backup on this device.');
+  await keepBackup('restore');
+  await replaceLocal(b);
   setLastVersion(null); // this device and the cloud now differ: automatic sync asks which to keep
   return { cards: b.entries.length, decks: b.decks.length };
+}
+/** The newest backup (the copy from before the last Pull or merge). */
+export const undoPull = () => restoreBackup();
+
+/** Everything on this device as a file to keep: binders, decks and binder settings (no sync code inside). */
+export async function backupFile() {
+  const d = await local();
+  const body = JSON.stringify({ app: 'collectionhub', fmt: 1, at: Date.now(), ...d } satisfies Snapshot);
+  return { name: `collectionhub-backup-${new Date().toISOString().slice(0, 10)}.json`, blob: new Blob([body], { type: 'application/json' }) };
 }
 
 /** Replaces this device's binders and decks with the cloud copy (the old ones are kept for Undo). */
 export async function pull(code?: string) {
   const started = Date.now();
   const got = await download(code);
-  const local = { profiles: await db.profiles.toArray(), entries: await db.entries.toArray(), decks: await db.decks.toArray() };
-  const risk = syncRisk('pull', size(local), got ? size(got.snap) : 0);
+  const here = await local();
+  const risk = syncRisk('pull', size(here), got ? size(got.snap) : 0);
   if (risk) throw new Error(risk);
   if (!got) return { cards: 0, decks: 0 };
   const { snap, v } = got;
-  await db.edhrec.put({ path: BACKUP, data: local, at: Date.now() });
-  await quietly(() =>
-    db.transaction('rw', db.profiles, db.entries, db.decks, async () => {
-      await Promise.all([db.profiles.clear(), db.entries.clear(), db.decks.clear()]);
-      await db.profiles.bulkAdd(snap.profiles);
-      await db.entries.bulkAdd(snap.entries);
-      await db.decks.bulkAdd(snap.decks);
-    }),
-  );
+  await keepBackup('pull', here);
+  await quietly(() => replaceLocal(snap));
   setLastVersion(v);
+  await matched(v, snap);
   clearDirty(started);
   // Card details (type, colours, image) come from Scryfall's cache on this device.
   await resolveRows(snap.entries.map((e) => ({ name: e.name, qty: 1, id: e.cardId })), () => {});
@@ -152,7 +209,33 @@ export async function sameAsCloud() {
   const [cloud, entries, decks] = await Promise.all([download(), db.entries.toArray(), db.decks.toArray()]);
   const mine = { entries, decks };
   const theirs = cloud?.snap ?? { entries: [], decks: [] };
-  return { same: fingerprint(theirs) === fingerprint(mine), cloudCount: size(theirs), localCount: size(mine) };
+  // the two hold the same: that copy is the base later merges compare against
+  const same = fingerprint(theirs) === fingerprint(mine);
+  if (same && cloud) await matched(cloud.v, cloud.snap);
+  return { same, cloudCount: size(theirs), localCount: size(mine) };
+}
+
+/**
+ * Merges this device's binders and decks with the cloud's, card by card (lib/syncmerge), then saves the result on both.
+ * `keepBoth`: there is no shared copy to compare against (first link): everything from both sides is kept.
+ * This device's copy is kept as a backup first.
+ */
+export async function mergeWithCloud(opts: { keepBoth?: boolean } = {}): Promise<MergeReport & { cards: number; decks: number }> {
+  const got = await download();
+  if (!got) throw new Error('The cloud copy is empty: nothing to merge.');
+  const base = opts.keepBoth ? null : await baseFor(lastVersion());
+  if (!base && !opts.keepBoth) throw new Error('This device has no earlier shared copy to merge against. Pick MERGE BOTH, or a side.');
+  const here = await local();
+  const { data, report } = mergeSync(base, here, got.snap);
+  await keepBackup('merge', here);
+  // Not quietly: the merged copy counts as this device's change, so it is still sent if the save below fails.
+  await replaceLocal(data);
+  // The cloud copy is now the shared one: what this device adds on top of it is its own change, still to send.
+  setLastVersion(got.v);
+  await matched(got.v, got.snap);
+  await resolveRows(data.entries.map((e) => ({ name: e.name, qty: 1, id: e.cardId })), () => {});
+  const sent = await push({ base: got.v });
+  return { ...report, cards: sent.cards, decks: sent.decks };
 }
 
 // ---- turning sync on and off ----

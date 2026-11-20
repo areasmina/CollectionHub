@@ -250,3 +250,15 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   "later". Guillermo confirms which in Google Cloud Console (Credentials, the OAuth client's secret creation date).
 - Supabase row rules (RLS) are in `supabase/schema.sql`; the live project is hibernated, so checking them live waits
   until it is woken from Guillermo's PC.
+
+## 2026-11-20: Phase 5D safer sync (merge rules)
+- Approved with the Phase 5 plan; rules shown to Guillermo before building. When both sides changed since they last
+  matched, sync merges against that shared copy (kept on the device as `sync:base` in the cache table, no schema change):
+  a change on one side is taken; a card count changed on both gets both changes; removed on one side but changed on
+  the other keeps the change; a deck edited on both is kept twice (the cloud's named "(other device)"); binder
+  settings merge per setting, lists combined, both changed the same setting → this device's.
+- First link with different binders on each side: still asks, now with a third choice, MERGE BOTH (everything from
+  both; the same card keeps the larger count; identical decks once).
+- Every pull, merge and restore first keeps this device's copy as a backup (last 5, `backup:<time>` in the cache
+  table, restorable from BACKUPS in the sync drawer); DOWNLOAD BACKUP gives a file. The Worker and the snapshot format
+  are unchanged, so no redeploy was needed.

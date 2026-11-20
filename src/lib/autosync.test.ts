@@ -4,7 +4,7 @@ const mem = new Map<string, string>();
 vi.stubGlobal('localStorage', { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => mem.set(k, v), removeItem: (k: string) => mem.delete(k) });
 vi.stubGlobal('navigator', { onLine: true });
 
-const cloud = { version: 0, same: false, cloudCount: 0, localCount: 0 };
+const cloud = { version: 0, same: false, cloudCount: 0, localCount: 0, base: false };
 const calls: string[] = [];
 vi.mock('./sync', () => ({
   ChangedElsewhere: class extends Error {},
@@ -16,6 +16,11 @@ vi.mock('./sync', () => ({
     const { setLastVersion, clearDirty } = await import('./syncstate');
     setLastVersion((cloud.version = 999));
     clearDirty(Date.now());
+  },
+  baseFor: async () => (cloud.base ? { profiles: [], entries: [], decks: [] } : null),
+  mergeWithCloud: async () => {
+    calls.push('merge');
+    return { taken: 1, doubled: 0, cards: 5, decks: 0 };
   },
   pull: async () => {
     calls.push('pull');
@@ -34,7 +39,7 @@ describe('automatic sync decisions', () => {
     mem.clear();
     mem.set('ch:sync:code', 'x');
     calls.length = 0;
-    Object.assign(cloud, { version: 0, same: false, cloudCount: 0, localCount: 0 });
+    Object.assign(cloud, { version: 0, same: false, cloudCount: 0, localCount: 0, base: false });
   });
   it('stays off without a sync code', async () => {
     mem.clear();
@@ -70,6 +75,18 @@ describe('automatic sync decisions', () => {
     await syncNow();
     expect(calls).toEqual([]);
     expect(mem.get('ch:code:last')).toBe('100');
+  });
+  it('merges card by card when both changed and this device kept the copy they last shared', async () => {
+    mem.set('ch:code:last', '100');
+    Object.assign(cloud, { version: 200, cloudCount: 5, localCount: 5, base: true });
+    dirty();
+    await syncNow();
+    expect(calls).toEqual(['merge']);
+  });
+  it('asks on a first sync with different data on each side, even with an old shared copy around', async () => {
+    Object.assign(cloud, { version: 200, cloudCount: 5, localCount: 5, base: true });
+    await syncNow();
+    expect(calls).toEqual([]);
   });
   it('treats both-changed-to-the-same-thing as in sync', async () => {
     mem.set('ch:code:last', '100');

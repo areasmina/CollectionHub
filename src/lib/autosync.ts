@@ -1,10 +1,12 @@
-import { ChangedElsewhere, CodeGone, cloudVersion, pull, push, sameAsCloud } from './sync';
+import { ChangedElsewhere, CodeGone, baseFor, cloudVersion, mergeWithCloud, pull, push, sameAsCloud } from './sync';
 import { clearDirty, dirtyAt, lastVersion, onLocalChange, setLastVersion, setSyncState, syncCode } from './syncstate';
 
 /** Keeps this device and the cloud in step on its own:
  *  - this device changed and the cloud didn't → push (a few seconds after the last edit)
  *  - the cloud changed and this device didn't → pull (the old copy is kept for Undo)
- *  - both changed, or a first sync with different data on each side → stop and let the person pick (Push or Pull). */
+ *  - both changed → merge card by card against the last copy both held (lib/syncmerge), this device's copy kept as a backup
+ *  - a first sync with different data on each side (no shared copy yet) → stop and let the person pick
+ *    (Keep this device, Keep cloud, or Merge both). */
 let running = false;
 let again = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -35,7 +37,10 @@ export async function syncNow() {
         if (!cloud && localCount) await push({ base: 0 });
       } else if (!cloudCount) await push({ base: cloud });
       else if (!localCount) await pull();
-      else return setSyncState({ status: 'conflict', msg: last ? 'Changed on this device and in the cloud.' : 'This device and the cloud hold different binders or decks.' });
+      else if (last && (await baseFor(last))) {
+        const r = await mergeWithCloud();
+        return setSyncState({ status: 'synced', at: Date.now(), msg: r.doubled ? `Merged with another device. ${r.doubled === 1 ? 'A deck' : `${r.doubled} decks`} changed on both: the other version is kept as "(other device)".` : 'Merged changes from another device.' });
+      } else return setSyncState({ status: 'conflict', msg: last ? 'Changed on this device and in the cloud.' : 'This device and the cloud hold different binders or decks.' });
     } else if (cloudChanged) await pull();
     else if (dirty) await push();
     setSyncState({ status: 'synced', at: Date.now(), msg: '' });
