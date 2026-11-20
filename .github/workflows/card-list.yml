@@ -1,0 +1,30 @@
+# Once a week: rebuild the app's own card list (public/cards/oracle.json) from Scryfall's daily bulk file and open a
+# pull request with the changes (Phase 5C). The app keeps the list for imports and syncs when Scryfall can't be
+# reached; a list a few weeks old still works (new cards then come from Scryfall), so merging each week is optional.
+# Needs: repository Settings > Actions > General > "Allow GitHub Actions to create and approve pull requests".
+name: Card list
+on:
+  schedule:
+    - cron: '41 7 * * 2'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+# Actions are pinned to exact commits (Phase 5E), so a moved tag can't change what runs with write access.
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: node --max-old-space-size=4096 scripts/build-cardlist.mjs
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        with:
+          branch: card-list/refresh
+          title: 'Card list: weekly refresh'
+          commit-message: 'Card list: weekly refresh from Scryfall Oracle Cards'
+          add-paths: public/cards/oracle.json
+          body: The app's own card list (public/cards/oracle.json), rebuilt from Scryfall's Oracle Cards bulk file by the weekly workflow. Card data only (no prices, no pictures).

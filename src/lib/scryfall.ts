@@ -2,6 +2,7 @@ import { db, type Card, type Cheap } from './db';
 import type { Row } from './importers';
 import { norm } from './names';
 import { scryfallClient } from './scrynet';
+import { cardFromList, cardList } from './cardlist';
 
 const API = 'https://api.scryfall.com';
 /** How patient an import is: with the waits in scrynet.ts this outlasts about four minutes of Scryfall refusing. */
@@ -244,7 +245,7 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
 
   const matched: { row: Row; card: Card }[] = [];
   const unmatched: Row[] = [];
-  const failed: Row[] = []; // never looked up: Scryfall didn't answer
+  let failed: Row[] = []; // never looked up: Scryfall didn't answer
   const asked = new Set(need.map(identKey));
   for (const r of rows) {
     const card =
@@ -254,6 +255,26 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
     if (card) matched.push({ row: r, card });
     else if (down && asked.has(identKey(identOf(r)))) failed.push(r);
     else unmatched.push(r);
+  }
+  // Scryfall didn't answer: the card list kept on this device (lib/cardlist, Phase 5C) still knows every card. Those
+  // cards are saved without a price and marked old, so they are fetched again once Scryfall answers.
+  if (down && failed.length) {
+    const list = await cardList().catch(() => null);
+    if (list) {
+      const known = new Set((await db.cards.bulkGet([...new Set(failed.map((r) => r.id?.toLowerCase()).filter((x): x is string => !!x))])).filter(Boolean).map((c) => c!.id));
+      const fresh: Card[] = [];
+      const still: Row[] = [];
+      for (const r of failed) {
+        const card = cardFromList(list, cleanName(r.name), { id: r.id && UUID_RE.test(r.id) ? r.id : undefined, set: r.set, cn: r.cn });
+        if (!card) still.push(r);
+        else {
+          matched.push({ row: r, card });
+          if (!known.has(card.id)) (fresh.push(card), known.add(card.id));
+        }
+      }
+      if (fresh.length) await db.cards.bulkPut(fresh);
+      failed = still;
+    }
   }
   // A name-only row (text, Moxfield or Archidekt import, CSV without ids) gets Scryfall's default printing, which can be
   // MTGO-only or not priced yet (Underground Sea -> Vintage Masters). Use the cheapest paper printing with a price instead.

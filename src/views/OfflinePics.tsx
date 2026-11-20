@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { db } from '../lib/db';
 import { haptic } from '../lib/haptics';
 import { browserDeps, clearPics, OWNED, picCounts, saveOwned } from '../lib/offlinepics';
+import { cardListAt } from '../lib/cardlist';
 
 /** OFFLINE PICTURES, in the sync drawer (Phase 5B): how many card pictures this device keeps, the space they take,
  *  SAVE MY CARDS NOW (the small picture of every card you own) and CLEAR. Pictures only: binders and decks are never
@@ -58,6 +59,11 @@ export function OfflinePics() {
       </div>
       <p className="id-sync-desc">
         Pictures you look at stay on this device. On Wi-Fi, the small picture of every card you own is saved too ({(counts?.[OWNED] ?? 0).toLocaleString()} now), so your binder shows offline.
+      </p>
+      <p className="id-sync-desc id-sync-cardlist">
+        {cardListAt()
+          ? `Card list saved ${new Date(cardListAt()).toLocaleDateString([], { month: 'short', day: 'numeric' })}: imports and syncs know every card even without Scryfall.`
+          : 'Card list: saved on the next Wi-Fi visit to Collection, so imports and syncs work without Scryfall.'}
       </p>
       <div className="id-sync-act-row">
         <button type="button" className="id-btn-act" disabled={!!busy} onClick={saveNow}>
