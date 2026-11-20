@@ -1,16 +1,16 @@
 import { expect, test } from '@playwright/test';
 import { cards, mockWorld, seed } from './mock';
 
-// IMPORT DECK sits beside NEW BLANK DECK; a pasted list becomes a saved deck; the Collection is left alone.
+// IMPORT sits beside + NEW DECK on My Decks; a pasted list becomes a saved deck; the Collection is left alone.
 test('Decks: IMPORT DECK turns a pasted list into a deck and opens it', async ({ page }) => {
   await mockWorld(page);
   await seed(page);
   await page.evaluate(() => localStorage.setItem('ch:tab', 'decks'));
   await page.reload();
 
-  await expect(page.getByRole('button', { name: 'IMPORT DECK' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'NEW BLANK DECK' })).toBeVisible();
-  await page.getByRole('button', { name: 'IMPORT DECK' }).click();
+  await expect(page.getByRole('button', { name: 'IMPORT', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ NEW DECK' })).toBeVisible();
+  await page.getByRole('button', { name: 'IMPORT', exact: true }).click();
 
   const pop = page.getByRole('dialog', { name: 'Import a deck' });
   await expect(pop).toBeVisible();

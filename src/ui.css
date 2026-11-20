@@ -5283,7 +5283,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   z-index: 3 !important;
 }
 
-.coll .slip-btn {
+:is(.coll, .dlist) .slip-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -5299,30 +5299,30 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   line-height: 1.2 !important;
 }
 
-.coll .slip-btn.deck {
+:is(.coll, .dlist) .slip-btn.deck {
   background: #ffffff !important;
   color: #0a0a0a !important;
 }
 
-.coll .slip-btn.deck:hover {
+:is(.coll, .dlist) .slip-btn.deck:hover {
   background: #f0ede6 !important;
   transform: translate(-1px, -1px) !important;
   box-shadow: 3px 3px 0 #000000 !important;
 }
 
-.coll .slip-btn.import {
+:is(.coll, .dlist) .slip-btn.import {
   background: var(--accent, #e60012) !important;
   color: #ffffff !important;
   border-color: #000000 !important;
 }
 
-.coll .slip-btn.import:hover {
+:is(.coll, .dlist) .slip-btn.import:hover {
   background: #ff1a2b !important;
   transform: translate(-1px, -1px) !important;
   box-shadow: 3px 3px 0 #000000 !important;
 }
 
-.coll .slip-btn:active {
+:is(.coll, .dlist) .slip-btn:active {
   transform: translate(1px, 1px) !important;
   box-shadow: 1px 1px 0 #000000 !important;
 }
