@@ -1170,6 +1170,10 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
 @media (max-width: 1099px) {
   html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop { top: 46px !important; }
 }
+/* …and the CARDS · ANALYSIS · TO BUY tabs pin under the bar's moved-down underside, not behind the bar (Nov 19). */
+@media (max-width: 700px) {
+  html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .fcube { top: calc(var(--forgetop-h, 56px) + 46px); }
+}
 @media (max-width: 700px) {
   html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
   html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
@@ -1351,7 +1355,7 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 /* Top dock: the Forge bar moves down under the island; the strip it leaves above is filled, so no scrolled card or
    tile shows (or sits) under the island there. */
 @media (max-width: 1099px) {
-  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 46px; background: var(--u-ink); }
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop.stuck::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 46px; background: var(--u-ink); }
 }
 
 /* ── Dynamic Island: picked up and put down (Guillermo, Nov 13: "the detaching and attaching animation can be better") ──
@@ -1544,6 +1548,12 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
 html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
 html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
   top: 52px !important;
+}
+/* …but not the Forge's deck toolbar on a phone (Guillermo, Nov 19): there it is not pinned at all (it scrolls with the
+   cards, styles.css), so the 52px landed as a plain shift that opened a gap under CARDS · ANALYSIS · TO BUY and slid
+   the toolbar over the hint line below it. */
+@media (max-width: 700px) {
+  html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar { top: auto !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dpage.coll .collbar, .dpage.disc > .dfind, .dpage.dlist > .decktoolbar, .dpage .lists > .dtools.tbar { transition: none; }
