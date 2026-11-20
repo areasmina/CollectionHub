@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain JS build script module
-import { cardListFile, oracleEntry, row } from '../../scripts/cardlist-format.mjs';
+import { bulkCards, cardListFile, oracleEntry, row } from '../../scripts/cardlist-format.mjs';
 import { cardFromList, LIST_CACHE, LIST_URL, parseCardList, saveCardList, smallPic, type ListDeps } from './cardlist';
 
 const sol = { name: 'Sol Ring', layout: 'normal', games: ['paper', 'mtgo'], type_line: 'Artifact', mana_cost: '{1}', cmc: 1, color_identity: [], rarity: 'uncommon', legalities: { commander: 'legal' }, oracle_text: '{T}: Add {C}{C}.', id: 'aaaa0000-0000-4000-8000-000000000001', set: 'cmm', collector_number: '400' };
@@ -44,13 +44,21 @@ describe('card list file (scripts/build-cardlist.mjs)', () => {
     expect(list.get('delver of secrets')?.[0]).toBe(delver.name); // found by its front face too
     expect(list.get('mana crypt')?.[6]).toBe(0);
   });
-  it("finds the Oracle Cards file in Scryfall's bulk-data catalog, and says so when it is missing", () => {
-    const oracle = { object: 'bulk_data', type: 'oracle_cards', download_uri: 'https://data.scryfall.io/oracle-cards/x.json', updated_at: '2026-11-20T10:00:00Z' };
-    const catalog = { object: 'list', data: [{ object: 'bulk_data', type: 'default_cards', download_uri: 'https://data.scryfall.io/default-cards/y.json' }, oracle] };
-    expect(oracleEntry(catalog)).toBe(oracle);
-    expect(() => oracleEntry({ object: 'list', data: [catalog.data[0]] })).toThrow(/oracle_cards.*default_cards/);
+  it("finds the Oracle Cards file in Scryfall's bulk-data catalog, as JSON lines (now) or JSON (before)", () => {
+    const now = { object: 'bulk_data', type: 'oracle_cards', updated_at: '2026-11-19T22:01:59Z', jsonl_download_uri: 'https://data.scryfall.io/oracle-cards/x.jsonl.gz' };
+    const other = { object: 'bulk_data', type: 'default_cards', jsonl_download_uri: 'https://data.scryfall.io/default-cards/y.jsonl.gz' };
+    expect(oracleEntry({ object: 'list', data: [other, now] })).toEqual({ url: now.jsonl_download_uri, updated_at: now.updated_at });
+    expect(oracleEntry({ data: [{ type: 'oracle_cards', download_uri: 'old.json' }] }).url).toBe('old.json');
+    expect(() => oracleEntry({ object: 'list', data: [other] })).toThrow(/oracle_cards.*default_cards/);
     expect(() => oracleEntry({ object: 'bulk_data', type: 'oracle_cards' })).toThrow(/none/);
-    expect(() => oracleEntry({ data: [{ type: 'oracle_cards', uri: 'u' }] })).toThrow(/no download_uri.*"uri":"u"/);
+    expect(() => oracleEntry({ data: [{ type: 'oracle_cards', uri: 'u' }] })).toThrow(/no download address.*"uri":"u"/);
+  });
+  it('reads a bulk file gzipped as JSON lines, or plain as a JSON array', async () => {
+    const lines = `${JSON.stringify(sol)}\n${JSON.stringify(delver)}\n`;
+    const gz = new Uint8Array(await new Response(new Blob([lines]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+    expect(gz[0]).toBe(0x1f);
+    expect(bulkCards(gz).map((c: { name: string }) => c.name)).toEqual([sol.name, delver.name]);
+    expect(bulkCards(new TextEncoder().encode(JSON.stringify([sol]))).map((c: { name: string }) => c.name)).toEqual([sol.name]);
   });
   it('refuses a file in a format it does not know', () => {
     expect(() => parseCardList('{"v":2,"fields":[],"cards":[]}')).toThrow(/format/);
