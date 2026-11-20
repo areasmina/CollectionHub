@@ -37,3 +37,10 @@ export function cardListFile(cards, at = new Date().toISOString()) {
     .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
   return `{"v":${FORMAT},"at":${JSON.stringify(at)},"fields":${JSON.stringify(FIELDS)},"cards":[\n${rows.map((r) => JSON.stringify(r)).join(',\n')}\n]}\n`;
 }
+
+/** The "Oracle Cards" entry of Scryfall's bulk-data catalog (GET /bulk-data), or an error naming what came back. */
+export function oracleEntry(catalog) {
+  const e = (catalog?.data ?? []).find((d) => d?.type === 'oracle_cards');
+  if (!e?.download_uri) throw new Error(`No "oracle_cards" file in Scryfall's bulk-data catalog (types: ${(catalog?.data ?? []).map((d) => d?.type).join(', ') || 'none'})`);
+  return e;
+}

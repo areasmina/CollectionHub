@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain JS build script module
-import { cardListFile, row } from '../../scripts/cardlist-format.mjs';
+import { cardListFile, oracleEntry, row } from '../../scripts/cardlist-format.mjs';
 import { cardFromList, LIST_CACHE, LIST_URL, parseCardList, saveCardList, smallPic, type ListDeps } from './cardlist';
 
 const sol = { name: 'Sol Ring', layout: 'normal', games: ['paper', 'mtgo'], type_line: 'Artifact', mana_cost: '{1}', cmc: 1, color_identity: [], rarity: 'uncommon', legalities: { commander: 'legal' }, oracle_text: '{T}: Add {C}{C}.', id: 'aaaa0000-0000-4000-8000-000000000001', set: 'cmm', collector_number: '400' };
@@ -43,6 +43,13 @@ describe('card list file (scripts/build-cardlist.mjs)', () => {
     expect(list.get('sol ring')?.[8]).toBe(sol.id);
     expect(list.get('delver of secrets')?.[0]).toBe(delver.name); // found by its front face too
     expect(list.get('mana crypt')?.[6]).toBe(0);
+  });
+  it("finds the Oracle Cards file in Scryfall's bulk-data catalog, and says so when it is missing", () => {
+    const oracle = { object: 'bulk_data', type: 'oracle_cards', download_uri: 'https://data.scryfall.io/oracle-cards/x.json', updated_at: '2026-11-20T10:00:00Z' };
+    const catalog = { object: 'list', data: [{ object: 'bulk_data', type: 'default_cards', download_uri: 'https://data.scryfall.io/default-cards/y.json' }, oracle] };
+    expect(oracleEntry(catalog)).toBe(oracle);
+    expect(() => oracleEntry({ object: 'list', data: [catalog.data[0]] })).toThrow(/oracle_cards.*default_cards/);
+    expect(() => oracleEntry({ object: 'bulk_data', type: 'oracle_cards' })).toThrow(/none/);
   });
   it('refuses a file in a format it does not know', () => {
     expect(() => parseCardList('{"v":2,"fields":[],"cards":[]}')).toThrow(/format/);

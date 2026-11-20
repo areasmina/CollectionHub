@@ -4,7 +4,7 @@
 // A weekly GitHub Action reruns it (.github/workflows/card-list.yml). The app keeps the file for offline imports and
 // syncs (src/lib/cardlist.ts) and never needs it to work.
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { cardListFile } from './cardlist-format.mjs';
+import { cardListFile, oracleEntry } from './cardlist-format.mjs';
 
 const UA = { 'User-Agent': 'CollectionHub-cardlist/1.0', Accept: 'application/json' };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -17,7 +17,8 @@ async function get(url) {
   throw new Error(`Scryfall did not answer: ${url}`);
 }
 
-const bulk = await get('https://api.scryfall.com/bulk-data/oracle-cards');
+// The catalog of bulk files, then the "Oracle Cards" one (one entry per card, the newest printing)
+const bulk = oracleEntry(await get('https://api.scryfall.com/bulk-data'));
 const cards = await get(bulk.download_uri);
 if (!Array.isArray(cards) || cards.length < 20000) throw new Error(`Unexpected bulk file: ${Array.isArray(cards) ? cards.length : typeof cards} cards`);
 const file = cardListFile(cards, bulk.updated_at);
