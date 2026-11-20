@@ -123,6 +123,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Sync code (encrypted, no account), link a device, change code | Live | #5 | `lib/synccode.test.ts`, `lib/sync.test.ts`, `lib/autosync.test.ts`, e2e "sync code" |
 | Move from the old Supabase sign-in sync | Live | #5 | manual; Supabase removal waits for Guillermo's OK |
 | Installable PWA, works offline for saved data | Live | v1 | manual |
+| Card pictures offline: every picture you see is kept (capped, oldest first); on Wi-Fi the small picture of every card you own is saved ahead; an unseen full-size picture falls back to the small one; OFFLINE PICTURES in the sync drawer (count, space, SAVE MY CARDS NOW, CLEAR) | Review | Phase 5B, this PR | `lib/offlinepics.test.ts`, `e2e/offline-pics.spec.ts` |
 | Big binders stay quick: the Collection grid skips drawing cards far off screen (each keeps its exact place and its price tape); fonts ship with the app only (no Google Fonts wait). 10,000 cards, mid-range phone: SHOW MORE at 1,900 cards 40.8 s → 1.5 s | Review | Phase 5A, this PR | `e2e/big-binder.spec.ts` |
 | Card-spin loader | Live | #4 | manual |
 | Haptics on mobile | Live | #6 | `lib/haptics.test.ts` |
