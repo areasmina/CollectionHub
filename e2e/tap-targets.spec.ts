@@ -18,8 +18,8 @@ const small = (page: Page) =>
       if (!vis(e) || e.closest('.pillnav, .island, [hidden]')) continue; // the island is phase 4
       // the jump rail is a slim strip by design: its tap area is widened by a ::before, checked separately below
       if (e.closest('.jrail')) continue;
-      // known gap: the small theme badges on a My Decks tile stay small, because growing them would swallow the tile's own tap
-      if (e.matches('.themebadge')) continue;
+      // tablet / desktop: the theme badges on a My Decks tile stay small buttons (mouse); on phones they are plain labels
+      if (e.matches('.themebadge, .tagbadge')) continue;
       // a control inside a taller tappable box (label.sbox, a card tile) counts by that box
       const box = (e.matches('select, input') ? e.closest('label') : null) ?? e;
       const r = box.getBoundingClientRect();
@@ -45,6 +45,8 @@ test('Phone: no button, tab, select or section header under 44px on the main scr
   await go('decks');
   await page.waitForSelector('.dcard');
   found.decks = await small(page);
+  // phones: theme and tag badges on a deck tile are plain labels, not tiny buttons (Nov 19)
+  expect(await page.locator('.dcard .dtags [role=button]').count()).toBe(0);
   await page.locator('.dcard').first().click();
   await page.waitForSelector('details.cat');
   found.deck = await small(page);

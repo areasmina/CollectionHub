@@ -94,7 +94,7 @@ const TopWidget = memo(function TopWidget({ entries, cards }: { entries: Entry[]
       <ul key={p.key} aria-live="polite">
         {p.rows.length ? (
           p.rows.map(({ e, card, label, tone, why }, j) => (
-            <li key={e.id} style={{ '--i': j - (p.rows.length - 1) / 2 } as React.CSSProperties} onClick={(ev) => ev.stopPropagation()}>
+            <li key={e.id} onClick={(ev) => ev.stopPropagation()}>
               <Thumb src={card.img?.replace('/small/', '/normal/')} back={card.back} className={`thand xart owned${e.foil ? ' foil' : ''}`} name={e.name} />
               <span className={`tw price tapey y${j} t${j}${tone ? ' ' + tone : ''}`} title={why}>
                 {label}

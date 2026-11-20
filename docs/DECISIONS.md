@@ -224,3 +224,5 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - **A Forge panel opens and closes from a red corner flag** with + and −, not from a word in the header, and a closed
   panel is a 218px rail.
 
+
+- 2026-11-19: Top 3 on Collection lies flat (no fan tilt). Deck theme and tag badges are plain labels on phones. Keep the old Supabase sign-in (it may carry email log-ins later). Going public stays off for now.
