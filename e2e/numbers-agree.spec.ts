@@ -29,7 +29,9 @@ test('My Decks: "avg power" uses the Game Changers list, so it agrees with the b
     localStorage.setItem('ch:tab', 'decks');
   });
   await page.reload();
+  await showStats(page); // the tiles live on My Decks' STATS tab (Nov 19)
   await expect(page.locator('.dstats .stat', { hasText: 'avg power' }).locator('b')).toHaveText('B4');
+  await page.locator('.dlist .ctab', { hasText: 'DECKS' }).click();
   await page.locator('.dcard, .dtile button').filter({ hasText: 'Tatyova Lands' }).first().click();
   await expect(page.locator('details.scrap.bracket > summary, .vtile.fit, .vtiles').first()).toContainText(/IV|4/);
 });

@@ -55,16 +55,16 @@ test('Collection: the search bar, the filter sheet and the card menu carry no wh
   expect(await whiteFramed(page, '.fsheet2')).toEqual([]);
 });
 
-test('My Decks: the stat tiles are no wider than they need, the colour count sits at the right, and SHOW STATS is lettered like the buttons beside it', async ({ page }, info) => {
+test('My Decks: the stat tiles are no wider than they need, the colour count sits at the right, and STATS is lettered like the buttons beside it', async ({ page }, info) => {
   test.skip(info.project.name === 'phone', 'the row stacks on phones; the title band holds one button per line');
   await page.evaluate(() => localStorage.setItem('ch:tab', 'decks'));
   await page.reload();
-  const fold = page.getByRole('button', { name: /STATS/ });
+  const fold = page.getByRole('tab', { name: /STATS/ });
   await expect(fold).toBeVisible();
   const fonts = await page.evaluate(() => {
     const f = (el: Element | null) => (el ? getComputedStyle(el).fontFamily : '');
     const acts = document.querySelector('.titleacts')!;
-    return { fold: f(acts.querySelector('.dfold')), btn: f(acts.querySelector('.u-btn')) };
+    return { fold: f(acts.querySelector('.ctab')), btn: f(acts.querySelector('.slip-btn')) };
   });
   expect(fonts.fold).toBe(fonts.btn);
   await showStats(page);

@@ -78,6 +78,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Forge toolbar: ⋮ · search · sort on one row, chips / views / SIZE on a sliding row under it, nothing overlapping | In review | this PR | `e2e/forge.spec.ts`, `e2e/view-on-bar.spec.ts` (3 sizes) |
 | My Decks: SIZE in the filter row, calmer deck tiles (facts and owned mark on one line, NOT LEGAL as a corner tape) | In review | this PR | `e2e/workbench-features.spec.ts`, `e2e/deck-legal.spec.ts` (3 sizes) |
 | Deck colour wheel: one rainbow circle in the deck menu, arrow keys turn the hue | In review | this PR | `src/lib/deckcolor.test.ts`, `e2e/workbench-features.spec.ts` |
+| My Decks wears Collection's top (Guillermo's deferred Nov 13 ask, done Nov 19): DECKS (count) and STATS tabs with + NEW DECK and IMPORT on the same row, the same stamps and ink / red labels as Collection's CARDS · ANALYTICS · + DECK · IMPORT; the page always opens on DECKS, the stat tiles live on STATS (replaces the SHOW / HIDE STATS fold); the deck search lane is the same ink block as Collection's (no red frame). Collection's first-run "swipe" tag no longer covers the CARDS tab on wide screens | In review | this PR | `e2e/workbench-features.spec.ts` "Decks overview", `e2e/screens.spec.ts`, `e2e/zine-surfaces.spec.ts` (3 sizes) |
 | Dynamic Island: frosted glass by default (semi-transparent, matte, one soft gloss), not pure black | In review | this PR | `e2e/island-*.spec.ts` (3 sizes) |
 
 ## Decks and the Forge
