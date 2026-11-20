@@ -124,7 +124,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Move from the old Supabase sign-in sync | Live | #5 | manual; Supabase removal waits for Guillermo's OK |
 | Installable PWA, works offline for saved data | Live | v1 | manual |
 | Big binders stay quick: the Collection grid skips drawing cards far off screen (each keeps its exact place and its price tape); fonts ship with the app only (no Google Fonts wait). 10,000 cards, mid-range phone: SHOW MORE at 1,900 cards 40.8 s → 1.5 s | Live | Phase 5A, PR #93 | `e2e/big-binder.spec.ts` |
-| Card pictures offline: every picture you see is kept (capped, oldest first); on Wi-Fi the small picture of every card you own is saved ahead; an unseen full-size picture falls back to the small one; OFFLINE PICTURES in the sync drawer (count, space, SAVE MY CARDS NOW, CLEAR) | Review | Phase 5B, this PR | `lib/offlinepics.test.ts`, `e2e/offline-pics.spec.ts` |
+| Card pictures offline: every picture you see is kept (capped, oldest first); on Wi-Fi the small picture of every card you own is saved ahead; an unseen full-size picture falls back to the small one; OFFLINE PICTURES in the sync drawer (count, space, SAVE MY CARDS NOW, CLEAR) | Live | Phase 5B, PR #94 | `lib/offlinepics.test.ts`, `e2e/offline-pics.spec.ts` |
 | Card-spin loader | Live | #4 | manual |
 | Haptics on mobile | Live | #6 | `lib/haptics.test.ts` |
 | Pill nav, back arrow only where there's somewhere to go | Live | #6 | e2e "Pill menu" |

@@ -238,3 +238,15 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 
 
 - 2026-11-19: Top 3 on Collection lies flat (no fan tilt). Deck theme and tag badges are plain labels on phones. Keep the old Supabase sign-in (it may carry email log-ins later). Going public stays off for now.
+
+## 2026-11-20: Phase 5E security housekeeping
+- Approved with the Phase 5 plan ("All five, in the order suggested"). CI's checks run with a read-only GitHub token
+  (`permissions: contents: read`). Every outside GitHub Action is pinned to an exact commit, with the version in a
+  comment; to update one, look up the new tag's commit and change both.
+- Build tools are kept on patched versions with `npm audit fix` (no `--force`, no new packages). The app itself ships
+  with no known vulnerable package (`npm audit --omit=dev`: 0). Left on purpose: `glob`/`minimatch` inside
+  `workbox-build` (build time only, reads our own files); fixed when vite-plugin-pwa/workbox ship an update.
+- Old Google OAuth secret: `docs/ROADMAP.md` records it rotated on 2026-10-13, while the 2026-11-14 entry above says
+  "later". Guillermo confirms which in Google Cloud Console (Credentials, the OAuth client's secret creation date).
+- Supabase row rules (RLS) are in `supabase/schema.sql`; the live project is hibernated, so checking them live waits
+  until it is woken from Guillermo's PC.
