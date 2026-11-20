@@ -46,8 +46,9 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(page.locator('.shelfhead, .shelfrow')).toHaveCount(0);
 
     // The deck buttons ride the ransom title band since Nov 15 (they used to sit on the overview ribbon)
-    await expect(page.locator('.dlist .decksbar .titleacts .u-btn.primary')).toBeVisible();
-    await expect(page.locator('.dribbon')).toHaveCount(1);
+    // and since Nov 19 they are Collection's own labels and tabs (DECKS | STATS, + NEW DECK, IMPORT)
+    await expect(page.locator('.dlist .decksactions .slip-btn.deck')).toBeVisible();
+    await expect(page.locator('.dribbon')).toHaveCount(0); // the tiles wait on the STATS tab
 
     // Decks toolbar is visible with search, sort, and filters
     const toolbar = page.locator('.decktoolbar');
@@ -83,25 +84,32 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(menu.getByRole('menuitem', { name: '+ ADD TAG' })).toBeVisible();
   });
 
-  test('Decks overview: stats start folded; SHOW STATS sits beside the deck buttons and toggles the tiles', async ({ page }) => {
+  test('Decks overview: DECKS | STATS tabs like Collection; the page opens on the decks, the tabs sit in line with + NEW DECK / IMPORT', async ({ page }) => {
     await go(page, 'decks');
-
-    // the tiles start folded (Nov 13); SHOW STATS sits on the row of the deck buttons
-    const stats = page.locator('.dstats');
-    const foldBtn = page.locator('.dfold');
-    await expect(foldBtn).toContainText(/SHOW STATS/i);
-    await expect(stats).toBeHidden();
-    const row = async (sel: string) => { const b = (await page.locator(sel).first().boundingBox())!; return b.y + b.height / 2; };
-    expect(Math.abs((await row('.dfold')) - (await row('.titleacts.decksactions > .u-btn')))).toBeLessThanOrEqual(3);
-    expect((await foldBtn.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-
-    // one tap shows them, another folds them again
-    await foldBtn.click();
-    await expect(stats).toBeVisible();
-    await expect(foldBtn).toContainText(/HIDE STATS/i);
-    await foldBtn.click();
-    await expect(stats).toBeHidden();
-    await expect(foldBtn).toContainText(/SHOW STATS/i);
+    const tab = (name: string) => page.locator('.dlist .ctab', { hasText: name });
+    // opens on DECKS, tiles out of the way (they start hidden, every time, like Collection's)
+    await expect(tab('DECKS')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.dstats')).toHaveCount(0);
+    await expect(page.locator('.dcard').first()).toBeVisible();
+    // the tabs and the two buttons are one row, at a full tap height
+    const mid = async (sel: string) => { const b = (await page.locator(sel).first().boundingBox())!; return b.y + b.height / 2; };
+    expect(Math.abs((await mid('.dlist .ctab.on')) - (await mid('.dlist .decksactions .slip-btn.import')))).toBeLessThanOrEqual(4);
+    for (const sel of ['.dlist .ctab.on', '.dlist .decksactions .slip-btn.deck', '.dlist .decksactions .slip-btn.import'])
+      expect((await page.locator(sel).first().boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // the same parts as Collection: same tab stamp, same ink and red labels
+    const look = (sel: string) => page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return `${c.fontFamily}|${c.backgroundColor}`; });
+    const decks = { tab: await look('.dlist .ctab.on'), imp: await look('.dlist .slip-btn.import') };
+    // STATS shows the tiles and hides the decks; DECKS brings them back
+    await tab('STATS').click();
+    await expect(page.locator('.dstats .stat').first()).toBeVisible();
+    await expect(page.locator('.dcard')).toHaveCount(0);
+    await tab('DECKS').click();
+    await expect(page.locator('.dcard').first()).toBeVisible();
+    await page.reload();
+    await expect(tab('DECKS')).toHaveAttribute('aria-selected', 'true');
+    await go(page, 'collection');
+    expect(await look('.coll .ctab.on')).toBe(decks.tab);
+    expect(await look('.coll .slip-btn.import')).toBe(decks.imp);
   });
 
   test('Forge cube on phones: CARDS · ANALYSIS · TO BUY tabs and face switching', async ({ page }, info) => {

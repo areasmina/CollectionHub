@@ -224,3 +224,15 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - **A Forge panel opens and closes from a red corner flag** with + and −, not from a word in the header, and a closed
   panel is a 218px rail.
 
+## 2026-11-19: My Decks and Collection share one top (Guillermo's deferred items, approved "Proceed")
+- **My Decks has DECKS | STATS tabs**, like Collection's CARDS | ANALYTICS: the page always opens on the decks, the stat
+  tiles wait on STATS, and + NEW DECK / IMPORT sit on the same row in Collection's ink and red labels. This replaces the
+  Nov 14 SHOW / HIDE STATS button (and its remembered per-device choice) on My Decks.
+- **The commander mark stays the crown inside the price sticker** (Nov 15). That already answers the deferred "align the
+  yellow Commander tag with the price tag": the tag and the price are one sticker now.
+- **ManaBox references of Nov 13, reviewed:** what fits is already in (one filter sheet with Clear / Apply, rules-text
+  search, grid / list / compact view, group headers with count and price, card menu, search pinned in reach). Left as
+  proposals because they change logic, not looks: an exact colour-identity and number-of-colours filter, a STACKED view,
+  per-card price change, and ManaBox's "count basics / look in other decks" ownership switches (ownership is counted one
+  way everywhere, see above).
+
