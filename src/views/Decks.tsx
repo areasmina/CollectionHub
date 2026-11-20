@@ -1201,7 +1201,9 @@ export function Decks(s: Shared) {
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   }, []);
-  const [dstats, setDstats] = useStored<'show' | 'hide'>('ch:deckstats', 'hide', ['show', 'hide']);
+  // DECKS | STATS, the same two faces as Collection's CARDS | ANALYTICS (Guillermo, Nov 19: "make the two sections look
+  // cohesive"). The page always opens on the decks, so the stat tiles start out of the way every time, like Collection's.
+  const [dtab, setDtab] = useState<'decks' | 'stats'>('decks');
   // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
   const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
     try {
@@ -1291,85 +1293,89 @@ export function Decks(s: Shared) {
   }
 
 
+  const dtabrow = (
+    <>
+      <div className="ctabset" role="tablist" aria-label="My decks view">
+        {([['decks', 'DECKS'], ['stats', 'STATS']] as const)
+          .filter(([v]) => v === 'decks' || decks.length > 0)
+          .map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              id={`dtab-${v}`}
+              aria-selected={dtab === v}
+              aria-controls={`dpane-${v}`}
+              className={`ctab${dtab === v ? ' on' : ''}`}
+              onClick={() => (haptic('select'), setDtab(v))}
+            >
+              {label}
+              {v === 'decks' && <span className="ctab-n">{decks.length}</span>}
+            </button>
+          ))}
+      </div>
+      <div className="ctab-acts decksactions">
+        <button type="button" className="slip-btn deck" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
+          + NEW DECK
+        </button>
+        <button type="button" className="slip-btn import" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
+          IMPORT
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <>
       <PageDecor seed={333} rays="24% 20%" sheet={{ side: 'left', top: 320, rot: -4 }} />
       <main className="dpage dlist">
         {/* THE OVERHAUL, my decks: loud title → one ribbon of facts → flat deck tiles → the add form. */}
+        {/* The title band carries the page's two faces and its two actions, exactly as Collection's does: tabs on the
+            left, + NEW DECK (ink) and IMPORT (red) on the right. A phone has no room beside the ransom letters, so there
+            the same row sits on its own lane under the title, again exactly as Collection's does. */}
         <div className="decksbar">
-          {/* The three things you do to this page ride the title band, the way the binder tag does on Collection
-              (Guillermo, Nov 15), so the deck tiles start a row higher. NEW BLANK DECK stays the loud one. */}
-          <Title
-            text="MY DECKS"
-            label="My decks"
-            size={narrow ? 44 : 64}
-            seed={33}
-            after={
-              <span className="titleacts decksactions">
-                <button type="button" className="u-btn primary" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
-                  + NEW BLANK DECK
-                </button>
-                <button type="button" className="u-btn" onClick={() => (haptic('open'), setImporting(true))} title="Import a deck from a list or a CSV file">
-                  IMPORT DECK
-                </button>
-                {decks.length > 0 && (
-                  <button
-                    type="button"
-                    className="dfold"
-                    aria-expanded={dstats !== 'hide'}
-                    onClick={() => (haptic('select'), setDstats(dstats === 'hide' ? 'show' : 'hide'))}
-                    title={dstats === 'hide' ? 'Show the deck stats' : 'Hide the deck stats'}
-                  >
-                    {dstats === 'hide' ? 'SHOW STATS ▾' : 'HIDE STATS ▴'}
-                  </button>
-                )}
-              </span>
-            }
-          />
+          <Title text="MY DECKS" label="My decks" size={narrow ? 44 : 64} seed={33} after={!narrow ? <span className="titleacts">{dtabrow}</span> : undefined} />
         </div>
+        {narrow && <nav className="ctabs dtabs" aria-label="My decks view">{dtabrow}</nav>}
         <ShortAlert items={short} />
-        <div className="dribbonwrap">
-          {/* The same tiles as the Collection header (Guillermo, Nov 11): one look, one feel. HIDE folds them away. */}
-          <div className={`dribbon${dstats === 'hide' ? ' folded' : ''}`} role="region" aria-label="Deck collection overview">
-          {decks.length > 0 && (
-            <>
-            <section className="stats dstats" hidden={dstats === 'hide'}>
-              <div className="stat">
-                <span className="spray" aria-hidden="true" />
-                <b>{decks.length}</b>{' '}
-                <span>{decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}</span>
-              </div>
-              <div className="stat">
-                <span className="spray" aria-hidden="true" />
-                <b>{readyDecks}</b>{' '}
-                <span>all owned</span>
-              </div>
-              <div className="stat">
-                <span className="spray" aria-hidden="true" />
-                <b>{uniqueCardsInDecks}</b>{' '}
-                <span>unique cards in play</span>
-              </div>
-              <div className="stat red">
-                <span className="spray" aria-hidden="true" />
-                <b>B{avgBracket}</b>{' '}
-                <span>avg power</span>
-              </div>
-              {(['W', 'U', 'B', 'R', 'G'] as const).some((c) => colorCounts[c]) && (
-                <div className="stat dcols" title="How many decks use each colour">
-                  {(['W', 'U', 'B', 'R', 'G'] as const)
-                    .filter((c) => colorCounts[c])
-                    .map((c) => (
-                      <span key={c} className={`ov-pip pip-${c.toLowerCase()}`} title={`${colorCounts[c]} decks include ${c}`}>
-                        {c} <b>{colorCounts[c]}</b>
-                      </span>
-                    ))}
+        {dtab === 'stats' && decks.length > 0 && (
+          <div className="dribbonwrap" id="dpane-stats" role="tabpanel" aria-labelledby="dtab-stats">
+            {/* The same tiles as the Collection header (Guillermo, Nov 11): one look, one feel. */}
+            <div className="dribbon" role="region" aria-label="Deck collection overview">
+              <section className="stats dstats">
+                <div className="stat">
+                  <span className="spray" aria-hidden="true" />
+                  <b>{decks.length}</b> <span>{decks.length === 1 ? 'deck' : 'decks'} in {s.binderName}</span>
                 </div>
-              )}
-            </section>
-            </>
-          )}
+                <div className="stat">
+                  <span className="spray" aria-hidden="true" />
+                  <b>{readyDecks}</b> <span>all owned</span>
+                </div>
+                <div className="stat">
+                  <span className="spray" aria-hidden="true" />
+                  <b>{uniqueCardsInDecks}</b> <span>unique cards in play</span>
+                </div>
+                <div className="stat red">
+                  <span className="spray" aria-hidden="true" />
+                  <b>B{avgBracket}</b> <span>avg power</span>
+                </div>
+                {(['W', 'U', 'B', 'R', 'G'] as const).some((c) => colorCounts[c]) && (
+                  <div className="stat dcols" title="How many decks use each colour">
+                    {(['W', 'U', 'B', 'R', 'G'] as const)
+                      .filter((c) => colorCounts[c])
+                      .map((c) => (
+                        <span key={c} className={`ov-pip pip-${c.toLowerCase()}`} title={`${colorCounts[c]} decks include ${c}`}>
+                          {c} <b>{colorCounts[c]}</b>
+                        </span>
+                      ))}
+                  </div>
+                )}
+              </section>
+            </div>
           </div>
-        </div>
+        )}
+        {dtab === 'decks' && (
+        <>
         {/* Decks Workbench Toolbar (ManaBox-style, Nov 14): row 1 is the search and the sort, row 2 one sliding row of
             status and tag chips. Two slim rows that stay pinned while the deck tiles scroll under them. */}
         <div className="decktoolbar" role="search" aria-label="Deck filters and tools">
@@ -1442,7 +1448,7 @@ export function Decks(s: Shared) {
           </div>
         </div>
         {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
-        <ul className="dgrid cgrid" data-zoom={dzoom}>
+        <ul className="dgrid cgrid" data-zoom={dzoom} id="dpane-decks" role="tabpanel" aria-labelledby="dtab-decks">
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
             // No commander set: show the deck's most expensive card instead of a blank tile.
@@ -1544,6 +1550,8 @@ export function Decks(s: Shared) {
           })}
           {decks.length === 0 && <li className="dempty">No decks yet. Save one from a commander page, or paste a list below.</li>}
         </ul>
+        </>
+        )}
         {importing && <ImportDeckPop profile={s.profile} onClose={() => setImporting(false)} onDone={(id) => (setImporting(false), setOpen(id))} />}
 
 

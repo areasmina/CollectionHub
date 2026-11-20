@@ -129,19 +129,14 @@ export const openImport = async (page: Page) => {
 };
 
 /**
- * The stats: on Collection they live on the ANALYTICS tab (Guillermo, Nov 15, so cards open first); on My Decks they
- * still fold behind SHOW STATS. Either way, this puts them on screen.
+ * The stats: on Collection they live on the ANALYTICS tab (Guillermo, Nov 15, so cards open first); on My Decks on the
+ * STATS tab (Nov 19, the same two faces). Either way, this puts them on screen.
  */
 export const showStats = async (page: Page) => {
-  const tab = page.locator('.coll .ctab', { hasText: 'ANALYTICS' });
-  const fold = page.locator('.dlist .dfold');
-  await expect(tab.or(fold).first()).toBeVisible();
-  if (await tab.count()) {
-    if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
-    await page.locator('.coll .stats > .stat').first().waitFor();
-    return;
-  }
-  if ((await fold.first().getAttribute('aria-expanded')) === 'false') await fold.first().click();
+  const tab = page.locator('.coll .ctab', { hasText: 'ANALYTICS' }).or(page.locator('.dlist .ctab', { hasText: 'STATS' }));
+  await expect(tab.first()).toBeVisible();
+  if ((await tab.first().getAttribute('aria-selected')) !== 'true') await tab.first().click();
+  await page.locator('.stats > .stat').first().waitFor();
 };
 
 /** Wait until the page has stopped growing or shrinking (card pictures and brain data land after the first paint).

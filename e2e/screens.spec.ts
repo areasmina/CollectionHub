@@ -673,10 +673,13 @@ test('Saved deck (overhaul): same hero and strip as the commander page, each fac
 
 test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', async ({ page }) => {
   await go(page, 'decks');
+  await showStats(page); // the facts live on the STATS tab (Nov 19)
+  await fits(page, ['.decksbar', '.dribbon']);
   const ribbon = page.getByRole('region', { name: 'Deck collection overview' });
   await expect(ribbon).toContainText('1 deck in');
   await expect(ribbon).toContainText('1 all owned');
   await expect(ribbon).toContainText('avg power');
+  await page.locator('.dlist .ctab', { hasText: 'DECKS' }).click();
   const tile = page.locator('.dcard').first();
   await expect(tile.locator('.cmatch b')).toHaveText('100%');
   await expect(tile.locator('.cstate.ready')).toHaveText('ALL OWNED');
@@ -684,8 +687,8 @@ test('My decks (overhaul): one ribbon of facts, flat tiles, flat add form', asyn
   const t = await tile.evaluate((e) => getComputedStyle(e).transform);
   expect(t === 'none' || t === 'matrix(1, 0, 0, 1, 0, 0)').toBe(true);
   await expect(page.locator('.dlist .stamp, .dlist .doodles, .addpage .holes')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: '+ NEW BLANK DECK' })).toBeVisible();
-  await fits(page, ['.decksbar', '.dribbon', '.dgrid']);
+  await expect(page.getByRole('button', { name: '+ NEW DECK' })).toBeVisible();
+  await fits(page, ['.decksbar', '.dgrid']);
 });
 
 test('My decks shelf: a long deck name never makes its tile bigger', async ({ page }) => {
@@ -838,8 +841,8 @@ test('Add a deck with 0 saved decks: + DECK on closed overview and + NEW BLANK D
   // Closed overview fold shows + DECK right next to IMPORT
   await expect(page.locator('.slip-btn.deck')).toHaveText('+ DECK');
   await go(page, 'decks');
-  // Inside Decks, MY DECKS has a NEW BLANK DECK button even when 0 decks exist
-  const addBtn = page.locator('.decksactions button', { hasText: 'NEW BLANK DECK' });
+  // Inside Decks, MY DECKS has a + NEW DECK button even when 0 decks exist
+  const addBtn = page.locator('.decksactions button', { hasText: '+ NEW DECK' });
   await expect(addBtn).toBeVisible();
   page.on('dialog', (dialog) => dialog.accept('Test Brew'));
   await addBtn.click();
@@ -882,5 +885,5 @@ test('Cohesive UI overhaul: 3-tab pill nav (DISCOVER · DECKS · COLLECTION), 1-
   // Tap DECKS in the global pill nav to jump straight to MY DECKS from anywhere
   await page.locator('.pillnav .pill button', { hasText: 'DECKS' }).click();
   await expect(page.locator('.decksbar')).toBeVisible();
-  await expect(page.locator('.decksactions button', { hasText: 'NEW BLANK DECK' })).toBeVisible();
+  await expect(page.locator('.decksactions button', { hasText: '+ NEW DECK' })).toBeVisible();
 });
