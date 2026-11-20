@@ -70,6 +70,30 @@ export function ForgeTop({ label, sub, undo, onLeave, onSave, saving, reserved }
       root.removeProperty('--forgetop-h');
     };
   }, []);
+  // The bar knows when it is pinned (Guillermo, Nov 19). With the island on the top edge, the strip above a pinned bar
+  // is filled so nothing scrolls under the island; that fill must not show while the bar still sits in the page,
+  // where it painted a black band over the deck's price line.
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      const top = parseFloat(getComputedStyle(el).top) || 0;
+      el.classList.toggle('stuck', scrollY > 0 && el.getBoundingClientRect().top <= top + 0.5);
+    };
+    const soon = () => void (raf ||= requestAnimationFrame(check));
+    check();
+    addEventListener('scroll', soon, { passive: true });
+    addEventListener('resize', soon);
+    el.addEventListener('transitionend', soon);
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener('scroll', soon);
+      removeEventListener('resize', soon);
+      el.removeEventListener('transitionend', soon);
+    };
+  }, []);
   return (
     <div className="forgetop" role="toolbar" aria-label={`Forge: ${label}`} ref={bar}>
       <span className="fstamp" aria-hidden="true">
