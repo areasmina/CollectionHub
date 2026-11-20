@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { syncNow } from '../lib/autosync';
-import { changeCode, lastBackup, link, pull, push, turnOff, turnOn, undoPull } from '../lib/sync';
+import { changeCode, link, mergeWithCloud, pull, push, turnOff, turnOn } from '../lib/sync';
 import { codeLink, prettyCode } from '../lib/synccode';
 import { useSyncCode, useSyncState } from '../lib/syncstate';
 import { haptic } from '../lib/haptics';
 import { OfflinePics } from './OfflinePics';
+import { SyncBackups } from './SyncBackups';
 
 type Result = { cards: number; decks: number };
 
@@ -15,9 +16,6 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [backupAt, setBackupAt] = useState<number | null>(null);
-
-  useEffect(() => void lastBackup().then(setBackupAt), [busy]);
 
   const run = async (f: () => Promise<string | void>) => {
     setBusy(true);
@@ -132,7 +130,7 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
       {/* Conflict Resolution Banner */}
       {st.status === 'conflict' && (
         <div className="id-sync-conflict-box" role="alert">
-          <b>Pick which copy to keep:</b>
+          <b>Pick which copy to keep, or merge both:</b>
           <p>{st.msg || 'Both this device and the cloud changed since last sync.'}</p>
           <div className="id-sync-act-row">
             <button
@@ -153,6 +151,15 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
               }
             >
               KEEP CLOUD
+            </button>
+            <button
+              type="button"
+              className="id-btn-act"
+              disabled={busy}
+              onClick={() => run(async () => `Merged both: ${counts(await mergeWithCloud({ keepBoth: true }))}. Nothing was removed.`)}
+              title="Keep every card and deck from both copies"
+            >
+              MERGE BOTH
             </button>
           </div>
         </div>
@@ -235,21 +242,6 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
                 CHANGE CODE
               </button>
 
-              {backupAt && (
-                <button
-                  type="button"
-                  className="id-btn-act warning"
-                  disabled={busy}
-                  onClick={() =>
-                    confirm(`Restore binders and decks from before the last pull (${new Date(backupAt).toLocaleString()})?`) &&
-                    run(async () => `Restored: ${counts(await undoPull())}`)
-                  }
-                  title="Restore your data to before the last cloud pull"
-                >
-                  UNDO LAST PULL ({new Date(backupAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
-                </button>
-              )}
-
               {'share' in navigator && (
                 <button
                   type="button"
@@ -280,6 +272,8 @@ export function IslandSync({ onDone }: { onDone?: () => void }) {
           </div>
         </div>
       )}
+
+      <SyncBackups busy={busy} />
 
       <OfflinePics />
 

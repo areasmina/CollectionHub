@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { syncNow } from '../lib/autosync';
-import { changeCode, lastBackup, link, pull, push, turnOff, turnOn, undoPull } from '../lib/sync';
+import { changeCode, lastBackup, link, mergeWithCloud, pull, push, turnOff, turnOn, undoPull } from '../lib/sync';
 import { codeLink, prettyCode } from '../lib/synccode';
 import { hasLegacySession, syncCode, useSyncState } from '../lib/syncstate';
 
@@ -87,13 +87,16 @@ export function SyncPanel({ onClose, incoming = '' }: { onClose: () => void; inc
         <>
           {st.status === 'conflict' ? (
             <div className="syncstate conflict" role="alert">
-              <b>Pick which copy to keep.</b> {st.msg} Automatic sync is paused so nothing gets overwritten.
+              <b>Pick which copy to keep, or merge both.</b> {st.msg} Automatic sync is paused so nothing gets overwritten.
               <div className="row">
                 <button className="btn" disabled={busy} onClick={() => run(async () => `Kept this device: ${counts(await push({ force: true }))}.`)}>
                   KEEP THIS DEVICE
                 </button>
                 <button className="btn secondary" disabled={busy} onClick={() => confirm("Replace both binders and decks on this device with the cloud copy? (Undo last pull can put this device's copy back.)") && run(async () => `Kept the cloud copy: ${counts(await pull())}.`)}>
                   KEEP THE CLOUD
+                </button>
+                <button className="btn secondary" disabled={busy} onClick={() => run(async () => `Merged both: ${counts(await mergeWithCloud({ keepBoth: true }))}. Nothing was removed.`)}>
+                  MERGE BOTH
                 </button>
               </div>
             </div>
