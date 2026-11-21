@@ -6,8 +6,8 @@ process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = '1';
 
 /**
  * Offline card pictures (Phase 5B). These checks run the real service worker (the other checks block it):
- * a picture you have seen shows with no connection, SAVE MY CARDS NOW keeps the small picture of every card you own,
- * and a big picture never seen falls back to that small one instead of a blank card.
+ * a picture you have seen shows with no connection, SAVE MY DECKS NOW keeps the small picture of every card in your
+ * decks (moving one already seen, never a second copy), and a big picture never seen falls back to that small one.
  */
 test.use({ serviceWorkers: 'allow' });
 
@@ -51,8 +51,8 @@ async function saveMine(page: Page) {
   await page.locator('.syncpill .sdot').click();
   const box = page.locator('.island-drawer .id-sync-offline');
   await expect(box).toBeVisible();
-  await box.getByRole('button', { name: 'SAVE MY CARDS NOW' }).click();
-  await expect(box.getByRole('status')).toContainText('every card you own shows offline');
+  await box.getByRole('button', { name: 'SAVE MY DECKS NOW' }).click();
+  await expect(box.getByRole('status')).toContainText('every card in your decks shows offline');
   await expect(box).toContainText(/\d+ saved/);
   return box;
 }
@@ -80,18 +80,35 @@ test('Offline pictures: a picture you have seen shows again with no connection',
   expect(again.filter((u) => u.includes('/normal/'))).toEqual([]);
 });
 
-test('Offline pictures: SAVE MY CARDS NOW keeps every owned card, and a never-seen big picture falls back to it', async ({ page, context }, info) => {
+/** Takes `name` out of the seeded deck (the seed's deck holds every seeded card). */
+const dropFromDeck = (page: Page, name: string) =>
+  page.evaluate(async (name) => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const tx = db.transaction('decks', 'readwrite');
+    const st = tx.objectStore('decks');
+    const all: any[] = await new Promise((ok) => (st.getAll().onsuccess = (e: any) => ok(e.target.result)));
+    for (const d of all) st.put({ ...d, cards: d.cards.filter((c: any) => c.name !== name) });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  }, name);
+const cacheUrls = (page: Page, name: string) => page.evaluate(async (n) => (await (await caches.open(n)).keys()).map((r) => r.url), name);
+
+test('Offline pictures: SAVE MY DECKS NOW keeps every deck card, and a never-seen big picture falls back to it', async ({ page, context }, info) => {
   await picServer(context);
   await mockWorld(page);
   await seed(page);
   await controlled(page);
   await openCollection(page);
   const box = await saveMine(page);
-  const owned = await page.evaluate(async () => {
+  const inDeck = await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
-    return new Promise<number>((ok) => (db.transaction('entries').objectStore('entries').count().onsuccess = (e: any) => ok(e.target.result)));
+    const decks: any[] = await new Promise((ok) => (db.transaction('decks').objectStore('decks').getAll().onsuccess = (e: any) => ok(e.target.result)));
+    return new Set(decks.flatMap((d) => [d.commander, ...d.cards.map((c: any) => c.name)]).filter(Boolean)).size;
   });
-  expect(await cacheSize(page, 'ch-pics-owned')).toBe(owned);
+  expect(inDeck).toBeGreaterThan(2);
+  expect(await cacheSize(page, 'ch-pics-owned')).toBe(inDeck);
+  // a picture kept from looking at it was moved, not stored twice
+  const ahead = new Set(await cacheUrls(page, 'ch-pics-owned'));
+  expect((await cacheUrls(page, 'ch-pics')).filter((u) => ahead.has(u))).toEqual([]);
   await page.screenshot({ path: `test-results/offline-pics-drawer-${info.project.name}.png` });
   await box.page().keyboard.press('Escape');
 
@@ -107,6 +124,29 @@ test('Offline pictures: SAVE MY CARDS NOW keeps every owned card, and a never-se
   const srcs = await tab.locator('.cgrid2 > .ctile .timg img').evaluateAll((imgs) => (imgs as HTMLImageElement[]).slice(0, 3).map((i) => i.currentSrc));
   for (const s of srcs) expect(s).toContain('/small/');
   await context.setOffline(false);
+});
+
+test('Offline pictures: an owned card in no deck is not saved ahead (it is kept only once looked at)', async ({ page, context }) => {
+  await picServer(context);
+  await mockWorld(page);
+  await seed(page);
+  const name = await page.evaluate(async () => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const decks: any[] = await new Promise((ok) => (db.transaction('decks').objectStore('decks').getAll().onsuccess = (e: any) => ok(e.target.result)));
+    return decks[0].cards.find((c: any) => c.name !== decks[0].commander).name as string;
+  });
+  await dropFromDeck(page, name);
+  const id = await page.evaluate(async (name) => {
+    const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
+    const cards: any[] = await new Promise((ok) => (db.transaction('cards').objectStore('cards').getAll().onsuccess = (e: any) => ok(e.target.result)));
+    return cards.find((c) => c.name === name).id as string;
+  }, name);
+  await controlled(page);
+  await openCollection(page);
+  await saveMine(page);
+  const ahead = await cacheUrls(page, 'ch-pics-owned');
+  expect(ahead.length).toBeGreaterThan(1);
+  expect(ahead.some((u) => u.includes(id))).toBe(false);
 });
 
 test('Offline pictures: CLEAR removes the pictures only; binders stay', async ({ page, context }) => {

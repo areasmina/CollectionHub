@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { db } from '../lib/db';
 import { haptic } from '../lib/haptics';
-import { browserDeps, clearPics, OWNED, picCounts, saveOwned } from '../lib/offlinepics';
+import { AHEAD, browserDeps, clearPics, picCounts, saveAhead } from '../lib/offlinepics';
+import { deckPicUrls } from '../lib/deckpics';
 import { cardListAt } from '../lib/cardlist';
 
 /** OFFLINE PICTURES, in the sync drawer (Phase 5B): how many card pictures this device keeps, the space they take,
- *  SAVE MY CARDS NOW (the small picture of every card you own) and CLEAR. Pictures only: binders and decks are never
+ *  SAVE MY DECKS NOW (the small picture of every card in your decks) and CLEAR. Pictures only: binders and decks are never
  *  touched here. */
 export function OfflinePics() {
   const d = browserDeps();
@@ -27,14 +27,12 @@ export function OfflinePics() {
     setMsg('');
     setBusy('save');
     try {
-      const entries = await db.entries.toArray();
-      const cards = await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))]);
-      const r = await saveOwned(
-        cards.map((c) => c?.img ?? ''),
+      const r = await saveAhead(
+        await deckPicUrls(),
         d,
         { force: true, onProgress: (done, all) => setBusy(`save ${done}/${all}`) },
       );
-      setMsg('stopped' in r && r.stopped ? `Saved ${r.saved}; the connection dropped. It carries on next time.` : `Done: every card you own shows offline (${r.saved} new).`);
+      setMsg('stopped' in r && r.stopped ? `Saved ${r.saved}; the connection dropped. It carries on next time.` : `Done: every card in your decks shows offline (${r.saved} new).`);
       haptic('success');
     } catch (e) {
       setMsg(`Couldn't save pictures: ${(e as Error).message}`);
@@ -58,7 +56,7 @@ export function OfflinePics() {
         <span className="id-sync-privacy">{counts ? `${total.toLocaleString()} saved${mb != null ? ` · ${mb} MB` : ''}` : '…'}</span>
       </div>
       <p className="id-sync-desc">
-        Pictures you look at stay on this device. On Wi-Fi, the small picture of every card you own is saved too ({(counts?.[OWNED] ?? 0).toLocaleString()} now), so your binder shows offline.
+        Pictures you look at stay on this device, up to about 100 MB, oldest first. On Wi-Fi, the small picture of every card in your decks is saved too ({(counts?.[AHEAD] ?? 0).toLocaleString()} now), so your decks show offline.
       </p>
       <p className="id-sync-desc id-sync-cardlist">
         {cardListAt()
@@ -67,7 +65,7 @@ export function OfflinePics() {
       </p>
       <div className="id-sync-act-row">
         <button type="button" className="id-btn-act" disabled={!!busy} onClick={saveNow}>
-          {busy.startsWith('save') ? `SAVING${busy.slice(4) ? ` ${busy.slice(5)}` : '…'}` : 'SAVE MY CARDS NOW'}
+          {busy.startsWith('save') ? `SAVING${busy.slice(4) ? ` ${busy.slice(5)}` : '…'}` : 'SAVE MY DECKS NOW'}
         </button>
         <button type="button" className="id-btn-act danger" disabled={!!busy || !total} onClick={clear}>
           CLEAR
