@@ -36,13 +36,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const UA = { 'User-Agent': 'CollectionHub-roles/1.0', Accept: 'application/json' };
 
 async function get(url) {
-  for (let i = 0; i < 4; i++) {
-    const r = await fetch(url, { headers: UA }).catch(() => null);
+  let last = 'no answer';
+  for (let i = 0; i < 6; i++) {
+    const r = await fetch(url, { headers: UA }).catch((e) => ((last = String(e?.cause?.code ?? e)), null));
     if (r?.ok) return r.json();
     if (r && (r.status === 404 || r.status === 400)) return null; // no cards for this tag (or a tag Scryfall does not know)
-    await sleep(2000 * 2 ** i);
+    if (r) last = `${r.status} ${(await r.text().catch(() => '')).slice(0, 200)}`;
+    // Scryfall's own wait when it asks for one (429 Retry-After), else a growing pause: 2, 4, 8, 16, 32 s
+    const wait = Number(r?.headers.get('retry-after')) * 1000 || 2000 * 2 ** i;
+    console.log(`  Scryfall: ${last.split(' ')[0]}, trying again in ${Math.round(wait / 1000)} s`);
+    await sleep(wait);
   }
-  throw new Error(`Scryfall did not answer: ${url}`);
+  throw new Error(`Scryfall did not answer (${last}): ${url}`);
 }
 
 const bits = new Map();
