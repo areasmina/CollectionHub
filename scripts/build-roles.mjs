@@ -1,5 +1,5 @@
 // Builds public/brain/roles.json: card roles from Scryfall Tagger (otag:), the same tags Deck Wizard uses.
-// Run: node scripts/build-roles.mjs   (about 2 minutes; Scryfall asks for ~10 requests a second at most, we do ~8)
+// Run: node scripts/build-roles.mjs   (about 5 minutes; Scryfall asks for ~10 requests a second at most, we do ~8)
 // A monthly GitHub Action reruns it, so the app never asks Scryfall for tags at runtime.
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -11,7 +11,26 @@ const TAGS = {
   wipes: ['sweeper', 'board-wipe'],
   tutors: ['tutor'],
   counters: ['counterspell'],
+  // Other jobs (Nov 21, "card roles" upgrade). Added only at the end: the app reads bits by position (src/brain/data.ts
+  // ROLE_BITS). Several spellings are tried and merged, as Deck Wizard does; recursion and sacrifice-outlet are its own.
+  recursion: ['recursion'],
+  sacOutlet: ['sacrifice-outlet'],
+  tokens: ['token-generator', 'creature-token-generator'],
+  protection: ['protection', 'protects-creature', 'gives-hexproof', 'gives-indestructible'],
+  reanimate: ['reanimate', 'reanimation'],
+  flicker: ['flicker', 'blink'],
+  lifegain: ['lifegain', 'life-gain'],
+  burn: ['burn'],
+  mill: ['mill'],
+  discard: ['discard'],
+  evasion: ['evasion', 'gives-evasion'],
+  anthem: ['anthem'],
+  gyHate: ['graveyard-hate'],
+  costReducer: ['cost-reducer'],
+  extraCombat: ['extra-combat'],
+  steal: ['gain-control', 'steal', 'theft'],
 };
+const CORE = 6; // ramp … counters: an empty one stops the run; an empty newer one is only reported
 const norm = (s) => s.split(/\s\/\/?\s/)[0].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const UA = { 'User-Agent': 'CollectionHub-roles/1.0', Accept: 'application/json' };
@@ -20,7 +39,7 @@ async function get(url) {
   for (let i = 0; i < 4; i++) {
     const r = await fetch(url, { headers: UA }).catch(() => null);
     if (r?.ok) return r.json();
-    if (r && r.status === 404) return null; // no cards for this tag
+    if (r && (r.status === 404 || r.status === 400)) return null; // no cards for this tag (or a tag Scryfall does not know)
     await sleep(2000 * 2 ** i);
   }
   throw new Error(`Scryfall did not answer: ${url}`);
@@ -28,6 +47,7 @@ async function get(url) {
 
 const bits = new Map();
 const counts = {};
+const empty = [];
 for (const [i, [role, tags]] of Object.entries(TAGS).entries()) {
   const seen = new Set();
   for (const tag of tags) {
@@ -46,8 +66,10 @@ for (const [i, [role, tags]] of Object.entries(TAGS).entries()) {
   }
   counts[role] = seen.size;
   console.log(`${role}: ${seen.size} cards`);
-  if (!seen.size) throw new Error(`Tag for ${role} came back empty: check the tag name`);
+  if (!seen.size) empty.push({ role, core: i < CORE });
 }
+if (empty.length) console.log(`::warning::Tags came back empty (check the tag names): ${empty.map((e) => e.role).join(', ')}`);
+if (empty.some((e) => e.core)) throw new Error(`Tag for ${empty.filter((e) => e.core).map((e) => e.role).join(', ')} came back empty: check the tag name`);
 
 const out = { v: 1, at: new Date().toISOString().slice(0, 10), roles: Object.keys(TAGS), counts, cards: Object.fromEntries([...bits].sort()) };
 mkdirSync('public/brain', { recursive: true });

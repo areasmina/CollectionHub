@@ -277,3 +277,12 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Saved ahead on Wi-Fi: only the cards in your decks (decks you play first, up to 1,000, ~16 MB), no longer every
   owned card (up to 5,000, ~80 MB). A picture already kept from looking at it is moved, never stored twice.
 - Not chosen: keeping it as it was (~250 MB), or nothing saved ahead (~50 MB).
+
+## 2026-11-21: Card roles upgrade (Guillermo: "add the cards roles")
+
+- From 6 Scryfall Tagger roles to 22: the six deck-count roles stay as they are (ramp, draw, removal, wipes, tutors,
+  counters, with the same deck targets), and 16 other jobs are added after them in the file, so an older file still reads.
+- The other jobs show in a card's "Does:" line and help pick stand-ins: a shared deck-count role still counts +3, a
+  shared other job +1, so they break ties without outranking what a card does for the deck counts.
+- Fallback when the file doesn't know a card: Deck Wizard's two text rules (recursion, sacrifice outlet). An empty
+  tag for a new job is only reported by the monthly job; an empty one for the first six still stops it.

@@ -8,8 +8,57 @@ import { norm } from '../lib/names';
  * Loaded once, in the background; until then (or offline on a first visit) callers fall back to their own rules.
  */
 
-export const ROLE_BITS = ['ramp', 'draw', 'removal', 'wipes', 'tutors', 'counters'] as const; // = TAGS order in build-roles.mjs
+/** Bit order of roles.json = TAGS order in scripts/build-roles.mjs. New labels are only ever added at the end, so an
+ *  older file still reads right (its cards simply have none of the newer labels). The first six are the deck-count
+ *  roles (lib/deckstats roleOf); the rest (Nov 21, "card roles" upgrade) say what else a card does. */
+export const ROLE_BITS = [
+  'ramp',
+  'draw',
+  'removal',
+  'wipes',
+  'tutors',
+  'counters',
+  'recursion',
+  'sacOutlet',
+  'tokens',
+  'protection',
+  'reanimate',
+  'flicker',
+  'lifegain',
+  'burn',
+  'mill',
+  'discard',
+  'evasion',
+  'anthem',
+  'gyHate',
+  'costReducer',
+  'extraCombat',
+  'steal',
+] as const;
 export type TagRole = (typeof ROLE_BITS)[number];
+/** The first six: counted per deck. */
+export const CORE_ROLES = 6;
+export const CORE_MASK = (1 << CORE_ROLES) - 1;
+/** The other jobs a card can have, in plain words. */
+export const JOB_WORD: Record<Exclude<TagRole, 'ramp' | 'draw' | 'removal' | 'wipes' | 'tutors' | 'counters'>, string> = {
+  recursion: 'recursion',
+  sacOutlet: 'sacrifice outlet',
+  tokens: 'makes tokens',
+  protection: 'protection',
+  reanimate: 'reanimation',
+  flicker: 'flicker',
+  lifegain: 'life gain',
+  burn: 'direct damage',
+  mill: 'mill',
+  discard: 'makes opponents discard',
+  evasion: 'evasion',
+  anthem: 'team pump',
+  gyHate: 'graveyard hate',
+  costReducer: 'cost reduction',
+  extraCombat: 'extra combat',
+  steal: 'steals permanents',
+};
+export type Job = keyof typeof JOB_WORD;
 
 /** A two-card combo, with what the bracket rules need. */
 export interface Combo {
