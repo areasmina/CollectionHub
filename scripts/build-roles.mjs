@@ -1,5 +1,5 @@
 // Builds public/brain/roles.json: card roles from Scryfall Tagger (otag:), the same tags Deck Wizard uses.
-// Run: node scripts/build-roles.mjs   (about 5 minutes; Scryfall asks for ~10 requests a second at most, we do ~8)
+// Run: node scripts/build-roles.mjs   (about 4 minutes: Scryfall allows about 2 searches a second, we do under 2)
 // A monthly GitHub Action reruns it, so the app never asks Scryfall for tags at runtime.
 import { mkdirSync, writeFileSync } from 'node:fs';
 
@@ -15,7 +15,9 @@ const TAGS = {
   // ROLE_BITS). Several spellings are tried and merged, as Deck Wizard does; recursion and sacrifice-outlet are its own.
   recursion: ['recursion'],
   sacOutlet: ['sacrifice-outlet'],
-  tokens: ['token-generator', 'creature-token-generator'],
+  // No Tagger tag found for token makers (Nov 21 run: token-generator and creature-token-generator came back empty), so
+  // this one is a Scryfall text search: cards whose rules text creates a token.
+  tokens: ['o:/\\bcreates? [^.]*\\btokens?\\b/'],
   protection: ['protection', 'protects-creature', 'gives-hexproof', 'gives-indestructible'],
   reanimate: ['reanimate', 'reanimation'],
   flicker: ['flicker', 'blink'],
@@ -56,7 +58,7 @@ const empty = [];
 for (const [i, [role, tags]] of Object.entries(TAGS).entries()) {
   const seen = new Set();
   for (const tag of tags) {
-    let url = `https://api.scryfall.com/cards/search?${new URLSearchParams({ q: `otag:${tag} f:commander`, unique: 'cards' })}`;
+    let url = `https://api.scryfall.com/cards/search?${new URLSearchParams({ q: `${tag.startsWith('o:') ? tag : `otag:${tag}`} f:commander`, unique: 'cards' })}`;
     while (url) {
       const page = await get(url);
       if (!page) break;
@@ -66,7 +68,7 @@ for (const [i, [role, tags]] of Object.entries(TAGS).entries()) {
         bits.set(k, (bits.get(k) ?? 0) | (1 << i));
       }
       url = page.has_more ? page.next_page : null;
-      await sleep(120);
+      await sleep(600); // searches are a heavy call for Scryfall (about 2 a second); faster gets 429 and a 60 s wait
     }
   }
   counts[role] = seen.size;

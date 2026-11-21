@@ -284,5 +284,5 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   counters, with the same deck targets), and 16 other jobs are added after them in the file, so an older file still reads.
 - The other jobs show in a card's "Does:" line and help pick stand-ins: a shared deck-count role still counts +3, a
   shared other job +1, so they break ties without outranking what a card does for the deck counts.
-- Fallback when the file doesn't know a card: Deck Wizard's two text rules (recursion, sacrifice outlet). An empty
+- Fallback when the file doesn't know a card: Deck Wizard's two text rules (recursion, sacrifice outlet). Token makers come from a Scryfall text search (no Tagger tag found). An empty
   tag for a new job is only reported by the monthly job; an empty one for the first six still stops it.
