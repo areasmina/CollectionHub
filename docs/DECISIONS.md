@@ -269,3 +269,11 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   week's change is a few lines. Merging it each week is optional: an older list still works.
 - The app uses the list only when Scryfall can't answer (imports, syncs): online imports still ask Scryfall, because
   prices and exact printings come from there. Not precached; fetched by the app on Wi-Fi at most once a week.
+
+## 2026-11-21: Offline pictures stay light (about 100 MB at most)
+
+- Guillermo's choice on the decision card ("keep a lightweight app"). Pictures are kept as you look at them, the way
+  most apps do it, with lower caps: small 2,500, art crops 150, full size 150, symbols 600.
+- Saved ahead on Wi-Fi: only the cards in your decks (decks you play first, up to 1,000, ~16 MB), no longer every
+  owned card (up to 5,000, ~80 MB). A picture already kept from looking at it is moved, never stored twice.
+- Not chosen: keeping it as it was (~250 MB), or nothing saved ahead (~50 MB).

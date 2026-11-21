@@ -21,7 +21,8 @@ import { norm } from '../lib/names';
 import { fetchedNote, PRICE_METHOD } from '../lib/prices';
 import { cardsByIds } from '../lib/scryfall';
 import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
-import { saveOwnedSoon } from '../lib/offlinepics';
+import { saveAheadSoon } from '../lib/offlinepics';
+import { deckPicUrls } from '../lib/deckpics';
 import { saveCardListSoon } from '../lib/cardlist';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
@@ -323,8 +324,8 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
     if (entries.length)
       cardsByIds(entries.map((e) => e.cardId), 864e5)
         .then((m) => {
-          // On Wi-Fi, keep the small picture of every card you own on this device, so the binder shows offline (5B).
-          void saveOwnedSoon([...m.values()].map((c) => c.img ?? ''));
+          // On Wi-Fi, keep the small picture of every card in your decks on this device, so they show offline (5B).
+          void saveAheadSoon(deckPicUrls);
           // and the app's own card list, so an import or a sync without Scryfall still knows every card (5C)
           saveCardListSoon();
           return snapshot(entries, m);

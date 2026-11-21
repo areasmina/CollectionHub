@@ -20,7 +20,7 @@ const corsPics = {
   requestWillFetch: async ({ request }: { request: Request }) => new Request(request.url, { mode: 'cors', credentials: 'omit' }),
   handlerDidError: async ({ request }: { request: Request }) => fetch(request).catch(() => Response.error()),
 };
-// Small pictures of the cards you own are saved ahead of time into their own cache (src/lib/offlinepics.ts): look there too.
+// Small pictures of your deck cards are saved ahead of time into their own cache (src/lib/offlinepics.ts): look there too.
 const ownedFirst = {
   cachedResponseWillBeUsed: async ({ request, cachedResponse }: { request: Request; cachedResponse?: Response }) =>
     cachedResponse ?? (await (await caches.open('ch-pics-owned')).match(request.url)) ?? null,
@@ -36,12 +36,13 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}', 'brain/*.json'],
         // Card pictures (Phase 5B): every picture you have seen is kept on this device, so it shows offline and is never
         // downloaded twice. Capped, oldest seen goes first (sizes measured Nov 20: small 16 KB, art crop 120 KB, full
-        // size 165 KB): small 3,000 (~50 MB), art crops 400 (~50 MB), full size 400 (~65 MB), symbols 600 (~2 MB).
-        // The small pictures of the cards you own are saved ahead on Wi-Fi: src/lib/offlinepics.ts.
+        // size 165 KB): small 2,500 (~40 MB), art crops 150 (~18 MB), full size 150 (~25 MB), symbols 600 (~2 MB).
+        // With the deck cards saved ahead on Wi-Fi (up to 1,000, ~16 MB: src/lib/offlinepics.ts) that is ~100 MB at
+        // most (Guillermo, Nov 21: keep the app light; it was ~250 MB).
         runtimeCaching: [
-          { urlPattern: /^https:\/\/cards\.scryfall\.io\/small\//, handler: 'CacheFirst', options: { cacheName: PICS, plugins: [corsPics, ownedFirst], expiration: { maxEntries: 3000, maxAgeSeconds: 180 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
-          { urlPattern: /^https:\/\/cards\.scryfall\.io\/art_crop\//, handler: 'CacheFirst', options: { cacheName: PICS_ART, plugins: [corsPics], expiration: { maxEntries: 400, maxAgeSeconds: 180 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
-          { urlPattern: /^https:\/\/cards\.scryfall\.io\//, handler: 'CacheFirst', options: { cacheName: PICS_BIG, plugins: [corsPics], expiration: { maxEntries: 400, maxAgeSeconds: 180 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
+          { urlPattern: /^https:\/\/cards\.scryfall\.io\/small\//, handler: 'CacheFirst', options: { cacheName: PICS, plugins: [corsPics, ownedFirst], expiration: { maxEntries: 2500, maxAgeSeconds: 180 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
+          { urlPattern: /^https:\/\/cards\.scryfall\.io\/art_crop\//, handler: 'CacheFirst', options: { cacheName: PICS_ART, plugins: [corsPics], expiration: { maxEntries: 150, maxAgeSeconds: 180 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
+          { urlPattern: /^https:\/\/cards\.scryfall\.io\//, handler: 'CacheFirst', options: { cacheName: PICS_BIG, plugins: [corsPics], expiration: { maxEntries: 150, maxAgeSeconds: 180 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
           { urlPattern: /^https:\/\/svgs\.scryfall\.io\//, handler: 'CacheFirst', options: { cacheName: SYMBOLS, plugins: [corsPics], expiration: { maxEntries: 600, maxAgeSeconds: 60 * 86400, purgeOnQuotaError: true }, cacheableResponse: { statuses: [200] } } },
         ],
       },
