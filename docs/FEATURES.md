@@ -91,6 +91,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Copies across decks: "you'll need N more copies" (decks are virtual) | Live | 3a.2 | `lib/copies.test.ts` |
 | Deck colours; active decks light their cards in Collection | Live | #6 | `lib/deckcolor.test.ts`, e2e "Deck light" |
 | Swap window: every card swaps, top 3 + search your binder, undo, pins, drag to swap | Live | #6, #9 | `lib/pins.test.ts`, e2e "Swap window: every card swaps", "drag a suggestion" |
+| One score for swap stand-ins (`lib/subs.ts` scoreStandIn): what ties a card to the missing one (Tagger job, EDHREC list, type, mana value), EDHREC's numbers and, on a deck, the brain's own parts (deck needs, combos, themes, copies, taste) add up to one number that orders the picks; the swap window's reasons are the named parts of that same number, so a saved deck's picks can say "fills ramp (deck has 3, Hungry wants 9–12)". Same picks as the two separate scorers gave (all 1,920 rankings of the benchmark identical) | Review | this PR | `tests/bench/swap.test.ts` (48 real decks), `brain/brain.test.ts` "one score for stand-ins", e2e `swap-styling.spec.ts` |
 | Combo warnings in the swap window | Live | #7 | `brain/round2.test.ts` |
 | Forge: first swap starts it, leaving asks to save, change commander with undo | Live | #6, #8 | e2e "Forging zone", "Forge: the big commander card is its menu" |
 | Full Forge: focus mode + top bar (undo, save, leave, RESERVED), ANALYSIS meters, live suggestions (OUR PICK / EDHREC LIFT / POPULAR, needs + theme chips, own-card search), tap-tap and drag incl. touch, phone bottom sheet, TO BUY pane | Live | #20 | `brain/brain.test.ts` (theme part), `e2e/forge.spec.ts` |
@@ -107,7 +108,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Export: Moxfield .txt, Copy for MTG Arena, CSV | Live | #20 | `lib/export.test.ts` |
 | Swaps keep the deck organised by type | Live | #6 | `lib/sections.test.ts`, e2e "Swapping keeps the deck organised" |
 | Bracket estimate with reasons; combo-aware (Spellbook two-card combos) | Live | #7 | `brain/brackets.test.ts` |
-| Card roles from Scryfall Tagger (ramp, draw, removal…), plus 16 other jobs (recursion, sacrifice outlet, token maker, protection, reanimation, flicker, life gain, direct damage, mill, discard, evasion, team pump, graveyard hate, cost reduction, extra combat, stealing): shown in "Does:" and used to match stand-ins; they never count toward the deck targets | Live (other jobs: Review) | #7; other jobs, this PR | `brain/roles.test.ts` |
+| Card roles from Scryfall Tagger (ramp, draw, removal…), plus 16 other jobs (recursion, sacrifice outlet, token maker, protection, reanimation, flicker, life gain, direct damage, mill, discard, evasion, team pump, graveyard hate, cost reduction, extra combat, stealing): shown in "Does:" and used to match stand-ins; they never count toward the deck targets | Live | #7; other jobs #102 | `brain/roles.test.ts` |
 | Salt (EDHREC top 1,000) | Live | 2026-10-12 | `lib/salt.test.ts` |
 | Legality and completeness checks (100 cards, singleton, colour identity) | Partial | – | banned cards flagged (#11); the rest not done |
 | Physical copy reservations (optional per deck: shared or reserved; shared stays default), copy status per deck | Live | #12, #14 | `lib/allocation.test.ts` |

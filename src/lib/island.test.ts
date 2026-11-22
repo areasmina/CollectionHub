@@ -62,6 +62,14 @@ describe('islandScroll: away as you go down, back once you have really pulled up
   it('one tiny step down mid-page alone does not hide it', () => {
     expect(islandScroll('top', at(1200), 1204, view, page).away).toBe(false);
   });
+  it('the page getting shorter at its end pulls the view up, but that is not you scrolling up: it stays away', () => {
+    let s = islandScroll('top', at(1200), page - view, view, page); // down to the end
+    expect(s.away).toBe(true);
+    s = islandScroll('top', s, page - view - 150, view, page - 150); // 150px less page: the view is pulled up 150px
+    expect(s.away).toBe(true);
+    s = islandScroll('top', s, page - view - 250, view, page - 150); // then a real move up brings it back
+    expect(s.away).toBe(false);
+  });
   it('still shows where the page leaves room on its own edge', () => {
     expect(islandScroll('top', at(1200, true), 10, view, page).away).toBe(false);
     expect(islandScroll('bottom', at(1200, true), page - view, view, page).away).toBe(false);

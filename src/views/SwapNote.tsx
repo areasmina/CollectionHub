@@ -1,9 +1,10 @@
 import { haptic } from '../lib/haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { type PinSide } from '../lib/pins';
 import { searchByText } from '../lib/search';
 import { reasonsFor, whyIn, type SubCard } from '../lib/subs';
 import { comboBreaks, swapEffect } from '../brain/combos';
+import { deckNeeds, type DeckContext, type Needs } from '../brain/score';
 import { scryfallUrl, showPreview } from './shared';
 import { WhyCard } from './Verdict';
 import type { Why } from '../brain/why';
@@ -21,15 +22,16 @@ export interface SwapOption {
 }
 
 /** A suggestion row: hover (mouse) shows it in the viewer; press and hold (touch) shows it full screen; tap swaps. */
-function Option({ o, missing, notes = [], onPick, onLook }: { o: SwapOption; missing: SubCard; notes?: { text: string; warn?: boolean }[]; onPick: () => void; onLook: (src?: string) => void }) {
+function Option({ o, missing, ctx, needs, notes = [], onPick, onLook }: { o: SwapOption; missing: SubCard; ctx?: DeckContext; needs?: Needs; notes?: { text: string; warn?: boolean }[]; onPick: () => void; onLook: (src?: string) => void }) {
   const timer = useRef<number>(undefined);
   const held = useRef(false);
   // The swap list reads at a glance (Guillermo, Nov 15): lift and inclusion as numbers, then at most two reasons in words.
-  // The numbers and "you own" have their own spots, so they're not repeated among the reasons.
+  // The numbers and "you own" have their own spots, so they're not repeated among the reasons; nor are combos (their
+  // own line below). The reasons are the named parts of the same score that ordered the list (lib/subs.ts scoreStandIn).
   const signal = o.sub.lift ?? undefined;
   const lift = signal !== undefined ? `${signal.toFixed(1)}× lift` : o.sub.synergy ? `${o.sub.synergy > 0 ? '+' : ''}${Math.round(o.sub.synergy * 100)}% synergy` : undefined;
-  const why = reasonsFor(missing, o.sub, o.owned)
-    .filter((r) => !/x lift$| synergy$|^In \d+% of decks$|^You own/.test(r))
+  const why = reasonsFor(missing, o.sub, o.owned, ctx, needs)
+    .filter((r) => !/x lift$| synergy$|^In \d+% of decks$|^You own|^combo with /.test(r))
     .slice(0, 2);
   return (
     <li>
@@ -107,7 +109,9 @@ export function SwapNote({
   deck,
   bracket = 4,
   whyCard,
+  ctx,
 }: {
+  ctx?: DeckContext; // the deck the stand-ins were ranked for: the reasons then include the brain's (deck needs, themes…)
   deck?: string[]; // every card in the deck now (commander included): for combo warnings
   whyCard?: Why; // the brain's "Why this card?" for the card in the slot now
   bracket?: number; // 2–5: which combos the rules allow
@@ -149,6 +153,7 @@ export function SwapNote({
     return () => (document.removeEventListener('keydown', key), back?.focus?.({ preventScroll: true }));
   }, []);
   const shown = look ?? big;
+  const needs = useMemo(() => (ctx ? deckNeeds(ctx) : undefined), [ctx]);
   const why = whyIn(missing);
   const now = replaced ?? name;
   const top = new Set(options.map((o) => o.sub.name));
@@ -169,7 +174,7 @@ export function SwapNote({
       ...e.gained.map((c) => (e.gainedBlocked.includes(c) ? { text: `▲ completes ${c.cards.join(' + ')}: not allowed in bracket ${bracket}`, warn: true } : { text: `combo: ${c.cards.join(' + ')}` })),
     ];
   };
-  const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} notes={notesFor(o)} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
+  const row = (o: SwapOption) => <Option key={o.sub.name} o={o} missing={missing} ctx={ctx} needs={needs} notes={notesFor(o)} onPick={() => (setQ(''), onPick(o.sub.name))} onLook={setLook} />;
   return (
     <div ref={box} tabIndex={-1} className="note-pop swapnote" role="dialog" aria-modal="true" aria-label={`Swap ${now}`} onClick={(e) => e.stopPropagation()}>
       <div className="nh">

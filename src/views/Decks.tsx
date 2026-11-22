@@ -761,6 +761,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [placing, setPlacing] = useState<string | null>(null); // a suggestion picked: the next deck card tapped is swapped
   const forgeCands = [...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never));
   const anyCard = (n: string) => byKey.get(norm(n)) ?? binderCard.get(norm(n)) ?? edhCards.get(norm(n));
+  // The deck the swap window ranks stand-ins for, and names its reasons from (lib/subs.ts scoreStandIn).
+  const swapCtx = { deck: deck.cards, cardOf: anyCard, commander: deck.commander, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0], taken: takenOthers };
   const sugImg = (n: string) => binderCard.get(norm(n))?.img ?? edhCards.get(norm(n))?.img ?? byKey.get(norm(n))?.img;
   async function addCard(n: string) {
     if (cmdr && offIdentity([n], ci, (x) => anyCard(x)?.ci).length) return; // hard rule: never outside the colours
@@ -1020,7 +1022,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                               name={c.name}
                               missing={slotInfo(c.name)}
                               big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
-                              options={rankSubs(slotInfo(c.name), candidates, 3, { deck: deck.cards, cardOf: anyCard, commander: deck.commander, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0], taken: takenOthers }).map(optionOf)}
+                              ctx={swapCtx}
+                              options={rankSubs(slotInfo(c.name), candidates, 3, swapCtx).map(optionOf)}
                               pool={forgePool()}
                               loading={!!deck.commander && !recs}
                               pin={pinOf(pins, c.name)}

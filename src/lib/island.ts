@@ -22,8 +22,8 @@ export function islandRests(dock: IslandDock, scrollY: number, viewH: number, pa
  *  reader scrolling up, and the island would flicker on and off at the end of a page. */
 export const ISLAND_BACK = 64;
 
-/** What the island remembers between scroll events. */
-export type IslandScroll = { away: boolean; lastY: number; up: number };
+/** What the island remembers between scroll events (`pageH`: the page height at the last one, when known). */
+export type IslandScroll = { away: boolean; lastY: number; up: number; pageH?: number };
 
 /**
  * The island after one scroll event. Where the page leaves room on the island's own edge it always shows. Otherwise it
@@ -32,15 +32,18 @@ export type IslandScroll = { away: boolean; lastY: number; up: number };
  */
 export function islandScroll(dock: IslandDock, s: IslandScroll, y: number, viewH: number, pageH: number): IslandScroll {
   const dy = y - s.lastY;
-  if (islandRests(dock, y, viewH, pageH)) return { away: false, lastY: y, up: 0 };
+  if (islandRests(dock, y, viewH, pageH)) return { away: false, lastY: y, up: 0, pageH };
+  // The page got shorter while you were at its end (a late picture or font, a list closing): the browser pulls the view
+  // up by what was lost. Nobody scrolled up, so the island stays as it was.
+  if (dy < 0 && s.pageH != null && pageH < s.pageH && y + viewH >= pageH - 2) return { ...s, lastY: y, pageH };
   // Leaving the rest zone downward sends it away at once, however small the step (a late image or font can nudge the
   // view a few px past the zone's edge, and the island would stay over the content there).
-  if (dy > 6 || (dy > 0 && islandRests(dock, s.lastY, viewH, pageH))) return { away: true, lastY: y, up: 0 };
+  if (dy > 6 || (dy > 0 && islandRests(dock, s.lastY, viewH, pageH))) return { away: true, lastY: y, up: 0, pageH };
   // A small step down is kept from where the last one started, so a slow, steady scroll adds up and still sends it away.
-  if (dy > 0) return s;
+  if (dy > 0) return { ...s, pageH };
   if (dy < 0) {
     const up = s.up - dy;
-    return up >= ISLAND_BACK ? { away: false, lastY: y, up: 0 } : { ...s, lastY: y, up };
+    return up >= ISLAND_BACK ? { away: false, lastY: y, up: 0, pageH } : { ...s, lastY: y, up, pageH };
   }
-  return s;
+  return { ...s, pageH };
 }

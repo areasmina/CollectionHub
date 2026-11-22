@@ -70,15 +70,16 @@ test('Collection opens as one block: four lanes, no gaps between them, cards nea
   const phone = info.project.name === 'phone';
   if (!phone) await expect(page.locator('.coll .titleacts .ctab').first()).toBeVisible();
   const lanes = phone ? ['.coll .ctabs', '.coll .coll-listbar', '.coll .collbar'] : ['.coll .coll-listbar', '.coll .collbar'];
-  const boxes = [];
-  for (const sel of lanes) {
-    const b = (await page.locator(sel).boundingBox())!;
-    expect(b, `${sel} is missing`).toBeTruthy();
-    boxes.push(b);
-  }
+  for (const sel of lanes) await expect(page.locator(sel), `${sel} is missing`).toBeVisible();
   // the lanes touch: no empty band between the tabs, the list ribbon and the tools
-  // (neighbouring lanes share their 2px rule, so a 2px overlap is that rule, not a gap)
-  for (let i = 1; i < boxes.length; i++) expect(Math.abs(boxes[i].y - (boxes[i - 1].y + boxes[i - 1].height)), 'a gap opened between the lanes').toBeLessThanOrEqual(3);
+  // (neighbouring lanes share their 2px rule, so a 2px overlap is that rule, not a gap). Measured once the page has
+  // stopped laying out: on a slow machine the lanes were read one by one while a late font still moved them.
+  const gaps = async () => {
+    const boxes = [];
+    for (const sel of lanes) boxes.push((await page.locator(sel).boundingBox())!);
+    return Math.max(...boxes.slice(1).map((b, i) => Math.abs(b.y - (boxes[i].y + boxes[i].height))));
+  };
+  await expect.poll(gaps, { message: 'a gap opened between the lanes' }).toBeLessThanOrEqual(3);
   // the binder starts near the top, not a third of the way down
   const first = (await page.locator('#cpane-cards .zgrid, #cpane-cards .clist').first().boundingBox())!;
   // a phone's ransom title is small, so the cards sit right under it; wider screens keep the big title's full height

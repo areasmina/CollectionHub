@@ -1332,6 +1332,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                                       big={imgOf(c.id, 'normal')}
                                       replaced={repl}
                                       loading={!recs}
+                                      ctx={brainCtx}
                                       options={suggest(c, brainCtx).map(optionOf)}
                                       pool={binder
                                         .filter((b) => b.ci.every((x) => ci.includes(x)) && !inDeck.has(b.key) && !never.has(b.key) && b.key !== norm(name))

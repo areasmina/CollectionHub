@@ -65,13 +65,39 @@ test('Island docked top: at the end of Collection it is not sitting on + DECK or
   await open(page, 'top', 'collection');
   await page.waitForSelector('.timg');
   await settled(page); // measure the island, not a page still laying out
+  // A log of every scroll and every time the island comes or goes, shown if the check fails: it has failed now and
+  // then on CI only, and the log says which move brought the island back.
+  await page.evaluate(() => {
+    const t0 = performance.now();
+    const log: string[] = ((window as unknown as { islandLog: string[] }).islandLog = []);
+    const at = () => `${Math.round(performance.now() - t0)}ms y=${Math.round(scrollY * 10) / 10} h=${document.documentElement.scrollHeight}`;
+    addEventListener('scroll', () => log.push(`scroll ${at()}`), { passive: true });
+    new MutationObserver(() => log.push(`${document.querySelector('.pillnav.away') ? 'away' : 'shown'} ${at()} focus=${document.activeElement?.className ?? ''}`)).observe(document.querySelector('.pillnav')!, { attributes: true, attributeFilter: ['class'] });
+  });
   await toEnd(page);
   await page.waitForTimeout(500);
   if (!(await page.evaluate(() => scrollY >= 80))) return; // the page does not scroll past the island's rest zone
   // Either the island has gone away (it slides off its edge and stops taking taps), or it is showing with nothing
   // tappable under it. Both ways the band's buttons answer to a tap where they are.
-  if (!(await page.locator('.pillnav.away').count())) expect(await covered(page)).toEqual([]);
+  const log = () => page.evaluate(() => (window as unknown as { islandLog: string[] }).islandLog.join('\n'));
+  if (!(await page.locator('.pillnav.away').count())) expect(await covered(page), `island log:\n${await log()}`).toEqual([]);
   expect(await bandReachable(page)).toEqual([]);
+});
+
+test('Island docked top: the page getting shorter at its end does not bring it back over the content', async ({ page }) => {
+  // A late picture, font or list change can shorten the page while you are at its end; the browser then pulls the view
+  // up, which used to read as you scrolling up (seen on slow CI machines, covering + DECK and IMPORT).
+  await open(page, 'top', 'collection');
+  await page.waitForSelector('.timg');
+  await settled(page);
+  await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 2}px`));
+  await toEnd(page);
+  await expect(page.locator('.pillnav.away')).toHaveCount(1);
+  await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 2 - 150}px`));
+  await page.waitForTimeout(400);
+  await expect(page.locator('.pillnav.away')).toHaveCount(1);
+  await page.mouse.wheel(0, -200); // a real move up still brings it back
+  await expect(page.locator('.pillnav.away')).toHaveCount(0);
 });
 
 test('Island docked bottom: shows at the top and the end of a page, away while going down, and the end has room for it', async ({ page }) => {
