@@ -74,6 +74,22 @@ test('Island docked top: at the end of Collection it is not sitting on + DECK or
   expect(await bandReachable(page)).toEqual([]);
 });
 
+test('Island docked top: the page getting shorter at its end does not bring it back over the content', async ({ page }) => {
+  // A late picture, font or list change can shorten the page while you are at its end; the browser then pulls the view
+  // up, which used to read as you scrolling up (seen on slow CI machines, covering + DECK and IMPORT).
+  await open(page, 'top', 'collection');
+  await page.waitForSelector('.timg');
+  await settled(page);
+  await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 2}px`));
+  await toEnd(page);
+  await expect(page.locator('.pillnav.away')).toHaveCount(1);
+  await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 2 - 150}px`));
+  await page.waitForTimeout(400);
+  await expect(page.locator('.pillnav.away')).toHaveCount(1);
+  await page.mouse.wheel(0, -200); // a real move up still brings it back
+  await expect(page.locator('.pillnav.away')).toHaveCount(0);
+});
+
 test('Island docked bottom: shows at the top and the end of a page, away while going down, and the end has room for it', async ({ page }) => {
   await open(page, 'bottom', 'collection');
   await page.waitForSelector('.timg');
