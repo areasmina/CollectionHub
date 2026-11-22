@@ -60,10 +60,16 @@ test('Backups: each backup is listed and restorable; the copy replaced becomes a
   await expect(rows.first()).toContainText('2 cards');
   // each row fits the drawer: its RESTORE stays inside, nothing runs off the side
   await box.scrollIntoViewIfNeeded();
-  for (const r of await rows.all()) {
-    const [li, btn] = [await r.boundingBox(), await r.getByRole('button', { name: 'RESTORE' }).boundingBox()];
-    expect(btn!.x + btn!.width).toBeLessThanOrEqual(li!.x + li!.width + 1);
-  }
+  // (read once the drawer has finished opening: mid-slide the row and its button were measured a frame apart)
+  const overflow = async () => {
+    let worst = -Infinity;
+    for (const r of await rows.all()) {
+      const [li, btn] = [await r.boundingBox(), await r.getByRole('button', { name: 'RESTORE' }).boundingBox()];
+      worst = Math.max(worst, btn!.x + btn!.width - (li!.x + li!.width));
+    }
+    return worst;
+  };
+  await expect.poll(overflow, { message: 'RESTORE runs off its row' }).toBeLessThanOrEqual(1);
   page.once('dialog', (d) => d.accept());
   await rows.first().getByRole('button', { name: 'RESTORE' }).click();
   await expect(box.getByRole('status')).toContainText('Restored: 2 cards');
