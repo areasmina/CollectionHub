@@ -286,3 +286,12 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   shared other job +1, so they break ties without outranking what a card does for the deck counts.
 - Fallback when the file doesn't know a card: Deck Wizard's two text rules (recursion, sacrifice outlet). Token makers come from a Scryfall text search (no Tagger tag found). An empty
   tag for a new job is only reported by the monthly job; an empty one for the first six still stops it.
+
+## 2026-11-22: One score for swap stand-ins (Guillermo: "swap scoring?", go-ahead via the coordinator)
+
+- The swap window's matcher and the brain's scoreCard are one score now (`lib/subs.ts` scoreStandIn), on the brain's
+  scale. The swap weights are the old ones divided by 4, so every pick stays what it was: checked on the new swap
+  benchmark (`tests/bench/swap.test.ts`, 48 real decks, 10 hidden cards each, both callers, both binders).
+- The reasons under each pick are the parts of that same score. On a deck the brain's parts (deck needs, themes,
+  copies, taste) can now be named; combos are not repeated there, they keep their own line. Still at most two reasons.
+- Changing the weights is a separate step, to be measured on the benchmark first.

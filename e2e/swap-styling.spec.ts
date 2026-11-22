@@ -34,6 +34,9 @@ test('Swap window: dark neo-brutalist styling, clean composition, refined undo b
   await expect(pickItem.locator('.ostats .oincl')).toHaveText('20% of decks');
   await expect(pickItem.locator('.owhy')).toBeVisible();
   expect(await pickItem.locator('.owhy').evaluate((el) => el.textContent!.split(' · ').length)).toBeLessThanOrEqual(2);
+  // The reasons come from the same score that ordered the picks, deck needs included (lib/subs.ts scoreStandIn): the
+  // mock deck has 3 ramp cards, under what the dial wants.
+  await expect(pickItem.locator('.owhy')).toContainText(/fills ramp \(deck has \d+, \w+ wants \d+–\d+\)/);
   for (const sel of ['.olift', '.owhy']) expect(await pickItem.locator(sel).evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgb(255, 255, 255)');
 
   // Take screenshot of standard swap window

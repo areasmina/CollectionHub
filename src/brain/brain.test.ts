@@ -5,7 +5,7 @@ import { pickWildcards, seedOf } from './wildcard';
 import { addTaste, pinTaste, tasteFor, tasteSummary, type TasteEvent } from './taste';
 import { scoreCard, suggestCards, type DeckContext } from './score';
 import { themeOf } from './themes';
-import { rankSubs } from '../lib/subs';
+import { rankSubs, reasonsFor, scoreStandIn } from '../lib/subs';
 
 const t = (type: string, text: string, cmc = 2) => ({ type, text, cmc, mana: '' });
 const CARDS: Record<string, ReturnType<typeof t>> = {
@@ -159,6 +159,25 @@ describe('suggestions follow the deck (proof the brain is personal and live)', (
       ctxB3,
     );
     expect(subs.map((c) => c.name)).toEqual(['Harmonize']);
+  });
+  it('one score for stand-ins: the order is the sum of the parts, and the reasons are those parts', () => {
+    const ctx = base(['Forest']); // a deck with no ramp, so ramp is a need
+    const missing = { name: 'Cultivate', category: 'Ramp', type: 'Sorcery', cmc: 3 };
+    const sub = { name: "Kodama's Reach", category: 'Ramp', type: 'Sorcery', cmc: 3, lift: 1.6, incl: 0.4 };
+    const sc = scoreStandIn(missing, sub, ctx);
+    expect(sc.total).toBeCloseTo(sc.parts.reduce((n, p) => n + p.value, 0), 12);
+    // the deck's need is one of the parts, and the swap window names it among the reasons
+    const need = sc.parts.find((p) => /^fills ramp/.test(p.label));
+    expect(need?.source).not.toBe('EDHREC');
+    expect(reasonsFor(missing, sub, 0, ctx)).toContain(need!.label);
+    // without a deck (the commander page's auto-fill), only what ties the two cards together and EDHREC
+    expect(reasonsFor(missing, sub)).toEqual(['Same role: Ramp', 'Sorcery like it', 'Same mana value (3)', '1.6x lift', 'In 40% of decks']);
+    expect(scoreStandIn(missing, sub).parts.every((p) => p.source !== 'deck needs' && !/^fills/.test(p.label))).toBe(true);
+  });
+  it('a stand-in the bracket forbids is marked blocked and never offered', () => {
+    setBrainData({ combos });
+    const ctxB3 = base(["Thassa's Oracle"], { bracket: 3 });
+    expect(scoreStandIn({ name: 'Brainstorm', type: 'Instant', cmc: 1 }, { name: 'Demonic Consultation', type: 'Instant', cmc: 1 }, ctxB3).blocked).toMatch(/bracket 3/);
   });
   it('flags a card that completes a combo the bracket forbids, and rewards it where allowed', () => {
     setBrainData({ combos });
