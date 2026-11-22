@@ -65,12 +65,22 @@ test('Island docked top: at the end of Collection it is not sitting on + DECK or
   await open(page, 'top', 'collection');
   await page.waitForSelector('.timg');
   await settled(page); // measure the island, not a page still laying out
+  // A log of every scroll and every time the island comes or goes, shown if the check fails: it has failed now and
+  // then on CI only, and the log says which move brought the island back.
+  await page.evaluate(() => {
+    const t0 = performance.now();
+    const log: string[] = ((window as unknown as { islandLog: string[] }).islandLog = []);
+    const at = () => `${Math.round(performance.now() - t0)}ms y=${Math.round(scrollY * 10) / 10} h=${document.documentElement.scrollHeight}`;
+    addEventListener('scroll', () => log.push(`scroll ${at()}`), { passive: true });
+    new MutationObserver(() => log.push(`${document.querySelector('.pillnav.away') ? 'away' : 'shown'} ${at()} focus=${document.activeElement?.className ?? ''}`)).observe(document.querySelector('.pillnav')!, { attributes: true, attributeFilter: ['class'] });
+  });
   await toEnd(page);
   await page.waitForTimeout(500);
   if (!(await page.evaluate(() => scrollY >= 80))) return; // the page does not scroll past the island's rest zone
   // Either the island has gone away (it slides off its edge and stops taking taps), or it is showing with nothing
   // tappable under it. Both ways the band's buttons answer to a tap where they are.
-  if (!(await page.locator('.pillnav.away').count())) expect(await covered(page)).toEqual([]);
+  const log = () => page.evaluate(() => (window as unknown as { islandLog: string[] }).islandLog.join('\n'));
+  if (!(await page.locator('.pillnav.away').count())) expect(await covered(page), `island log:\n${await log()}`).toEqual([]);
   expect(await bandReachable(page)).toEqual([]);
 });
 
