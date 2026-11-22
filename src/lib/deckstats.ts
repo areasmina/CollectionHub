@@ -1,4 +1,4 @@
-import { brainData, loadBrainData, ROLE_BITS, type Combo } from '../brain/data';
+import { brainData, CORE_ROLES, JOB_WORD, loadBrainData, ROLE_BITS, type Combo, type Job } from '../brain/data';
 import type { Card, DeckCard } from './db';
 import { norm } from './names';
 
@@ -58,6 +58,26 @@ export function roleOf(c: Pick<Card, 'type' | 'text'> & { name?: string }): Role
     return ROLES[r].test(r === 'draw' ? text.replace(OPP_DRAW, '') : text);
   });
 }
+
+// Fallback for two of the other jobs, ported from Deck Wizard (legacy/DeckWizard/deck_wizard.py regex_roles):
+// "return ... card(s) from your/a graveyard" is recursion; "sacrifice a/another creature/permanent/artifact ...:" is a
+// sacrifice outlet (a cost, so it is yours to use at will). The rest come only from the Tagger file.
+const JOB_TEXT: Partial<Record<Job, RegExp>> = {
+  recursion: /return [^.]*cards? from (your|a) graveyard/i,
+  sacOutlet: /sacrifice (a|another) (creature|permanent|artifact)[^.]*:/i,
+};
+
+/**
+ * The other jobs a card does (recursion, sacrifice outlet, token maker, protection…): Scryfall Tagger tags when the
+ * card is in the brain's roles file, else the two Deck Wizard text rules. These never count toward the deck targets.
+ */
+export function extraJobs(c: Pick<Card, 'type' | 'text'> & { name?: string }): Job[] {
+  if (isLand(c.type)) return [];
+  const bits = c.name != null ? brainData().roles?.get(norm(c.name)) : undefined;
+  if (bits != null) return ROLE_BITS.slice(CORE_ROLES).filter((_, i) => bits & (1 << (i + CORE_ROLES))) as Job[];
+  return (Object.keys(JOB_TEXT) as Job[]).filter((j) => JOB_TEXT[j]!.test(c.text ?? ''));
+}
+export const jobWord = (j: Job) => JOB_WORD[j];
 
 export const MLD = /(destroy|exile) all lands|each player sacrifices (all|\w+) lands|lands don't untap|players can't untap more than one land|nonbasic lands are mountains|each land is a/i;
 export const EXTRA_TURN = /takes? an extra turn/i;

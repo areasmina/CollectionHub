@@ -23,7 +23,7 @@ function signalTag(c: SubCard): string | undefined {
   return c.synergy && c.synergy >= 0.05 ? `+${pctOf(c.synergy)} synergy` : undefined;
 }
 
-import { brainData, ROLE_BITS } from '../brain/data';
+import { brainData, CORE_MASK, CORE_ROLES, JOB_WORD, ROLE_BITS, type Job } from '../brain/data';
 import { deckNeeds, scoreCard, type DeckContext, type Needs } from '../brain/score';
 import { BASICS } from './compare';
 import { norm } from './names';
@@ -33,6 +33,8 @@ export const mainType = (type = '') => TYPES.find((t) => type.includes(t)) ?? ''
 
 /** A card's Scryfall Tagger roles by name (bits of ROLE_BITS), when the brain's roles file knows it. */
 const tagBits = (name: string) => brainData().roles?.get(norm(name));
+/** A Tagger role in plain words (the deck-count roles keep their short names). */
+const roleWord = (r: (typeof ROLE_BITS)[number]) => (r in JOB_WORD ? JOB_WORD[r as Job] : r);
 /** Roles two cards share, by Tagger tags (undefined when either card isn't tagged). */
 export function sharedRoles(a: string, b: string): (typeof ROLE_BITS)[number][] | undefined {
   const x = tagBits(a);
@@ -51,10 +53,14 @@ export function sharedRoles(a: string, b: string): (typeof ROLE_BITS)[number][] 
 export function rankSubs(missing: SubCard, candidates: SubCard[], n = 3, ctx?: DeckContext, preNeeds?: Needs): SubCard[] {
   const mBits = tagBits(missing.name);
   const nd = ctx ? (preNeeds ?? deckNeeds(ctx)) : undefined;
+  // Each shared deck-count role (ramp, draw, removal…) +3; each shared other job (recursion, sacrifice outlet…) +1.
+  // A card doing none of the missing card's deck-count jobs -3, as before the other jobs existed.
   const job = (c: SubCard) => {
     const shared = sharedRoles(missing.name, c.name);
     if (!shared) return 0;
-    return shared.length ? 3 * shared.length : mBits ? -3 : 0;
+    const core = shared.filter((r) => ROLE_BITS.indexOf(r) < CORE_ROLES).length;
+    const other = shared.length - core;
+    return core ? 3 * core + other : (mBits ?? 0) & CORE_MASK ? -3 : other;
   };
   const brainBonus = (c: SubCard) => {
     if (!ctx || !nd) return 0;
@@ -101,7 +107,7 @@ export function reasonsFor(missing: SubCard, sub: SubCard, owned = 0, ctx?: Deck
   const out: string[] = [];
   if (missing.category && sub.category === missing.category) out.push(`Same role: ${missing.category}`);
   const job = sharedRoles(missing.name, sub.name);
-  if (job?.length) out.push(`Same job: ${job.join(', ')} (Scryfall Tagger)`);
+  if (job?.length) out.push(`Same job: ${job.map(roleWord).join(', ')} (Scryfall Tagger)`);
   if (ctx) {
     const sc = scoreCard(sub, ctx);
     for (const p of sc.parts) {

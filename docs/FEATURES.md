@@ -107,7 +107,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Export: Moxfield .txt, Copy for MTG Arena, CSV | Live | #20 | `lib/export.test.ts` |
 | Swaps keep the deck organised by type | Live | #6 | `lib/sections.test.ts`, e2e "Swapping keeps the deck organised" |
 | Bracket estimate with reasons; combo-aware (Spellbook two-card combos) | Live | #7 | `brain/brackets.test.ts` |
-| Card roles from Scryfall Tagger (ramp, draw, removal…) | Live | #7 | `brain/roles.test.ts` |
+| Card roles from Scryfall Tagger (ramp, draw, removal…), plus 16 other jobs (recursion, sacrifice outlet, token maker, protection, reanimation, flicker, life gain, direct damage, mill, discard, evasion, team pump, graveyard hate, cost reduction, extra combat, stealing): shown in "Does:" and used to match stand-ins; they never count toward the deck targets | Live (other jobs: Review) | #7; other jobs, this PR | `brain/roles.test.ts` |
 | Salt (EDHREC top 1,000) | Live | 2026-10-12 | `lib/salt.test.ts` |
 | Legality and completeness checks (100 cards, singleton, colour identity) | Partial | – | banned cards flagged (#11); the rest not done |
 | Physical copy reservations (optional per deck: shared or reserved; shared stays default), copy status per deck | Live | #12, #14 | `lib/allocation.test.ts` |

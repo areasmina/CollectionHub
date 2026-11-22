@@ -1,5 +1,5 @@
 import type { SubCard } from '../lib/subs';
-import { isEarly, roleOf, roleSource, type Role } from '../lib/deckstats';
+import { extraJobs, isEarly, jobWord, roleOf, roleSource, type Role } from '../lib/deckstats';
 import { norm } from '../lib/names';
 import { comboBreaks } from './combos';
 import { brainData } from './data';
@@ -64,7 +64,7 @@ export function whyCard(o: {
   if (breaks.length) notes.push(`Cutting it breaks ${breaks.map((k) => k.cards.join(' + ')).join(', ')}.`);
   if (gameChanger) notes.push(`Game Changer: counts toward the bracket's cap (none in II, 3 in III).`);
   if (!roles.length && !plans.length && !combos.length && !scored.parts.length) notes.push('No stated reason found: a candidate to cut.');
-  const job = [...roles.map((r) => ROLE_WORD[r.role]), ...plans.map((p) => `wins by ${p.toLowerCase()}`)];
+  const job = [...roles.map((r) => ROLE_WORD[r.role]), ...(card ? extraJobs({ ...card, name }).map(jobWord) : []), ...plans.map((p) => `wins by ${p.toLowerCase()}`)];
   const headline = `${lead[how]}${job.length ? ` Does: ${job.join(', ')}.` : ''}`;
   return { name, how, headline, parts: scored.parts, roles, plans, combos, gameChanger, notes };
 }

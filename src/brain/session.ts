@@ -1,5 +1,6 @@
 import type { SubCard } from '../lib/subs';
-import { isLand, roleOf, type Role } from '../lib/deckstats';
+import { extraJobs, isLand, jobWord, roleOf, type Role } from '../lib/deckstats';
+import type { Job } from './data';
 import { norm } from '../lib/names';
 import { comboBreaks } from './combos';
 import { deckNeeds, scoreCard, type DeckContext, type Needs, type Part, type Scored } from './score';
@@ -56,11 +57,19 @@ export const UPGRADE_MARGIN = 0.12;
 const TYPES = ['Creature', 'Planeswalker', 'Battle', 'Instant', 'Sorcery', 'Artifact', 'Enchantment'];
 const mainType = (t = '') => TYPES.find((x) => t.includes(x)) ?? '';
 
-/** The jobs a card does, as words: its roles, then the engines it makes. */
+/** Engines that say the same as one of the other jobs: named once, by the job. */
+const SAME_AS: Partial<Record<Job, string>> = { tokens: 'tokens', sacOutlet: 'sacrifice', lifegain: 'life gain', discard: 'discard', recursion: 'your graveyard', reanimate: 'your graveyard' };
+/** The jobs a card does, as words: its roles, its other jobs, then the engines it makes. */
 function jobsOf(name: string, card: { type: string; text: string } | undefined): string[] {
   if (!card) return [];
   const p = profileOf(card);
-  return [...roleOf({ ...card, name }).map((r) => ROLE_WORD[r]), ...ENGINES.filter((_, i) => p.makes & (1 << i)).map((e) => e.label)];
+  const extra = extraJobs({ ...card, name });
+  const said = new Set(extra.map((j) => SAME_AS[j]).filter(Boolean));
+  return [
+    ...roleOf({ ...card, name }).map((r) => ROLE_WORD[r]),
+    ...extra.map(jobWord),
+    ...ENGINES.filter((e, i) => p.makes & (1 << i) && !said.has(e.label)).map((e) => e.label),
+  ];
 }
 
 export function readDeck(o: {
