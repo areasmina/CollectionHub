@@ -75,7 +75,14 @@ export async function seed(page: Page) {
     tx.objectStore('decks').put({ profile: 1, name: 'Tatyova Lands', commander: cs[0].name, cards: cs.map((c) => ({ name: c.name, qty: c.type.startsWith('Basic') ? 20 : 1 })), updated: Date.now() });
     await new Promise((ok) => (tx.oncomplete = ok));
   }, cards);
+  // Reload, and wait until the new page has started for real: on its first render the app writes the tab it opened on
+  // to localStorage ('ch:tab'). Tests set ch:tab next and reload again; done before that first write, the app's own
+  // 'discover' can land on top of the test's choice and the second reload opens the wrong page. That fits the CI-only
+  // failures where a binder's cards or a deck "never appeared" (Nov 22); not reproduced here, so it is the likely
+  // cause, not a proven one. Clearing the key first makes its return the signal.
+  await page.evaluate(() => localStorage.removeItem('ch:tab'));
   await page.reload();
+  await page.waitForFunction(() => localStorage.getItem('ch:tab') !== null);
 }
 
 
