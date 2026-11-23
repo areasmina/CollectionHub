@@ -304,3 +304,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - Phase 2 (full collection analysis page) approved. Guillermo chose to keep a year of daily worth totals: one line per
   binder per day in the cache table (`worthlog:<binder>:<day>`), on this device only, not synced, no Dexie change.
 
+- **The analysis page is a dashboard** (Guillermo on #105: "seeing all red is confusing… desktop is a mess"). Each
+  chart has its own colour on its heading rule, corner tape and bars: mana colours on COLOURS, rarity colours on
+  RARITY, ownership green on IN YOUR DECKS, cobalt MANA CURVE, violet CARD TYPES, red BIGGEST SETS. Headings carry a
+  FIG.01… stamp. From tablet up the cards sit square (no tilt) and a row's cards share one height; on desktop a
+  12-column grid puts WORTH OVER TIME (8) beside AT A GLANCE (4), then the charts three to a row. Phones keep the tilt.
+  This replaces "Anton headings on a red rule", the tilt at wide widths and "each chart only as tall as it says".

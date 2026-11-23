@@ -66,5 +66,8 @@ test('the analytics cards wear the same zine frame as the stat tiles', async ({ 
   expect(t.img).toContain('radial-gradient');
   expect(a.bg).toBe(t.bg); // same ink
   expect(a.shadow).not.toBe('none'); // hard shadow
-  expect(a.tilt).not.toBe('none'); // and a slight tilt, like everything else on the page
+  // a slight tilt on phones, like everything else on the page; from tablet up the cards sit square so the dashboard's
+  // edges line up (Guillermo, Nov 23)
+  if (page.viewportSize()!.width > 700) expect(a.tilt).toBe('none');
+  else expect(a.tilt).not.toBe('none');
 });

@@ -3296,21 +3296,10 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
   }
 }
 
-/* The charts: worth over time is a chart, not a field. It takes two columns, not the whole row, and its line keeps
-   a readable height instead of a tall empty box. */
-@media (min-width: 1000px) {
-  .apanel .acard.awide {
-    grid-column: span 2 !important;
-  }
-}
+/* The worth line keeps a readable height instead of a tall empty box. (The analytics grid itself, spans and
+   alignment, lives in the dashboard block at the end of this file: Phase 2 revision, Nov 23.) */
 .apanel .aline {
   height: 132px !important;
-}
-
-/* Each chart is only as tall as what it says: the grid stops stretching a short card to match a tall neighbour,
-   which is where most of the empty space in the marked screenshot came from. */
-.apanel .agrid {
-  align-items: start !important;
 }
 /* TOP 3 holds three cards, so its frame stops after them instead of leaving an empty fourth slot. */
 @media (min-width: 701px) {
@@ -3866,4 +3855,167 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 /* The conflict box holds three choices (Phase 5D: MERGE BOTH); on a narrow phone they wrap instead of squeezing. */
 .id-sync-conflict-box .id-sync-act-row {
   flex-wrap: wrap !important;
+}
+
+/* ---------- Collection analysis as a dashboard (Phase 2 revision, Guillermo, Nov 23) ----------
+   "Seeing all red is confusing… desktop is a mess; make it feel like a real analysis dashboard."
+   1. Every chart has its own colour (--ac), worn on its heading rule, its corner tab and its bars. Where the bars
+      mean something by colour they say it: mana colours on COLOURS, rarity colours on RARITY, ownership green on
+      IN YOUR DECKS. Red is left to one chart (BIGGEST SETS) and the app's own actions.
+   2. An editor's mark on each heading (FIG.01 …) and a coloured tab on each card's corner: the zine frame, loud;
+      the numbers inside stay plain and aligned.
+   3. Wide screens: a 12-column grid with one gap everywhere. Worth over time takes 8 columns and AT A GLANCE the
+      4 beside it; the six charts sit three to a row, every card in a row the same height, nothing tilted, so the
+      edges line up like a dashboard. Phones keep one column and the slight tilt of the stat tiles. */
+.apanel .acard {
+  --ac: #e60012;
+}
+.apanel .ak-worth {
+  --ac: #39ff88;
+}
+.apanel .ak-glance {
+  --ac: #fff824;
+}
+.apanel .ak-decks {
+  --ac: #2bd65a;
+}
+.apanel .ak-colours {
+  --ac: #e8c35a;
+}
+.apanel .ak-curve {
+  --ac: #3b6cff;
+}
+.apanel .ak-types {
+  --ac: #b38cff;
+}
+.apanel .ak-rarity {
+  --ac: #ff8a3d;
+}
+.apanel .ak-sets {
+  --ac: #e60012;
+}
+.apanel .acard h3 {
+  border-bottom-color: var(--ac) !important;
+}
+.apanel .acard::before {
+  /* a strip of coloured tape on the top-left corner, the chart's colour */
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 14px;
+  width: 38px;
+  height: 9px;
+  background: var(--ac);
+  opacity: 0.9;
+  transform: rotate(-3deg);
+  clip-path: polygon(0 12%, 100% 0, 97% 100%, 3% 88%);
+  pointer-events: none;
+}
+.apanel .afig {
+  align-self: center;
+  padding: 2px 5px 1px;
+  border: 1px solid var(--ac);
+  font: 400 10px/1 var(--u-mono, monospace);
+  letter-spacing: 0.06em;
+  color: var(--ac);
+}
+/* bars: the chart's colour by default, in the same zine stripe as before */
+.apanel .abar {
+  --bar: var(--ac);
+}
+.apanel .afill,
+.apanel .abar.good .afill {
+  background: repeating-linear-gradient(135deg, var(--bar) 0 6px, color-mix(in srgb, var(--bar) 72%, #000) 6px 12px) !important;
+}
+/* COLOURS: each bar in its mana colour (readable on black; black mana as a violet-grey) */
+.apanel .ak-colours .k-W { --bar: #f3ecd2; }
+.apanel .ak-colours .k-U { --bar: #3b8bff; }
+.apanel .ak-colours .k-B { --bar: #9a86b8; }
+.apanel .ak-colours .k-R { --bar: #ff4a3d; }
+.apanel .ak-colours .k-G { --bar: #3fbf6a; }
+.apanel .ak-colours .k-C { --bar: #a9a9b4; }
+.apanel .ak-colours .k-M { --bar: #e8c35a; }
+/* RARITY: the set-symbol colours */
+.apanel .ak-rarity .k-common { --bar: #8f8f9c; }
+.apanel .ak-rarity .k-uncommon { --bar: #c4d2df; }
+.apanel .ak-rarity .k-rare { --bar: #e6c15a; }
+.apanel .ak-rarity .k-mythic { --bar: #ff6a2b; }
+.apanel .ak-rarity .k-other { --bar: #6b6b78; }
+/* IN YOUR DECKS: idle is grey, in a deck is ownership green */
+.apanel .ak-decks .k-idle { --bar: #6b6b78; }
+.apanel .abar .alabel::before {
+  /* a colour key beside every label, so a bar can be read by its colour too */
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  background: var(--bar);
+  vertical-align: 0;
+}
+
+@media (min-width: 701px) {
+  .apanel .agrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 24px 16px !important;
+    align-items: stretch !important;
+  }
+  .apanel .acard,
+  .apanel .acard:nth-child(even),
+  .apanel .acard.awide {
+    transform: none !important;
+  }
+  .apanel .acard.awide {
+    grid-column: 1 / -1 !important;
+  }
+}
+@media (min-width: 1100px) {
+  .apanel .agrid {
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    gap: 24px !important;
+  }
+  .apanel .acard {
+    grid-column: span 4 !important;
+  }
+  .apanel .acard.ahistory {
+    grid-column: span 8 !important;
+  }
+  .apanel .acard.aglance {
+    grid-column: span 4 !important;
+    display: flex;
+    flex-direction: column;
+  }
+  /* beside the line, AT A GLANCE reads top to bottom: three ruled rows */
+  .apanel .aglance .areads {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin: 0;
+    flex: 1;
+    align-content: space-between;
+  }
+  .apanel .aglance .areads > div {
+    padding: 10px 0;
+    border-bottom: 1px dashed #2c2c3a;
+  }
+  .apanel .aglance .areads > div:last-child {
+    border-bottom: 0;
+  }
+  .apanel .ahistory .aline {
+    height: 168px !important;
+  }
+}
+
+/* Every bar in a chart starts and ends on the same line: the rows share one set of columns (label, track, count,
+   worth), so a long label no longer pushes its own track out of line with the others. */
+@supports (grid-template-columns: subgrid) {
+  .apanel .abars {
+    display: grid;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr) auto auto;
+    column-gap: 8px;
+    row-gap: 6px;
+  }
+  .apanel .abars > .abar {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid !important;
+  }
 }
