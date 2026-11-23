@@ -295,3 +295,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The reasons under each pick are the parts of that same score. On a deck the brain's parts (deck needs, themes,
   copies, taste) can now be named; combos are not repeated there, they keep their own line. Still at most two reasons.
 - Changing the weights is a separate step, to be measured on the benchmark first.
+
+## 2026-11-23: Foil fades in, no hard square
+- Guillermo: "the foil effect should be smooth all over the card, seems like there is a cut square". He chose soft
+  edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
+  still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
+  sheen's inner edge is feathered too.
