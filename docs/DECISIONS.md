@@ -295,3 +295,12 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - The reasons under each pick are the parts of that same score. On a deck the brain's parts (deck needs, themes,
   copies, taste) can now be named; combos are not repeated there, they keep their own line. Still at most two reasons.
 - Changing the weights is a separate step, to be measured on the benchmark first.
+
+## 2026-11-23: Phase 1 done, Phase 3 kept as decided, Phase 2 started
+- Next round of five phases planned (doc: https://claude.ai/artifact/PxXH6iXkttV8MG5jdVwc1i). Phase 1 (steadier checks,
+  true feature list) merged as #104.
+- Phase 3 (make the Discover tile and the commander page show the same %) is skipped: Guillermo keeps the Nov 6 and
+  Nov 13 choices (decks from Discover open at MED + $$$; the tile says "decks avg", the page "in this deck").
+- Phase 2 (full collection analysis page) approved. Guillermo chose to keep a year of daily worth totals: one line per
+  binder per day in the cache table (`worthlog:<binder>:<day>`), on this device only, not synced, no Dexie change.
+

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyse, valueHistory } from './analytics';
+import { analyse, valueHistory, worthOf } from './analytics';
 import type { Card, Deck, Entry } from './db';
 
 const card = (id: string, o: Partial<Card>): Card => ({ id, name: id, key: id, type: 'Creature — Elf', text: '', ci: [], legal: true, ...o });
@@ -84,5 +84,45 @@ describe('valueHistory', () => {
 
   it('leaves out days where nothing you own had a price', () => {
     expect(valueHistory([entry('cobra')], [{ day: '2026-11-09', prices: new Map() }])).toEqual([]);
+  });
+});
+
+describe('the full analysis page (Phase 2, Nov 23): at a glance and rarity', () => {
+  const a = analyse(binder, cards, decks);
+
+  it('counts the sets the copies come from (Sol Ring, Cobra and Forest, Tatyova, Titan: four)', () => {
+    // entries carry no set of their own here, so the card's set is used; Cobra and the Forests share ZNR
+    expect(a.setCount).toBe(4);
+  });
+
+  it('names the most valuable single copy at the finish you own', () => {
+    expect(a.dearest).toEqual({ name: 'titan', usd: 20, foil: false }); // Titan 20 beats the foil Cobra at 12
+    const foilWins = analyse([entry('cobra', { foil: true }), entry('sol')], cards, []);
+    expect(foilWins.dearest).toEqual({ name: 'cobra', usd: 12, foil: true });
+  });
+
+  it('gives the worth per copy, the same total the Collection shows', () => {
+    expect(a.average).toBeCloseTo((1.5 + 12 + 0.4 + 1 + 20) / 14, 2);
+    expect(worthOf(binder, cards)).toBe(a.usd);
+  });
+
+  it('splits copies and worth by rarity; unknown rarities share Other', () => {
+    const rc = new Map<string, Card>([
+      ['m', card('m', { rarity: 'mythic', usd: '30' })],
+      ['r', card('r', { rarity: 'rare', usd: '2' })],
+      ['c', card('c', { rarity: 'common', usd: '0.10' })],
+      ['s', card('s', { rarity: 'special', usd: '5' })],
+      ['x', card('x', {})],
+    ]);
+    const r = analyse([entry('m'), entry('r', { qty: 2 }), entry('c', { qty: 10 }), entry('s'), entry('x')], rc, []);
+    const by = Object.fromEntries(r.rarity.map((s) => [s.key, [s.cards, Math.round(s.usd * 100) / 100]]));
+    expect(by).toEqual({ common: [10, 1], uncommon: [0, 0], rare: [2, 4], mythic: [1, 30], other: [2, 5] });
+    expect(r.rarity.map((s) => s.key)).toEqual(['common', 'uncommon', 'rare', 'mythic', 'other']);
+  });
+
+  it('has no dearest copy and a zero average when nothing has a price', () => {
+    const none = analyse([entry('x')], new Map([['x', card('x', {})]]), []);
+    expect(none.dearest).toBeNull();
+    expect(none.average).toBe(0);
   });
 });
