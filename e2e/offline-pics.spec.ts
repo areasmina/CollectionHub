@@ -121,8 +121,14 @@ test('Offline pictures: SAVE MY DECKS NOW keeps every deck card, and a never-see
   await tab.goto('/');
   await expect(tab.locator('.cgrid2 > .ctile').first()).toBeVisible();
   await expect.poll(async () => (await drawn(tab)).every(Boolean)).toBe(true);
-  const srcs = await tab.locator('.cgrid2 > .ctile .timg img').evaluateAll((imgs) => (imgs as HTMLImageElement[]).slice(0, 3).map((i) => i.currentSrc));
-  for (const s of srcs) expect(s).toContain('/small/');
+  // Read the pictures' addresses in one go with "drawn": the grid can re-render between two separate reads (a fresh
+  // <img> has no address yet), which made this check fail now and then on CI (Nov 23) while the pictures were fine.
+  // The check itself is unchanged: the first three cards must end up drawn from the saved small pictures.
+  const small = () =>
+    tab.locator('.cgrid2 > .ctile .timg img').evaluateAll((imgs) =>
+      (imgs as HTMLImageElement[]).slice(0, 3).map((i) => (i.complete && i.naturalWidth > 0 ? i.currentSrc : '(not drawn)')),
+    );
+  await expect.poll(async () => (await small()).every((s) => s.includes('/small/')), { message: 'the first three cards are drawn from the saved small pictures' }).toBe(true);
   await context.setOffline(false);
 });
 

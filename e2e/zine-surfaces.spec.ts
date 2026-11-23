@@ -41,8 +41,20 @@ test('Collection analytics: the stat tiles, TOP 3 and the charts carry no white 
   await expect(page.locator('.apanel .acard').first()).toBeVisible();
   expect(await whiteFramed(page, '.coll .stats')).toEqual([]);
   expect(await whiteFramed(page, '.apanel')).toEqual([]);
-  // the charts do not stretch to match their tallest neighbour: each card is its own height
-  expect(await page.locator('.apanel .agrid').evaluate((e) => getComputedStyle(e).alignItems)).toBe('start');
+  // Nov 23 (Guillermo: "make it feel like a real analysis dashboard"): from tablet up the cards of one row line up,
+  // same top and same height, so the panel reads as one dashboard rather than loose cards
+  if (page.viewportSize()!.width > 700) {
+    expect(await page.locator('.apanel .agrid').evaluate((e) => getComputedStyle(e).alignItems)).toBe('stretch');
+    const rows = await page.locator('.apanel .acard').evaluateAll((els) => {
+      const by = new Map<number, number[]>();
+      for (const e of els) {
+        const r = e.getBoundingClientRect();
+        by.set(Math.round(r.top), [...(by.get(Math.round(r.top)) ?? []), Math.round(r.height)]);
+      }
+      return [...by.values()];
+    });
+    for (const heights of rows) expect(new Set(heights).size, `card heights in one row: ${heights}`).toBe(1);
+  }
 });
 
 test('Collection: the search bar, the filter sheet and the card menu carry no white frame', async ({ page }) => {

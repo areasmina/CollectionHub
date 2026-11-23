@@ -24,6 +24,8 @@ import { movers, snapshot, snapshotFrom, type Move } from '../lib/pricewatch';
 import { saveAheadSoon } from '../lib/offlinepics';
 import { deckPicUrls } from '../lib/deckpics';
 import { saveCardListSoon } from '../lib/cardlist';
+import { worthOf } from '../lib/analytics';
+import { logWorth } from '../lib/worthlog';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
 import { Doodles, PageDecor, Title } from './zine';
 
@@ -328,6 +330,8 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           void saveAheadSoon(deckPicUrls);
           // and the app's own card list, so an import or a sync without Scryfall still knows every card (5C)
           saveCardListSoon();
+          // and one line a day of what this binder is worth, so WORTH OVER TIME can reach back a year
+          void logWorth(profile, worthOf(entries, m)).catch(() => {});
           return snapshot(entries, m);
         })
         .catch(() => {});
@@ -524,7 +528,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
           so there is no second ANALYTICS button to press. */}
       {ctab === 'analytics' && (
         <Suspense fallback={<p className="small">Working out your numbers…</p>}>
-          <Analytics entries={entries} cards={cards} decks={deckRows} binder={name} />
+          <Analytics entries={entries} cards={cards} decks={deckRows} binder={name} profile={profile} />
         </Suspense>
       )}
 

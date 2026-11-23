@@ -296,6 +296,21 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   copies, taste) can now be named; combos are not repeated there, they keep their own line. Still at most two reasons.
 - Changing the weights is a separate step, to be measured on the benchmark first.
 
+## 2026-11-23: Phase 1 done, Phase 3 kept as decided, Phase 2 started
+- Next round of five phases planned (doc: https://claude.ai/artifact/PxXH6iXkttV8MG5jdVwc1i). Phase 1 (steadier checks,
+  true feature list) merged as #104.
+- Phase 3 (make the Discover tile and the commander page show the same %) is skipped: Guillermo keeps the Nov 6 and
+  Nov 13 choices (decks from Discover open at MED + $$$; the tile says "decks avg", the page "in this deck").
+- Phase 2 (full collection analysis page) approved. Guillermo chose to keep a year of daily worth totals: one line per
+  binder per day in the cache table (`worthlog:<binder>:<day>`), on this device only, not synced, no Dexie change.
+
+- **The analysis page is a dashboard** (Guillermo on #105: "seeing all red is confusing… desktop is a mess"). Each
+  chart has its own colour on its heading rule, corner tape and bars: mana colours on COLOURS, rarity colours on
+  RARITY, ownership green on IN YOUR DECKS, cobalt MANA CURVE, violet CARD TYPES, red BIGGEST SETS. Headings carry a
+  FIG.01… stamp. From tablet up the cards sit square (no tilt) and a row's cards share one height; on desktop a
+  12-column grid puts WORTH OVER TIME (8) beside AT A GLANCE (4), then the charts three to a row. Phones keep the tilt.
+  This replaces "Anton headings on a red rule", the tilt at wide widths and "each chart only as tall as it says".
+
 ## 2026-11-23: Foil fades in, no hard square
 - Guillermo: "the foil effect should be smooth all over the card, seems like there is a cut square". He chose soft
   edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
