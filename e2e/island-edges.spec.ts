@@ -75,11 +75,15 @@ test('Island docked top: at the end of Collection it is not sitting on + DECK or
     new MutationObserver(() => log.push(`${document.querySelector('.pillnav.away') ? 'away' : 'shown'} ${at()} focus=${document.activeElement?.className ?? ''}`)).observe(document.querySelector('.pillnav')!, { attributes: true, attributeFilter: ['class'] });
   });
   await toEnd(page);
-  await page.waitForTimeout(500);
   if (!(await page.evaluate(() => scrollY >= 80))) return; // the page does not scroll past the island's rest zone
+  const log = () => page.evaluate(() => (window as unknown as { islandLog: string[] }).islandLog.join('\n'));
+  // Judge the island only once the browser has told the page about the scroll. On a busy CI machine the scroll event
+  // can arrive well after the view moved: the failures seen there (Nov 22) had an EMPTY log, so the island was
+  // measured before the app had even heard of the scroll. A scroll that never arrives still fails, here.
+  await expect.poll(async () => (await log()).includes('scroll'), { message: 'the page never received the scroll', timeout: 10_000 }).toBe(true);
+  await page.waitForTimeout(500);
   // Either the island has gone away (it slides off its edge and stops taking taps), or it is showing with nothing
   // tappable under it. Both ways the band's buttons answer to a tap where they are.
-  const log = () => page.evaluate(() => (window as unknown as { islandLog: string[] }).islandLog.join('\n'));
   if (!(await page.locator('.pillnav.away').count())) expect(await covered(page), `island log:\n${await log()}`).toEqual([]);
   expect(await bandReachable(page)).toEqual([]);
 });
