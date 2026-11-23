@@ -28,7 +28,11 @@ export interface Analytics {
   colours: Slice[];
   types: Slice[];
   curve: Slice[]; // mana value 0,1,…,6,7+ (lands left out: they have no cost to speak of)
-  sets: Slice[]; // biggest first
+  sets: Slice[]; // biggest first, top 8
+  setCount: number; // how many different sets the binder's copies come from
+  rarity: Slice[]; // common, uncommon, rare, mythic, then anything else (special, bonus, unknown)
+  dearest: { name: string; usd: number; foil: boolean } | null; // the most valuable single copy, at its finish
+  average: number; // worth per copy, USD
   inDecks: { used: number; idle: number; decks: number };
   history: ValuePoint[];
 }
@@ -42,6 +46,10 @@ const COLOURS: [string, string][] = [
 ];
 
 const usdOf = (c: Card | undefined, e: Entry) => Number(finishUsd(c, e.foil) ?? 0) * e.qty;
+
+/** What a binder is worth, USD, at your printings and finishes (the same sum as the Collection's "worth about"). */
+export const worthOf = (entries: Entry[], cards: Map<string, Card>) =>
+  Math.round(entries.reduce((n, e) => n + usdOf(cards.get(e.cardId), e), 0) * 100) / 100;
 
 /** Adds one entry's copies and value into a bucket. */
 function add(into: Map<string, Slice>, key: string, label: string, e: Entry, usd: number) {
@@ -64,6 +72,36 @@ function colourSlices(rows: { e: Entry; c?: Card; usd: number }[]): Slice[] {
     if (ci.length > 1) add(out, 'M', 'Multicolour', e, usd);
   }
   return [...out.values()];
+}
+
+const RARITIES: [string, string][] = [
+  ['common', 'Common'],
+  ['uncommon', 'Uncommon'],
+  ['rare', 'Rare'],
+  ['mythic', 'Mythic'],
+];
+
+/** Copies and worth by rarity. Special, bonus and cards whose rarity isn't known yet share one "Other" bar. */
+function raritySlices(rows: { e: Entry; c?: Card; usd: number }[]): Slice[] {
+  const out = new Map<string, Slice>();
+  for (const [key, label] of RARITIES) out.set(key, { key, label, cards: 0, usd: 0 });
+  out.set('other', { key: 'other', label: 'Other', cards: 0, usd: 0 });
+  for (const { e, c, usd } of rows) {
+    const k = c?.rarity && out.has(c.rarity) ? c.rarity : 'other';
+    add(out, k, out.get(k)!.label, e, usd);
+  }
+  return [...out.values()];
+}
+
+/** The most valuable single copy (per copy, at the finish you own); ties go to the name first in the alphabet. */
+function dearestCopy(rows: { e: Entry; c?: Card; usd: number }[]) {
+  let best: { name: string; usd: number; foil: boolean } | null = null;
+  for (const { e, c } of rows) {
+    const unit = Number(finishUsd(c, e.foil) ?? 0);
+    const name = c?.name ?? e.name;
+    if (unit > 0 && (!best || unit > best.usd || (unit === best.usd && name < best.name))) best = { name, usd: unit, foil: !!e.foil };
+  }
+  return best;
 }
 
 /** Mana curve of the non-land cards: 0, 1, … 6, then 7+. */
@@ -138,14 +176,20 @@ export function analyse(
   const keys = new Map<string, boolean>();
   for (const { e, c } of rows) keys.set(c?.key ?? norm(e.name), wanted.has(c?.key ?? norm(e.name)));
   const used = [...keys.values()].filter(Boolean).length;
+  const copies = entries.reduce((n, e) => n + e.qty, 0);
+  const usd = Math.round(rows.reduce((n, r) => n + r.usd, 0) * 100) / 100;
   return {
-    cards: entries.reduce((n, e) => n + e.qty, 0),
+    cards: copies,
     unique: keys.size,
-    usd: Math.round(rows.reduce((n, r) => n + r.usd, 0) * 100) / 100,
+    usd,
     colours: colourSlices(rows),
     types: [...types.values()].sort((a, b) => b.cards - a.cards),
     curve: curveSlices(rows),
     sets: [...sets.values()].sort((a, b) => b.cards - a.cards || a.key.localeCompare(b.key)).slice(0, 8),
+    setCount: [...sets.keys()].filter((k) => k !== '—').length,
+    rarity: raritySlices(rows),
+    dearest: dearestCopy(rows),
+    average: copies ? Math.round((usd / copies) * 100) / 100 : 0,
     inDecks: { used, idle: keys.size - used, decks: decks.length },
     history: valueHistory(entries, snaps),
   };
