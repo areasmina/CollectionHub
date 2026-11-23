@@ -310,3 +310,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   FIG.01… stamp. From tablet up the cards sit square (no tilt) and a row's cards share one height; on desktop a
   12-column grid puts WORTH OVER TIME (8) beside AT A GLANCE (4), then the charts three to a row. Phones keep the tilt.
   This replaces "Anton headings on a red rule", the tilt at wide widths and "each chart only as tall as it says".
+
+## 2026-11-23: Foil fades in, no hard square
+- Guillermo: "the foil effect should be smooth all over the card, seems like there is a cut square". He chose soft
+  edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
+  still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
+  sheen's inner edge is feathered too.

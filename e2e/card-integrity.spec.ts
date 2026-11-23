@@ -43,9 +43,13 @@ test('Collection: a foil card shines on its picture and frame, never over its na
   const look = await foil.evaluate((e) => {
     const a = getComputedStyle(e, '::after');
     const b = getComputedStyle(e, '::before');
-    return { clip: a.clipPath, mask: b.maskImage || (b as unknown as Record<string, string>).webkitMaskImage };
+    const m = (s: CSSStyleDeclaration) => s.maskImage || (s as unknown as Record<string, string>).webkitMaskImage;
+    return { art: m(a), mask: m(b) };
   });
-  expect(look.clip).toContain('inset'); // the strong shine is held to the art box
+  // the strong shine is held to the art box and fades in from its edges (no hard square, Nov 23): transparent at the
+  // box's own edges (10.5% / 55.5% down, 7.5% / 92.5% across), so it never reaches the name or the type line
+  expect(look.art).toMatch(/rgba\(0, 0, 0, 0\) 10\.5%.*rgba\(0, 0, 0, 0\) 55\.5%/);
+  expect(look.art).toMatch(/rgba\(0, 0, 0, 0\) 7\.5%.*rgba\(0, 0, 0, 0\) 92\.5%/);
   expect(look.mask).toContain('gradient'); // the frame sheen is masked to the outer border
 });
 
