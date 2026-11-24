@@ -50,6 +50,8 @@ test('Import: the pasted list, the lookup progress and the Scryfall pause are ea
   await page.reload();
   const pop = page.locator('.importbox-pop');
   await expect(pop).toBeVisible();
+  // the dialog fades in (the note-pop drop): measure once it has landed, not mid-fade
+  await pop.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).map((a) => a.finished)));
   const box = pop.locator('textarea');
   await box.fill(csv);
 
