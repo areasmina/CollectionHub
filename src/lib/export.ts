@@ -1,4 +1,4 @@
-import type { Deck, Entry } from './db';
+import type { Deck, Entry, Profile } from './db';
 
 const q = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 
@@ -27,6 +27,27 @@ export const binderShareText = (name: string, entries: Entry[]) => {
   const copies = entries.reduce((n, e) => n + e.qty, 0);
   return [`# ${name.replace(/\s+/g, ' ').trim()}: ${copies} card${copies === 1 ? '' : 's'}, ${entries.length} unique`, '', collectionText(entries)].join('\n');
 };
+
+/** Every binder as one plain text list: a "# Binder (N cards)" heading per binder (skipped on import), then the same
+ *  lines as EXPORT TEXT. Imports back here, into Moxfield or Archidekt, all into the one binder you import into. */
+export const allBindersText = (binders: { name: string; entries: Entry[] }[]) =>
+  binders
+    .map((b) => {
+      const copies = b.entries.reduce((n, e) => n + e.qty, 0);
+      return `# ${b.name.replace(/\s+/g, ' ').trim()} (${copies} card${copies === 1 ? '' : 's'})\n${collectionText(b.entries)}`;
+    })
+    .join('\n\n');
+
+/**
+ * The CollectionHub file: the same shape as DOWNLOAD BACKUP in the sync drawer ({ app: 'collectionhub', fmt: 1, at,
+ * profiles, entries, decks }), cut down to the binders asked for. It keeps everything the app knows about a binder:
+ * cards with their exact printing, finish, list and date added, the binder's decks, and its settings.
+ */
+export const binderFile = (profiles: Profile[], entries: Entry[], decks: Deck[], at = Date.now()) =>
+  JSON.stringify({ app: 'collectionhub', fmt: 1, at, profiles, entries, decks });
+
+export const EXPORT_FORMATS = ['csv', 'txt', 'collectionhub'] as const;
+export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 export const collectionText = (entries: Entry[]) =>
   entries.map((e) => `${e.qty} ${e.name}${e.set ? ` (${e.set.toUpperCase()})${e.cn ? ' ' + e.cn : ''}` : ''}${e.foil ? ' *F*' : ''}`).join('\n');

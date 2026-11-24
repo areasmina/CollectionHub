@@ -62,3 +62,25 @@ describe('collection export', () => {
     ]);
   });
 });
+
+import { allBindersText, binderFile } from './export';
+
+describe('export file types', () => {
+  it('all-binders text: a heading per binder the importer skips, then every card', () => {
+    const text = allBindersText([{ name: 'My Cards', entries: binderA }, { name: 'Second', entries: binderB }]);
+    expect(text).toBe(`# My Cards (3 cards)\n${collectionText(binderA)}\n\n# Second (4 cards)\n4 Counterspell`);
+    const back = parseImport(text);
+    expect(back.errors).toEqual([]);
+    expect(back.rows.map((r) => [r.name, r.qty])).toEqual([
+      ['Sol Ring', 2],
+      ['Kodama, of the "East" Tree', 1],
+      ['Counterspell', 4],
+    ]);
+  });
+
+  it('CollectionHub file: the backup shape, holding exactly the binders, cards and decks given', () => {
+    const deck = { profile: 1, name: 'D', cards: [{ name: 'Sol Ring', qty: 1 }], updated: 5 };
+    const body = JSON.parse(binderFile([{ id: 1, name: 'My Cards' }], binderA, [deck], 42));
+    expect(body).toEqual({ app: 'collectionhub', fmt: 1, at: 42, profiles: [{ id: 1, name: 'My Cards' }], entries: binderA, decks: [deck] });
+  });
+});

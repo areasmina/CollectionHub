@@ -100,3 +100,46 @@ test('Binder menu: SHARE THIS BINDER hands over the card list (share sheet on to
   expect(lines).toContain('4 Rhystic Study (TST) 3 *F*');
   if (!touch) await expect(menu.getByRole('status')).toContainText('Copied My Cards');
 });
+
+test('Binder menu: FILE picks the export type (CSV, TXT, CollectionHub), remembered for next time', async ({ page }) => {
+  await mockWorld(page);
+  await seed(page);
+  await binders(page);
+  let menu = await openMenu(page);
+  const pick = menu.getByRole('group', { name: 'Export file type' });
+  await expect(pick.getByRole('menuitemradio', { name: 'CSV' })).toHaveAttribute('aria-checked', 'true');
+  await fits(page, ['.bmenu', '.bmfmt']);
+
+  // TXT, this binder: the plain list, one card a line.
+  await pick.getByRole('menuitemradio', { name: 'TXT' }).click();
+  await expect(menu.getByRole('menuitem', { name: /EXPORT THIS BINDER/ })).toContainText('TXT');
+  let [file] = await Promise.all([page.waitForEvent('download'), menu.getByRole('menuitem', { name: /EXPORT THIS BINDER/ }).click()]);
+  expect(file.suggestedFilename()).toBe('My_Cards.txt');
+  const [rows] = await binderCopies(page, 1);
+  const lines = (await text(file)).split('\n');
+  expect(lines).toHaveLength(rows);
+  expect(lines).toContain('4 Rhystic Study (TST) 3 *F*');
+
+  // CollectionHub, this binder: the backup shape with only this binder, its cards and its deck.
+  menu = await openMenu(page);
+  await menu.getByRole('group', { name: 'Export file type' }).getByRole('menuitemradio', { name: 'CollectionHub' }).click();
+  [file] = await Promise.all([page.waitForEvent('download'), menu.getByRole('menuitem', { name: /EXPORT THIS BINDER/ }).click()]);
+  expect(file.suggestedFilename()).toBe('My_Cards.collectionhub.json');
+  let body = JSON.parse(await text(file));
+  expect(body.app).toBe('collectionhub');
+  expect(body.profiles).toEqual([{ id: 1, name: 'My Cards' }]);
+  expect(body.entries).toHaveLength(rows);
+  expect(new Set(body.entries.map((e: any) => e.profile))).toEqual(new Set([1]));
+  expect(body.decks.map((d: any) => d.name)).toEqual(['Tatyova Lands']);
+
+  // The choice is remembered: reopened after a reload, CollectionHub is still picked; all binders go in one file.
+  menu = await openMenu(page);
+  await expect(menu.getByRole('menuitemradio', { name: 'CollectionHub' })).toHaveAttribute('aria-checked', 'true');
+  [file] = await Promise.all([page.waitForEvent('download'), menu.getByRole('menuitem', { name: /EXPORT ALL BINDERS/ }).click()]);
+  expect(file.suggestedFilename()).toMatch(/^collectionhub-all-binders-\d{4}-\d{2}-\d{2}\.json$/);
+  body = JSON.parse(await text(file));
+  const [all] = await binderCopies(page, -1);
+  expect(body.entries).toHaveLength(all);
+  expect(body.profiles.map((p: any) => p.name).sort()).toEqual(['My Cards', 'Trade Box']);
+  await expect(menu.getByRole('status')).toContainText('one CollectionHub file');
+});
