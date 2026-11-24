@@ -33,6 +33,33 @@ export function flipOneCopy(entries: Entry[], name: string, toFoil: boolean): { 
   return { put, del };
 }
 
+/**
+ * Moves EVERY owned copy of a card to the other finish (Guillermo, Nov 24: MARK AS FOIL turns the whole card foil, so a
+ * card with two copies stays one tile instead of splitting into a plain and a foil tile). Each row joins the row of the
+ * same printing, finish and list when there is one; the count of copies never changes. Nothing when no copy has the
+ * other finish.
+ */
+export function flipAllCopies(entries: Entry[], name: string, toFoil: boolean): { put: Entry[]; del: number[] } {
+  const k = norm(name);
+  const mine = entries.filter((e) => norm(e.name) === k);
+  const moving = mine.filter((e) => !!e.foil !== toFoil);
+  if (!moving.length) return { put: [], del: [] };
+  const key = (e: Entry) => `${e.cardId}|${e.set ?? ''}|${e.cn ?? ''}|${e.list ?? ''}`;
+  const into = new Map<string, Entry>();
+  for (const e of mine) if (!!e.foil === toFoil && !into.has(key(e))) into.set(key(e), { ...e });
+  const del: number[] = [];
+  for (const from of moving) {
+    if (from.id !== undefined) del.push(from.id);
+    const had = into.get(key(from));
+    into.set(key(from), had ? { ...had, qty: had.qty + from.qty } : { ...from, id: undefined, foil: toFoil });
+  }
+  const put = [...into.values()].filter((e) => {
+    const was = mine.find((m) => m.id !== undefined && m.id === e.id);
+    return !was || was.qty !== e.qty;
+  });
+  return { put, del };
+}
+
 import { saveDeckSnapshot } from './deckhistory';
 
 const saveDeck = (deck: Deck, cards: Deck['cards'], label?: string) => {
@@ -41,12 +68,12 @@ const saveDeck = (deck: Deck, cards: Deck['cards'], label?: string) => {
   return db.decks.update(deck.id!, { cards, updated: Date.now() });
 };
 
-/** Collection: turns one binder copy of a card foil (or back to non-foil). Nothing is added or lost: the copy moves
+/** Collection: turns every binder copy of a card foil (or back to non-foil). Nothing is added or lost: the copies move
  *  between the foil and non-foil rows of the same printing. Returns an undo that puts the rows back as they were. */
 export async function setBinderFoil(profile: number, name: string, toFoil: boolean) {
   const before = (await db.entries.where('profile').equals(profile).toArray()).filter((e) => norm(e.name) === norm(name));
   await db.transaction('rw', db.entries, async () => {
-    const { put, del } = flipOneCopy(before, name, toFoil);
+    const { put, del } = flipAllCopies(before, name, toFoil);
     if (del.length) await db.entries.bulkDelete(del);
     if (put.length) await db.entries.bulkPut(put.map((e) => (e.id === undefined ? (({ id: _, ...r }) => r)(e) : e)) as Entry[]);
   });

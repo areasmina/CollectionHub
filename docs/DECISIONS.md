@@ -316,3 +316,9 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
   still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
   sheen's inner edge is feathered too.
+
+## 2026-11-24: MARK AS FOIL turns the whole card
+- Guillermo: "when you make a card foil it duplicates". On a card with two or more copies the menu used to make ONE
+  copy foil, which showed as a second tile beside the plain one. He chose "Turn every copy foil": MARK AS FOIL and
+  MARK AS NON-FOIL now move every copy of the card, so it stays one tile. Copies are never added or lost; different
+  printings and lists stay apart. (A deck's own SWITCH TO FOIL still moves one binder copy, as before.)

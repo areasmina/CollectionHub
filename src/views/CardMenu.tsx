@@ -388,17 +388,17 @@ export function CardMenu({
           )}
           {!d && plainCopies > 0 && (
             <li>
-              <button onClick={act(async () => (haptic('success'), toast({ text: `${name}: one copy is foil now`, undo: await setBinderFoil(profile, name, true) })))}>
-                <span className="cmenu-main">{foilCopies + plainCopies > 1 ? 'MAKE ONE COPY FOIL' : 'MARK AS FOIL'}</span>
-                <small className="cmenu-meta">to foil</small>
+              <button onClick={act(async () => (haptic('success'), toast({ text: plainCopies > 1 ? `${name}: all ${plainCopies + foilCopies} copies are foil now` : `${name} is foil now`, undo: await setBinderFoil(profile, name, true) })))}>
+                <span className="cmenu-main">MARK AS FOIL</span>
+                <small className="cmenu-meta">{foilCopies + plainCopies > 1 ? `all ${foilCopies + plainCopies} copies` : 'to foil'}</small>
               </button>
             </li>
           )}
           {!d && foilCopies > 0 && (
             <li>
-              <button onClick={act(async () => (haptic('success'), toast({ text: `${name}: one copy is non-foil now`, undo: await setBinderFoil(profile, name, false) })))}>
-                <span className="cmenu-main">{foilCopies + plainCopies > 1 ? 'MAKE ONE COPY NON-FOIL' : 'MARK AS NON-FOIL'}</span>
-                <small className="cmenu-meta">{foilCopies} foil</small>
+              <button onClick={act(async () => (haptic('success'), toast({ text: foilCopies > 1 ? `${name}: all ${plainCopies + foilCopies} copies are non-foil now` : `${name} is non-foil now`, undo: await setBinderFoil(profile, name, false) })))}>
+                <span className="cmenu-main">MARK AS NON-FOIL</span>
+                <small className="cmenu-meta">{foilCopies + plainCopies > 1 ? `all ${foilCopies + plainCopies} copies` : `${foilCopies} foil`}</small>
               </button>
             </li>
           )}
