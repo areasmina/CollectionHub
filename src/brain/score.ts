@@ -8,6 +8,7 @@ import { tasteFor, type TasteEvent } from './taste';
 import { themeRoleOf, type Theme } from './themes';
 import { deckSynergy, synergyParts } from './synergy';
 import type { Taken } from '../lib/copies';
+import { jobQuality } from './jobquality';
 
 /**
  * scoreCard / suggestCards: one needs-aware score for "what should go in this slot", shared by every view.
@@ -39,6 +40,12 @@ export interface DeckContext {
   focus?: Theme;
   /** Copies your OTHER active decks already use (lib/copies.ts takenBy): a card with none to spare is marked down. */
   taken?: (name: string) => Taken | undefined;
+  /**
+   * Which evidence orders the cards. 'edhrec' (the default, every view today) counts EDHREC's play rate and lift.
+   * 'own' (the guided builder: our picks first, Guillermo Nov 24) leaves both out of the total and adds how good the
+   * card is at its job (brain/jobquality.ts), so the order comes only from what the card does for this deck.
+   */
+  evidence?: 'edhrec' | 'own';
 }
 
 const NEED = 0.15; // per role the deck is short of (at most two roles)
@@ -76,11 +83,15 @@ export type Needs = ReturnType<typeof deckNeeds>;
 export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds(ctx)): Scored {
   const parts: Part[] = [];
   const card = ctx.cardOf(c.name);
-  if (c.incl) parts.push({ label: `in ${Math.round(c.incl * 100)}% of decks`, value: c.incl, source: 'EDHREC' });
-  const sig = edhSignal(c);
-  if (sig) parts.push({ label: c.lift != null ? `${c.lift.toFixed(1)}x lift` : 'synergy', value: SIGNAL_W * sig, source: 'EDHREC' });
+  const own = ctx.evidence === 'own';
+  if (!own) {
+    if (c.incl) parts.push({ label: `in ${Math.round(c.incl * 100)}% of decks`, value: c.incl, source: 'EDHREC' });
+    const sig = edhSignal(c);
+    if (sig) parts.push({ label: c.lift != null ? `${c.lift.toFixed(1)}x lift` : 'synergy', value: SIGNAL_W * sig, source: 'EDHREC' });
+  }
 
   const roles = card ? roleOf({ ...card, name: c.name }) : [];
+  if (own && card) parts.push(...jobQuality({ ...card, name: c.name }, roles));
   const src = brainData().roles?.has(norm(c.name)) ? 'Scryfall Tagger' : 'card text';
   let short = 0;
   for (const r of roles) {

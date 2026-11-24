@@ -316,3 +316,14 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
   still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
   sheen's inner edge is feathered too.
+
+## 2026-11-24: Guided deckbuilder, our picks first
+- Guillermo wants a step-by-step builder after EDHspace's flow (commander, mana base, ramp, card advantage, targeted
+  disruption, mass disruption, plan), but **our own recommendations from the cards he owns come first; EDHREC is an
+  optional reference**, as the Forge already offers it. Plan: https://claude.ai/artifact/SZUPJnHJbvwu3VDvvGsrZc.
+- He took the recommended answers (decision card, Nov 24): EDHREC is left out of the guide's order entirely (shown
+  only as a reference toggle and an EDHREC % sort); the Forge's OUR PICK stays as it is for now; the guide starts
+  from a GUIDED BUILD button on the commander page and NEW GUIDED DECK on My Decks; each step lists only his cards
+  (missing ones go to TO BUY and the EDHREC strip); default targets come from the Patient / Hungry / Lethal dial.
+- Still to ask before it is built: whether moving a card between Tabletop piles is saved with the deck (a sync change).
+- Only the idea of steps is borrowed from EDHspace; its code, text and look are not copied.

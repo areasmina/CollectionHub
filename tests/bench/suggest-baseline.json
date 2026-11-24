@@ -9,6 +9,11 @@
   "at20": 0.44,
   "first": 0.663
  },
+ "own": {
+  "at10": 0.319,
+  "at20": 0.477,
+  "first": 0.626
+ },
  "cuts": {
   "edhrec": {
    "found": 0.533,
@@ -17,6 +22,10 @@
   "none": {
    "found": 0.2,
    "restored": 0.854
+  },
+  "own": {
+   "found": 0.277,
+   "restored": 1.167
   }
  }
 }

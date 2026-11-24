@@ -46,6 +46,18 @@ export interface Built {
   refused: { name: string; why: string }[];
 }
 
+/**
+ * How well an owned land fits the deck's mana (Karsten's colour math, Deck Wizard owned_duals): `made` = how many of the
+ * deck's colours it makes, `colour` = 0.1 per colour weighted by how much the deck asks for it (`demand` 0–1 per
+ * colour), `tapped` = -0.05 when it always enters tapped. Shared by the builder and the guided mana base step.
+ */
+export function landFit(meta: Pick<Card, 'type' | 'text'>, colours: string[], demand: (colour: string) => number) {
+  const cols = [...landColours(meta)].filter((x) => colours.includes(x));
+  const colour = 0.1 * cols.reduce((s, x) => s + (0.75 + 0.5 * demand(x)), 0);
+  const tapped = /enters (the battlefield )?tapped/i.test(meta.text) && !/unless/i.test(meta.text) ? -0.05 : 0;
+  return { made: cols.length, cols, colour, tapped };
+}
+
 export function buildDeck(o: {
   commander: string;
   partner?: string;
@@ -163,10 +175,8 @@ export function buildDeck(o: {
   const ranked = pool
     .filter((c) => isLand(c.meta.type) && !has.has(norm(c.name)))
     .map((c) => {
-      const cols = [...landColours(c.meta)].filter((x) => colours.includes(x));
-      const made = cols.length;
-      const demandSum = cols.reduce((s, x) => s + (0.75 + 0.5 * ((pips[x] + 0.5 * multiPip[x]) / maxDemand)), 0);
-      return { c, made, rank: (c.incl ?? 0) + 0.1 * demandSum + (/enters (the battlefield )?tapped/i.test(c.meta.text) && !/unless/i.test(c.meta.text) ? -0.05 : 0) };
+      const f = landFit(c.meta, colours, (x) => (pips[x] + 0.5 * multiPip[x]) / maxDemand);
+      return { c, made: f.made, rank: (c.incl ?? 0) + f.colour + f.tapped };
     })
     .filter((x) => x.made > 0 || (x.c.incl ?? 0) > 0)
     .sort((a, b) => b.rank - a.rank || a.c.name.localeCompare(b.c.name))

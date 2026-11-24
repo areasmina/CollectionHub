@@ -7,6 +7,9 @@
 //   inclusion). This is today's normal case.
 // - 'none': no popularity at all, as for an owned card EDHREC doesn't list for this commander. Here the brain can only
 //   use what a card does (roles, combos, the deck's needs, themes). This is the number the overhaul has to move.
+// - 'own': the guided builder's order (our picks first). Candidates DO carry the popularity numbers, but the score is
+//   told to leave them out (DeckContext.evidence = 'own') and adds how good each card is at its job instead. Proves
+//   EDHREC never leaks into that order, and measures it.
 import { suggestCards, type DeckContext } from '../../src/brain/score';
 import { inIdentity } from '../../src/brain/identity';
 import { rng } from '../../src/brain/wildcard';
@@ -15,7 +18,7 @@ import { isLand } from '../../src/lib/deckstats';
 import { norm } from '../../src/lib/names';
 import { cardOf, commanders, decksOf, popularity } from './measure';
 
-export type Evidence = 'edhrec' | 'none';
+export type Evidence = 'edhrec' | 'none' | 'own';
 export interface Next {
   cmdr: string;
   deck: string;
@@ -52,8 +55,8 @@ export function nextCards(cmdr: string, d: { id: number; name: string; bracket: 
   // The binder as the Forge sees it: legal, inside the commander's colours (brain/candidates.ts).
   const candidates = [...hidden, ...noise]
     .filter((n) => { const m = cardOf(n); return m && m.legal && inIdentity(m.ci, identity); })
-    .map((name) => ({ name, type: cardOf(name)!.type, cmc: cardOf(name)!.cmc, incl: evidence === 'edhrec' ? pop(name) || undefined : undefined }));
-  const ctx: DeckContext = { deck, cardOf, commander: cmdr, bracket: d.bracket ?? 4, aggression: 'hungry' };
+    .map((name) => ({ name, type: cardOf(name)!.type, cmc: cardOf(name)!.cmc, incl: evidence !== 'none' ? pop(name) || undefined : undefined }));
+  const ctx: DeckContext = { deck, cardOf, commander: cmdr, bracket: d.bracket ?? 4, aggression: 'hungry', evidence: evidence === 'own' ? 'own' : 'edhrec' };
   const top = suggestCards(candidates, ctx, 50).filter((s) => !s.blocked).map((s) => s.name);
   const hit = (n: number) => top.slice(0, n).filter((x) => hiddenKeys.has(norm(x))).length / Math.max(1, hidden.length);
   const firstAt = top.findIndex((x) => hiddenKeys.has(norm(x)));
@@ -97,8 +100,8 @@ export function impostors(cmdr: string, d: { id: number; name: string; bracket: 
   const fakeKeys = new Set(fake.map(norm));
   const deck = [{ name: cmdr, qty: 1 }, ...d.cards.filter(([n]) => !hiddenKeys.has(norm(n)) && norm(n) !== norm(cmdr)).map(([name, qty]) => ({ name, qty })), ...fake.map((name) => ({ name, qty: 1 }))];
   const pop = popularity(cmdr, d.id);
-  const rec = (name: string) => ({ name, incl: evidence === 'edhrec' ? pop(name) || undefined : undefined });
-  const read = readDeck({ ctx: { deck, cardOf, commander: cmdr, bracket: d.bracket ?? 4, aggression: 'hungry' }, candidates: hidden.map((n) => ({ ...rec(n), type: cardOf(n)!.type, cmc: cardOf(n)!.cmc })), recOf: rec, cuts: fake.length });
+  const rec = (name: string) => ({ name, incl: evidence !== 'none' ? pop(name) || undefined : undefined });
+  const read = readDeck({ ctx: { deck, cardOf, commander: cmdr, bracket: d.bracket ?? 4, aggression: 'hungry', evidence: evidence === 'own' ? 'own' : 'edhrec' }, candidates: hidden.map((n) => ({ ...rec(n), type: cardOf(n)!.type, cmc: cardOf(n)!.cmc })), recOf: rec, cuts: fake.length });
   const hit = read.cuts.filter((c) => fakeKeys.has(norm(c.name))).length;
   return { cmdr, deck: d.name, found: hit / Math.max(1, fake.length), wrong: read.cuts.length - hit, restored: read.upgrades.filter((u) => hiddenKeys.has(norm(u.in)) && fakeKeys.has(norm(u.out))).length, upgrades: read.upgrades.length, ms: Date.now() - t0 };
 }
