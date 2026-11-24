@@ -316,3 +316,18 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
   still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
   sheen's inner edge is feathered too.
+
+## 2026-11-24: Tag navigator (Scryfall-style), Phase 0 started
+- Guillermo wants a tag navigator like the Scryfall Tag Navigator: pick a function tag (draw), follow its broader and
+  narrower tags, see its cards. Plan doc: https://claude.ai/artifact/MFmzb5Kxjy9B3xUhkLkrNp. His UX plan sets it:
+  a TAGS sub-tab inside DISCOVER (COMMANDERS | TAGS), a split pane on tablet and desktop (graph or list left, results
+  grid right; GRAPH | LIST toggle on phones), a multi-node expandable graph (+ / − on each node, zoom, pan, fit), owned
+  / total on every node and chip for the active binder, condition pills (AND, NOT, ×) from Phase 1, and the grid's SHOW
+  with OWNED ONLY by default, ALL CARDS (unowned greyed) and MISSING ONLY, plus the card menu to add to decks.
+- Order: Phase 0 data, Phase 1 browse + results grid + pills, Phase 2 the interactive graph. One PR each.
+- Data: Scryfall's daily "Oracle Tags" bulk file (official, with parent and child tags), built once a month by the
+  Brain data workflow into `public/tags/tags.json`, never fetched from Scryfall by the app. Function tags only,
+  Commander-legal cards only. Tags are keyed by Scryfall's stable id; `HIDDEN` in `scripts/tags-format.mjs` hides a bad
+  tag (Scryfall's advice for community data). The file is outside `brain/` because the install pre-downloads `brain/`.
+- The graph is drawn with the app's own SVG, no graph library. Card roles (roles.json) and everything the brain
+  scores stay as they are; the tag file is separate and read-only.
