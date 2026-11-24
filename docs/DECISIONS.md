@@ -324,4 +324,5 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   shine, two-faced flip and offline pictures keep working; checks stay ordinary. Three.js stays a possible later layer.
 - One copy = one unit of a binder row. Changing a copy moves 1 between rows, so the saved data, sync, export and
   ManaBox import are unchanged (`lib/handcopies.ts`). Per-copy condition or language would need new fields: not now.
-- Still open with him: whether a tap on the picture opens the hand (Scryfall then a button inside) on computers.
+- His yes (Nov 24): a tap on a card picture in Collection opens YOUR COPIES on computers too; Scryfall is a button
+  inside it. The ⋮ menu keeps CHANGE ARTWORK for every copy; the sheet changes one copy.
