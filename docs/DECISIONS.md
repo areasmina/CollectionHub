@@ -316,3 +316,8 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
   still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
   sheen's inner edge is feathered too.
+
+## 2026-11-24: Foil shines over the whole card
+- Guillermo: "the foil is only inside the art square of the card when it should be all over the card". The shine now
+  covers the whole card with no edge anywhere: full on the picture, about half over the name bar, type line and rules
+  text so they stay readable. This replaces the Nov 12 rule (shine on the picture and frame only) and the Nov 23 soft box.
