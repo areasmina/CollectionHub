@@ -56,6 +56,8 @@ test('A card picture opens YOUR COPIES: one card per copy, Scryfall inside, fits
   // sacred card rule: the copies stand straight, not tilted
   const tilt = await sheet.locator('.yc-img').first().evaluate((el) => getComputedStyle(el).transform);
   expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(tilt);
+  // every copy is a card you own: full colour, never the black-and-white of cards you don't own (Guillermo, Nov 24)
+  for (const f of await sheet.locator('.yc-img').evaluateAll((els) => els.map((e) => getComputedStyle(e).filter))) expect(f).not.toContain('grayscale');
   await page.screenshot({ path: `test-results/your-copies-${info.project.name}.png` });
   await sheet.getByRole('button', { name: 'Close your copies' }).click();
   await expect(sheet).toHaveCount(0);

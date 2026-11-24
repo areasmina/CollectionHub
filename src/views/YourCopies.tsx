@@ -123,7 +123,7 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
                   onClick={() => (haptic('select'), setPick(i), setArts(null))}
                   onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setPick(i), setArts(null))}
                 >
-                  <Thumb src={cd?.img?.replace('/small/', '/normal/')} back={cd?.back} className={`yc-img xart${c.entry.foil ? ' foil' : ''}`} name={name} onPick={() => (haptic('select'), setPick(i), setArts(null))} />
+                  <Thumb src={cd?.img?.replace('/small/', '/normal/')} back={cd?.back} className={`yc-img xart owned${c.entry.foil ? ' foil' : ''}`} name={name} onPick={() => (haptic('select'), setPick(i), setArts(null))} />
                   <span className="yc-tag">
                     {line(c.entry)}
                     {c.entry.foil && <b> FOIL</b>}
