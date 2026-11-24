@@ -4028,3 +4028,144 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
     grid-template-columns: subgrid !important;
   }
 }
+
+/* ---------- My Decks: COMPARE (Nov 24, deck-analysis plan step 1) ----------
+   Level 2 frame, Level 1 numbers: the same ink strip and hard shadow as the tab bar around the picks; inside, a plain
+   table on the hairline grid. Values are mono and right-aligned so the two columns read straight down. The Δ wears
+   cobalt (the analysis accent, as on MANA CURVE): a difference is neither good nor bad, so it is never red or green.
+   Each row's sentence sits under its numbers, full width, so the delta is always said in words. */
+.dlist .dcompare {
+  --dc-accent: #3b6cff;
+  max-width: 960px; /* two columns of numbers read across, not from one screen edge to the other */
+  margin: 0 0 var(--s6);
+}
+.dlist .dcmp-picks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--tap) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s2);
+  padding: var(--s3);
+  background: var(--u-ink);
+  border: 2px solid var(--u-text);
+  box-shadow: 5px 5px 0 #000;
+}
+.dlist .dcmp-pick {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+}
+.dlist .dcmp-role {
+  font: 400 11px var(--u-mono);
+  letter-spacing: 0.08em;
+  color: var(--u-muted);
+}
+.dlist .dcmp-pick select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--s2);
+  background: var(--u-carbon);
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  font: 600 14px var(--u-body);
+  text-overflow: ellipsis;
+}
+.dlist .dcmp-swap {
+  width: var(--tap);
+  height: var(--tap);
+  background: transparent;
+  color: var(--u-text);
+  border: 1px solid var(--u-line2);
+  font: 400 20px var(--u-mono);
+  cursor: pointer;
+}
+.dlist .dcmp-swap:hover,
+.dlist .dcmp-swap:focus-visible,
+.dlist .dcmp-pick select:focus-visible {
+  border-color: var(--dc-accent);
+  outline: none;
+}
+.dlist .dcmp-note {
+  margin: var(--s3) 0;
+  padding: var(--s2) var(--s3);
+  background: var(--u-ink);
+  border-left: 2px solid var(--dc-accent);
+  font: 400 12px var(--u-mono);
+  color: var(--u-muted);
+}
+.dlist .dcmp-table {
+  background: var(--u-carbon);
+  border: 1px solid var(--u-line);
+}
+.dlist .dcmp-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 104px;
+  column-gap: var(--s3);
+  row-gap: var(--s1);
+  align-items: baseline;
+  padding: var(--s2) var(--s3);
+  border-top: 1px solid var(--u-line);
+}
+.dlist .dcmp-row:first-child {
+  border-top: 0;
+}
+.dlist .dcmp-head {
+  position: sticky;
+  top: var(--navh);
+  z-index: 1;
+  background: var(--u-ink);
+  border-bottom: 2px solid var(--dc-accent);
+}
+.dlist .dcmp-head .dcmp-val {
+  font: 400 14px var(--u-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--u-text);
+}
+.dlist .dcmp-label {
+  font: 600 14px var(--u-body);
+  color: var(--u-text);
+}
+.dlist .dcmp-val,
+.dlist .dcmp-delta {
+  font: 400 14px var(--u-mono);
+  text-align: right;
+  color: var(--u-text);
+  font-variant-numeric: tabular-nums;
+}
+.dlist .dcmp-delta {
+  color: var(--dc-accent);
+  font-weight: 700;
+}
+.dlist .dcmp-delta.same {
+  color: var(--u-muted);
+  font-weight: 400;
+}
+.dlist .dcmp-says {
+  grid-column: 1 / -1;
+  font: 400 12px var(--u-mono);
+  line-height: 1.45;
+  color: var(--u-muted);
+}
+.dlist .dcmp-says:empty {
+  display: none;
+}
+/* The bracket is an estimate: its label says so, and a dashed rule under the row keeps it apart from the counts. */
+.dlist .dcmp-row.est {
+  border-top: 1px dashed var(--u-line2);
+}
+@media (max-width: 420px) {
+  .dlist .dcmp-row {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 80px;
+    column-gap: var(--s2);
+    padding: var(--s2);
+  }
+  .dlist .dcmp-label,
+  .dlist .dcmp-val,
+  .dlist .dcmp-delta {
+    font-size: 12px;
+  }
+}
