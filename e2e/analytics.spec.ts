@@ -34,20 +34,25 @@ test('the ANALYTICS tab shows what the binder is made of', async ({ page }) => {
 });
 
 test('Analytics draws the line once days have been recorded', async ({ page }) => {
-  await page.evaluate(async () => {
+  // Two snapshot days a few days back. They were fixed dates (Nov 9 and 10) until Nov 24, when Nov 9 fell outside the
+  // 14 days the app keeps snapshots and the check broke on the calendar alone: dates relative to today can't age out.
+  const DAY = 864e5;
+  const [d1, d2] = [5, 4].map((n) => new Date(Date.now() - n * DAY).toISOString().slice(0, 10));
+  const since = new Date(`${d1}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  await page.evaluate(async ([d1, d2]) => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
     const ids: string[] = await new Promise((ok) => {
       const r = db.transaction(['cards']).objectStore('cards').getAll();
       r.onsuccess = () => ok(r.result.map((c: any) => c.id));
     });
     const tx = db.transaction(['edhrec'], 'readwrite');
-    for (const [day, mul] of [['2026-11-09', 1], ['2026-11-10', 2]] as [string, number][])
+    for (const [day, mul] of [[d1, 1], [d2, 2]] as [string, number][])
       tx.objectStore('edhrec').put({ path: `pricesnap:${day}`, data: ids.map((id) => [id, mul, null]), at: Date.now() });
     await new Promise((ok) => (tx.oncomplete = ok));
-  });
+  }, [d1, d2]);
   const a = await open(page);
   await expect(a.locator('.aline .apath')).toBeVisible();
-  await expect(a.locator('.ahistory .areads .up')).toContainText('since Nov 9'); // today's prices are above both saved days
+  await expect(a.locator('.ahistory .areads .up')).toContainText(`since ${since}`); // today's prices are above both saved days
   await expect(a.locator('.ahistory .afoot')).toContainText('The first 2 days are estimated'); // the two snapshot days
   await expect(a.locator('.anone')).toHaveCount(0);
 });
