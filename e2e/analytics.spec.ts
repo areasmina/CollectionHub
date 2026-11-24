@@ -34,20 +34,24 @@ test('the ANALYTICS tab shows what the binder is made of', async ({ page }) => {
 });
 
 test('Analytics draws the line once days have been recorded', async ({ page }) => {
-  await page.evaluate(async () => {
+  // The two saved price days are 3 and 2 days before today: the price snapshots are kept 14 days, so fixed dates
+  // (Nov 9 and 10, as this check had) aged out and broke it on Nov 24.
+  const first = await page.evaluate(async () => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
     const ids: string[] = await new Promise((ok) => {
       const r = db.transaction(['cards']).objectStore('cards').getAll();
       r.onsuccess = () => ok(r.result.map((c: any) => c.id));
     });
+    const ago = (n: number) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
     const tx = db.transaction(['edhrec'], 'readwrite');
-    for (const [day, mul] of [['2026-11-09', 1], ['2026-11-10', 2]] as [string, number][])
+    for (const [day, mul] of [[ago(3), 1], [ago(2), 2]] as [string, number][])
       tx.objectStore('edhrec').put({ path: `pricesnap:${day}`, data: ids.map((id) => [id, mul, null]), at: Date.now() });
     await new Promise((ok) => (tx.oncomplete = ok));
+    return new Date(ago(3) + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   });
   const a = await open(page);
   await expect(a.locator('.aline .apath')).toBeVisible();
-  await expect(a.locator('.ahistory .areads .up')).toContainText('since Nov 9'); // today's prices are above both saved days
+  await expect(a.locator('.ahistory .areads .up')).toContainText(`since ${first}`); // today's prices are above both saved days
   await expect(a.locator('.ahistory .afoot')).toContainText('The first 2 days are estimated'); // the two snapshot days
   await expect(a.locator('.anone')).toHaveCount(0);
 });
