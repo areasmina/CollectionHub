@@ -573,7 +573,7 @@ export function Collection({ profile, name, s, binders = [], onPick, sync }: { p
               ) : (
                 <label className="ipaste">
                   <span>…or paste cards you own</span>
-                  <textarea rows={6} placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+                  <textarea rows={6} spellCheck={false} autoCapitalize="off" autoCorrect="off" placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
                 </label>
               )}
               {deckLike && (
