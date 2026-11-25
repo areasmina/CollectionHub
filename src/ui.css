@@ -2810,6 +2810,9 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   border-radius: 6px !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
   padding: 20px !important;
+  /* it borrows .note-pop (dark ink on paper) but is dark itself: reset the text to light, or loose text such as
+     the Scryfall progress line inherits near-black ink on the near-black panel */
+  color: var(--u-text);
 }
 
 .importbox-pop .nh {
@@ -2922,6 +2925,23 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   font-style: normal;
   color: var(--u-muted);
 }
+/* Import progress: bright, a size up, roomy lines; the bar runs full width above the words so they are not squeezed */
+.importbox-pop .progress {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--s2);
+  margin: 0;
+  color: var(--u-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.importbox-pop .progress progress {
+  width: 100%;
+}
+.importbox-pop .progress .pwait {
+  margin-top: var(--s1);
+  color: var(--u-text);
+}
 .coll .importrow .file {
   position: relative;
   gap: var(--s2);
@@ -2950,6 +2970,12 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   color: var(--u-text);
   font: 400 14px/1.5 var(--u-mono);
   resize: vertical;
+}
+/* Pasted lists in the import dialog: a size up, roomier lines, a taller box */
+.importbox-pop .ipaste textarea {
+  min-height: 168px;
+  font-size: 15px;
+  line-height: 1.65;
 }
 .coll .ipaste textarea:focus {
   outline: 2px solid var(--u-yellow);
