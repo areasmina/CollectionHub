@@ -561,9 +561,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     setBack(onBack);
     return () => void setBack(null);
   }, [deck.id]);
-  const byKey =
-    useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ??
-    new Map<string, Card>();
+  const cardsRaw = useLiveQuery(
+    async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])),
+    [deck],
+  );
+  const byKey = cardsRaw ?? new Map<string, Card>();
   const cheap = useLiveQuery(async () => new Map((await db.cheap.bulkGet(deck.cards.map((c) => norm(c.name)))).filter(Boolean).map((c) => [c!.key, c!])), [deck]) ?? new Map<string, Cheap>();
   const cardOf = (name: string) => withCheapest(byKey.get(norm(name)), cheap);
   const [gc, setGc] = useState<Set<string> | null | undefined>(undefined);
@@ -640,6 +642,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   };
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
+  const hydrating = deck.cards.length > 0 && (cardsRaw === undefined || (st.total > 0 && st.unknown >= st.total));
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
   const partner = deck.partner ? byKey.get(norm(deck.partner)) : undefined;
@@ -843,8 +846,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <Pips ci={ci} size={20} />
               {deck.commander && <span>{deck.commander.split(' // ')[0]}</span>}
               <span>{st.total} cards</span>
-              <span>{st.lands} lands</span>
-              {st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
+              {!hydrating && <span>{st.lands} lands</span>}
+              {!hydrating && st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
               <SaltStat names={deck.cards.map((c) => c.name)} />
               <BracketStat call={call} cedh={deck.source === 'cedh'} />
               {deck.commander && <OutsideLinks commander={deck.commander} edhrecPath={`commanders/${slug(deck.commander)}`} />}
@@ -859,12 +862,18 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </small>
               </span>
             </div>
-            <ReadyTiles ready={ready} fit={fit} cardNames={deck.cards.map((c) => c.name)} />
+            {hydrating ? (
+              <p className="small muted" role="status" style={{ margin: '8px 0 0' }}>
+                Loading card data &amp; readiness checks…
+              </p>
+            ) : (
+              <ReadyTiles ready={ready} fit={fit} cardNames={deck.cards.map((c) => c.name)} />
+            )}
           </div>
         </section>
 
         {/* The one strip: what the deck costs, what it still lacks, copies short. */}
-        <section className="dstrip" aria-label="Deck status">
+        <section className="dstrip" aria-label="Deck status" style={{ paddingInline: 12 }}>
           <p className="dstatus" role="status">
             {pricesIn && (
               <span className="dcost" title={`${PRICE_METHOD} ${fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}`}>

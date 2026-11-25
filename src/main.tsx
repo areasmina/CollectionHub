@@ -19,6 +19,7 @@ import '@fontsource/shippori-mincho-b1/latin-800.css';
 import '@fontsource/space-mono/latin-400.css';
 import '@fontsource/space-mono/latin-700.css';
 import '@fontsource/special-elite/latin-400.css';
+import './tokens.css';
 import './styles.css';
 import './ui.css'; // THE OVERHAUL: tokens + the 7 parts; loaded last, so it wins over the old rules it replaces
 import './polish.css'; // Nov 11 spacing & composition pass, loaded after ui.css so it wins

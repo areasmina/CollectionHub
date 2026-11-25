@@ -490,7 +490,7 @@ export function snapTick(e: React.UIEvent<HTMLElement>) {
 export function ChipPick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
   return (
     <OptRow label={label}>
-      <div className="chiprow" role="radiogroup" aria-label={label} onScroll={snapTick}>
+      <div className="chiprow" role="radiogroup" aria-label={label} onScroll={snapTick} style={{ flexWrap: 'wrap', rowGap: 6 }}>
         {options.map(([v, t]) => (
           <button key={v} type="button" role="radio" className="u-chip" aria-checked={value === v} aria-pressed={value === v} onClick={() => (haptic('select'), onChange(v))}>
             {t}
@@ -933,12 +933,27 @@ export function ToolBar({ q, setQ, placeholder, searchLabel, now, quick, extra, 
             // On wide screens the options hang under the bar, so a bar sitting low on the screen pushed the panel's
             // own APPLY button off the bottom. Opening them pins the bar to the top first, which gives the panel the
             // whole screen under it. On phones the sheet is fixed to the bottom edge already, so nothing moves.
-            const panel = e.currentTarget.querySelector('.fbody');
+            const panel = e.currentTarget.querySelector('.fbody') as HTMLElement | null;
             if (panel && matchMedia('(min-width: 701px)').matches) {
+              panel.style.removeProperty('left');
+              panel.style.removeProperty('right');
+              panel.style.removeProperty('max-width');
               requestAnimationFrame(() => {
                 const r = panel.getBoundingClientRect();
-                const over = r.bottom - (innerHeight - 12);
-                if (over > 0) scrollBy({ top: Math.min(over, Math.max(0, r.top - 72)), behavior: 'smooth' });
+                const maxW = Math.max(260, innerWidth - 24);
+                if (r.width > maxW) panel.style.setProperty('max-width', `${maxW}px`, 'important');
+                const r2 = panel.getBoundingClientRect();
+                if (r2.right > innerWidth - 12) {
+                  panel.style.setProperty('left', 'auto', 'important');
+                  panel.style.setProperty('right', '0', 'important');
+                }
+                const r3 = panel.getBoundingClientRect();
+                if (r3.left < 12) {
+                  panel.style.setProperty('left', `${12 - (panel.offsetParent?.getBoundingClientRect().left ?? 0)}px`, 'important');
+                  panel.style.setProperty('right', 'auto', 'important');
+                }
+                const over = r3.bottom - (innerHeight - 12);
+                if (over > 0) scrollBy({ top: Math.min(over, Math.max(0, r3.top - 72)), behavior: 'smooth' });
               });
             }
           }
