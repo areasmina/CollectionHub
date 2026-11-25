@@ -341,3 +341,16 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   tag (Scryfall's advice for community data). The file is outside `brain/` because the install pre-downloads `brain/`.
 - The graph is drawn with the app's own SVG, no graph library. Card roles (roles.json) and everything the brain
   scores stay as they are; the tag file is separate and read-only.
+
+## 2026-11-24: Binder folders and read-only sharing (Guillermo)
+- Plan: claude.ai/artifact/GiXXBSLpV5PtVmh5vAkMBM. Taken from the EDHspace idea: nested folders, folder stats, a
+  read-only share link. Rejected: automatic default folders.
+- Lists become folders (one system). A folder is a path in `Entry.list` / `Profile.lists` (`Trade/Blue`): no Dexie
+  or sync format change. Two levels on screen; the helpers work at any depth. Typed names can't contain "/".
+- Deleting a folder never deletes cards: they move up to the folder above (top level: Unlisted).
+- Spare to trade, per folder: min(copies in the folder, max(0, copies in the binder − copies active decks need)).
+- Share link (step 4): a cut-down, encrypted copy on the sync Worker, key in the link's `#` part; no prices, notes,
+  tags or decks. Updates by itself only when the shared folder changes; no expiry. The Worker checks the owner
+  secret (stored as a hash) on every update and delete; its header joins the Worker's allowed CORS headers. Not on
+  Supabase.
+- Export: a Folder column in our CSV export (step 3); ManaBox imports still land in Unlisted.
