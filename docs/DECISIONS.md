@@ -332,3 +332,31 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   copy foil, which showed as a second tile beside the plain one. He chose "Turn every copy foil": MARK AS FOIL and
   MARK AS NON-FOIL now move every copy of the card, so it stays one tile. Copies are never added or lost; different
   printings and lists stay apart. (A deck's own SWITCH TO FOIL still moves one binder copy, as before.)
+
+## 2026-11-24: Tag navigator (Scryfall-style), Phase 0 started
+- Guillermo wants a tag navigator like the Scryfall Tag Navigator: pick a function tag (draw), follow its broader and
+  narrower tags, see its cards. Plan doc: https://claude.ai/artifact/MFmzb5Kxjy9B3xUhkLkrNp. His UX plan sets it:
+  a TAGS sub-tab inside DISCOVER (COMMANDERS | TAGS), a split pane on tablet and desktop (graph or list left, results
+  grid right; GRAPH | LIST toggle on phones), a multi-node expandable graph (+ / − on each node, zoom, pan, fit), owned
+  / total on every node and chip for the active binder, condition pills (AND, NOT, ×) from Phase 1, and the grid's SHOW
+  with OWNED ONLY by default, ALL CARDS (unowned greyed) and MISSING ONLY, plus the card menu to add to decks.
+- Order: Phase 0 data, Phase 1 browse + results grid + pills, Phase 2 the interactive graph. One PR each.
+- Data: Scryfall's daily "Oracle Tags" bulk file (official, with parent and child tags), built once a month by the
+  Brain data workflow into `public/tags/tags.json`, never fetched from Scryfall by the app. Function tags only,
+  Commander-legal cards only. Tags are keyed by Scryfall's stable id; `HIDDEN` in `scripts/tags-format.mjs` hides a bad
+  tag (Scryfall's advice for community data). The file is outside `brain/` because the install pre-downloads `brain/`.
+- The graph is drawn with the app's own SVG, no graph library. Card roles (roles.json) and everything the brain
+  scores stay as they are; the tag file is separate and read-only.
+
+## 2026-11-24: Binder folders and read-only sharing (Guillermo)
+- Plan: claude.ai/artifact/GiXXBSLpV5PtVmh5vAkMBM. Taken from the EDHspace idea: nested folders, folder stats, a
+  read-only share link. Rejected: automatic default folders.
+- Lists become folders (one system). A folder is a path in `Entry.list` / `Profile.lists` (`Trade/Blue`): no Dexie
+  or sync format change. Two levels on screen; the helpers work at any depth. Typed names can't contain "/".
+- Deleting a folder never deletes cards: they move up to the folder above (top level: Unlisted).
+- Spare to trade, per folder: min(copies in the folder, max(0, copies in the binder − copies active decks need)).
+- Share link (step 4): a cut-down, encrypted copy on the sync Worker, key in the link's `#` part; no prices, notes,
+  tags or decks. Updates by itself only when the shared folder changes; no expiry. The Worker checks the owner
+  secret (stored as a hash) on every update and delete; its header joins the Worker's allowed CORS headers. Not on
+  Supabase.
+- Export: a Folder column in our CSV export (step 3); ManaBox imports still land in Unlisted.
