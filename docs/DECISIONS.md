@@ -317,6 +317,16 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
   sheen's inner edge is feathered too.
 
+## 2026-11-24: Your copies as a hand of cards
+- Guillermo wants a tap on a collection card to show every copy he owns (any printing, foil or not) as a hand of
+  cards, each copy managed on its own: finish, artwork, count. Plan: https://claude.ai/artifact/EqDDRHENxcmx6CyFNs273r
+- His pick: built with the browser's own 3D (CSS transforms and native swipe), not Three.js. No new library; foil
+  shine, two-faced flip and offline pictures keep working; checks stay ordinary. Three.js stays a possible later layer.
+- One copy = one unit of a binder row. Changing a copy moves 1 between rows, so the saved data, sync, export and
+  ManaBox import are unchanged (`lib/handcopies.ts`). Per-copy condition or language would need new fields: not now.
+- His yes (Nov 24): a tap on a card picture in Collection opens YOUR COPIES on computers too; Scryfall is a button
+  inside it. The ⋮ menu keeps CHANGE ARTWORK for every copy; the sheet changes one copy.
+
 ## 2026-11-24: MARK AS FOIL turns the whole card
 - Guillermo: "when you make a card foil it duplicates". On a card with two or more copies the menu used to make ONE
   copy foil, which showed as a second tile beside the plain one. He chose "Turn every copy foil": MARK AS FOIL and
