@@ -316,3 +316,14 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   edges with the text kept clear: the picture shine fades in from the art box's edges instead of stopping on them, and
   still never reaches past the box, so the Nov 12 rule (name, type line, rules text never covered) holds. The frame
   sheen's inner edge is feathered too.
+
+## 2026-11-24/25: Deck history plan (versions, restore, fork, timeline)
+- Plan: https://claude.ai/artifact/DxQdbQTuVxZZep5t8FyDZe. Order: step 0 make the existing history safe, 1 named
+  versions, 2 restore with preview and UNDO, 3 fork, 4 timeline, 5 (optional, ask) history on every device.
+- Guillermo's picks: history on this device only for steps 0 to 4; automatic versions grouped per editing burst plus
+  named ones (20 automatic, 50 named, named never pushed out); RESTORE brings back cards, commander and partner only
+  (name, tags, note, colour stay); a fork starts with its light off and as a shared deck.
+- From his review (Nov 24): versions are saved before `setFoil`'s transaction (the cache table isn't in it); each deck
+  gets an optional `uid` that history is filed under (binder + name + commander only as a fallback); deleting a deck
+  deletes its versions. The sync merge ignores `uid` when comparing decks so it can never cause an "(other device)"
+  copy; the "(other device)" copy and DUPLICATE get a new `uid`.

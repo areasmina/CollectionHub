@@ -42,7 +42,7 @@ import { CardLine, CardTile, CmdrCard, CycleBtn, OutsideLinks, SaltStat, priced 
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
-import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
+import { countDeckSnapshots, deleteDeck, getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
 import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '../lib/drafts';
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
@@ -351,6 +351,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
   const ref = useRef<HTMLDivElement>(null);
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const [copied, setCopied] = useState(false);
+  const versions = useLiveQuery(() => countDeckSnapshots(deck), [deck.uid]) ?? 0;
   // Phones: the system share sheet (WhatsApp, Messages…). Elsewhere: the decklist goes to the clipboard.
   const canShare = typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
   async function share() {
@@ -409,7 +410,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                 <button
                   role="menuitem"
                   onClick={act(async () => {
-                    const { id: _, ...copy } = deck;
+                    const { id: _, uid: _uid, ...copy } = deck; // the copy gets its own uid (and so its own history)
                     const name = await freeDeckName(deck.profile, `${deck.name} (copy)`);
                     haptic('success');
                     onOpen(await db.decks.add({ ...copy, name, cards: deck.cards.map((c) => ({ ...c })), tags: deck.tags && [...deck.tags], updated: Date.now() }));
@@ -494,7 +495,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                 <button
                   role="menuitem"
                   onClick={act(async () => {
-                    const snap = saveDeckSnapshot(deck, `Manual save (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
+                    const snap = await saveDeckSnapshot(deck, `Manual save (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
                     if (snap) haptic('success');
                   })}
                 >
@@ -502,12 +503,12 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                   <small className="cmenu-meta">save current deck version</small>
                 </button>
               </li>
-              {deck.id && getDeckSnapshots(deck.id).length > 0 && (
+              {deck.id !== undefined && versions > 0 && (
                 <li>
                   <button
                     role="menuitem"
                     onClick={act(async () => {
-                      const snaps = getDeckSnapshots(deck.id!);
+                      const snaps = await getDeckSnapshots(deck);
                       const listStr = snaps
                         .map((s, i) => `${i + 1}. [${new Date(s.at).toLocaleDateString()} ${new Date(s.at).toLocaleTimeString()}] ${s.label || ''} (${s.cardCount} cards)`)
                         .slice(0, 8)
@@ -523,7 +524,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                     })}
                   >
                     <span className="cmenu-main">RESTORE VERSION...</span>
-                    <small className="cmenu-meta">{getDeckSnapshots(deck.id).length} saved snapshots</small>
+                    <small className="cmenu-meta">{versions} saved snapshots</small>
                   </button>
                 </li>
               )}
@@ -534,7 +535,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                   className="danger"
                   onClick={act(async () => {
                     if (confirm(`Delete deck "${deck.name}"?`)) {
-                      await db.decks.delete(deck.id!);
+                      await deleteDeck(deck); // its saved versions go with it
                       onDeleted?.();
                     }
                   })}

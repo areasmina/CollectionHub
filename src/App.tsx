@@ -33,6 +33,8 @@ idle(() => {
   import('./views/Collection');
   import('./views/Decks');
   import('./lib/autosync').then((m) => m.startAutoSync());
+  // Deck history housekeeping: old versions moved in once, orphaned ones refiled or cleared (lib/deckhistory).
+  import('./lib/deckhistory').then((m) => m.tidyDeckVersions());
 });
 
 type Tab = 'discover' | 'collection' | 'decks';

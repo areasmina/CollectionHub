@@ -138,3 +138,30 @@ describe('merge3: binder settings', () => {
     expect(out).toEqual([{ id: 1, name: 'Main', lists: ['Trade'] }, { id: 2, name: 'Trade' }]);
   });
 });
+
+describe('mergeSync: deck uid (deck history, Nov 25)', () => {
+  it('a uid alone never makes a deck look edited, nor kept twice as "(other device)"', () => {
+    const base = data([], [deck(1, 'Zombies', [['Gravecrawler', 1]])]);
+    const mine = data([], [deck(1, 'Zombies', [['Gravecrawler', 1]], { uid: 'here' })]);
+    const theirs = data([], [deck(1, 'Zombies', [['Gravecrawler', 1]], { uid: 'there' })]);
+    const out = mergeSync(base, mine, theirs).data.decks;
+    expect(out).toHaveLength(1);
+    expect(out[0].uid).toBe('here'); // this device's wins; its history refiles the other's (lib/deckhistory)
+  });
+
+  it('keeps the other side’s uid when this side has none yet, so the two devices settle on one', () => {
+    const base = data([], [deck(1, 'Zombies', [['Gravecrawler', 1]])]);
+    const mine = data([], [deck(1, 'Zombies', [['Gravecrawler', 1]])]);
+    const theirs = data([], [deck(1, 'Zombies', [['Gravecrawler', 2]], { uid: 'there' })]);
+    expect(mergeSync(base, mine, theirs).data.decks.map((d) => d.uid)).toEqual(['there']);
+    expect(mergeSync(null, mine, data([], [deck(1, 'Zombies', [['Gravecrawler', 1]], { uid: 'there' })])).data.decks.map((d) => d.uid)).toEqual(['there']);
+  });
+
+  it('a deck edited on both sides: the second copy gets its own history (no uid until it is saved)', () => {
+    const base = data([], [deck(1, 'Zombies', [['Gravecrawler', 1]], { uid: 'z' })]);
+    const mine = data([], [deck(1, 'Zombies', [['Gravecrawler', 2]], { uid: 'z' })]);
+    const theirs = data([], [deck(1, 'Zombies', [['Gravecrawler', 3]], { uid: 'z' })]);
+    const out = mergeSync(base, mine, theirs).data.decks;
+    expect(out.map((d) => [d.name, d.uid])).toEqual([['Zombies', 'z'], ['Zombies' + OTHER, undefined]]);
+  });
+});

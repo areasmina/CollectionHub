@@ -33,7 +33,7 @@ Status: **Live** (merged to `main`, CI green) · **Partial** (live, known gaps l
 | Custom lists inside a binder (trade, wishlist, sell…): list tabs, MOVE TO LIST… in the card menu | Partial | 61c46e7 (pushed to main) | no test yet |
 | More binders + the Unassigned Cards binder: deleting a binder releases its cards there; the binder stays open after a reload; DELETE shows only with two real binders | Live | 61c46e7, 97f0ab5, review fixes Nov 11 | `lib/ownership.test.ts` "Saved binder" |
 | Deck page ownership line (N to buy · N in the other binder · N in this deck): copies from both binders add up; basic lands are never "to buy" | Live | 97f0ab5, review fixes Nov 11 | `lib/ownership.test.ts`, e2e "Saved deck (overhaul)" |
-| Deck history: a snapshot before every change (30 per deck, this device only, not synced), restore from the deck menu | Partial | 97f0ab5 | `lib/ownership.test.ts` "Deck Snapshot History" |
+| Deck history, step 0 of the deck history plan (Nov 25): versions in the app database (cache table, `deckver:<uid>:…`, no schema change), this device only, not synced; filed under each deck's own `uid` so a sync Pull never shows another deck's history; one automatic version per editing burst (10 min), 20 automatic + 50 named per deck; restore brings back cards, commander and partner only and never touches binder copies; deleting a deck deletes its versions, orphans cleared after 30 days; old localStorage versions moved in. Restore picker is still the old pop-up (step 1 replaces it) | Partial | this PR | `src/lib/deckhistory.test.ts`, `src/lib/syncmerge.test.ts` "deck uid", e2e `deck-history.spec.ts` (3 sizes) |
 
 ## Discover and commander page
 

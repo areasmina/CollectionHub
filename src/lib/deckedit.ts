@@ -35,11 +35,20 @@ export function flipOneCopy(entries: Entry[], name: string, toFoil: boolean): { 
 
 import { saveDeckSnapshot } from './deckhistory';
 
-const saveDeck = (deck: Deck, cards: Deck['cards'], label?: string) => {
-  // Automatically capture snapshot before making modifications
-  saveDeckSnapshot(deck, label);
-  return db.decks.update(deck.id!, { cards, updated: Date.now() });
+// Deck edits run one after another, each after its version (lib/deckhistory) is saved, so two quick taps land in the
+// order they were made. A version that can't be saved never stops the edit.
+let queue: Promise<unknown> = Promise.resolve();
+const inTurn = <T>(f: () => Promise<T>): Promise<T> => {
+  const run = queue.then(f, f);
+  queue = run.catch(() => {});
+  return run;
 };
+const writeDeck = (deck: Deck, cards: Deck['cards']) => db.decks.update(deck.id!, { cards, updated: Date.now() });
+const saveDeck = (deck: Deck, cards: Deck['cards']) =>
+  inTurn(async () => {
+    await saveDeckSnapshot(deck);
+    return writeDeck(deck, cards);
+  });
 
 /** Collection: turns one binder copy of a card foil (or back to non-foil). Nothing is added or lost: the copy moves
  *  between the foil and non-foil rows of the same printing. Returns an undo that puts the rows back as they were. */
@@ -61,8 +70,11 @@ export async function setBinderFoil(profile: number, name: string, toFoil: boole
 
 /** Deck card to foil / non-foil, and one binder copy with it when you own one. */
 export async function setFoil(deck: Deck, profile: number, name: string, foil: boolean) {
+  // The version is saved first, outside the transaction: the transaction holds only decks and binder rows, and the
+  // version lives in the cache table.
+  await inTurn(() => saveDeckSnapshot(deck));
   await db.transaction('rw', db.decks, db.entries, async () => {
-    await saveDeck(deck, deck.cards.map((c) => (c.name === name ? { ...c, foil: foil || undefined } : c)));
+    await writeDeck(deck, deck.cards.map((c) => (c.name === name ? { ...c, foil: foil || undefined } : c)));
     const { put, del } = flipOneCopy(await db.entries.where('profile').equals(profile).toArray(), name, foil);
     if (del.length) await db.entries.bulkDelete(del);
     if (put.length) await db.entries.bulkPut(put.map((e) => (e.id === undefined ? (({ id: _, ...r }) => r)(e) : e)) as Entry[]);

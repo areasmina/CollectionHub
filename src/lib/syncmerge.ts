@@ -38,7 +38,11 @@ function stable(v: unknown): string {
   return JSON.stringify(v) ?? 'undefined';
 }
 const same = (a: unknown, b: unknown) => stable(a) === stable(b);
-const deckBody = (d: Deck | undefined) => (d ? stable({ ...d, id: undefined, updated: undefined }) : '');
+// The deck's uid is left out like its number and save time: two devices can give the same older deck different uids
+// before they first sync, and that alone must never make a deck look edited (or kept twice as "(other device)").
+const deckBody = (d: Deck | undefined) => (d ? stable({ ...d, id: undefined, updated: undefined, uid: undefined }) : '');
+/** The deck as kept, holding on to a uid the other side already has when this one has none yet. */
+const withUid = (kept: Deck, other: Deck | undefined): Deck => ({ ...kept, ...(kept.uid || !other?.uid ? {} : { uid: other.uid }) });
 const plain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /** One value merged three ways: the side that changed it wins; both changed → lists combine, objects merge per key,
@@ -114,6 +118,7 @@ function mergeDecks(base: Deck[] | null, mine: Deck[], theirs: Deck[], r: MergeR
   const used = new Set(mine.map((d) => d.id).filter((x) => x !== undefined));
   const theirsAsNew = (t: Deck, name = t.name) => {
     const d: Deck = { ...t, name };
+    if (name !== t.name) delete d.uid; // a second copy ("(other device)") is a deck of its own, with its own history
     if (t.id === undefined || used.has(t.id)) delete d.id;
     else used.add(t.id);
     out.push(d);
@@ -121,7 +126,7 @@ function mergeDecks(base: Deck[] | null, mine: Deck[], theirs: Deck[], r: MergeR
   if (!base) {
     // no common copy: keep every deck, the same deck on both sides once
     const have = new Set(mine.map(deckBody));
-    out.push(...mine.map((d) => ({ ...d })));
+    out.push(...mine.map((d) => withUid(d, theirs.find((t) => deckBody(t) === deckBody(d)))));
     for (const t of theirs) if (!have.has(deckBody(t))) (theirsAsNew(t), r.taken++);
     return out;
   }
@@ -145,8 +150,8 @@ function mergeDecks(base: Deck[] | null, mine: Deck[], theirs: Deck[], r: MergeR
     }
     const mc = deckBody(m) !== deckBody(b);
     const tc = deckBody(t) !== deckBody(b);
-    if (!tc || deckBody(m) === deckBody(t)) out.push({ ...m });
-    else if (!mc) (out.push({ ...t }), r.taken++);
+    if (!tc || deckBody(m) === deckBody(t)) out.push(withUid(m, t));
+    else if (!mc) (out.push(withUid(t, m)), r.taken++);
     else {
       out.push({ ...m });
       theirsAsNew(t, t.name.endsWith(OTHER) ? t.name : t.name + OTHER);

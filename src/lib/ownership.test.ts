@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { addCounts, calculateDeckOwnership, savedProfile } from './ownership';
-import { getDeckSnapshots, saveDeckSnapshot, restoreDeckSnapshot, deleteDeckSnapshot, pruneDeckSnapshots } from './deckhistory';
 import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint, hasDraftDifference } from './drafts';
 import type { Deck } from './db';
 
@@ -62,55 +61,7 @@ describe('Deck Ownership Breakdown', () => {
   });
 });
 
-describe('Deck Snapshots & History', () => {
-  const dummyDeck: Deck = {
-    id: 999,
-    profile: 1,
-    name: 'Gisa and Geralf Zombies',
-    cards: [
-      { name: 'Diregraf Colossus', qty: 1 },
-      { name: 'Gravecrawler', qty: 1 },
-    ],
-    commander: 'Gisa and Geralf',
-    updated: Date.now(),
-  };
-
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  it('saves and reads snapshots', () => {
-    const snap = saveDeckSnapshot(dummyDeck, 'Custom checkpoint');
-    expect(snap).not.toBeNull();
-    const snaps = getDeckSnapshots(999);
-    expect(snaps.length).toBe(1);
-    expect(snaps[0].label).toBe('Custom checkpoint');
-    expect(snaps[0].cardCount).toBe(2);
-  });
-
-  it('prunes snapshots cleanly', () => {
-    for (let i = 0; i < 5; i++) {
-      dummyDeck.cards.push({ name: `Zombie Token ${i}`, qty: 1 });
-      saveDeckSnapshot(dummyDeck, `Revision ${i}`);
-    }
-    expect(getDeckSnapshots(999).length).toBe(5);
-    const pruned = pruneDeckSnapshots(999, 2);
-    expect(pruned.length).toBe(2);
-  });
-
-  it('deletes specific snapshot', () => {
-    const s1 = saveDeckSnapshot(dummyDeck, 'Rev 1')!;
-    dummyDeck.cards.push({ name: 'Lord of the Undead', qty: 1 });
-    const s2 = saveDeckSnapshot(dummyDeck, 'Rev 2')!;
-    expect(getDeckSnapshots(999).length).toBe(2);
-
-    deleteDeckSnapshot(999, s1.id);
-    const remaining = getDeckSnapshots(999);
-    expect(remaining.length).toBe(1);
-    expect(remaining[0].id).toBe(s2.id);
-  });
-});
-
+// Deck history (lib/deckhistory) moved to the app database in Nov 2026: its tests live in deckhistory.test.ts.
 describe('Draft Checkpoints', () => {
   beforeEach(() => {
     sessionStorage.clear();

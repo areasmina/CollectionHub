@@ -46,6 +46,12 @@ export interface DeckCard {
 }
 export interface Deck {
   id?: number;
+  /**
+   * The deck's own id, random, kept through renames, commander swaps and syncs (the number `id` can change on a sync
+   * Pull). Deck history is filed under it (lib/deckhistory). Optional: older decks get one when first needed, and every
+   * new deck gets one as it is saved (the hook below). DUPLICATE and Fork drop it so the copy gets its own.
+   */
+  uid?: string;
   profile: number;
   name: string;
   commander?: string;
@@ -106,7 +112,18 @@ class DB extends Dexie {
     super('collectionhub');
     this.version(1).stores({ cards: 'id,key', entries: '++id,profile', decks: '++id,profile', profiles: 'id', edhrec: 'path' });
     this.version(2).stores({ cheap: 'key' });
+    // Not an index: `uid` is a plain field, so no schema version change.
+    this.decks.hook('creating', (_key, deck) => {
+      if (!deck.uid) deck.uid = newDeckUid();
+    });
   }
+}
+
+/** A new deck id: random, so two devices never pick the same one. */
+export function newDeckUid(): string {
+  const c = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
 }
 
 export const db = new DB();

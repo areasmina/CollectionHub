@@ -1,4 +1,5 @@
 import { db, type Deck, type Entry, type Profile } from './db';
+import { tidyDeckVersions } from './deckhistory';
 import { resolveRows } from './scryfall';
 import { cleanCode, keysFor, newCode, seal, unseal, type Keys } from './synccode';
 import { mergeSync, type MergeReport, type SyncData } from './syncmerge';
@@ -160,6 +161,8 @@ async function replaceLocal(d: SyncData) {
     await db.entries.bulkAdd(d.entries);
     await db.decks.bulkAdd(d.decks);
   });
+  // Deck numbers may have changed: refile any deck history whose deck now has another uid (never throws).
+  await tidyDeckVersions();
 }
 /** Puts a backup back on this device (what is here now becomes a backup first, so a restore can be undone too). */
 export async function restoreBackup(path?: string) {
