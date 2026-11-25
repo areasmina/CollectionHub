@@ -332,6 +332,12 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   covers the whole card with no edge anywhere: full on the picture, about half over the name bar, type line and rules
   text so they stay readable. This replaces the Nov 12 rule (shine on the picture and frame only) and the Nov 23 soft box.
 
+## 2026-11-24: MARK AS FOIL turns the whole card
+- Guillermo: "when you make a card foil it duplicates". On a card with two or more copies the menu used to make ONE
+  copy foil, which showed as a second tile beside the plain one. He chose "Turn every copy foil": MARK AS FOIL and
+  MARK AS NON-FOIL now move every copy of the card, so it stays one tile. Copies are never added or lost; different
+  printings and lists stay apart. (A deck's own SWITCH TO FOIL still moves one binder copy, as before.)
+
 ## 2026-11-24: Tag navigator (Scryfall-style), Phase 0 started
 - Guillermo wants a tag navigator like the Scryfall Tag Navigator: pick a function tag (draw), follow its broader and
   narrower tags, see its cards. Plan doc: https://claude.ai/artifact/MFmzb5Kxjy9B3xUhkLkrNp. His UX plan sets it:
