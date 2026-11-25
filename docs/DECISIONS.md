@@ -327,6 +327,11 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - His yes (Nov 24): a tap on a card picture in Collection opens YOUR COPIES on computers too; Scryfall is a button
   inside it. The ⋮ menu keeps CHANGE ARTWORK for every copy; the sheet changes one copy.
 
+## 2026-11-24: Foil shines over the whole card
+- Guillermo: "the foil is only inside the art square of the card when it should be all over the card". The shine now
+  covers the whole card with no edge anywhere: full on the picture, about half over the name bar, type line and rules
+  text so they stay readable. This replaces the Nov 12 rule (shine on the picture and frame only) and the Nov 23 soft box.
+
 ## 2026-11-24: Tag navigator (Scryfall-style), Phase 0 started
 - Guillermo wants a tag navigator like the Scryfall Tag Navigator: pick a function tag (draw), follow its broader and
   narrower tags, see its cards. Plan doc: https://claude.ai/artifact/MFmzb5Kxjy9B3xUhkLkrNp. His UX plan sets it:

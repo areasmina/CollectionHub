@@ -969,17 +969,11 @@ html.forging .vhero {
   animation: foilglare 12s ease-in-out infinite alternate, foilsweep 5.5s cubic-bezier(0.45, 0.05, 0.35, 1) infinite, foilwash 9s ease-in-out infinite alternate !important;
 }
 :is(.timg, .thand, .thumb).foil::after {
-  /* the art box of a modern card frame: below the name bar, above the type line. The shine fades in from the box's
-     edges instead of stopping on them (Guillermo, Nov 23: "smooth all over, not a cut square"), and it still never
-     reaches past the box, so the name, type line and rules text stay clear. */
-  -webkit-mask:
-    linear-gradient(180deg, transparent 10.5%, #000 17%, #000 49%, transparent 55.5%),
-    linear-gradient(90deg, transparent 7.5%, #000 15%, #000 85%, transparent 92.5%);
-  -webkit-mask-composite: source-in;
-  mask:
-    linear-gradient(180deg, transparent 10.5%, #000 17%, #000 49%, transparent 55.5%),
-    linear-gradient(90deg, transparent 7.5%, #000 15%, #000 85%, transparent 92.5%);
-  mask-composite: intersect;
+  /* One shine over the whole card, like a real foil (Guillermo, Nov 24: "it should be all over the card"). It is at full
+     strength on the picture and eases to about half over the name bar, the type line and the rules text, with no edge
+     anywhere, so the text stays readable under the light. */
+  -webkit-mask: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.5) 7%, #000 14%, #000 50%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.45) 100%);
+  mask: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.5) 7%, #000 14%, #000 50%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.45) 100%);
 }
 .thumb.foil::after { -webkit-mask: none; mask: none; }
 .foil::before {
