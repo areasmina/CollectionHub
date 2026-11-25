@@ -11,8 +11,8 @@ import { runCuts, runSuggest } from './suggest';
  */
 const SLACK = 0.02;
 const round = (x: number) => Math.round(x * 1000) / 1000;
-const runs = { edhrec: runSuggest('edhrec'), none: runSuggest('none') };
-const cuts = { edhrec: runCuts('edhrec'), none: runCuts('none') };
+const runs = { edhrec: runSuggest('edhrec'), none: runSuggest('none'), own: runSuggest('own') };
+const cuts = { edhrec: runCuts('edhrec'), none: runCuts('none'), own: runCuts('own') };
 
 describe('suggestions: find the cards a real deck is missing', () => {
   it('with popularity evidence (the normal case)', () => {
@@ -22,6 +22,13 @@ describe('suggestions: find the cards a real deck is missing', () => {
   it('with no popularity evidence (owned cards EDHREC does not list): only what the cards do', () => {
     expect(runs.none.at10).toBeGreaterThanOrEqual(baseline.none.at10 - SLACK);
     expect(runs.none.at20).toBeGreaterThanOrEqual(baseline.none.at20 - SLACK);
+  });
+  it("our own order (guided builder): EDHREC numbers present but left out, how good each card is at its job counted in", () => {
+    expect(runs.own.at10).toBeGreaterThanOrEqual(baseline.own.at10 - SLACK);
+    expect(runs.own.at20).toBeGreaterThanOrEqual(baseline.own.at20 - SLACK);
+    // it must do at least as well as reading the cards with no evidence at all
+    expect(runs.own.at20).toBeGreaterThanOrEqual(runs.none.at20);
+    expect(cuts.own.found).toBeGreaterThanOrEqual(baseline.cuts.own.found - SLACK);
   });
   it('cuts: 10 spells of each deck swapped for random ones are found among the 10 weakest cards', () => {
     expect(cuts.edhrec.found).toBeGreaterThanOrEqual(baseline.cuts.edhrec.found - SLACK);

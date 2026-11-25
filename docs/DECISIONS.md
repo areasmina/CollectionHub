@@ -359,3 +359,14 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   secret (stored as a hash) on every update and delete; its header joins the Worker's allowed CORS headers. Not on
   Supabase.
 - Export: a Folder column in our CSV export (step 3); ManaBox imports still land in Unlisted.
+
+## 2026-11-24: Guided deckbuilder, our picks first
+- Guillermo wants a step-by-step builder after EDHspace's flow (commander, mana base, ramp, card advantage, targeted
+  disruption, mass disruption, plan), but **our own recommendations from the cards he owns come first; EDHREC is an
+  optional reference**, as the Forge already offers it. Plan: https://claude.ai/artifact/SZUPJnHJbvwu3VDvvGsrZc.
+- He took the recommended answers (decision card, Nov 24): EDHREC is left out of the guide's order entirely (shown
+  only as a reference toggle and an EDHREC % sort); the Forge's OUR PICK stays as it is for now; the guide starts
+  from a GUIDED BUILD button on the commander page and NEW GUIDED DECK on My Decks; each step lists only his cards
+  (missing ones go to TO BUY and the EDHREC strip); default targets come from the Patient / Hungry / Lethal dial.
+- Still to ask before it is built: whether moving a card between Tabletop piles is saved with the deck (a sync change).
+- Only the idea of steps is borrowed from EDHspace; its code, text and look are not copied.
