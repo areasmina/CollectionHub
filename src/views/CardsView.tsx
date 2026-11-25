@@ -1,9 +1,10 @@
 import { haptic } from '../lib/haptics';
 import { GridIcon, ListIcon } from './zine';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
 import { EmptyState, OptRow, PriceLink, priced, Thumb, ToolBar, useMenuPress } from './shared';
 import { CardMenu, type Toast } from './CardMenu';
+import { YourCopies } from './YourCopies';
 import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
 import { colourByCard } from '../lib/deckcolor';
@@ -198,7 +199,8 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; used?: Map<string, string[]>; tints?: Map<string, string[]> }) {
+function Items({ list, cards, view, onMenu, onPick, used, tints }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; onPick?: (e: Entry) => void; used?: Map<string, string[]>; tints?: Map<string, string[]> }) {
+  const pick = (e: Entry) => (onPick ? () => (haptic('open'), onPick(e)) : undefined);
   // In your active decks: a small mark under the name ("in 2 decks", the deck names on hover).
   const useMark = (e: Entry) => {
     const ds = used?.get(norm(e.name));
@@ -229,7 +231,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
               {e.name}
             </span>
             <span className="cart">
-              <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} back={cards.get(e.cardId)?.back} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} />
+              <Thumb src={cards.get(e.cardId)?.img?.replace('/small/', '/normal/')} back={cards.get(e.cardId)?.back} className={`timg xart${e.foil ? ' foil' : ''}`} name={e.name} onPick={pick(e)} />
               {/* Can lead a deck: a crown on the price sticker, nothing else (Guillermo, Nov 15 — the COMMANDER tape
                   repeated what Discover already tells you, and took a corner of the art to say it) */}
               <PriceLink card={priced(cards.get(e.cardId), e.foil)} tape={e.cardId} crown={cmd(e)} />
@@ -253,7 +255,7 @@ function Items({ list, cards, view, onMenu, used, tints }: { list: Entry[]; card
         {list.map((e) => (
           <MenuLi key={e.id} e={e} onMenu={onMenu} className="crow">
             <QtyEdit e={e} />
-            <Thumb src={cards.get(e.cardId)?.img} back={cards.get(e.cardId)?.back} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} />
+            <Thumb src={cards.get(e.cardId)?.img} back={cards.get(e.cardId)?.back} className={`thumb xart${e.foil ? ' foil' : ''}`} name={e.name} onPick={pick(e)} />
             <span className="cn">
               <b>{e.name}</b>
               <span>{setLine(e)}</span>
@@ -282,6 +284,10 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
   const used = inUse(decks);
   const tints = colourByCard(decks, norm); // each card glows in the colour of its deck
   const onMenu: MenuFn | undefined = profile ? (e, x, y) => setMenu({ e, x, y }) : undefined;
+  // a card picture opens YOUR COPIES: every copy of that card, each one changed on its own (Guillermo, Nov 24)
+  const [hand, setHand] = useState<string | null>(null);
+  const closeHand = useCallback(() => setHand(null), []);
+  const onPick = profile ? (e: Entry) => setHand(e.name) : undefined;
   const owned = (name: string) => entries.filter((x) => norm(x.name) === norm(name)).reduce((n, x) => n + x.qty, 0);
   // Always opens in grid; LIST switches for this visit only.
   const [view, setView] = useState<'list' | 'grid'>('grid');
@@ -312,6 +318,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
       {menu && profile && (
         <CardMenu name={menu.e.name} at={menu} profile={profile} binderName={binderName ?? 'your binder'} owned={owned(menu.e.name)} onClose={() => setMenu(null)} onToast={setToast} />
       )}
+      {hand && profile && <YourCopies profile={profile} name={hand} onClose={closeHand} onToast={setToast} />}
       {toast && (
         <div className="toast" role="status">
           <span>{toast.text}</span>
@@ -402,7 +409,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
                     {g.code.toUpperCase()} · {n}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} onPick={onPick} used={used} tints={tints} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
@@ -411,7 +418,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
         empty
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} used={used} tints={tints} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} onPick={onPick} used={used} tints={tints} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)

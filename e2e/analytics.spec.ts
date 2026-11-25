@@ -34,27 +34,25 @@ test('the ANALYTICS tab shows what the binder is made of', async ({ page }) => {
 });
 
 test('Analytics draws the line once days have been recorded', async ({ page }) => {
-  // Two snapshot days a few days back, counted from today: the app drops snapshots older than 14 days
-  // (lib/pricewatch KEEP), so fixed dates stop being "recorded" two weeks after they were written.
-  const since = await page.evaluate(async () => {
-    const DAY = 24 * 60 * 60 * 1000;
-    const iso = (back: number) => new Date(Date.now() - back * DAY).toISOString().slice(0, 10);
-    const days = [iso(3), iso(2)];
+  // Two saved days, 3 and 2 days ago. Relative to today: the app keeps snapshots 14 days (lib/pricewatch), so fixed
+  // dates (this test used Nov 9 and 10) are dropped as soon as they are two weeks old, and the check fails by date.
+  const ago = (n: number) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
+  const [first, second] = [ago(3), ago(2)];
+  const label = new Date(first + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  await page.evaluate(async ([first, second]) => {
     const db: IDBDatabase = await new Promise((ok) => (indexedDB.open('collectionhub').onsuccess = (e: any) => ok(e.target.result)));
     const ids: string[] = await new Promise((ok) => {
       const r = db.transaction(['cards']).objectStore('cards').getAll();
       r.onsuccess = () => ok(r.result.map((c: any) => c.id));
     });
     const tx = db.transaction(['edhrec'], 'readwrite');
-    for (const [day, mul] of [[days[0], 1], [days[1], 2]] as [string, number][])
+    for (const [day, mul] of [[first, 1], [second, 2]] as [string, number][])
       tx.objectStore('edhrec').put({ path: `pricesnap:${day}`, data: ids.map((id) => [id, mul, null]), at: Date.now() });
     await new Promise((ok) => (tx.oncomplete = ok));
-    // the label the app writes for the first day (views/Analytics.tsx `day`)
-    return new Date(days[0] + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  });
+  }, [first, second]);
   const a = await open(page);
   await expect(a.locator('.aline .apath')).toBeVisible();
-  await expect(a.locator('.ahistory .areads .up')).toContainText(`since ${since}`); // today's prices are above both saved days
+  await expect(a.locator('.ahistory .areads .up')).toContainText(`since ${label}`); // today's prices are above both saved days
   await expect(a.locator('.ahistory .afoot')).toContainText('The first 2 days are estimated'); // the two snapshot days
   await expect(a.locator('.anone')).toHaveCount(0);
 });
