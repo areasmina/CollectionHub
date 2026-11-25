@@ -4028,3 +4028,75 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
     grid-template-columns: subgrid !important;
   }
 }
+
+/* ── YOUR COPIES (hand of cards, step 1, Nov 24) ─────────────────────────────────────────────────────────────────
+   Every copy of one card, one card each, side by side; pick one to change only that copy. Level 2: an Anton heading
+   and a hard accent shadow frame it; the cards themselves stay flat, straight and uncovered (sacred card rule). The
+   fanned hand is step 2. Phones: a bottom sheet like the card menu; wider screens: a centred panel. */
+.backdrop.handback { position: fixed; inset: 0; z-index: 1009; background: rgba(0, 0, 0, 0.66); }
+.yourcopies {
+  position: fixed; z-index: 1010; left: 50%; top: 50%; translate: -50% -50%;
+  width: min(920px, calc(100vw - 2 * var(--sp5)));
+  max-height: calc(100dvh - 2 * var(--sp5)); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--bg); color: var(--text);
+  border: 2px solid var(--text); box-shadow: 8px 8px 0 var(--accent);
+  padding: var(--sp3) var(--sp4) var(--sp4);
+}
+.yourcopies .yc-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp2) var(--sp3); }
+.yourcopies .yc-head h2 { margin: 0; font-family: var(--an); font-weight: 400; font-size: 26px; letter-spacing: 0.02em; line-height: 1; }
+.yourcopies .yc-n { display: inline-block; background: var(--hazard); color: var(--ink); padding: 0 6px; margin-left: 4px; font-size: 0.8em; }
+.yourcopies .yc-name { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yourcopies .yc-scry { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
+.yourcopies .close { min-width: 44px; min-height: 44px; background: var(--text); color: var(--bg); border: 0; font-size: 18px; cursor: pointer; }
+
+/* the copies: one sideways row that snaps a card at a time (swipe on phones, wheel / arrows on computers) */
+.yourcopies .yc-row {
+  list-style: none; margin: var(--sp3) calc(-1 * var(--sp4)) 0; padding: var(--sp3) var(--sp4) var(--sp2);
+  display: flex; gap: var(--sp3); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 var(--sp4);
+  overscroll-behavior-x: contain;
+}
+.yourcopies .yc-row > li { flex: none; scroll-snap-align: center; }
+.yourcopies .yc-copy {
+  display: flex; flex-direction: column; gap: var(--sp1); width: 168px; padding: var(--sp1);
+  background: none; color: inherit; border: 2px solid transparent; cursor: pointer; text-align: left;
+  transition: translate 0.18s ease, border-color 0.18s ease;
+}
+.yourcopies .yc-copy.on { border-color: var(--hazard); translate: 0 -6px; }
+.yourcopies .yc-copy:focus-visible { outline: 3px solid var(--hazard); outline-offset: 2px; }
+.yourcopies .yc-img { display: block; width: 100%; aspect-ratio: 488 / 680; }
+.yourcopies .yc-img img { width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4.5% / 3.2%; }
+.yourcopies .yc-tag { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yourcopies .yc-tag b { color: var(--hazard); font-weight: 400; }
+.yourcopies .yc-more { align-self: center; font-family: 'Space Mono', monospace; color: var(--muted); padding: 0 var(--sp4); }
+
+/* this copy: what it is, then its controls */
+.yourcopies .yc-tools { border-top: 2px solid var(--raised); margin-top: var(--sp2); padding-top: var(--sp3); }
+.yourcopies .yc-which { margin: 0 0 var(--sp3); font-family: 'Space Mono', monospace; font-size: 13px; }
+.yourcopies .yc-acts { display: flex; flex-wrap: wrap; gap: var(--sp2); align-items: center; }
+.yourcopies .yc-acts .u-btn { min-height: 44px; }
+.yourcopies .yc-step { display: inline-flex; align-items: center; gap: var(--sp1); }
+.yourcopies .yc-step .u-btn { min-width: 44px; font-size: 20px; padding: 0; }
+.yourcopies .yc-qty { font-family: 'Space Mono', monospace; min-width: 3ch; text-align: center; }
+.yourcopies .yc-note { margin: var(--sp2) 0 0; color: var(--muted); }
+.yourcopies .yc-arts { list-style: none; margin: var(--sp3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp2); max-height: 300px; overflow-y: auto; }
+.yourcopies .yc-arts button { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 2px; background: none; color: inherit; border: 2px solid transparent; cursor: pointer; }
+.yourcopies .yc-arts button[aria-pressed='true'] { border-color: var(--hazard); }
+.yourcopies .yc-arts img { width: 100%; border-radius: 4px; }
+.yourcopies .yc-arts small { font-family: 'Space Mono', monospace; font-size: 11px; }
+/* the undo note shows over the sheet */
+html:has(.yourcopies) .toast { z-index: 1020; }
+html:has(.yourcopies) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
+
+@media (max-width: 700px) {
+  .yourcopies {
+    left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto; max-height: 88dvh;
+    border-bottom: 0; box-shadow: 0 -4px 0 var(--accent);
+    padding-bottom: calc(var(--sp4) + env(safe-area-inset-bottom));
+  }
+  .yourcopies .yc-head h2 { font-size: 22px; }
+  .yourcopies .yc-copy { width: 42vw; max-width: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yourcopies .yc-copy { transition: none; }
+  .yourcopies .yc-copy.on { translate: none; }
+}
