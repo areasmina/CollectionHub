@@ -10,3 +10,77 @@ describe('deck export', () => {
     expect(deckCsv(deck).split('\n')[1]).toBe('"Tatyova, Benthic Druid",1,true,normal');
   });
 });
+
+import { allBindersCsv, binderShareText, collectionCsv, collectionText } from './export';
+import { mergeRows, parseImport } from './importers';
+
+const e = (name: string, qty: number, extra: Partial<import('./db').Entry> = {}) => ({ profile: 1, cardId: `id-${name}`, name, qty, set: 'cmm', cn: '1', ...extra });
+const binderA = [e('Sol Ring', 2, { foil: true }), e('Kodama, of the "East" Tree', 1, { list: 'Trade' })];
+const binderB = [e('Counterspell', 4, { profile: 2, set: undefined, cn: undefined })];
+
+describe('collection export', () => {
+  it('one-binder CSV reads back to the same cards', () => {
+    const back = parseImport(collectionCsv(binderA));
+    expect(back.errors).toEqual([]);
+    expect(back.rows).toEqual([
+      { name: 'Sol Ring', qty: 2, set: 'cmm', cn: '1', id: 'id-Sol Ring', foil: true, added: undefined },
+      { name: 'Kodama, of the "East" Tree', qty: 1, set: 'cmm', cn: '1', id: 'id-Kodama, of the "East" Tree', foil: false, added: undefined },
+    ]);
+  });
+
+  it('all-binders CSV: one row per printing per binder, ManaBox binder column, every card reads back', () => {
+    const csv = allBindersCsv([{ name: 'My Cards', entries: binderA }, { name: 'Second', entries: binderB }]);
+    const lines = csv.split('\n');
+    expect(lines[0]).toBe('Binder Name,Name,Quantity,Set code,Collector number,Foil,Scryfall ID,List');
+    expect(lines).toHaveLength(4);
+    expect(lines[3]).toBe('Second,Counterspell,4,,,normal,id-Counterspell,');
+    const back = parseImport(csv);
+    expect(back.errors).toEqual([]);
+    expect(back.rows.map((r) => [r.name, r.qty, r.foil, r.id])).toEqual([
+      ['Sol Ring', 2, true, 'id-Sol Ring'],
+      ['Kodama, of the "East" Tree', 1, false, 'id-Kodama, of the "East" Tree'],
+      ['Counterspell', 4, false, 'id-Counterspell'],
+    ]);
+    // Quantities add up to the whole collection.
+    expect(back.rows.reduce((n, r) => n + r.qty, 0)).toBe(7);
+  });
+
+  it('binder and list names a spreadsheet could run as formulas are defused; card names are kept exact', () => {
+    const csv = allBindersCsv([{ name: '=HYPERLINK("x")', entries: [e('+2 Mace', 1, { list: '@trade' })] }]);
+    expect(csv.split('\n')[1]).toBe(`"'=HYPERLINK(""x"")",+2 Mace,1,cmm,1,normal,id-+2 Mace,'@trade`);
+    expect(parseImport(csv).rows[0].name).toBe('+2 Mace');
+  });
+
+  it('shared binder list: a heading the importer skips, then lines that read back with set, number and foil', () => {
+    const text = binderShareText('My Cards', binderA);
+    expect(text.split('\n')[0]).toBe('# My Cards: 3 cards, 2 unique');
+    expect(text.endsWith(collectionText(binderA))).toBe(true);
+    const back = mergeRows(parseImport(text).rows);
+    expect(back.map((r) => [r.name, r.qty, r.set, r.cn, r.foil])).toEqual([
+      ['Sol Ring', 2, 'CMM', '1', true],
+      ['Kodama, of the "East" Tree', 1, 'CMM', '1', false],
+    ]);
+  });
+});
+
+import { allBindersText, binderFile } from './export';
+
+describe('export file types', () => {
+  it('all-binders text: a heading per binder the importer skips, then every card', () => {
+    const text = allBindersText([{ name: 'My Cards', entries: binderA }, { name: 'Second', entries: binderB }]);
+    expect(text).toBe(`# My Cards (3 cards)\n${collectionText(binderA)}\n\n# Second (4 cards)\n4 Counterspell`);
+    const back = parseImport(text);
+    expect(back.errors).toEqual([]);
+    expect(back.rows.map((r) => [r.name, r.qty])).toEqual([
+      ['Sol Ring', 2],
+      ['Kodama, of the "East" Tree', 1],
+      ['Counterspell', 4],
+    ]);
+  });
+
+  it('CollectionHub file: the backup shape, holding exactly the binders, cards and decks given', () => {
+    const deck = { profile: 1, name: 'D', cards: [{ name: 'Sol Ring', qty: 1 }], updated: 5 };
+    const body = JSON.parse(binderFile([{ id: 1, name: 'My Cards' }], binderA, [deck], 42));
+    expect(body).toEqual({ app: 'collectionhub', fmt: 1, at: 42, profiles: [{ id: 1, name: 'My Cards' }], entries: binderA, decks: [deck] });
+  });
+});
