@@ -8,7 +8,7 @@ import { SAMPLE_COLLECTION } from '../lib/sample';
 import { haptic as buzz, HAPTIC_NOTE, hapticsOn, hapticsSupported, setHaptics } from '../lib/haptics';
 import { useRef } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { collectionCsv, collectionText, download } from '../lib/export';
+import { allBindersCsv, allBindersText, binderFile, binderShareText, collectionCsv, collectionText, download, EXPORT_FORMATS, type ExportFormat } from '../lib/export';
 import { cad, toCad } from '../lib/prices';
 import { CardsView } from './CardsView';
 import { freeDeckName, openDeck, openDeckList } from '../lib/nav';
@@ -27,6 +27,8 @@ import { saveCardListSoon } from '../lib/cardlist';
 import { worthOf } from '../lib/analytics';
 import { logWorth } from '../lib/worthlog';
 import { EmptyState, priced, priceSum, Progress, Thumb, useStored } from './shared';
+
+const FORMAT_LABEL: Record<ExportFormat, string> = { csv: 'CSV', txt: 'TXT', collectionhub: 'CollectionHub' };
 import { Doodles, PageDecor, Title } from './zine';
 
 const Analytics = lazy(() => import('./Analytics'));
@@ -869,9 +871,64 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
     });
     onPick?.(UNASSIGNED_PROFILE);
   }
+  // Exports read the binders straight from the device at the moment of the tap (never a filtered or stale list).
+  const fileOf = (nm: string, ext: string) => `${nm.replace(/[^\w-]+/g, '_') || 'binder'}.${ext}`;
+  const binderEntries = () => db.entries.where('profile').equals(profile).sortBy('name');
+  // The file type both exports use, picked in the menu and remembered on this device.
+  const [fmt, setFmt] = useStored<ExportFormat>('ch:exportfmt', 'csv', EXPORT_FORMATS);
+  const day = () => new Date().toISOString().slice(0, 10);
+  async function exportBinder() {
+    const es = await binderEntries();
+    if (!es.length) return setNote(`${name} has no cards to export.`);
+    if (fmt === 'csv') download(fileOf(name, 'csv'), collectionCsv(es), 'text/csv');
+    else if (fmt === 'txt') download(fileOf(name, 'txt'), collectionText(es));
+    else {
+      const [prof, decks] = await Promise.all([db.profiles.get(profile), db.decks.where('profile').equals(profile).toArray()]);
+      download(fileOf(name, 'collectionhub.json'), binderFile([prof ?? { id: profile, name }], es, decks), 'application/json');
+    }
+    buzz('success');
+  }
+  async function exportAll() {
+    const [all, profs, decks] = await Promise.all([db.entries.toArray(), db.profiles.toArray(), db.decks.toArray()]);
+    if (!all.length) return setNote('There are no cards in any binder yet.');
+    const named = new Map<number, string>(profs.map((p) => [p.id, p.name]));
+    named.set(UNASSIGNED_PROFILE, UNASSIGNED_NAME);
+    // Binders in the menu's order, Unassigned Cards last, then any binder only its cards still name.
+    const order = [...new Set([...binders.map((b) => b.id).filter((id) => id !== UNASSIGNED_PROFILE), ...profs.map((p) => p.id).filter((id) => id !== UNASSIGNED_PROFILE), UNASSIGNED_PROFILE, ...all.map((e) => e.profile)])];
+    const groups = order
+      .map((id) => ({ name: named.get(id) ?? `Binder ${id}`, entries: all.filter((e) => e.profile === id).sort((a, b) => a.name.localeCompare(b.name)) }))
+      .filter((g) => g.entries.length);
+    const base = `collectionhub-all-binders-${day()}`;
+    if (fmt === 'csv') download(`${base}.csv`, allBindersCsv(groups), 'text/csv');
+    else if (fmt === 'txt') download(`${base}.txt`, allBindersText(groups));
+    else download(`${base}.json`, binderFile(profs, all, decks), 'application/json');
+    buzz('success');
+    setNote(`Saved ${groups.length} binder${groups.length === 1 ? '' : 's'}, ${all.reduce((n, e) => n + e.qty, 0).toLocaleString()} cards, in one ${FORMAT_LABEL[fmt]} file.`);
+  }
+  // Phones: the system share sheet (as a file when it takes one: a big binder is too long for a chat message).
+  // Elsewhere: the list goes to the clipboard, ready to paste.
+  async function share() {
+    const es = await binderEntries();
+    if (!es.length) return setNote(`${name} has no cards to share.`);
+    const text = binderShareText(name, es);
+    const canShare = typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
+    if (canShare) {
+      const f = typeof File === 'function' ? new File([text], fileOf(name, 'txt'), { type: 'text/plain' }) : null;
+      const data: ShareData = f && navigator.canShare?.({ files: [f] }) ? { title: name, files: [f] } : { title: name, text };
+      setOpen(false);
+      await navigator.share(data).catch(() => {});
+      return;
+    }
+    const ok = await (navigator.clipboard?.writeText(text).then(
+      () => true,
+      () => false,
+    ) ?? Promise.resolve(false));
+    if (ok) buzz('success');
+    setNote(ok ? `Copied ${name}'s list (${es.length.toLocaleString()} unique cards). Paste it anywhere; it imports back here, into Moxfield or Archidekt.` : "Couldn't copy: this browser blocked the clipboard. Use EXPORT THIS BINDER instead.");
+  }
   return (
     <div className="bindermenu" ref={box}>
-      <button className={`bmbtn${sync?.alert ? ' alert' : ''}`} aria-expanded={open} aria-haspopup="menu" onClick={() => (buzz('open'), setOpen(!open))}>
+      <button className={`bmbtn${sync?.alert ? ' alert' : ''}`} aria-expanded={open} aria-haspopup="menu" onClick={() => (buzz('open'), setNote(''), setOpen(!open))}>
         <span className="lbl">BINDER</span>
         <b>{name}</b>
         <span className="chev" aria-hidden="true">
@@ -898,6 +955,24 @@ function BinderMenu({ profile, name, count, binders, onPick, sync }: { profile: 
           </button>
           <button role="menuitem" onClick={act(rename)}>
             RENAME BINDER
+          </button>
+          <hr />
+          <div className="bmfmt" role="group" aria-label="Export file type">
+            <span className="lbl">FILE</span>
+            {EXPORT_FORMATS.map((f) => (
+              <button key={f} type="button" role="menuitemradio" aria-checked={fmt === f} className={fmt === f ? 'on' : ''} onClick={() => (buzz('select'), setFmt(f))}>
+                {FORMAT_LABEL[f]}
+              </button>
+            ))}
+          </div>
+          <button role="menuitem" disabled={!count} onClick={act(exportBinder)}>
+            EXPORT THIS BINDER <small>{FORMAT_LABEL[fmt]}</small>
+          </button>
+          <button role="menuitem" onClick={exportAll}>
+            EXPORT ALL BINDERS <small>one {FORMAT_LABEL[fmt]} file</small>
+          </button>
+          <button role="menuitem" disabled={!count} onClick={share}>
+            SHARE THIS BINDER <small>card list</small>
           </button>
           <hr />
           {sync && (

@@ -38,6 +38,7 @@ import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, u
 import { shortfalls, takenBy } from '../lib/copies';
 import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
+import { DeckCompare } from './DeckCompare';
 import { CardLine, CardTile, CmdrCard, CycleBtn, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
@@ -1206,7 +1207,9 @@ export function Decks(s: Shared) {
   }, []);
   // DECKS | STATS, the same two faces as Collection's CARDS | ANALYTICS (Guillermo, Nov 19: "make the two sections look
   // cohesive"). The page always opens on the decks, so the stat tiles start out of the way every time, like Collection's.
-  const [dtab, setDtab] = useState<'decks' | 'stats'>('decks');
+  // COMPARE (Nov 24) puts two of your decks side by side; it shows from two decks up and saves nothing.
+  const [dtabPick, setDtab] = useState<'decks' | 'stats' | 'compare'>('decks');
+  const dtab = dtabPick === 'compare' && decks.length < 2 ? 'decks' : dtabPick; // a deck deleted down to one: back to DECKS
   // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
   const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
     try {
@@ -1299,8 +1302,8 @@ export function Decks(s: Shared) {
   const dtabrow = (
     <>
       <div className="ctabset" role="tablist" aria-label="My decks view">
-        {([['decks', 'DECKS'], ['stats', 'STATS']] as const)
-          .filter(([v]) => v === 'decks' || decks.length > 0)
+        {([['decks', 'DECKS'], ['stats', 'STATS'], ['compare', 'COMPARE']] as const)
+          .filter(([v]) => v === 'decks' || decks.length > (v === 'compare' ? 1 : 0))
           .map(([v, label]) => (
             <button
               key={v}
@@ -1377,6 +1380,7 @@ export function Decks(s: Shared) {
             </div>
           </div>
         )}
+        {dtab === 'compare' && decks.length > 1 && <DeckCompare decks={decks} priced={priced} gc={gcAll} shareById={shareById} />}
         {dtab === 'decks' && (
         <>
         {/* Decks Workbench Toolbar (ManaBox-style, Nov 14): row 1 is the search and the sort, row 2 one sliding row of
