@@ -327,6 +327,11 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
 - His yes (Nov 24): a tap on a card picture in Collection opens YOUR COPIES on computers too; Scryfall is a button
   inside it. The ⋮ menu keeps CHANGE ARTWORK for every copy; the sheet changes one copy.
 
+## 2026-11-24: Foil shines over the whole card
+- Guillermo: "the foil is only inside the art square of the card when it should be all over the card". The shine now
+  covers the whole card with no edge anywhere: full on the picture, about half over the name bar, type line and rules
+  text so they stay readable. This replaces the Nov 12 rule (shine on the picture and frame only) and the Nov 23 soft box.
+
 ## 2026-11-24: MARK AS FOIL turns the whole card
 - Guillermo: "when you make a card foil it duplicates". On a card with two or more copies the menu used to make ONE
   copy foil, which showed as a second tile beside the plain one. He chose "Turn every copy foil": MARK AS FOIL and

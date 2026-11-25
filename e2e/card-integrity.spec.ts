@@ -35,7 +35,7 @@ test('Commander and deck pages: the ⋯ OPTIONS tag hides at rest and shows on t
   await check();
 });
 
-test('Collection: a foil card shines on its picture and frame, never over its name, type line or rules text', async ({ page }) => {
+test('Collection: a foil card shines over the whole card, full on the picture and gentler over the text', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
   const foil = page.locator('.timg.foil').first();
@@ -46,10 +46,12 @@ test('Collection: a foil card shines on its picture and frame, never over its na
     const m = (s: CSSStyleDeclaration) => s.maskImage || (s as unknown as Record<string, string>).webkitMaskImage;
     return { art: m(a), mask: m(b) };
   });
-  // the strong shine is held to the art box and fades in from its edges (no hard square, Nov 23): transparent at the
-  // box's own edges (10.5% / 55.5% down, 7.5% / 92.5% across), so it never reaches the name or the type line
-  expect(look.art).toMatch(/rgba\(0, 0, 0, 0\) 10\.5%.*rgba\(0, 0, 0, 0\) 55\.5%/);
-  expect(look.art).toMatch(/rgba\(0, 0, 0, 0\) 7\.5%.*rgba\(0, 0, 0, 0\) 92\.5%/);
+  // Nov 24 (Guillermo: "all over the card"): the shine reaches every edge of the card, with no transparent band
+  // anywhere; it is full on the picture and about half over the name bar and the text box, so the text stays readable
+  expect(look.art).toContain('gradient');
+  expect(look.art).not.toMatch(/rgba\(0, 0, 0, 0\)/);
+  expect(look.art).toMatch(/rgba\(0, 0, 0, 0\.5\) 0%/);
+  expect(look.art).toMatch(/rgba\(0, 0, 0, 0\.45\) 100%/);
   expect(look.mask).toContain('gradient'); // the frame sheen is masked to the outer border
 });
 
