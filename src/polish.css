@@ -1233,13 +1233,22 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
 .qadd-btn:hover { background: #ffd400 !important; color: #0a0a0a !important; }
 .qadd-btn:active { transform: scale(0.97) !important; }
 @media (max-width: 700px) {
-  .dpage .lists > .dtools.tbar > .tquick { flex-wrap: wrap !important; }
-  /* keep + MY CARDS on the same row as the view pills and SIZE on a normal phone (the bar stays two rows); it only
-     drops to its own row on the narrowest phones */
-  .dpage .lists > .dtools.tbar > .tquick:has(> .qadd-btn) { gap: 8px !important; }
+  .dpage .lists > .dtools.tbar > .tquick,
+  html.forging .deckgrid.forge-split .dpage .lists > .dtools.tbar > .tquick,
+  html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+    max-width: 100% !important;
+  }
+  .dpage .lists > .dtools.tbar > .tquick::-webkit-scrollbar { display: none; }
+  /* keep + MY CARDS on the same single scrollable row as view/size controls on phones */
+  .dpage .lists > .dtools.tbar > .tquick:has(> .qadd-btn) { gap: 6px !important; }
+  .dpage .lists > .dtools.tbar > .tquick > * { flex: 0 0 auto !important; }
   .dpage .lists > .dtools.tbar > .tquick > .qadd-btn {
-    min-height: 44px !important; flex: 1 1 auto !important; min-width: 0 !important;
-    padding: 0 8px !important; font-size: 12px !important; letter-spacing: 0 !important;
+    min-height: 44px !important; flex: 0 0 auto !important; min-width: 0 !important;
+    padding: 0 10px !important; font-size: 12px !important; letter-spacing: 0.02em !important;
   }
 }
 /* the search of your own cards inside the suggestions: a MY CARDS tab on the box, and the "why not" notes under it */

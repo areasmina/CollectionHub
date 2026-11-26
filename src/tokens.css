@@ -221,13 +221,15 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
 }
 @media (max-width: 700px) {
   .forgemain > .dstrip {
-    padding: 4px 0 6px !important;
-    gap: 6px !important;
+    padding: 2px 0 3px !important;
+    gap: 4px !important;
   }
   .forgemain > .dstrip > .dstatus {
     flex: 1 1 100%;
     order: 0 !important;
-    font-size: 11.5px;
+    font-size: 11px;
+    line-height: 1.25;
+    gap: 2px 8px;
     padding: 0 2px;
   }
   .forgemain > .dstrip > .dacts {
@@ -364,14 +366,16 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   background: rgba(12, 7, 8, 0.94) !important;
   border-color: rgba(255, 68, 24, 0.72) !important;
   box-shadow: 0 0 22px rgba(230, 0, 18, 0.28), 0 10px 28px rgba(0, 0, 0, 0.75) !important;
+  transition: all 0.36s cubic-bezier(0.32, 0.72, 0, 1) !important;
 }
 .pillnav.forging-island .island-content {
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
-  gap: 5px !important;
+  gap: 3px !important;
   height: auto !important;
   width: 100% !important;
+  transition: all 0.36s cubic-bezier(0.32, 0.72, 0, 1) !important;
 }
 .pillnav.forging-island .syncpill,
 .pillnav.forging-island .island-lip {
@@ -381,8 +385,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 5px;
+  gap: 3px;
   width: 100%;
+  transition: all 0.36s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .pillnav .forgetop {
   position: static !important;
@@ -522,6 +527,75 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     border-radius: 999px;
     font: 700 10px/1.2 var(--mo-mono);
   }
+}
+
+/* Side-docked Forge Dynamic Island (dock-left / dock-right): keep inside the 46px vertical rail without clipping */
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  padding: 8px 0 !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .island-content {
+  align-items: center !important;
+  gap: 4px !important;
+  width: 34px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forge-island-wrap {
+  width: 34px !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop {
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 34px !important;
+  gap: 4px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .ftitle {
+  display: none !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop :is(.fstamp, .u-btn, .forge-nav-btn) {
+  writing-mode: vertical-rl;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: auto !important;
+  min-height: 34px !important;
+  padding: 8px 0 !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .fstamp .forge-card-icon {
+  writing-mode: horizontal-tb;
+  width: 16px;
+  height: 20px;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .fstamp .forge-card-icon img {
+  width: 16px;
+  height: 20px;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .fcube {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 34px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .fcube > button {
+  writing-mode: vertical-rl;
+  width: 30px !important;
+  min-width: 30px !important;
+  min-height: 44px !important;
+  padding: 8px 0 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .fcube > button > small {
+  writing-mode: horizontal-tb;
+  padding: 1px 4px;
+  font-size: 9px;
 }
 
 /* ── Dwarf Blacksmith Forge Realm (html.forging) ── */
