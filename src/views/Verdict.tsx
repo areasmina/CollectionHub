@@ -204,9 +204,9 @@ export function ReadyTiles({
             ) : (
               <p className="small" style={{ margin: '6px 0' }}>No cards from EDHREC's salt list.</p>
             )}
-            <li className="salt-expl">
+            <p className="salt-expl">
               Sum of EDHREC player-voted salt scores (0–4 scale per card). Lower salt means less table groan.
-            </li>
+            </p>
           </div>
         </details>
       )}

@@ -8,7 +8,7 @@ import type { Shortfall } from '../../lib/copies';
 import type { readiness } from '../../brain/validate';
 import type { bracketFit } from '../../brain/validate';
 import { Meter } from '../../views/parts';
-import { CmdrCard, DeckLink, OutsideLinks, SaltStat, ShortAlert, type Shared } from '../../views/shared';
+import { CmdrCard, DeckLink, OutsideLinks, ShortAlert, type Shared } from '../../views/shared';
 import { ReadyTiles } from '../../views/Verdict';
 import { heroRoom, Pips, Ransom } from '../../views/zine';
 
@@ -107,13 +107,20 @@ export function CommanderHero({
   onOpenMenu,
 }: CommanderHeroProps) {
   const binderNote: ReactNode =
-    kind === 'average' && (covText || (pricesIn && deckCost > 0)) ? (
+    kind === 'average' && covText ? (
       <>
         <span className="lbl">FROM YOUR BINDER</span>
         <b title={pricesIn && deckCost > 0 ? `What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}` : undefined}>
-          {covText || (pricesIn && deckCost > 0 ? `deck ≈${cad(deckCost)}` : '—')}
+          {covText}
         </b>
-        {covText && pricesIn && deckCost > 0 && <small>deck ≈{cad(deckCost)}</small>}
+        {pricesIn && deckCost > 0 && <small>deck ≈{cad(deckCost)}</small>}
+      </>
+    ) : kind === 'average' && pricesIn && deckCost > 0 ? (
+      <>
+        <span className="lbl">EST. DECK VALUE</span>
+        <b title={`What the whole deck costs (cheapest printings) ${fetchedNote(all.map((c) => cardOf(c)?.priceAt ?? cardOf(c)?.at))}`}>
+          deck ≈{cad(deckCost)}
+        </b>
       </>
     ) : undefined;
 
@@ -125,14 +132,13 @@ export function CommanderHero({
           <div className="vname">
             <span className="vslash" aria-hidden="true" />
             <h1 aria-label={label}>
-              <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 28 ? 26 : 32) : label.length > 28 ? 40 : 52} seed={11} room={narrow ? heroRoom() : undefined} />
+              <Ransom text={label.toUpperCase()} size={narrow ? (label.length > 26 ? 21 : label.length > 16 ? 25 : 30) : label.length > 28 ? 40 : 52} seed={11} room={narrow ? heroRoom() : undefined} />
             </h1>
           </div>
           <p className="vmeta">
             <Pips ci={ci} size={20} />
             <span>NO.{no ? String(no).padStart(3, '0') : '—'}</span>
             <span>{page?.numDecks ? page.numDecks.toLocaleString() : '—'} decks</span>
-            {page && <SaltStat names={names} />}
             {mine.length > 0 && !saved && (
               <span className="mydecks">
                 <span className="mydecks-lbl">your deck{mine.length > 1 ? 's' : ''}:</span>

@@ -42,7 +42,6 @@ import {
   OutsideLinks,
   priced as atFinish,
   priceSum,
-  SaltStat,
   SetChips,
   ShortAlert,
   ToolBar,
@@ -398,7 +397,6 @@ export function DeckView({
                 <span>{st.total} cards</span>
                 {!hydrating && <span>{st.lands} lands</span>}
                 {!hydrating && st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
-                <SaltStat names={deck.cards.map((c) => c.name)} />
                 <BracketStat call={call} cedh={deck.source === 'cedh'} />
                 {deck.commander && <OutsideLinks commander={deck.commander} edhrecPath={`commanders/${slug(deck.commander)}`} />}
               </div>

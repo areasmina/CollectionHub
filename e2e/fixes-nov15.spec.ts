@@ -19,8 +19,8 @@ test('Commander header: equal tiles, and the salt list opens on top of everythin
     expect(Math.abs(t.width - tiles[0].width)).toBeLessThanOrEqual(1);
     expect(Math.abs(t.top - tiles[0].top)).toBeLessThanOrEqual(1);
   }
-  await page.locator('.vmeta .scrap.salt summary').click();
-  const pop = page.locator('.vmeta .scrap.salt .popnote');
+  await page.locator('.vhero .vtile.salt-tile summary').click();
+  const pop = page.locator('.vhero .vtile.salt-tile .vpop');
   await expect(pop).toBeVisible();
   // every corner of the list is the list itself, not a link or tile drawn over it
   const covered = () => pop.evaluate((el) => {

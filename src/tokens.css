@@ -240,9 +240,9 @@
   }
 }
 
-/* Saved Deck (.forgemain): clear top-docked Dynamic Island when hero is hidden (SHOW HEADER mode) */
+/* Saved Deck (.forgemain): clear top-docked Dynamic Island via .stage below (avoid stacking on top of .stage 52px) */
 html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has(> .vhero)) {
-  padding-top: calc(var(--island-h, 52px) + 6px) !important;
+  padding-top: 0 !important;
 }
 
 /* Saved Deck (.forgemain) status & utility strip: sleek minimalist hairline bar */
@@ -495,8 +495,16 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     box-shadow 0.25s ease;
 }
 .pillnav.forging-island .island-membrane {
-  background: linear-gradient(180deg, rgba(28, 9, 8, 0.96) 0%, rgba(12, 6, 7, 0.96) 100%) !important;
-  border-color: rgba(255, 88, 22, 0.86) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.2)),
+    rgba(10, 10, 13, 0.84) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  backdrop-filter: blur(20px) saturate(1.35);
+  border-color: rgba(230, 0, 18, 0.45) !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.68),
+    0 0 18px rgba(230, 0, 18, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
   transition: all 0.36s var(--mo-ease-spring) !important;
 }
 .pillnav.forging-island .island-content {
@@ -526,8 +534,10 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  gap: 5px !important;
+  gap: 4px !important;
   width: 100% !important;
+  height: 38px;
+  min-height: 38px;
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
@@ -538,16 +548,25 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 36px;
+  min-height: 34px;
   padding: 0 10px 0 8px;
-  border: 0;
+  border: 1px solid rgba(230, 0, 18, 0.38);
   border-radius: var(--mo-r-pill);
-  background: linear-gradient(135deg, #e60012 0%, #ff5500 100%);
+  background: rgba(230, 0, 18, 0.14);
   color: #ffffff;
   font: 400 12.5px/1 var(--mo-display);
   letter-spacing: 0.06em;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.pillnav .forgetop .fstamp:hover,
+.pillnav .forgetop .fstamp:focus-visible {
+  background: rgba(230, 0, 18, 0.24);
+  border-color: rgba(230, 0, 18, 0.65);
+}
+.pillnav .forgetop .forge-nav-btn {
+  background: rgba(255, 255, 255, 0.07);
 }
 .forge-card-icon {
   display: inline-flex;
@@ -623,11 +642,19 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     min-height: 44px !important;
   }
 }
-/* Dynamic Island "caught on fire" whenever Forge mode is active (controls OR nav switcher) */
+/* Dynamic Island live-activity obsidian glass + crimson rim whenever Forge mode is active */
 html.forging .pillnav .island-membrane {
-  background: linear-gradient(180deg, rgba(28, 9, 8, 0.96) 0%, rgba(12, 6, 7, 0.96) 100%) !important;
-  border-color: rgba(255, 88, 22, 0.86) !important;
-  animation: island-flame-pulse 2.2s ease-in-out infinite;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.2)),
+    rgba(10, 10, 13, 0.84) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  backdrop-filter: blur(20px) saturate(1.35);
+  border-color: rgba(230, 0, 18, 0.45) !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.68),
+    0 0 18px rgba(230, 0, 18, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .pillnav .pback.forge-back-pill .forge-card-icon,
@@ -644,25 +671,38 @@ html.forging .pillnav .island-membrane {
   white-space: nowrap;
   padding: 0 4px;
 }
-.pillnav .forgetop .u-btn {
-  min-height: 36px;
+.pillnav .forgetop .u-btn:not(.primary) {
+  min-height: 34px;
   padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f0f0f5;
+  border-radius: var(--mo-r-pill);
+  border: 0;
+  background: transparent;
+  color: #d0d0dc;
   font: 400 12px/1 var(--mo-display);
   letter-spacing: 0.05em;
   white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
 }
-.pillnav .forgetop .u-btn.primary.forge {
-  background: #e60012;
-  border-color: #ff4422;
+.pillnav .forgetop .u-btn:not(.primary):hover,
+.pillnav .forgetop .u-btn:not(.primary):focus-visible {
+  background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
 }
-.pillnav .forgetop .u-btn:hover,
-.pillnav .forgetop .u-btn:focus-visible {
-  background: rgba(255, 255, 255, 0.14);
+.pillnav .forgetop .u-btn.primary.forge {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--mo-r-pill);
+  border: 0;
+  background: var(--mo-red);
+  color: #ffffff;
+  font: 400 12px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 10px rgba(230, 0, 18, 0.45);
+  white-space: nowrap;
+}
+.pillnav .forgetop .u-btn.primary.forge:hover,
+.pillnav .forgetop .u-btn.primary.forge:focus-visible {
+  background: #ff1224;
   color: #ffffff;
 }
 .pillnav .fcube {
@@ -671,6 +711,10 @@ html.forging .pillnav .island-membrane {
 @media (max-width: 700px) {
   .pillnav.forging-island {
     max-width: calc(100vw - 16px);
+  }
+  .pillnav .forgetop {
+    height: 44px;
+    min-height: 44px;
   }
   .pillnav .forgetop .ftitle {
     position: absolute;
@@ -685,6 +729,7 @@ html.forging .pillnav .island-membrane {
   .pillnav .forgetop .u-btn,
   .pillnav .forgetop .forge-nav-btn {
     min-height: 44px !important;
+    height: 44px !important;
   }
   .pillnav .fcube {
     order: 3;
@@ -692,7 +737,7 @@ html.forging .pillnav .island-membrane {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     align-items: stretch;
-    gap: 3px !important;
+    gap: 2px !important;
     width: 100% !important;
     padding: 2px !important;
     margin: 0 !important;
@@ -700,28 +745,30 @@ html.forging .pillnav .island-membrane {
     top: auto !important;
     transform: none !important;
     box-shadow: none !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 999px !important;
   }
   .pillnav .fcube > button {
     min-height: 44px !important;
     padding: 0 6px !important;
     border: 0 !important;
-    border-radius: var(--mo-r-md) !important;
+    border-radius: 999px !important;
     background: transparent;
-    color: #c8c8d4;
-    font: 400 11.5px/1 var(--mo-display);
-    letter-spacing: 0.05em;
+    color: var(--mo-muted);
+    font: 400 12.5px/1 var(--mo-display);
+    letter-spacing: 0.06em;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 4px;
     white-space: nowrap;
+    transition: background 0.18s ease, color 0.18s ease;
   }
   .pillnav .fcube > button[aria-selected='true'] {
-    background: #e60012;
+    background: var(--mo-red);
     color: #ffffff;
+    box-shadow: 0 2px 10px rgba(230, 0, 18, 0.45);
   }
   .pillnav .fcube > button > small {
     background: #fff824 !important;
@@ -753,6 +800,7 @@ html.forging .pillnav .island-membrane {
   flex-direction: column !important;
   align-items: center !important;
   width: 34px !important;
+  height: auto !important;
   gap: 4px !important;
 }
 .pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .ftitle {
@@ -934,17 +982,41 @@ html.forging .lists.drop-over {
   height: auto !important;
   min-height: 44px !important;
   padding: 5px 10px !important;
+  border-radius: 24px !important;
+}
+.pillnav.forging-island .island-membrane {
+  height: 100% !important;
+  border-radius: 24px !important;
 }
 .pillnav.forging-island.dock-top {
   top: 0 !important;
   padding-top: calc(env(safe-area-inset-top, 0px) + 5px) !important;
 }
-.pillnav.forging-island .island-membrane {
-  height: 100% !important;
-  border-radius: 20px !important;
+.pillnav.forging-island.dock-top,
+.pillnav.forging-island.dock-top .island-membrane {
+  border-radius: 0 0 24px 24px !important;
 }
-html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :is(.dpage, .dpage.forgemain, .dpage.forgemain:not(:has(> .vhero))) {
-  padding-top: calc(var(--island-h, 58px) + 8px) !important;
+.pillnav.forging-island.dock-bottom,
+.pillnav.forging-island.dock-bottom .island-membrane {
+  border-radius: 24px 24px 0 0 !important;
+}
+.pillnav.forging-island.dock-left,
+.pillnav.forging-island.dock-left .island-membrane {
+  border-radius: 0 22px 22px 0 !important;
+}
+.pillnav.forging-island.dock-right,
+.pillnav.forging-island.dock-right .island-membrane {
+  border-radius: 22px 0 0 22px !important;
+}
+.dpage.forgemain,
+html.forging .dpage {
+  padding-top: 0 !important;
+}
+html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
+  padding-top: calc(var(--island-h, 54px) + 8px) !important;
+}
+html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
+  padding-top: 10px !important;
 }
 @media (max-width: 700px) {
   .pillnav.forging-island {
@@ -953,7 +1025,7 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   .pillnav.forging-island.dock-top {
     padding-top: calc(env(safe-area-inset-top, 0px) + 4px) !important;
   }
-  html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :is(.dpage, .dpage.forgemain, .dpage.forgemain:not(:has(> .vhero))) {
+  html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
     padding-top: calc(var(--island-h, 96px) + 6px) !important;
   }
   html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) {
@@ -973,9 +1045,14 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   white-space: nowrap !important;
-  padding: 2px 18px 2px 0;
-  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 22px), transparent 100%);
-  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 22px), transparent 100%);
+  padding: 2px 14px 2px 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 14px), transparent 100%);
+}
+.vhero .vmeta .mydecks:not(:has(.mydecks-pill + .mydecks-pill)):not(:has(.mydecks-more)) {
+  padding-right: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 .vhero .vmeta .mydecks::-webkit-scrollbar {
   display: none;
@@ -1004,9 +1081,12 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   text-decoration: none !important;
   font: 400 11px/1.2 var(--mo-mono) !important;
   white-space: nowrap !important;
-  max-width: 175px;
+  max-width: 210px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.vhero .vmeta .mydecks:not(:has(.mydecks-pill + .mydecks-pill)):not(:has(.mydecks-more)) .mydecks-pill .decklink {
+  max-width: min(280px, calc(100vw - 116px));
 }
 .vhero .vmeta .mydecks-pill .decklink:hover {
   color: #fff824 !important;
@@ -1024,7 +1104,12 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
 }
 @media (max-width: 700px) {
   .vhero {
-    gap: var(--s3) 18px !important;
+    padding: 6px 8px !important;
+    gap: 6px 14px !important;
+    margin-bottom: 6px !important;
+  }
+  .vhero .vcard {
+    align-self: center;
   }
   .vhero .vname {
     padding-left: 4px;
@@ -1037,21 +1122,54 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
     min-height: 44px !important;
   }
 }
+.vhero .vtiles:has(details[open]) {
+  position: relative;
+  z-index: 60;
+}
 .vhero .vtile:not(.vnote) {
   background: #101014;
   border: 1px solid #24242e;
   border-radius: 4px;
   box-shadow: none;
 }
-.vtile.vnote {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  background: transparent !important;
-  border: 1px solid #24242e !important;
-  padding: 8px 10px !important;
-  border-radius: 4px !important;
+.vhero .vtile .vpop {
+  min-width: min(280px, calc(100vw - 32px)) !important;
+  max-width: min(380px, calc(100vw - 32px)) !important;
+}
+.vhero .vtile.salt-tile .vpop {
+  left: auto !important;
+  right: 0 !important;
+}
+.vtile.salt-tile .vpop .salt-expl {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--mo-muted);
+  line-height: 1.4;
+}
+@media (min-width: 900px) {
+  .vhero .vtiles.hasnote > .vtile.vnote {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px !important;
+    background: transparent !important;
+    border: 1px solid #24242e !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+  }
+}
+@media (max-width: 899px) {
+  .vhero .vtiles.hasnote > .vtile.vnote {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    padding: 2px 2px 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
 }
 .dstrip .dacts .u-btn:not(.primary) {
   background: #121217;
