@@ -2984,31 +2984,26 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .colours button.mana-filter-btn {
   transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
-.colours button[data-c='W']:hover,
 .colours button[data-c='W'][aria-pressed='true'] {
   border-color: #f8f6d8 !important;
   color: #f8f6d8 !important;
   box-shadow: 0 0 14px rgba(248, 246, 216, 0.8), inset 0 0 6px rgba(248, 246, 216, 0.3) !important;
 }
-.colours button[data-c='U']:hover,
 .colours button[data-c='U'][aria-pressed='true'] {
   border-color: #38bdf8 !important;
   color: #38bdf8 !important;
   box-shadow: 0 0 14px rgba(56, 189, 248, 0.8), inset 0 0 6px rgba(56, 189, 248, 0.3) !important;
 }
-.colours button[data-c='B']:hover,
 .colours button[data-c='B'][aria-pressed='true'] {
   border-color: #c084fc !important;
   color: #c084fc !important;
   box-shadow: 0 0 14px rgba(192, 132, 252, 0.8), inset 0 0 6px rgba(192, 132, 252, 0.3) !important;
 }
-.colours button[data-c='R']:hover,
 .colours button[data-c='R'][aria-pressed='true'] {
   border-color: #ef4444 !important;
   color: #ef4444 !important;
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.8), inset 0 0 6px rgba(239, 68, 68, 0.3) !important;
 }
-.colours button[data-c='G']:hover,
 .colours button[data-c='G'][aria-pressed='true'] {
   border-color: var(--miku-green, #00f5a0) !important;
   color: var(--miku-green, #00f5a0) !important;

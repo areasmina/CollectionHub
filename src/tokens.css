@@ -147,6 +147,9 @@
   transform: none;
   box-shadow: none;
 }
+.disc-tabs + .dfind {
+  margin-top: 0 !important;
+}
 .disc-tabs + .dfind > .dtools.tbar {
   margin-top: 0 !important;
   border-top: 0 !important;
