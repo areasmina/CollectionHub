@@ -64,6 +64,24 @@ export const onPendingTag = (f: (tag: string) => void) => {
   return () => removeEventListener(OPEN_TAG, h);
 };
 
+/** Hand off seed cards from Tag Builder directly into Guided Builder. */
+const OPEN_SEEDS = 'ch:openguidedseeds';
+let pendingSeeds: string[] | null = null;
+export function openGuidedWithSeeds(cardNames: string[]) {
+  pendingSeeds = cardNames;
+  dispatchEvent(new CustomEvent(OPEN_SEEDS, { detail: cardNames }));
+}
+export function takePendingSeeds(): string[] | null {
+  const s = pendingSeeds;
+  pendingSeeds = null;
+  return s;
+}
+export const onPendingSeeds = (f: (names: string[]) => void) => {
+  const h = (e: Event) => f((e as CustomEvent<string[]>).detail);
+  addEventListener(OPEN_SEEDS, h);
+  return () => removeEventListener(OPEN_SEEDS, h);
+};
+
 /** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
 export async function freeDeckName(profile: number, want: string, except?: number) {
   const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));

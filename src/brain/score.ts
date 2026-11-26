@@ -33,6 +33,8 @@ export interface DeckContext {
   deck: DeckCard[];
   cardOf: (name: string) => Pick<Card, 'type' | 'text' | 'cmc' | 'mana'> | undefined;
   commander?: string;
+  /** Optional second commander (Partner, Background, Doctor's companion). Never cut. */
+  partner?: string;
   bracket: number; // 2–5
   aggression: Aggression;
   taste?: TasteEvent[];
@@ -76,7 +78,20 @@ export function deckNeeds(ctx: DeckContext) {
   }
   const synergy = deckSynergy(ctx.deck, ctx.cardOf, ctx.commander);
   const extraTurns = ctx.deck.filter((c) => EXTRA_TURN.test(ctx.cardOf(c.name)?.text ?? '')).length;
-  return { stats, dial, kill, range, themeBalance, synergy, extraTurns, names: new Set(ctx.deck.map((c) => norm(c.name))) };
+  let spells = 0;
+  let earlyDrops = 0;
+  const cmcCounts = new Map<number, number>();
+  for (const c of ctx.deck) {
+    const m = ctx.cardOf(c.name);
+    if (!m || isLand(m.type)) continue;
+    spells += c.qty;
+    if (m.cmc != null) {
+      if (m.cmc <= 2) earlyDrops += c.qty;
+      const bucket = Math.round(m.cmc);
+      cmcCounts.set(bucket, (cmcCounts.get(bucket) ?? 0) + c.qty);
+    }
+  }
+  return { stats, dial, kill, range, themeBalance, synergy, extraTurns, spells, earlyDrops, cmcCounts, names: new Set(ctx.deck.map((c) => norm(c.name))) };
 }
 export type Needs = ReturnType<typeof deckNeeds>;
 
@@ -137,6 +152,17 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
 
   if (card?.cmc != null && card.cmc > 4 && needs.stats.avgMv > needs.dial.maxAvgMv)
     parts.push({ label: `curve already high (${needs.stats.avgMv.toFixed(1)} average)`, value: -0.03 * (card.cmc - 4), source: 'deck needs' });
+
+  // Curve-slot awareness (activated only on real decks >= 25 spells so unit-test mini decks stay unchanged).
+  if (needs.spells >= 25 && !(type && isLand(type)) && card?.cmc != null) {
+    const bucket = Math.round(card.cmc);
+    const haveBucket = needs.cmcCounts.get(bucket) ?? 0;
+    if (card.cmc <= 2 && needs.earlyDrops < Math.round(needs.spells * 0.22)) {
+      parts.push({ label: 'smooths early curve (1–2 MV)', value: 0.06, source: 'deck needs' });
+    } else if (card.cmc >= 4 && haveBucket >= 10) {
+      parts.push({ label: `deck already has ${haveBucket} ${bucket}-drops`, value: -0.04, source: 'deck needs' });
+    }
+  }
 
   if (ctx.focus && card && ctx.focus.test(card)) {
     const lbl = ctx.focus.label.toLowerCase();

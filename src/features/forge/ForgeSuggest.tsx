@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from '../../brain/score';
+import { readDeck, upgradeLine } from '../../brain/session';
 import { themeOf } from '../../brain/themes';
 import type { Aggression } from '../../brain/win';
 import type { NotOffered } from '../../lib/collsearch';
@@ -57,6 +58,11 @@ export function ForgeSuggest({
   onPlace,
   onAdd,
   onCut,
+  onSwap,
+  onBalance,
+  partner,
+  pinned,
+  deckTotal,
   loading,
   aggression: dial,
   expanded: controlledExpanded,
@@ -70,6 +76,9 @@ export function ForgeSuggest({
   profile: number;
   deck: DeckCard[];
   commander?: string;
+  partner?: string;
+  pinned?: string[];
+  deckTotal?: number;
   bracket: number;
   candidates: SubCard[];
   cardOf: (name: string) => Card | undefined;
@@ -86,6 +95,8 @@ export function ForgeSuggest({
   onPlace: (name: string | null) => void;
   onAdd?: (name: string) => void;
   onCut?: (name: string) => void;
+  onSwap?: (from: string, to: string) => void;
+  onBalance?: () => void;
   loading?: boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
@@ -123,7 +134,7 @@ export function ForgeSuggest({
   const [more, setMore] = useState(false);
   const [allThemes, setAllThemes] = useState(false);
   const [sheet, setSheet] = useState(false);
-  const [pane, setPane] = useState<'sugg' | 'buy'>('sugg');
+  const [pane, setPane] = useState<'sugg' | 'upgrades' | 'buy'>('sugg');
   const [theme, setTheme] = useState(pageTheme);
   useEffect(() => setTheme(pageTheme), [pageTheme]);
   const tagOf = themes.find((t) => t.slug === theme);
@@ -139,7 +150,7 @@ export function ForgeSuggest({
     return () => clearTimeout(t);
   }, [openSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const ctx: DeckContext = { deck, cardOf, commander, bracket, aggression, taste: brain?.taste, focus, taken };
+  const ctx: DeckContext = { deck, cardOf, commander, partner, bracket, aggression, taste: brain?.taste, focus, taken };
   const takenKey = taken ? candidates.map((c) => taken(c.name)).filter(Boolean).map((t) => `${t!.used}/${t!.own}`).join(',') : '';
   const deckKey = deck.map((c) => `${c.name}×${c.qty}`).join('|');
   const sigNeeds = [deckKey, deck.filter((c) => cardOf(c.name)).length, aggression, bracket, brain?.taste?.length ?? 0, brain?.taste?.at(-1)?.at ?? 0, tagOf?.value ?? ''].join('#');
@@ -160,6 +171,21 @@ export function ForgeSuggest({
     }
     return out;
   }, [needs, focus, candKey, candidates.filter((c) => cardOf(c.name)).length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const upgrades = useMemo(() => {
+    if (!onSwap) return [];
+    const ownedPool = rows.filter((r) => r.owned > 0 && !r.blocked).map((r) => r.c);
+    if (!ownedPool.length) return [];
+    const recMap = new Map(ownedPool.map((c) => [norm(c.name), c]));
+    return readDeck({
+      ctx,
+      candidates: ownedPool,
+      recOf: (n) => recMap.get(norm(n)),
+      pinned: [...(pinned ?? []), ...(partner ? [partner] : [])],
+      cuts: 10,
+    }).upgrades;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(onSwap), needs, candKey, rows.length]);
 
   const short = shortOf(needs.stats, needs.range);
   const searching = q.trim().length >= 2;
@@ -217,14 +243,21 @@ export function ForgeSuggest({
       </button>
       <div className="fsugg-header">
         <div className="fpanes-wrap">
-          {buy ? (
+          {buy || onSwap ? (
             <div className="fpanes" role="tablist" aria-label="Forge panel">
               <button role="tab" aria-selected={pane === 'sugg'} onClick={() => (haptic('select'), setPane('sugg'))}>
                 SUGGESTIONS <small>{loading ? '…' : list.length}</small>
               </button>
-              <button role="tab" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
-                TO BUY
-              </button>
+              {onSwap && (
+                <button role="tab" aria-selected={pane === 'upgrades'} onClick={() => (haptic('select'), setPane('upgrades'))}>
+                  UPGRADES <small>{upgrades.length}</small>
+                </button>
+              )}
+              {buy && (
+                <button role="tab" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
+                  TO BUY
+                </button>
+              )}
             </div>
           ) : (
             <h3>
@@ -263,6 +296,22 @@ export function ForgeSuggest({
               <small>Auto-craft 100 cards from your binder</small>
             </span>
             <span className="build-arrow">BUILD 100 →</span>
+          </button>
+        </div>
+      )}
+      {!onJustBuild && onBalance && expanded && (
+        <div className="just-build-banner sugg-top-action">
+          <button
+            type="button"
+            className="btn-just-build"
+            onClick={() => (haptic('open'), onBalance())}
+            title="Propose adds and cuts from your binder to land on 100 cards with balanced roles"
+          >
+            <span className="build-text">
+              <strong>BALANCE TO 100</strong>
+              <small>{deckTotal && deckTotal !== 100 ? `Currently ${deckTotal} cards · review adds & cuts` : 'Tune roles & swaps from your binder'}</small>
+            </span>
+            <span className="build-arrow">BALANCE →</span>
           </button>
         </div>
       )}
@@ -314,6 +363,44 @@ export function ForgeSuggest({
               </button>
             ))}
           </div>
+        </div>
+      ) : pane === 'upgrades' && onSwap ? (
+        <div className="fupgrades">
+          {upgrades.length === 0 ? (
+            <p className="small" style={{ margin: '12px 0' }}>
+              No clear owned role upgrades found for weak slots right now. Check SUGGESTIONS or BALANCE TO 100 for full edits.
+            </p>
+          ) : (
+            <ol className="frows">
+              {upgrades.map((u) => {
+                const img = imgOf(u.in);
+                return (
+                  <li key={`${u.out}->${u.in}`} className="own">
+                    <div className="frow">
+                      {img ? <img src={img} alt="" loading="lazy" /> : <span className="noimg" aria-hidden="true" />}
+                      <span className="fbody">
+                        <b>
+                          {u.in} <small style={{ fontWeight: 400, opacity: 0.75 }}>for {u.out}</small>
+                        </b>
+                        <span className="whys">
+                          <span className="cgain">{u.job}</span>
+                          <span>{upgradeLine(u)}</span>
+                        </span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="fadd"
+                      aria-label={`Swap ${u.out} for ${u.in}`}
+                      onClick={() => (haptic('success'), onSwap(u.out, u.in))}
+                    >
+                      ⇄ SWAP
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
         </div>
       ) : pane === 'buy' && buy ? (
         <div className="fbuy">{buy}</div>

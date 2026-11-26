@@ -216,3 +216,23 @@ describe('wildcard candidates', () => {
     expect(c[1].why).toBe('hidden gem: 3.0x lift, in 5% of decks');
   });
 });
+
+describe('curve-slot awareness in scoreCard', () => {
+  it('nudges 1-2 MV plays when a 25+ spell deck lacks early drops and stays silent on tiny test decks', () => {
+    const filler = Array.from({ length: 26 }, (_, i) => ({ name: `Big-${i}`, qty: 1 }));
+    const meta = (n: string) =>
+      n === 'Cheap Bear'
+        ? { type: 'Creature', text: '', cmc: 2 }
+        : n === 'Big Ten'
+          ? { type: 'Creature', text: '', cmc: 5 }
+          : { type: 'Creature', text: '', cmc: 5 };
+    const bigCtx: DeckContext = { deck: filler, cardOf: meta, bracket: 3, aggression: 'hungry' };
+    const cheapScore = scoreCard({ name: 'Cheap Bear' }, bigCtx);
+    const bigScore = scoreCard({ name: 'Big Ten' }, bigCtx);
+    expect(cheapScore.parts.some((p) => p.label.includes('smooths early curve'))).toBe(true);
+    expect(bigScore.parts.some((p) => p.label.includes('5-drops'))).toBe(true);
+
+    const tinyCtx: DeckContext = { deck: filler.slice(0, 3), cardOf: meta, bracket: 3, aggression: 'hungry' };
+    expect(scoreCard({ name: 'Cheap Bear' }, tinyCtx).parts.some((p) => p.label.includes('smooths early curve'))).toBe(false);
+  });
+});

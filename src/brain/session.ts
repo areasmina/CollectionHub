@@ -96,7 +96,7 @@ export function readDeck(o: {
   const rated: (Cut & { keep?: string })[] = [];
   for (const dc of ctx.deck) {
     const card = ctx.cardOf(dc.name);
-    if (!card || isLand(card.type) || (ctx.commander && norm(dc.name) === norm(ctx.commander))) continue;
+    if (!card || isLand(card.type) || (ctx.commander && norm(dc.name) === norm(ctx.commander)) || (ctx.partner && norm(dc.name) === norm(ctx.partner))) continue;
     const rest: DeckContext = { ...ctx, deck: ctx.deck.filter((c) => c !== dc) };
     const restNeeds = deckNeeds(rest);
     const s = scoreCard({ ...o.recOf?.(dc.name), name: dc.name, type: card.type, cmc: card.cmc }, rest, restNeeds);

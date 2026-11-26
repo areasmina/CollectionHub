@@ -10,7 +10,7 @@ import { db, type Card, type Deck, type DeckCard } from '../../lib/db';
 import { bracketOf, deckStats, isLand } from '../../lib/deckstats';
 import { deckText } from '../../lib/export';
 import { haptic } from '../../lib/haptics';
-import { freeDeckName, openDeck } from '../../lib/nav';
+import { freeDeckName, onPendingSeeds, openDeck, takePendingSeeds } from '../../lib/nav';
 import { norm } from '../../lib/names';
 import { cad, toCad } from '../../lib/prices';
 import { useBinder } from '../../views/shared';
@@ -131,6 +131,26 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
       if (found) setCommander(found);
     }
   }, [cardByKey, commander, savedCommanderKey]);
+
+  // Receive seed cards handed off from Tag Builder ("BUILD WITH THESE TAGS →")
+  useEffect(() => {
+    const applySeeds = async (names: string[]) => {
+      if (!names.length) return;
+      const keys = names.slice(0, MAX_SEED_CARDS).map(norm);
+      const fromBinder = keys.map((k) => binderCards.find((b) => b.key === k) ?? cardByKey.get(k)).filter(Boolean) as Card[];
+      const missingKeys = keys.filter((k) => !fromBinder.some((c) => c.key === k));
+      const fromDb = missingKeys.length ? await db.cards.where('key').anyOf(missingKeys).toArray() : [];
+      const resolved = [...fromBinder, ...fromDb].slice(0, MAX_SEED_CARDS);
+      if (resolved.length) {
+        setStartMode('cards');
+        setStep('commander');
+        setSeedCards(resolved);
+      }
+    };
+    const initial = takePendingSeeds();
+    if (initial) void applySeeds(initial);
+    return onPendingSeeds((names) => void applySeeds(names));
+  }, [binderCards, cardByKey]);
 
   // Persist draft across reloads/tab switches
   useEffect(() => {
