@@ -8,6 +8,7 @@ import {
   dealGoldfish,
   playHandCard,
   returnCommanderToZone,
+  simulateGoldfish,
 } from './goldfish';
 
 const cards: Record<string, { type: string; text: string; cmc: number }> = {
@@ -115,5 +116,20 @@ describe('goldfish playtester engine', () => {
     s = castFromCommandZone(s, 0, cardOf);
     expect(s.commandZone.length).toBe(0);
     expect(s.commanderCasts.commander).toBe(2);
+  });
+
+  it('runs deterministic Monte Carlo Goldfish simulation across 4 turns', () => {
+    const deck = [
+      { name: 'Commander', qty: 1 },
+      { name: 'Forest', qty: 37 },
+      { name: 'Sol Ring', qty: 4 },
+      { name: 'Bear Cub', qty: 58 },
+    ];
+    const a = simulateGoldfish(deck, cardOf, 'Commander', undefined, 200);
+    const b = simulateGoldfish(deck, cardOf, 'Commander', undefined, 200);
+    expect(a).toEqual(b);
+    expect(a.keepablePct).toBeGreaterThan(40);
+    expect(a.t4ManaAvg).toBeGreaterThanOrEqual(2.5);
+    expect(a.t4ThreeLandsPct).toBeGreaterThan(30);
   });
 });

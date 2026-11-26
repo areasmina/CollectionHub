@@ -46,8 +46,8 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(page.locator('.shelfhead, .shelfrow')).toHaveCount(0);
 
     // The deck buttons ride the ransom title band since Nov 15 (they used to sit on the overview ribbon)
-    // and since Nov 19 they are Collection's own labels and tabs (DECKS | STATS, + NEW DECK, IMPORT)
-    await expect(page.locator('.dlist .decksactions .slip-btn.deck')).toBeVisible();
+    // and since Nov 19 they are Collection's own labels and tabs (DECKS | STATS, + GUIDED / + NEW DECK, IMPORT)
+    await expect(page.locator('.dlist .decksactions .slip-btn.deck').first()).toBeVisible();
     await expect(page.locator('.dribbon')).toHaveCount(0); // the tiles wait on the STATS tab
 
     // Decks toolbar is visible with search, sort, and filters
@@ -84,16 +84,18 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(menu.getByRole('menuitem', { name: '+ ADD TAG' })).toBeVisible();
   });
 
-  test('Decks overview: DECKS | STATS tabs like Collection; the page opens on the decks, the tabs sit in line with + NEW DECK / IMPORT', async ({ page }) => {
+  test('Decks overview: DECKS | STATS tabs like Collection; the page opens on the decks, the tabs sit in line with + NEW DECK / IMPORT', async ({ page }, info) => {
     await go(page, 'decks');
     const tab = (name: string) => page.locator('.dlist .ctab', { hasText: name });
     // opens on DECKS, tiles out of the way (they start hidden, every time, like Collection's)
     await expect(tab('DECKS')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('.dstats')).toHaveCount(0);
     await expect(page.locator('.dcard').first()).toBeVisible();
-    // the tabs and the two buttons are one row, at a full tap height
+    // on wide screens the tabs and actions share one row; every control keeps >= 44px tap height
     const mid = async (sel: string) => { const b = (await page.locator(sel).first().boundingBox())!; return b.y + b.height / 2; };
-    expect(Math.abs((await mid('.dlist .ctab.on')) - (await mid('.dlist .decksactions .slip-btn.import')))).toBeLessThanOrEqual(4);
+    if (info.project.name !== 'phone') {
+      expect(Math.abs((await mid('.dlist .ctab.on')) - (await mid('.dlist .decksactions .slip-btn.import')))).toBeLessThanOrEqual(4);
+    }
     for (const sel of ['.dlist .ctab.on', '.dlist .decksactions .slip-btn.deck', '.dlist .decksactions .slip-btn.import'])
       expect((await page.locator(sel).first().boundingBox())!.height).toBeGreaterThanOrEqual(44);
     // the same parts as Collection: same tab stamp, same ink and red labels

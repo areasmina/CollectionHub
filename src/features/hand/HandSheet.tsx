@@ -15,6 +15,7 @@ import {
   maxManaPool,
   playHandCard,
   returnCommanderToZone,
+  simulateGoldfish,
   togglePermanentTap,
   type GoldfishState,
 } from './goldfish';
@@ -81,6 +82,7 @@ export function HandSheet({
   }, [cards, commander, partner, cardOf]);
 
   const pct = (p: number) => `${Math.round(p * 100)}%`;
+  const sim = useMemo(() => simulateGoldfish(cards, cardOf, commander, partner, 400), [cards, cardOf, commander, partner]);
 
   const landsOnField = state.battlefield.filter((p) => p.isLand);
   const spellsOnField = state.battlefield.filter((p) => !p.isLand);
@@ -297,6 +299,28 @@ export function HandSheet({
             </div>
           ) : (
             <div id="hand-panel-odds" role="tabpanel" aria-labelledby="hand-tab-odds" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--mo-s3)' }}>
+              <div className={styles.simGrid} aria-label="400-game Goldfish simulation summary">
+                <div className={styles.simBox}>
+                  <span className={styles.simLbl}>KEEPABLE OPENING 7</span>
+                  <span className={styles.simVal}>{sim.keepablePct}%</span>
+                  <span className={styles.simSub}>2–4 lands</span>
+                </div>
+                <div className={styles.simBox}>
+                  <span className={styles.simLbl}>T4 ≥3 LANDS</span>
+                  <span className={styles.simVal}>{sim.t4ThreeLandsPct}%</span>
+                  <span className={styles.simSub}>{sim.runs} simulated starts</span>
+                </div>
+                <div className={styles.simBox}>
+                  <span className={styles.simLbl}>AVG T3 MANA</span>
+                  <span className={styles.simVal}>{sim.t3ManaAvg.toFixed(1)}</span>
+                  <span className={styles.simSub}>lands + rocks</span>
+                </div>
+                <div className={styles.simBox}>
+                  <span className={styles.simLbl}>AVG T4 MANA</span>
+                  <span className={styles.simVal}>{sim.t4ManaAvg.toFixed(1)}</span>
+                  <span className={styles.simSub}>lands + rocks</span>
+                </div>
+              </div>
               <p style={{ margin: 0, fontFamily: 'var(--mo-mono)', fontSize: 12, color: 'var(--mo-muted)' }}>
                 Exact hypergeometric odds over {librarySize} library cards (commander excluded). Each row is independent — don&apos;t add overlapping categories.
               </p>
