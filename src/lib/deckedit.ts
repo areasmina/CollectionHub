@@ -69,6 +69,13 @@ export async function setFoil(deck: Deck, profile: number, name: string, foil: b
   });
 }
 
+/** Replaces the deck's card list in one atomic write (one history snapshot) and returns an undo function. */
+export async function applyDeckCards(deck: Deck, cards: Deck['cards'], label = 'Balance deck') {
+  const before = deck.cards;
+  await saveDeck(deck, cards, label);
+  return () => saveDeck(deck, before, `Undo ${label}`);
+}
+
 /** Removes a card from the deck; returns an undo that puts the deck back as it was. */
 export async function removeFromDeck(deck: Deck, name: string) {
   const before = deck.cards;

@@ -48,6 +48,7 @@ import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '..
 
 const HandSheet = lazy(() => import('../features/hand/HandSheet').then((m) => ({ default: m.HandSheet })));
 const RuleZeroModal = lazy(() => import('../features/rulezero/RuleZeroModal').then((m) => ({ default: m.RuleZeroModal })));
+const BalanceSheet = lazy(() => import('../features/balance/BalanceSheet').then((m) => ({ default: m.BalanceSheet })));
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -600,6 +601,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
   const [handOpen, setHandOpen] = useState(false);
   const [ruleZeroOpen, setRuleZeroOpen] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
   const [compactHero, setCompactHero] = useState(() => {
     try {
       return localStorage.getItem('ch:forge:compact_hero') === 'true';
@@ -918,6 +920,9 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
           </p>
           <div className="dacts" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <ShortAlert items={shortHere} inline currentDeck={deck.name} />
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setBalanceOpen(true))}>
+              BALANCE
+            </button>
             <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHandOpen(true))}>
               HAND &amp; ODDS
             </button>
@@ -929,6 +934,26 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             </button>
           </div>
         </section>
+
+        {balanceOpen && (
+          <Suspense fallback={null}>
+            <BalanceSheet
+              deck={deck}
+              ctx={swapCtx}
+              candidates={candidates}
+              identity={ci}
+              pinned={pins.in}
+              never={never}
+              recOf={slotInfo}
+              cardOf={anyCard}
+              call={call}
+              aggression={aggression}
+              gameChangers={gc}
+              onToast={setToast}
+              onClose={() => setBalanceOpen(false)}
+            />
+          </Suspense>
+        )}
 
         {handOpen && (
           <Suspense fallback={null}>
