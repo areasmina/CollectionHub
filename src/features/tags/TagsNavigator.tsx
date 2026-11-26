@@ -5,7 +5,7 @@ import { cardFromList, cardList, smallPic, type CardList } from '../../lib/cardl
 import { db, type Card } from '../../lib/db';
 import { haptic } from '../../lib/haptics';
 import { norm } from '../../lib/names';
-import { onPendingTag, takePendingTag } from '../../lib/nav';
+import { onPendingTag, openDiscoverSub, openGuidedWithSeeds, takePendingTag } from '../../lib/nav';
 import { resolveRows } from '../../lib/scryfall';
 import { findTags } from '../../lib/tags';
 import { CardMenu, type Toast } from '../../views/CardMenu';
@@ -486,6 +486,25 @@ export function TagsNavigator({
               >
                 FORMAT: {formatMode === 'paper' ? 'PAPER' : 'ONLINE'}
               </button>
+              {ownedMatchesCount > 0 && (
+                <button
+                  type="button"
+                  className={styles.showBtn}
+                  title="Send top matching cards you own into the Guided Builder to find a commander and build a 100-card deck"
+                  onClick={() => {
+                    haptic('open');
+                    const seeds = matches
+                      .filter((m) => m.owned)
+                      .slice(0, 8)
+                      .map((m) => m.name);
+                    openGuidedWithSeeds(seeds);
+                    openDiscoverSub('guided');
+                    onToast({ text: `Loaded ${seeds.length} owned cards into Guided Builder` });
+                  }}
+                >
+                  BUILD WITH THESE TAGS →
+                </button>
+              )}
               {PIPS.map((p) => (
                 <button
                   key={p}

@@ -186,8 +186,9 @@ export function DeckView({
   const partner = deck.partner ? byKey.get(norm(deck.partner)) : undefined;
   const ci = cmdr ? pairIdentity(cmdr.ci, partner?.ci) : [...new Set(deck.cards.flatMap((c) => byKey.get(norm(c.name))?.ci ?? []))];
   const cmdrSlug = deck.commander ? commanderSlug(deck.commander, deck.partner) : '';
+  const prof = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
   const aim = Number(BRACKETS.find(([v]) => v === deck.source)?.[2]) || 4;
-  const aggression = (({ upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' }) as Record<string, 'patient' | 'hungry' | 'lethal'>)[deck.source ?? ''] ?? 'hungry';
+  const aggression = (({ upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' }) as Record<string, 'patient' | 'hungry' | 'lethal'>)[deck.source ?? ''] ?? prof?.brain?.aggression ?? 'hungry';
   const ready = readiness({ deck: deck.cards, cardOf, commander: deck.commander, partner: deck.partner, identity: ci, bracket: aim, aggression });
   const fit = bracketFit(call, aim);
   const refBracket = deck.source === 'cedh' ? 'cedh' : call.bracket >= 4 ? (st.lands <= 30 ? 'cedh' : 'optimized') : call.bracket === 3 ? 'upgraded' : 'core';
@@ -217,7 +218,6 @@ export function DeckView({
     if (cmdrSlug) showPage(pagePath('commander', cmdrSlug), (p) => live && setRecs(p)).catch(() => {});
     return () => void (live = false);
   }, [cmdrSlug]);
-  const prof = useLiveQuery(() => db.profiles.get(s.profile), [s.profile]);
   const pins = (deck.commander && prof?.pins?.[deck.commander]) || noPins();
   const [cf, setCf] = useState<CardFilter>({ inc: [], exc: [] });
   const [filtered, setFiltered] = useState<{ page: EdhPage; applied: boolean; pins?: boolean } | null>(null);
@@ -292,7 +292,7 @@ export function DeckView({
   const [placing, setPlacing] = useState<string | null>(null);
   const forgeCands = [...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never));
   const anyCard = (n: string) => byKey.get(norm(n)) ?? binderCard.get(norm(n)) ?? edhCards.get(norm(n));
-  const swapCtx = { deck: deck.cards, cardOf: anyCard, commander: deck.commander, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0], taken: takenOthers };
+  const swapCtx = { deck: deck.cards, cardOf: anyCard, commander: deck.commander, partner: deck.partner, bracket: aim, aggression, taste: prof?.brain?.taste, focus: commanderThemes(cmdr, recs?.tags)[0], taken: takenOthers };
   const sugImg = (n: string) => binderCard.get(norm(n))?.img ?? edhCards.get(norm(n))?.img ?? byKey.get(norm(n))?.img;
   async function addCard(n: string) {
     if (cmdr && offIdentity([n], ci, (x: string) => anyCard(x)?.ci).length) return;
@@ -634,6 +634,9 @@ export function DeckView({
               profile={s.profile}
               deck={deck.cards}
               commander={deck.commander}
+              partner={deck.partner}
+              pinned={pins.in}
+              deckTotal={st.total}
               bracket={aim}
               aggression={aggression}
               candidates={forgeCands}
@@ -649,6 +652,8 @@ export function DeckView({
               onPlace={setPlacing}
               onAdd={(n) => void addCard(n)}
               onCut={(n) => void cutCard(n)}
+              onSwap={(from, to) => void swapIn(from, to)}
+              onBalance={() => setBalanceOpen(true)}
               loading={!!deck.commander && !recs}
               expanded={sugExpanded}
               onToggleExpand={toggleSug}

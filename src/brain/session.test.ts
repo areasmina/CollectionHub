@@ -57,4 +57,12 @@ describe('deck session: one read for suggestions, cuts and upgrades', () => {
     expect(r.suggestions[0].name).toBe('Hymn');
     expect(r.suggestions.map((s) => s.name)).not.toContain('Vanilla Bear');
   });
+  it('protects a partner commander even when not listed in pinned', () => {
+    const r = readDeck({
+      ctx: { deck: [{ name: 'Discard Lord', qty: 1 }, { name: 'Plain Ogre', qty: 1 }, { name: 'Vanilla Bear', qty: 1 }], cardOf, commander: 'Discard Lord', partner: 'Plain Ogre', bracket: 4, aggression: 'hungry' },
+      candidates: [],
+      cuts: 5,
+    });
+    expect(r.cuts.map((c) => c.name)).toEqual(['Vanilla Bear']);
+  });
 });
