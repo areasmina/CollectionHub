@@ -254,7 +254,7 @@ export function ForgeSuggest({
                 </button>
               )}
               {buy && (
-                <button role="tab" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
+                <button role="tab" className="fpanes-buy" aria-selected={pane === 'buy'} onClick={() => (haptic('select'), setPane('buy'))}>
                   TO BUY
                 </button>
               )}

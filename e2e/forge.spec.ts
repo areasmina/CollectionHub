@@ -79,10 +79,13 @@ test('Forge on the commander page: the first swap opens it, with SUGGESTIONS and
   await expect(page.locator('.fmeters')).toBeVisible();
   await page.screenshot({ path: `test-results/forge-cmdr-${info.project.name}.png` });
   // on phones the sheet peeks at the bottom; expand it so the TO BUY tab is reachable
-  const fgrab = sugg.locator('.fgrab');
-  if (await fgrab.isVisible()) await fgrab.click();
-  await sugg.getByRole('tab', { name: 'TO BUY' }).click();
-  await expect(sugg.locator('.fbuy .receipt')).toBeVisible();
+  if (info.project.name === 'phone') {
+    await page.locator('.fcube').getByRole('tab', { name: /TO BUY/ }).click();
+    await expect(page.locator('.forge-buy .fbuylist')).toBeVisible();
+  } else {
+    await sugg.getByRole('tab', { name: 'TO BUY' }).click();
+    await expect(sugg.locator('.fbuy .receipt')).toBeVisible();
+  }
   // undo the swap from the Forge bar
   await page.locator('.forgetop .fundo').click();
   await expect(page.locator('.forgetop')).toHaveCount(0);
