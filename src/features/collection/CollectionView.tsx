@@ -253,7 +253,7 @@ export function Collection({
           <Title
             text="COLLECTION"
             label="Collection"
-            size={phone ? 24 : 60}
+            size={phone ? 21 : 60}
             seed={21}
             after={
               <>

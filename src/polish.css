@@ -2363,9 +2363,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
     max-width: 100%;
-    overflow: hidden;
+    overflow: visible;
     padding-top: 8px !important;
     padding-bottom: 6px !important;
   }
