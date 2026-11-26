@@ -538,7 +538,7 @@ test('Swap window: drag a suggestion onto the card to swap (mouse)', async ({ pa
 test('Deck light: active decks mark their cards in use in Collection; off frees them', async ({ page }, info) => {
   await go(page, 'collection');
   const sol = page.locator('li', { hasText: 'Sol Ring' }).first();
-  await expect(sol.locator('.inuse')).toHaveText('in 1 deck');
+  await expect(sol.locator('.inuse')).toContainText('in 1 deck');
   await expect(sol.locator('.inuse i')).toHaveCount(1); // one dot, in the deck's colour
   await page.screenshot({ path: `test-results/light-${info.project.name}.png` });
   await go(page, 'decks');

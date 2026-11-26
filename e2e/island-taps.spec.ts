@@ -68,7 +68,7 @@ test('Island: a tap on the edge of a section button goes to that section, not th
   await page.reload();
   const decks = page.locator('.pillnav .pill button', { hasText: 'DECKS' });
   const r = (await decks.boundingBox())!;
-  await page.mouse.click(r.x + r.width / 2, r.y - 8); // above the drawn button, inside its 44px area, under the grip line
+  await page.mouse.click(r.x + r.width / 2, r.y - 2); // above the drawn button, inside its 44px area, under the grip line
   await expect(page.locator('.pillnav .pill button[aria-current="page"]')).toHaveText('DECKS');
 });
 

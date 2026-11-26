@@ -88,7 +88,7 @@ test('copy the deck list as "qty name" lines, commander first', async ({ page, b
   await page.locator('.tilemenu').getByRole('menuitem', { name: /COPY DECK LIST/ }).click();
   await expect(page.locator('.toast')).toContainText('Copied');
   const text = await page.evaluate(() => navigator.clipboard.readText());
-  const lines = text.split('\n');
+  const lines = text.split(/\r?\n/);
   expect(lines[0]).toBe('1 Tatyova, Benthic Druid');
   expect(lines).toContain('1 Sol Ring');
   expect(lines).toContain('10 Forest');
