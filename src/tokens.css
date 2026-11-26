@@ -247,3 +247,100 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     justify-content: center;
   }
 }
+
+/* ── Mobile UI density & cohesion (Nov 26) ── */
+/* Copies Shortfall modal: crisp dark deck tags without default blue underline */
+.shortitem-deck-tags {
+  gap: 6px;
+}
+.shortitem-deck-tag {
+  padding: 4px 8px;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  border-radius: 3px;
+}
+.shortitem-deck-tag button.decklink {
+  color: #f2f2f2;
+  text-decoration: none;
+  text-align: left;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.shortitem-deck-tag button.decklink:hover {
+  color: var(--mo-yellow);
+}
+
+@media (max-width: 700px) {
+  /* Discover hero: compact on phone so commander cards lead above the fold */
+  .discohero {
+    padding: 8px 10px !important;
+    margin: 6px 0 8px !important;
+  }
+  .discohero .ztitle {
+    gap: 4px !important;
+  }
+  .discohero .tanswer {
+    margin-top: 2px !important;
+  }
+  .discohero .tagline {
+    font-size: 11px !important;
+    margin-top: 2px !important;
+  }
+
+  /* My Decks tabs + action row: sleek hairline bar instead of heavy stacked white blocks */
+  .dlist .ctabs {
+    background: #0c0c10 !important;
+    border: 1px solid #23232a !important;
+    border-radius: 4px !important;
+    padding: 3px !important;
+    gap: 4px !important;
+  }
+  .dlist .ctab {
+    flex: 1 1 auto;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    border-radius: 3px !important;
+  }
+  .dlist .ctab-acts {
+    width: 100%;
+    display: flex !important;
+    gap: 4px !important;
+    margin-left: 0 !important;
+  }
+  .dlist .ctab-acts .slip-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    border-radius: 3px !important;
+    background: #141418 !important;
+    color: #e8e8f0 !important;
+    border: 1px solid #2e2e38 !important;
+    box-shadow: none !important;
+  }
+  .dlist .ctab-acts .slip-btn.red {
+    background: var(--mo-red) !important;
+    color: #ffffff !important;
+    border-color: var(--mo-red) !important;
+  }
+
+  /* Collection stacked control rows: tighter vertical rhythm */
+  .coll .ctabs {
+    margin: 4px 0 0 !important;
+    padding: 3px !important;
+    gap: 4px !important;
+  }
+  .coll .ctab-acts {
+    gap: 4px !important;
+  }
+  .coll .coll-listbar {
+    padding: 4px !important;
+    gap: 4px !important;
+  }
+  .coll .collbar {
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+}

@@ -69,16 +69,19 @@ test.describe('Collection & Decks Workbench Features', () => {
     const menu = page.locator('.deckmenu');
     await expect(menu).toBeVisible();
 
-    // The deck colour is one rainbow wheel (Guillermo, Nov 15), not a block of swatches and a separate shade box
+    // The deck colour is a compact rainbow square (Guillermo, Nov 26)
     await expect(menu.locator('.swatches, .custom-color-label')).toHaveCount(0);
     const wheel = menu.locator('.cwheel');
     await expect(wheel).toBeVisible();
-    const before = await menu.locator('.cwheel-val').innerText();
     const w = (await wheel.boundingBox())!;
-    await page.mouse.click(w.x + w.width / 2, w.y + 4); // the top of the rim: red
+    expect(w.width).toBeLessThanOrEqual(48);
+    expect(w.height).toBeLessThanOrEqual(48);
+    const before = await menu.locator('.cwheel-val').innerText();
+    await wheel.focus();
+    await page.keyboard.press('ArrowRight');
     await expect(menu.locator('.cwheel-val')).not.toHaveText(before);
-    await expect(menu.locator('.cwheel-val')).toHaveText(/^#F/); // a red
-    await expect(menu.locator('.cwheel-now')).toHaveCSS('background-color', /rgb\(2[0-9]{2}, [0-9]+, [0-9]+\)/);
+    await expect(menu.locator('.cwheel-val')).toHaveText(/^#[0-9A-F]{6}$/);
+    await expect(menu.locator('.cwheel-now')).toHaveCSS('background-color', /rgb\(/);
 
     // Add tag action is available
     await expect(menu.getByRole('menuitem', { name: '+ ADD TAG' })).toBeVisible();

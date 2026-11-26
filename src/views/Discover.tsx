@@ -285,7 +285,7 @@ export function Discover(s: Shared) {
         <Title
           text="WHAT CAN I BUILD?"
           label="What can I build?"
-          size={phone ? 50 : 44}
+          size={phone ? 26 : 44}
           seed={7}
           behind={<EyeDoodle bare />}
           after={
@@ -293,7 +293,7 @@ export function Discover(s: Shared) {
               {commanders.length > 0 && (
                 // The answer to the title, in the same cut-out letters: how many commander decks this binder can build.
                 <p className="tanswer" aria-live="polite" aria-label={shown.length === commanders.length ? `${commanders.length} commander decks you can build` : `${shown.length} of ${commanders.length} commanders shown`}>
-                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 28 : 30} seed={23} />
+                  <Ransom text={shown.length === commanders.length ? `${commanders.length} DECK${commanders.length === 1 ? '' : 'S'}` : `${shown.length} OF ${commanders.length}`} size={phone ? 18 : 30} seed={23} />
                 </p>
               )}
               <p className="tagline">Your collection. Real decks. No guesswork.</p>
