@@ -339,16 +339,6 @@ main {
   border: 2px solid var(--text);
 }
 .themes button,
-.iconbtn {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: var(--bg);
-  color: var(--text);
-}
 .themes button {
   height: 40px;
   background: var(--white);
@@ -610,28 +600,6 @@ a.price:hover {
 }
 
 /* ---------- Discover ---------- */
-.ticker {
-  position: relative;
-  z-index: 1;
-  margin: 18px -30px 0;
-  background: var(--accent);
-  color: var(--white);
-  transform: rotate(-1.4deg);
-  padding: 7px 0;
-  white-space: nowrap;
-  overflow: hidden;
-  border-top: 3px solid var(--white);
-  border-bottom: 3px solid var(--white);
-}
-.ticker > span {
-  display: inline-flex;
-  gap: 40px;
-  padding-left: 40px;
-  font-family: var(--an);
-  font-size: 19px;
-  letter-spacing: 0.5px;
-  animation: tick 34s linear infinite;
-}
 @keyframes tick {
   to {
     transform: translateX(-50%);
@@ -770,47 +738,7 @@ a.price:hover {
   font-size: 36px;
   line-height: 1;
 }
-.plate {
-  position: relative;
-  height: 58px;
-  display: flex;
-  align-items: stretch;
-  background: radial-gradient(rgba(0, 0, 0, 0.2) 1px, transparent 1.5px) 0 0/5px 6px, var(--hazard);
-  border: 3px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
-  color: var(--ink);
-}
 .plate::before,
-.plate::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: repeating-linear-gradient(-45deg, var(--ink) 0 6px, transparent 6px 12px);
-}
-.plate::before {
-  top: 0;
-}
-.plate::after {
-  bottom: 0;
-}
-.plate .amt {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 8px;
-  white-space: nowrap;
-  font-family: var(--an);
-  font-size: 26px;
-  line-height: 1;
-}
-.plate .amt small {
-  font-size: 20px;
-}
 
 .deckgrid {
   display: flex;
@@ -1183,27 +1111,6 @@ a.price:hover {
   display: none;
 }
 
-.btnrow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-.btnrow .btn {
-  border-color: var(--text);
-}
-.cardshead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-  margin-top: 56px;
-}
-.cardshead .rule {
-  flex: 1;
-  height: 3px;
-  background: var(--text);
-  min-width: 40px;
-}
 .colhead,
 .crow {
   display: grid;
@@ -1381,17 +1288,6 @@ a.price:hover {
   color: var(--ink);
   border-color: var(--ink);
 }
-.panel .github {
-  width: 100%;
-  margin: 10px 0;
-  min-height: 48px;
-  background: #24292f;
-  color: #fff;
-  border: 0;
-  font-family: var(--an);
-  font-size: 18px;
-  letter-spacing: 0.5px;
-}
 .report {
   margin-top: 14px;
   padding: 12px 14px;
@@ -1466,16 +1362,8 @@ a.price:hover {
 a.price,
 .receipt .pr a,
 .receipt li input,
-.chead .right a {
-  position: relative;
-}
 a.price::after,
 .receipt .pr a::after,
-.chead .right a::after {
-  content: '';
-  position: absolute;
-  inset: -8px -6px;
-}
 /* Dropdown menus: native option lists get light paper, dark ink (readable in both themes). */
 select option {
   background: #ffffff;
@@ -1634,16 +1522,7 @@ button.logo {
 /* ---------- HUB drawer: thin red strip + hanging tab; logo/binder/theme/sync slide down on hover, focus or tap ---------- */
 
 /* Section tabs stay visible: under the strip on desktop, the bottom bar on phones. */
-.navbar {
-  padding: 18px 24px 12px;
-  border-bottom: 5px solid var(--accent);
-  background: var(--bg);
-}
 @media (max-width: 899px) {
-  .navbar {
-    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-    border-bottom: 0;
-  }
   }
 @media (prefers-reduced-motion: reduce) {
   }
@@ -1665,29 +1544,9 @@ button.logo {
 
 /* Desktop: Discover / Collection / Decks sit in the hidden HUB drawer; phones keep the bottom bar. */
 @media (min-width: 900px) {
-  .navbar {
-    display: none;
-  }
     }
 
 /* ---------- Collection: list/grid, editable quantity, group by set ---------- */
-.cardopts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 22px;
-  margin-top: 16px;
-}
-.cardopts .check {
-  min-height: 44px;
-  font-family: var(--se);
-  font-size: 15px;
-}
-.cardopts .check input {
-  width: 22px;
-  height: 22px;
-  accent-color: var(--accent);
-}
 .colhead,
 .crow {
   grid-template-columns: 132px 46px minmax(0, 1fr) auto 44px;
@@ -1820,24 +1679,6 @@ button.logo {
   }
 }
 
-.panel .oauth {
-  width: 100%;
-  margin: 8px 0 0;
-  min-height: 48px;
-  border: 0;
-  font-family: var(--an);
-  font-size: 18px;
-  letter-spacing: 0.5px;
-}
-.panel .oauth.github {
-  background: #24292f;
-  color: #fff;
-}
-.panel .oauth.google {
-  background: #fff;
-  color: #1f1f1f;
-  border: 3px solid var(--ink);
-}
 
 /* Scryfall links: in the tap preview and in the swap note */
 .preview.tap {
@@ -2034,20 +1875,11 @@ ul.popnote .small {
   .dtools {
     gap: 10px;
   }
-      .dtools .sticker,
-  .dtools .stencil {
+  .dtools .sticker {
     flex: 1 1 auto;
     justify-content: center;
     padding: 0 10px;
     font-size: 14px;
-  }
-}
-.narrowonly {
-  display: none;
-}
-@media (max-width: 700px) {
-    .narrowonly {
-    display: inline;
   }
 }
 
@@ -2479,12 +2311,6 @@ ul.popnote .small {
 }
 
 /* Collection grouped by set: release year after the name, set symbol after the card count */
-.setgrp > summary .yr {
-  font-family: var(--se);
-  font-size: 14px;
-  color: #6b6b6b;
-  margin-left: 4px;
-}
 .setgrp > summary .n {
   display: inline-flex;
   align-items: center;
@@ -2626,79 +2452,8 @@ ul.popnote .small {
   font-size: 20px;
 }
 
-.cardshead {
-  margin-top: 30px;
-}
 
 /* Collection stats sized to their content on desktop (no empty box space); centred on phones */
-
-/* GROUP BY SET / HIDE EMPTY SETS: toggle stickers instead of plain checkboxes (red when on) */
-.cardopts .check {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  padding: 0 14px 0 10px;
-  border: 3px solid var(--text);
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--an);
-  font-size: 17px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transform: rotate(-1deg);
-  box-shadow: 3px 3px 0 var(--accent);
-  transition: background 0.15s, transform 0.1s;
-}
-.cardopts .check:nth-of-type(2) {
-  transform: rotate(1deg);
-}
-.cardopts .check input {
-  appearance: none;
-  -webkit-appearance: none;
-  flex: none;
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  border: 2px solid currentColor;
-  background: transparent;
-  display: grid;
-  place-content: center;
-  cursor: pointer;
-}
-.cardopts .check input::after {
-  content: '✕';
-  font-family: 'Archivo Black', sans-serif;
-  font-size: 13px;
-  line-height: 1;
-  transform: scale(0);
-  transition: transform 0.12s;
-}
-.cardopts .check input:checked::after {
-  transform: scale(1);
-}
-.cardopts .check:has(input:checked) {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #ffffff;
-  box-shadow: 3px 3px 0 var(--ink);
-}
-.cardopts .check:has(input:focus-visible) {
-  outline: 3px solid var(--hazard);
-  outline-offset: 2px;
-}
-.cardopts .check:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .cardopts .check,
-  .cardopts .check input::after {
-    transition: none;
-  }
-}
 
 /* Collection grid tile, minimal: art with the price taped to its top-right corner and the quantity spray-painted
    as X tally marks (Jinx-style) on its bottom-left; name + set below. Tap the marks to edit. */
@@ -2892,90 +2647,10 @@ ul.popnote .small {
   /* value slip ends after its text; APPRAISED sits in the empty space above the note */
 
   /* top 3 most valuable cards fanned in the free space */
-  .tophand {
-    flex: 1 1 auto;
-    min-width: 230px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    margin-left: 18px;
-  }
-  .tophand .tlabel {
-    font-family: var(--an);
-    font-size: 15px;
-    letter-spacing: 1px;
-    background: var(--ink);
-    color: var(--hazard);
-    padding: 1px 10px;
-    transform: rotate(-2deg);
-    z-index: 5;
-  }
-  .tophand .tlabel small {
-    font-family: var(--se);
-    font-size: 12px;
-    color: #fff;
-    letter-spacing: 0;
-  }
-  .tophand ul {
-    list-style: none;
-    margin: 0;
-    padding: 0 10px;
-    display: flex;
-    justify-content: center;
-    height: 140px;
-  }
-  .tophand li {
-    position: relative;
-    width: 86px;
-    margin: 0 -10px;
-    transform: rotate(calc(var(--i) * 8deg)) translateY(calc(var(--i) * var(--i) * 6px));
-    transform-origin: 50% 120%;
-    transition: transform 0.18s;
-    z-index: 1;
-  }
-  .tophand li:hover {
-    transform: rotate(calc(var(--i) * 4deg)) translateY(-8px) scale(1.06);
-    z-index: 3;
-  }
-  .tophand .thand {
-    display: block;
-    position: relative;
-    width: 86px;
-    aspect-ratio: 63 / 88;
-    border-radius: 5px;
-    overflow: hidden;
-    background: #333;
-    box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.7);
-  }
-  .tophand .thand img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    cursor: zoom-in;
-  }
-  .tophand li > .price {
-    position: absolute;
-    left: 50%;
-    bottom: -6px;
-    transform: translateX(-50%) rotate(-3deg);
-    font-size: 11px;
-    padding: 0 6px;
-    white-space: nowrap;
-    z-index: 4;
-  }
 }
 @media (max-width: 700px) {
-  .tophand {
-    display: none;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tophand li {
-    transition: none;
-  }
 }
 
 /* Category bars: the +/− box is the same fixed square everywhere, with a drawn plus/minus (not a font glyph) */
@@ -3030,10 +2705,6 @@ ul.popnote .small {
 }
 .setgrp > summary .dots {
   background-image: linear-gradient(90deg, var(--sb) 30%, transparent 100%), radial-gradient(var(--sd) 1.6px, transparent 1.9px);
-}
-.setgrp > summary .yr {
-  color: inherit;
-  opacity: 0.7;
 }
 .setgrp > summary .n {
   color: inherit;
@@ -3347,36 +3018,6 @@ ul.popnote .small {
 
 /* Yellow marker crown scribbled on the commanders counter */
 
-.panel .oauth {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  transform: rotate(-0.6deg);
-  box-shadow: 4px 4px 0 var(--accent);
-}
-.panel .oauth + .oauth {
-  transform: rotate(0.5deg);
-}
-.panel .oauth .ologo {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  background: #fff;
-  border: 2px solid #0a0a0a;
-  border-radius: 50%;
-  transform: rotate(-8deg);
-}
-.panel .oauth.github .ologo {
-  background: #24292f;
-  border-color: #fff;
-  color: #fff;
-}
-.panel .oauth:active {
-  transform: translate(2px, 2px);
-  box-shadow: none;
-}
 
 /* commanders counter doodles sit on its left corner */
 
@@ -4371,13 +4012,6 @@ details.cat {
 .fsheet > summary::-webkit-details-marker {
   display: none;
 }
-.fsheet .ft {
-  font-family: var(--an);
-  font-size: 18px;
-  background: var(--accent);
-  color: var(--white);
-  padding: 2px 10px;
-}
 .fsheet .fnow {
   flex: 1;
   min-width: 0;
@@ -4484,63 +4118,7 @@ details.cat {
 }
 
 /* Collection tools: search | List / Grid | ⋯ (group by set, exports) on one row */
-.cardopts.tools1 {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: var(--sp2, 8px);
-  margin: var(--sp4, 16px) 0;
-  position: relative;
-}
-.cardopts.tools1 > .sbox {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-}
-.toolmore {
-  flex: 0 0 auto;
-}
-.toolmore > summary {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 100%;
-  min-height: 48px;
-  background: var(--ink);
-  color: var(--white);
-  border: 3px solid var(--white);
-  font-size: 22px;
-  cursor: pointer;
-  list-style: none;
-}
-.toolmore > summary::-webkit-details-marker {
-  display: none;
-}
-.toolmore[open] > summary {
-  background: var(--accent);
-}
-.toolmore .tmbody {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--sp2, 8px);
-  min-width: 220px;
-  padding: var(--sp3, 12px);
-  background: var(--ink);
-  border: 3px solid var(--white);
-  box-shadow: 6px 6px 0 var(--accent);
-}
-.toolmore .tmbody .sticker {
-  transform: none;
-}
 @media (max-width: 700px) {
-  .cardopts.tools1 > .sbox .tab {
-    display: none;
-  }
   }
 
 /* Copies, Arena style: four pips centred under the card, filled per copy you own; "+N" past four */
@@ -4704,35 +4282,6 @@ details.cat {
   color: var(--hazard);
   text-decoration: underline;
 }
-.ctile .tmeta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 32px;
-}
-.ctile .tmeta .tally {
-  position: static;
-  transform: none;
-}
-.ctile .tmeta .tally .marks {
-  min-height: 28px;
-  min-width: 0;
-  padding: 0 2px;
-  background: transparent;
-  border: 0;
-}
-.ctile .tmeta .price {
-  position: static;
-  transform: none;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font-family: var(--se);
-  font-size: 12px;
-  color: #9a9a9a;
-  box-shadow: none;
-}
 .ctile.live .cart {
   border-radius: 10px;
   box-shadow: 0 0 0 2px rgba(46, 204, 64, 0.85), 0 0 16px rgba(46, 204, 64, 0.45);
@@ -4890,28 +4439,9 @@ details.cat {
 }
 
 /* Collection tools = one bar: search | ZOOM (card size) | list / grid | ⋯, inside one frame */
-.cardopts.tools1 {
-  gap: 0;
-  border: 3px solid var(--text);
-  background: var(--bg);
-}
-.cardopts.tools1 > .sbox {
-  border: 0;
-  box-shadow: none;
-}
 .cardopts.tools1 > .zoomsw,
 .cardopts.tools1 > .viewsw.icons,
-.cardopts.tools1 > .toolmore > summary {
-  border-left: 1px solid #3a3a3a;
-}
 .cardopts.tools1 .viewsw.icons button,
-.cardopts.tools1 > .toolmore > summary {
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  color: var(--text);
-}
 /* card sizes */
 .collbar[data-zoom='s'] ~ * .cgrid2,
 .collbar[data-zoom='s'] ~ .cgrid2 {
@@ -5762,10 +5292,6 @@ details.cat {
   }
   }
 /* the binder switch next to the binder's name */
-.binderswap {
-  align-self: flex-start;
-  margin-top: var(--sp2, 8px);
-}
 /* $$$ never wraps onto two lines */
 
 /* WILDCARD: one seeded pick with evidence, on the commander page */
@@ -6995,9 +6521,6 @@ ul.zcompact > li.zrow .price.tapey {
   }
   .chead2 .ztitle {
     font-size: 38px;
-  }
-  .colltitle {
-    display: none !important;
   }
 
   /* Compact My Decks action row */

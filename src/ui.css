@@ -781,54 +781,7 @@
   max-height: min(380px, calc(80vh - 80px));
 }
 
-.island-drawer .id-decks {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 320px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
 
-.island-drawer .id-deck-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
-  text-align: left;
-}
-.island-drawer .id-deck-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.22);
-  transform: translateY(-1px);
-}
-.island-drawer .id-dinfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-.island-drawer .id-dname {
-  font: 700 14px/1.2 var(--u-display);
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.island-drawer .id-dmeta {
-  font: 400 11px/1.2 var(--u-mono);
-  color: var(--u-muted, #888888);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* Color Identity Pips inside Island Deck Card */
 .island-drawer .pips {
@@ -839,29 +792,7 @@
 }
 
 /* OPEN ↗ in Neon Green (User: "red looks weird") */
-.island-drawer .id-dtag {
-  font: 700 11px/1 var(--u-display);
-  color: var(--u-green, #00d26a);
-  background: rgba(0, 210, 106, 0.12);
-  border: 1px solid rgba(0, 210, 106, 0.35);
-  border-radius: 999px;
-  padding: 5px 11px;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-.island-drawer .id-deck-card:hover .id-dtag {
-  background: var(--u-green, #00d26a);
-  color: #000000;
-  box-shadow: 0 0 12px rgba(0, 210, 106, 0.5);
-}
 
-.island-drawer .id-empty {
-  margin: 12px 0;
-  color: var(--u-muted);
-  font-size: 13px;
-  text-align: center;
-}
 .stage {
   padding-top: 52px;
 }
@@ -2261,11 +2192,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(230, 0, 18, 0.4);
 }
-.btn-just-build .build-icon {
-  font-size: 20px;
-  color: #fff824;
-  margin-right: 10px;
-}
 .btn-just-build .build-text {
   display: flex;
   flex-direction: column;
@@ -2328,55 +2254,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
     overflow-y: auto;
   }
 }
-
-
-/* Quick sync status inside Island Drawer */
-.island-drawer .id-sync-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px 8px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-.island-drawer .id-sync-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font: 700 11px/1 var(--u-display);
-  letter-spacing: 0.06em;
-  color: var(--u-muted, #888888);
-}
-.island-drawer .id-sync-pill .sdot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #666;
-}
-.island-drawer .id-sync-pill.synced .sdot,
-.island-drawer .id-sync-pill.on .sdot {
-  background: var(--u-green, #00d26a);
-  box-shadow: 0 0 6px var(--u-green, #00d26a);
-}
-.island-drawer .id-sync-pill.syncing .sdot {
-  background: #38bdf8;
-  animation: syncDotPulse 0.8s infinite ease-in-out;
-}
-.island-drawer .id-sync-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  color: #fff;
-  font: 700 11px/1 var(--u-display);
-  padding: 5px 11px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.island-drawer .id-sync-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
 
 /* ==========================================================================
    DISCOVER EYE INTEGRATION ON DESKTOP (IMAGE 5)
@@ -2898,9 +2775,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* 1. JUST BUILD IT! top action */
-.just-build-banner.top-action {
-  margin: 0 !important;
-}
 .btn-just-build {
   padding: 6px 12px !important;
   min-height: 38px !important;
@@ -3062,9 +2936,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .tbar .fbody .sbox.pick select {
   font-size: 11px !important;
   padding: 0 4px !important;
-}
-.just-build-banner.top-action {
-  margin: 0 0 12px 0;
 }
 
 /* 3. Discover tagline: typewriter font on black electrical tape, integrated into main logo right after 330 decks */
@@ -3512,16 +3383,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   display: block;
 }
 /* Dynamic Island Saved Decks OPEN tag: green instead of red */
-.id-deck-card .id-dtag {
-  color: var(--miku-green, #00f5a0) !important;
-  border-color: rgba(0, 245, 160, 0.3) !important;
-  background: rgba(0, 245, 160, 0.08) !important;
-  text-shadow: 0 0 8px rgba(0, 245, 160, 0.4) !important;
-}
-.id-deck-card:hover .id-dtag {
-  background: rgba(0, 245, 160, 0.18) !important;
-  border-color: var(--miku-green, #00f5a0) !important;
-}
 
 /* ==========================================================================
    GLOBAL TOOLBAR RULE: ALL FILTERS & QUICK BUTTONS ON THE LEFT
