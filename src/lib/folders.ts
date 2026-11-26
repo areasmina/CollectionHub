@@ -201,10 +201,12 @@ export async function applyFolderPlan(profile: number, plan: FolderPlan): Promis
   let beforeLists: string[] | undefined;
   await db.transaction('rw', db.profiles, db.entries, async () => {
     before = (await db.entries.bulkGet(ids)).filter((e): e is Entry => !!e);
-    beforeLists = (await db.profiles.get(profile))?.lists;
+    const p = await db.profiles.get(profile);
+    beforeLists = p?.lists;
     if (plan.put.length) await db.entries.bulkPut(plan.put);
     if (plan.del.length) await db.entries.bulkDelete(plan.del);
-    await db.profiles.update(profile, { lists: plan.lists });
+    if (p) await db.profiles.update(profile, { lists: plan.lists });
+    else await db.profiles.put({ id: profile, name: profile === 0 ? 'Unassigned Cards' : `Binder ${profile}`, lists: plan.lists });
   });
   return async () => {
     await db.transaction('rw', db.profiles, db.entries, async () => {

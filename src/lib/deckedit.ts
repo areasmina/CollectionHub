@@ -235,8 +235,11 @@ export async function assignCardToList(profile: number, name: string, listName: 
 export async function manageBinderLists(profile: number, action: 'add' | 'remove', listName: string) {
   const clean = listName.trim();
   if (!clean) return;
-  const p = await db.profiles.get(profile);
-  if (!p) return;
+  let p = await db.profiles.get(profile);
+  if (!p) {
+    p = { id: profile, name: profile === UNASSIGNED_PROFILE ? UNASSIGNED_NAME : `Binder ${profile}` };
+    await db.profiles.put(p);
+  }
   const current = p.lists ?? [];
   let updated: string[];
   if (action === 'add') {
