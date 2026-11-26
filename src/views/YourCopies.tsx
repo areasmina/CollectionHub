@@ -111,6 +111,8 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
         <ul className="yc-row" ref={rowRef} role="listbox" aria-label={`Copies of ${name}`} aria-orientation="horizontal" onKeyDown={keys}>
           {shown.map((c, i) => {
             const cd = cards.get(c.entry.cardId);
+            const finishTag = c.entry.finish === 'etched' ? 'ETCHED' : c.entry.foil ? 'FOIL' : '';
+            const details = [c.entry.condition, c.entry.lang?.toUpperCase()].filter(Boolean).join(' · ');
             return (
               <li key={`${c.rowId}-${c.nth}`} role="presentation">
                 <div
@@ -118,7 +120,7 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
                   data-copy={i}
                   aria-selected={i === at}
                   tabIndex={i === at ? 0 : -1}
-                  aria-label={`Copy ${i + 1}: ${line(c.entry)}${c.entry.foil ? ', foil' : ''}${c.entry.list ? `, in ${c.entry.list}` : ''}`}
+                  aria-label={`Copy ${i + 1}: ${line(c.entry)}${finishTag ? `, ${finishTag.toLowerCase()}` : ''}${details ? `, ${details}` : ''}${c.entry.list ? `, in ${c.entry.list}` : ''}`}
                   className={`yc-copy${i === at ? ' on' : ''}`}
                   onClick={() => (haptic('select'), setPick(i), setArts(null))}
                   onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setPick(i), setArts(null))}
@@ -126,7 +128,8 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
                   <Thumb src={cd?.img?.replace('/small/', '/normal/')} back={cd?.back} className={`yc-img xart owned${c.entry.foil ? ' foil' : ''}`} name={name} onPick={() => (haptic('select'), setPick(i), setArts(null))} />
                   <span className="yc-tag">
                     {line(c.entry)}
-                    {c.entry.foil && <b> FOIL</b>}
+                    {finishTag && <b> {finishTag}</b>}
+                    {details ? ` · ${details}` : ''}
                   </span>
                 </div>
               </li>
