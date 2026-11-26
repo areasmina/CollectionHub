@@ -1,0 +1,455 @@
+/* Commander feature styles (extracted from src/ui.css in Phase D3) */
+@layer features {
+/* WILDCARD: one flat row, yellow tag (wildcards are yellow) */
+.dpage .wildcard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  margin: 0;
+  padding: var(--s2) 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--u-line);
+  box-shadow: none;
+  transform: none;
+  color: var(--u-text);
+}
+.dpage .wildcard::before,
+.dpage .wildcard::after {
+  display: none;
+}
+.dpage .wildcard .wtag {
+  padding: 2px 6px;
+  background: var(--u-yellow);
+  color: var(--u-ink);
+  font: 400 13px var(--u-display);
+  letter-spacing: 0.06em;
+  transform: none;
+}
+.dpage .wildcard .wtxt {
+  flex: 1;
+  min-width: 180px;
+  font: 400 13px/1.4 var(--u-mono);
+}
+.dpage .wildcard .wtxt b {
+  font-family: var(--u-body);
+  font-weight: 800;
+}
+.dpage .wildcard .wtxt small {
+  color: var(--u-muted);
+}
+.dpage .wildcard .btn {
+  min-height: 36px;
+  padding: 0 var(--s3);
+  border: 1px solid var(--u-line2);
+  background: transparent;
+  color: var(--u-text);
+  font: 400 13px var(--u-display);
+  box-shadow: none;
+  transform: none;
+}
+
+.u-sheet .receipt {
+  position: static;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  transform: none;
+}
+
+/* 5. Standout Wildcard ("Hidden Gem") Card (Item 4) */
+.dpage .wildcard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 16px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255, 248, 36, 0.08) 0%, rgba(20, 20, 18, 0.98) 100%);
+  border: 1px solid rgba(255, 248, 36, 0.45);
+  border-left: 5px solid #fff824;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(255, 248, 36, 0.03);
+}
+.dpage .wildcard .wtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff824;
+  color: #000000;
+  padding: 4px 10px;
+  font: 700 12px/1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.dpage .wildcard .wbody {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 240px;
+}
+.dpage .wildcard .wthumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 248, 36, 0.4);
+  flex-shrink: 0;
+}
+.dpage .wildcard .wtxt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #eeeeee;
+  font-size: 13px;
+  text-align: left;
+}
+.dpage .wildcard .wtxt b {
+  font: 700 15px/1.2 var(--u-display, sans-serif);
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+.dpage .wildcard .wtxt .wmeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: #aaaaaa;
+}
+.dpage .wildcard .wtxt .wbadge {
+  background: rgba(255, 248, 36, 0.15);
+  color: #fff824;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+}
+.dpage .wildcard .wacts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.dpage .wildcard .wacts .btn-swap-in {
+  background: var(--u-red, #e60012);
+  color: #ffffff;
+  border: 1px solid #ff2a3a;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font: 700 13px/1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(230, 0, 18, 0.4);
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+.dpage .wildcard .wacts .btn-swap-in:hover {
+  background: #ff1a2b;
+  transform: translateY(-1px);
+}
+
+/* 6. Visual Card Glance Popover in Autocomplete (Item 6) */
+.cglance-wrap {
+  position: relative;
+  width: 100%;
+}
+.cglance-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  background: #141414;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.cglance-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #222222;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.cglance-item:last-child {
+  border-bottom: none;
+}
+.cglance-item:hover,
+.cglance-item:focus {
+  background: rgba(230, 0, 18, 0.15);
+}
+.cglance-thumb {
+  width: 32px;
+  height: 44px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #222222;
+  border: 1px solid #333333;
+}
+.cglance-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.cglance-name {
+  font: 700 13px/1.2 var(--u-display, sans-serif);
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cglance-sub {
+  font: 400 11px/1.2 var(--u-mono, monospace);
+  color: var(--u-muted, #888888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cglance-badge {
+  font: 600 10px/1 var(--u-mono, monospace);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(26, 178, 107, 0.18);
+  color: var(--u-green, #1ab26b);
+  border: 1px solid rgba(26, 178, 107, 0.4);
+  flex-shrink: 0;
+}
+
+/* 7. Synergy Auto-Tune Card (Item 7) */
+.synergy-autotune-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 6px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(230, 0, 18, 0.12) 0%, rgba(25, 25, 28, 0.98) 100%);
+  border: 1px solid rgba(230, 0, 18, 0.35);
+  border-left: 4px solid var(--u-red, #e60012);
+  border-radius: 8px;
+}
+.synergy-autotune-card .syn-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  flex: 1;
+  min-width: 200px;
+}
+.synergy-autotune-card .syn-badge {
+  font: 700 10px/1 var(--u-display, Impact, sans-serif);
+  color: var(--u-red, #e60012);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.synergy-autotune-card p {
+  margin: 0;
+  font: 400 12px/1.3 var(--u-mono, monospace);
+  color: #dddddd;
+}
+.synergy-autotune-card p strong {
+  color: #ffffff;
+}
+.synergy-autotune-card p em {
+  color: #fff824;
+  font-style: normal;
+}
+.synergy-autotune-card .syn-btn {
+  background: var(--u-red, #e60012);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font: 700 12px/1 var(--u-display, Impact, sans-serif);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(230, 0, 18, 0.3);
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+.synergy-autotune-card .syn-btn:hover {
+  background: #ff1a2b;
+}
+
+/* 9. Card filter buttons above the bar (Item 8) */
+
+.tbar .fbody .cfilter .cfbtns {
+  position: relative !important;
+  z-index: 1300 !important;
+}
+
+/* 2. PIN & WITHOUT card selection */
+.tbar .fbody .cfilter {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: none !important;
+}
+.tbar .fbody .cf-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+.tbar .fbody .cf-row .cglance-wrap {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+.tbar .fbody .cf-row .sbox {
+  display: flex !important;
+  align-items: center !important;
+  background: #151518 !important;
+  border: 1px solid #33333e !important;
+  border-radius: 6px !important;
+  height: 32px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  transition: border-color 0.15s ease !important;
+}
+.tbar .fbody .cf-row .sbox:focus-within {
+  border-color: var(--u-red, #e60012) !important;
+}
+.tbar .fbody .cf-row .sbox .tab {
+  background: #202028 !important;
+  color: #b0b0c0 !important;
+  font-family: var(--u-display, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  padding: 0 8px !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  border-right: 1px solid #33333e !important;
+  flex-shrink: 0 !important;
+}
+.tbar .fbody .cf-row .sbox input {
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-family: var(--u-mono, monospace) !important;
+  font-size: 12px !important;
+  padding: 0 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  outline: none !important;
+}
+.tbar .fbody .cf-apply-btn {
+  height: 32px !important;
+  padding: 0 12px !important;
+  background: var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+  font-family: var(--u-display, sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: background 0.15s ease, transform 0.1s ease !important;
+}
+.tbar .fbody .cf-apply-btn:hover {
+  background: #ff1a2b !important;
+}
+.tbar .fbody .cf-clear-btn {
+  height: 32px !important;
+  padding: 0 10px !important;
+  background: #22222a !important;
+  color: #9999aa !important;
+  font-family: var(--u-display, sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  border: 1px solid #383844 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+.tbar .fbody .cf-clear-btn:hover {
+  background: #2a2a34 !important;
+  color: #ffffff !important;
+}
+.tbar .fbody .cf-pins {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 5px !important;
+  margin-top: 2px !important;
+}
+.tbar .fbody .cf-pins .pinchip {
+  height: 24px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.tbar .fbody .cf-pins .pinchip.in {
+  background: rgba(230, 0, 18, 0.16) !important;
+  border: 1px solid var(--u-red, #e60012) !important;
+  color: #ffffff !important;
+}
+.tbar .fbody .cf-pins .pinchip.out {
+  background: #1e1e24 !important;
+  border: 1px solid #484856 !important;
+  color: #b0b0c0 !important;
+}
+
+/* Receipt top total & heartfelt bottom message */
+.receipt .rtop-total {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: baseline !important;
+  font-family: var(--se, monospace) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  margin: 4px 0 2px !important;
+}
+.receipt .rtop-total span:last-child {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+}
+.receipt .thanks.heartfelt {
+  text-align: center !important;
+  font-family: var(--se, monospace) !important;
+  padding: 4px 0 !important;
+}
+.receipt .thanks.heartfelt .thanks-lead {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase !important;
+  margin: 0 0 6px 0 !important;
+  color: var(--ink, #111) !important;
+}
+.receipt .thanks.heartfelt .thanks-body {
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+  color: #3a3a3a !important;
+  margin: 0 !important;
+  font-style: italic !important;
+}
+
+}
