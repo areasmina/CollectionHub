@@ -1054,7 +1054,7 @@ html.forging .vhero {
   .acts .swapbtn, .acts .morebtn, .morebtn,
   ul.zcompact > li.zrow .acts .swapbtn, ul.zcompact > li.zrow .acts .morebtn { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; }
   /* text-style buttons: the words stay small, the tap area is a full row high */
-  .decklink:not(.shortpop .decklink) { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  .decklink:not(.shortpop .decklink):not(.mydecks .decklink) { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
   .shortpop .shortitem-deck-tag button.decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: 0 !important; text-align: left !important; line-height: 1.25 !important; text-decoration: none !important; color: #f2f2f2 !important; }
   /* the suggestions drawer's grab bar: the bar looks the same, the strip you can grab is 44px */
   .fsugg .fgrab { min-height: 44px !important; }
@@ -1138,6 +1138,13 @@ html.forging .vhero {
    3. Island on the bottom edge of a phone: the Forge suggestions sheet peeks just above it while it shows. */
 html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
 @media (max-width: 699px) { html:has(.swapnote) .pillnav.dock-bottom { translate: 0 140% !important; opacity: 1 !important; } }
+@media (max-width: 700px) {
+  html.forging:has(.fsugg.up) .pillnav.dock-bottom {
+    translate: 0 140% !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
 .forgetop { transition: top 0.25s ease; }
 @media (max-width: 1099px) {
   html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .forgetop { top: 46px !important; }
@@ -1148,8 +1155,9 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
 }
 @media (max-width: 700px) {
   html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
+  html.forging .fsugg.up { z-index: 70 !important; }
   html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
-  html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important; }
+  html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .forgetop, html.forging .fsugg { transition: none !important; }
@@ -1467,27 +1475,36 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   flex-wrap: nowrap !important;
   align-items: center;
   gap: 6px !important;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
+  overflow: visible !important;
   width: 100%;
   min-width: 0;
 }
-.dpage.dlist > .decktoolbar > .dfilters::-webkit-scrollbar { display: none; }
-.dpage.dlist > .decktoolbar > .dfilters > .dstatuspick,
-.dpage.dlist > .decktoolbar > .dfilters > .decktagpills {
+.dpage.dlist > .decktoolbar > .dfilters > .dstatuspick {
   display: flex !important;
-  flex: 0 0 auto;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
   flex-wrap: nowrap !important;
-  overflow: visible !important;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   gap: 6px !important;
-  width: auto !important;
   margin: 0 !important;
   padding: 0 !important;
   border: 0 !important;
 }
+.dpage.dlist > .decktoolbar > .dfilters > .dstatuspick::-webkit-scrollbar { display: none; }
 .dpage.dlist > .decktoolbar > .dfilters > .decktagpills {
+  display: flex !important;
+  flex: 0 0 auto;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  scrollbar-width: none;
+  gap: 6px !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
   padding-left: 8px !important;
+  border: 0 !important;
   border-left: 1px solid #33333e !important;
 }
 .dpage.dlist > .decktoolbar .dstatuspick > .u-chip,
@@ -1995,8 +2012,8 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   border-color: rgba(255, 255, 255, 0.14);
-  opacity: 0.16;
-  transition: opacity 0.3s ease;
+  opacity: 0.03;
+  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .jrail-wrap.awake > .jrail,
 .jrail:hover,
@@ -2251,13 +2268,13 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     display: none;
   }
 }
-/* SIZE stays in reach while the status and tag chips slide under it */
+/* SIZE stays in reach on the right while the status chips slide beside it without overlap */
 .dlist .dfilters > .dsize {
-  position: sticky;
-  right: 0;
-  z-index: 2;
+  position: static !important;
+  flex: 0 0 auto !important;
+  margin-left: 6px !important;
   background: #0c0c0e;
-  box-shadow: -10px 0 10px -6px #0c0c0e;
+  box-shadow: none !important;
 }
 
 /* ── The ⋮ on a card tile (Guillermo, Nov 15) ──
@@ -2582,6 +2599,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     padding-top: 0 !important;
     padding-bottom: 0 !important;
   }
+  html.forging .fsugg:not(.up) {
+    max-height: 58px !important;
+  }
   html.forging .fsugg .fgrab {
     position: absolute;
     top: 0;
@@ -2592,26 +2612,28 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     height: 44px;
     min-height: 44px !important;
     margin: 0 !important;
+    padding-top: 3px !important;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 3px;
+    justify-content: flex-start !important;
+    gap: 1px !important;
     background: transparent;
   }
   html.forging .fsugg:not(.up) .fgrab::after {
     content: '▲';
-    font: 400 9px var(--u-mono, monospace);
+    font: 400 8px var(--u-mono, monospace);
     color: var(--u-muted, #b8b8c0);
   }
   html.forging .fsugg.up .fgrab::after {
     content: '▼';
-    font: 400 9px var(--u-mono, monospace);
+    font: 400 8px var(--u-mono, monospace);
     color: var(--u-muted, #b8b8c0);
   }
   html.forging .fsugg > .fsugg-header {
     min-height: 44px;
     margin-top: 0;
+    padding-top: 14px !important;
   }
   html.forging .fsugg .fpanes {
     margin-bottom: 0;

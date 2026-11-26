@@ -137,13 +137,16 @@ export function JumpRail({ headers }: { headers: string[] }) {
       .map((h) => document.getElementById(jumpId(h)))
       .filter((e): e is HTMLElement => !!e);
     const seen = new Map<string, boolean>();
+    const wake = () => {
+      setAwake(true);
+      clearTimeout(sleep.current);
+      sleep.current = window.setTimeout(() => setAwake(false), 950);
+    };
     // A section counts as 'here' while it crosses the band just under the sticky tool bar.
     const io = new IntersectionObserver(
       (es) => {
         for (const e of es) seen.set(e.target.id, e.isIntersecting);
-        setAwake(true);
-        clearTimeout(sleep.current);
-        sleep.current = window.setTimeout(() => setAwake(false), 1400);
+        wake();
         if (Date.now() < quietUntil.current) return; // a tap just chose the section: don't let the scroll overrule it
         const first = headers.find((h) => seen.get(jumpId(h)));
         if (first) setNow(first);
@@ -151,6 +154,7 @@ export function JumpRail({ headers }: { headers: string[] }) {
       { rootMargin: '-30% 0px -60% 0px' },
     );
     els.forEach((e) => io.observe(e));
+    window.addEventListener('scroll', wake, { passive: true });
     // On phones the rail is pinned to the screen edge, so it only shows while its list is on screen (the swipe
     // cube can slide the list away sideways). It waits until the list reaches the top third of the screen, so it never
     // floats over the deck's header (scores, FORGE) while the list is still further down.
@@ -159,7 +163,7 @@ export function JumpRail({ headers }: { headers: string[] }) {
       rootMargin: '0px 0px -70% 0px',
     });
     if (list) lio.observe(list);
-    return () => (io.disconnect(), lio.disconnect(), clearTimeout(sleep.current));
+    return () => (io.disconnect(), lio.disconnect(), window.removeEventListener('scroll', wake), clearTimeout(sleep.current));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 

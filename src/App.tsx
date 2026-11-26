@@ -390,7 +390,7 @@ export default function App() {
       )}
       <nav
         ref={navRef}
-        className={`pillnav notch dock-${dock}${navAway && !forgeState ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState ? ' forging-island' : ''}`}
+        className={`pillnav notch dock-${dock}${navAway && !forgeState ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState && !forgeNavMode ? ' forging-island' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
         onPointerDown={onIslandDown()}
@@ -461,7 +461,12 @@ export default function App() {
                   title={forgeActionsOpen ? 'Collapse Forge controls' : 'Expand Forge controls'}
                   aria-expanded={forgeActionsOpen}
                 >
-                  <span className="forge-ember" aria-hidden="true" />
+                  <span className="forge-card-icon" aria-hidden="true">
+                    <picture>
+                      <source srcSet="/card-spin.png" media="(prefers-reduced-motion: reduce)" />
+                      <img src="/card-spin.webp" alt="" width={18} height={24} />
+                    </picture>
+                  </span>
                   FORGE
                 </button>
                 {forgeActionsOpen && (
@@ -517,7 +522,12 @@ export default function App() {
                   title="Back to Forge controls"
                   onClick={() => (haptic('tap'), setForgeNavMode(false))}
                 >
-                  🔥
+                  <span className="forge-card-icon" aria-hidden="true">
+                    <picture>
+                      <source srcSet="/card-spin.png" media="(prefers-reduced-motion: reduce)" />
+                      <img src="/card-spin.webp" alt="" width={18} height={24} />
+                    </picture>
+                  </span>
                 </button>
               )}
               {!forgeState && backFn && (

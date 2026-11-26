@@ -362,11 +362,23 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   border-color: rgba(255, 68, 24, 0.72) !important;
   box-shadow: 0 0 22px rgba(230, 0, 18, 0.28), 0 10px 28px rgba(0, 0, 0, 0.75) !important;
 }
+.pillnav.forging-island .island-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 5px !important;
+  height: auto !important;
+  width: 100% !important;
+}
+.pillnav.forging-island .syncpill,
+.pillnav.forging-island .island-lip {
+  display: none !important;
+}
 .forge-island-wrap {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 4px;
+  gap: 5px;
   width: 100%;
 }
 .pillnav .forgetop {
@@ -374,8 +386,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   top: auto !important;
   display: flex !important;
   align-items: center !important;
-  gap: 4px !important;
-  width: auto !important;
+  justify-content: space-between !important;
+  gap: 5px !important;
+  width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
@@ -397,17 +410,19 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   cursor: pointer;
   white-space: nowrap;
 }
-.pillnav .forgetop .forge-ember {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #fff3b0;
-  box-shadow: 0 0 8px #ffcc00;
-  animation: forgePulse 1.6s ease-in-out infinite;
+.forge-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  flex-shrink: 0;
 }
-@keyframes forgePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.82); }
+.forge-card-icon img {
+  width: 18px;
+  height: 24px;
+  object-fit: contain;
+  filter: sepia(1) saturate(7) hue-rotate(-38deg) brightness(1.12) drop-shadow(0 0 4px #ff4500) drop-shadow(0 0 8px #e60012);
 }
 .pillnav .forgetop .ftitle {
   font: 400 10.5px/1 var(--mo-mono);
@@ -446,28 +461,43 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   .pillnav.forging-island {
     max-width: calc(100vw - 16px);
   }
+  .pillnav .forgetop .ftitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .pillnav .forgetop .fstamp,
   .pillnav .forgetop .u-btn,
   .pillnav .forgetop .forge-nav-btn {
     min-height: 44px !important;
   }
   .pillnav .fcube {
-    display: flex !important;
+    order: 3;
+    flex: 1 1 100%;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     align-items: stretch;
-    gap: 3px;
-    width: 100%;
-    padding: 2px;
+    gap: 3px !important;
+    width: 100% !important;
+    padding: 2px !important;
     margin: 0 !important;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 999px;
+    position: static !important;
+    top: auto !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 10px !important;
   }
   .pillnav .fcube > button {
-    flex: 1 1 0;
     min-height: 44px !important;
     padding: 0 8px !important;
     border: 0 !important;
-    border-radius: 999px !important;
+    border-radius: 8px !important;
     background: transparent;
     color: #c8c8d4;
     font: 400 12px/1 var(--mo-display);
@@ -570,45 +600,82 @@ html.forging .lists.drop-over {
   height: 100% !important;
   border-radius: 22px !important;
 }
-.pillnav.forging-island .island-content {
-  height: auto !important;
-  align-items: center !important;
-}
-html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .dpage {
-  padding-top: 64px !important;
+html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :is(.dpage, .dpage.forgemain, .dpage.forgemain:not(:has(> .vhero))) {
+  padding-top: 68px !important;
 }
 @media (max-width: 700px) {
-  html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .dpage {
-    padding-top: 108px !important;
+  html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :is(.dpage, .dpage.forgemain, .dpage.forgemain:not(:has(> .vhero))) {
+    padding-top: 116px !important;
   }
   html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) {
-    bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
-/* Commander Hero: clean deck pills & calm Oversight-inspired hairline tiles */
-.vmeta .mydecks {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
+/* Commander Hero: 1-line side-scrollable deck pills & calm Oversight-inspired hairline tiles */
+.vhero .vmeta .mydecks {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  white-space: nowrap !important;
+  padding: 2px 0;
 }
-.vmeta .mydecks-pill {
+.vhero .vmeta .mydecks::-webkit-scrollbar {
+  display: none;
+}
+.vhero .vmeta .mydecks-lbl {
+  flex: 0 0 auto;
+  font: 400 11px var(--mo-mono);
+  color: var(--mo-muted);
+}
+.vhero .vmeta .mydecks-pill {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
+  padding: 0;
   background: #141418;
   border: 1px solid #2e2e38;
-  border-radius: 3px;
+  border-radius: 4px;
 }
-.vmeta .mydecks-pill .decklink {
+.vhero .vmeta .mydecks-pill .decklink {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 32px;
+  padding: 0 10px !important;
+  margin: 0 !important;
   color: #f2f2f2 !important;
   text-decoration: none !important;
-  font-size: 11px;
-  line-height: 1.25;
+  font: 400 11px/1.2 var(--mo-mono) !important;
+  white-space: nowrap !important;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.vmeta .mydecks-pill .decklink:hover {
+.vhero .vmeta .mydecks-pill .decklink:hover {
   color: #fff824 !important;
+}
+.vhero .vmeta .mydecks-more {
+  flex: 0 0 auto;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 32px;
+  min-width: 44px;
+  margin-left: 0 !important;
+  padding: 0 10px !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 700px) {
+  .vhero .vmeta .mydecks-pill .decklink,
+  .vhero .vmeta .mydecks-more {
+    min-height: 44px !important;
+  }
 }
 .vhero .vtile:not(.vnote) {
   background: #101014;
@@ -649,4 +716,77 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .d
 }
 .dtools.tbar > .tbmore > .fbody .optrow:last-of-type {
   border-bottom: 0;
+}
+
+/* ── JumpRail: auto-hide cleanly when dormant & stay bounded inside list on desktop ── */
+.jrail-wrap:not(.awake) > .jrail:not(:hover):not(:focus-within) > button[aria-current='true'] {
+  background: transparent;
+  color: var(--mo-muted);
+}
+@media (min-width: 701px) {
+  .lists > .jrail-wrap {
+    top: 64px !important;
+    bottom: 16px !important;
+    right: 2px !important;
+  }
+  .jrail {
+    border-radius: 14px;
+    overflow-y: auto;
+    max-height: calc(100vh - 140px);
+    scrollbar-width: none;
+  }
+  .jrail::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Suggestions Drawer: compact layout & side-scrollable filter/tag options ── */
+.fsugg .fchips,
+.fsugg .fthemes {
+  display: flex;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  margin-bottom: 6px !important;
+  padding-bottom: 2px !important;
+}
+@media (max-width: 700px) {
+  html.forging .fsugg:not(.up) .fchips,
+  html.forging .fsugg:not(.up) .fthemes {
+    display: none !important;
+  }
+  .fsugg .fchips > button,
+  .fsugg .fthemes > button {
+    min-height: 44px !important;
+  }
+}
+.fsugg .fchips::-webkit-scrollbar,
+.fsugg .fthemes::-webkit-scrollbar {
+  display: none;
+}
+.fsugg .fchips > button,
+.fsugg .fthemes > button {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+.fsugg .just-build-banner {
+  margin: 4px 0 6px !important;
+}
+.fsugg .btn-just-build {
+  padding: 6px 10px !important;
+  min-height: 44px !important;
+}
+.fsugg .fsorts {
+  margin-bottom: 6px !important;
+}
+.fsugg label.sbox.fq {
+  min-height: 40px !important;
+  margin-bottom: 6px !important;
+}
+.fsugg label.sbox.fq > .tab {
+  font-size: 11px !important;
+  padding: 0 8px !important;
 }

@@ -186,14 +186,27 @@
 }
 
 .decktagpills {
-  display: flex;
-  flex-wrap: wrap;
+  display: flex !important;
+  flex-wrap: nowrap !important;
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding-top: 10px;
-  margin-top: 4px;
+  min-width: 0;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding-top: 6px !important;
+  margin-top: 2px !important;
   border-top: 1px solid #22222a;
+}
+
+.decktagpills::-webkit-scrollbar {
+  display: none;
+}
+
+.decktagpills > * {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
 }
 
 .decktagpills .tlabel {

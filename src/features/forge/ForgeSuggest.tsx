@@ -432,7 +432,7 @@ export function ForgeSuggest({
               ))}
           </div>
           {themes.length > 0 && (
-            <div className="themes fthemes" role="group" aria-label="EDHREC themes" style={{ flexWrap: 'wrap', overflowX: 'visible' }}>
+            <div className="themes fthemes" role="group" aria-label="EDHREC themes">
               {(allThemes ? themes : themes.slice(0, 8)).map((t) => (
                 <button
                   key={t.slug}
