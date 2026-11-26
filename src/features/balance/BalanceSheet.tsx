@@ -47,6 +47,14 @@ export function BalanceSheet({
   const [staleNotice, setStaleNotice] = useState('');
   const [openedUpdated, setOpenedUpdated] = useState(deck.updated);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const evalCtx: DeckContext = useMemo(
     () => ({
       ...ctx,
@@ -134,6 +142,7 @@ export function BalanceSheet({
   );
   const currentLabCard = activeQueue[labIdx % Math.max(1, activeQueue.length)];
   const currentTotal = deck.cards.reduce((n, c) => n + c.qty, 0);
+  const afterTotal = afterDeck.reduce((n, c) => n + c.qty, 0);
 
   const applyCutLab = async () => {
     if (!labCuts.size) return;
@@ -175,13 +184,13 @@ export function BalanceSheet({
         <div className={styles.head}>
           <h2 className={styles.title}>BALANCE &amp; CUT LAB</h2>
           <div className={styles.tabs} role="tablist" aria-label="Balance modes">
-            <button type="button" role="tab" className={styles.tabBtn} aria-selected={tab === 'balance'} onClick={() => (haptic('select'), setTab('balance'))}>
+            <button type="button" role="tab" id="bal-tab-balance" aria-controls="bal-panel-balance" className={styles.tabBtn} aria-selected={tab === 'balance'} onClick={() => (haptic('select'), setTab('balance'))}>
               BALANCE TO 100
             </button>
-            <button type="button" role="tab" className={styles.tabBtn} aria-selected={tab === 'cutlab'} onClick={() => (haptic('select'), setTab('cutlab'))}>
+            <button type="button" role="tab" id="bal-tab-cutlab" aria-controls="bal-panel-cutlab" className={styles.tabBtn} aria-selected={tab === 'cutlab'} onClick={() => (haptic('select'), setTab('cutlab'))}>
               CUT LAB
             </button>
-            <button type="button" role="tab" className={styles.tabBtn} aria-selected={tab === 'bracket'} onClick={() => (haptic('select'), setTab('bracket'))}>
+            <button type="button" role="tab" id="bal-tab-bracket" aria-controls="bal-panel-bracket" className={styles.tabBtn} aria-selected={tab === 'bracket'} onClick={() => (haptic('select'), setTab('bracket'))}>
               BRACKET PATH
             </button>
           </div>
@@ -198,7 +207,7 @@ export function BalanceSheet({
           )}
 
           {tab === 'balance' && (
-            <>
+            <div id="bal-panel-balance" role="tabpanel" aria-labelledby="bal-tab-balance">
               <div className={styles.toolbar}>
                 <div className={styles.btnRow}>
                   <button
@@ -219,9 +228,21 @@ export function BalanceSheet({
                       {allowSwapsAt100 ? 'SWAPS AT 100: ON' : 'SWAPS AT 100: OFF'}
                     </button>
                   )}
+                  {proposal.items.length > 3 && (
+                    <button
+                      type="button"
+                      className={styles.toggleBtn}
+                      onClick={() => {
+                        haptic('select');
+                        setTicked(ticked.size === proposal.items.length ? new Set() : new Set(proposal.items.map((i) => i.id)));
+                      }}
+                    >
+                      {ticked.size === proposal.items.length ? 'CLEAR ALL' : 'SELECT ALL'}
+                    </button>
+                  )}
                 </div>
                 <span style={{ fontFamily: 'var(--mo-mono)', fontSize: 11.5, color: 'var(--mo-muted)' }}>
-                  Owned cards first · estimated from Tagger &amp; text
+                  Deck: {currentTotal} → {afterTotal} cards · Owned first
                 </span>
               </div>
 
@@ -285,11 +306,11 @@ export function BalanceSheet({
                   })}
                 </ul>
               )}
-            </>
+            </div>
           )}
 
           {tab === 'cutlab' && (
-            <>
+            <div id="bal-panel-cutlab" role="tabpanel" aria-labelledby="bal-tab-cutlab">
               <div className={styles.toolbar}>
                 <span style={{ fontFamily: 'var(--mo-mono)', fontSize: 12, color: 'var(--mo-muted)' }}>
                   Deck: {currentTotal} → {currentTotal - labCuts.size} cards · {labCuts.size} queued to cut · {labLocked.size} locked
@@ -354,11 +375,11 @@ export function BalanceSheet({
                   </div>
                 </div>
               )}
-            </>
+            </div>
           )}
 
           {tab === 'bracket' && (
-            <>
+            <div id="bal-panel-bracket" role="tabpanel" aria-labelledby="bal-tab-bracket">
               <div className={styles.toolbar}>
                 <div className={styles.btnRow}>
                   <button
@@ -421,7 +442,7 @@ export function BalanceSheet({
                   })}
                 </ul>
               )}
-            </>
+            </div>
           )}
         </div>
 
