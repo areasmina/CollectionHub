@@ -148,32 +148,3 @@
   font-size: 11px;
   color: var(--mo-muted);
 }
-
-.triggerBtn {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: var(--mo-z-sticky);
-  min-height: 36px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--mo-line-2);
-  background: var(--mo-surface);
-  color: var(--mo-text);
-  font-family: var(--mo-mono);
-  font-size: 11px;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-}
-
-.triggerBtn:hover {
-  border-color: var(--mo-red);
-}
-
-@media (max-width: 700px) {
-  .triggerBtn {
-    min-height: 44px;
-    padding: 8px 14px;
-  }
-}
