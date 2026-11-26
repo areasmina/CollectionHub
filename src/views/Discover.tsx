@@ -298,34 +298,36 @@ export function Discover(s: Shared) {
         />
       </section>
 
-      <div className="ctabset" role="tablist" aria-label="Ways to build a deck" style={{ marginBottom: 14 }}>
-        <button
-          type="button"
-          role="tab"
-          className={`ctab${subTab === 'commanders' ? ' on' : ''}`}
-          aria-selected={subTab === 'commanders'}
-          onClick={() => (haptic('select'), setSubTab('commanders'))}
-        >
-          COMMANDERS
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={`ctab${subTab === 'guided' ? ' on' : ''}`}
-          aria-selected={subTab === 'guided'}
-          onClick={() => (haptic('select'), setSubTab('guided'))}
-        >
-          GUIDED BUILDER
-        </button>
-        <button
-          type="button"
-          role="tab"
-          className={`ctab${subTab === 'tags' ? ' on' : ''}`}
-          aria-selected={subTab === 'tags'}
-          onClick={() => (haptic('select'), setSubTab('tags'))}
-        >
-          TAG BUILDER
-        </button>
+      <div className="ctabs disc-tabs">
+        <div className="ctabset" role="tablist" aria-label="Ways to build a deck">
+          <button
+            type="button"
+            role="tab"
+            className={`ctab${subTab === 'commanders' ? ' on' : ''}`}
+            aria-selected={subTab === 'commanders'}
+            onClick={() => (haptic('select'), setSubTab('commanders'))}
+          >
+            COMMANDERS
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`ctab${subTab === 'guided' ? ' on' : ''}`}
+            aria-selected={subTab === 'guided'}
+            onClick={() => (haptic('select'), setSubTab('guided'))}
+          >
+            GUIDED BUILDER
+          </button>
+          <button
+            type="button"
+            role="tab"
+            className={`ctab${subTab === 'tags' ? ' on' : ''}`}
+            aria-selected={subTab === 'tags'}
+            onClick={() => (haptic('select'), setSubTab('tags'))}
+          >
+            TAG BUILDER
+          </button>
+        </div>
       </div>
 
       {subTab === 'tags' ? (

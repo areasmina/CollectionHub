@@ -91,3 +91,71 @@
   height: 30px !important;
   margin: 0 auto !important;
 }
+
+/* Discover mode tabs: Midnight Override zine tab bar flush with search bar */
+.disc-tabs {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  margin: 8px 0 0;
+  background: #0a0a0a;
+  border: 1px solid #23232a;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+}
+.disc-tabs .ctabset {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.disc-tabs .ctab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  background: #0d0d11;
+  border: 2px solid #2c2c34;
+  color: var(--mo-muted);
+  font: 400 15px/1 var(--mo-display);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.disc-tabs .ctab + .ctab {
+  transform: rotate(0.5deg);
+}
+.disc-tabs .ctab:hover,
+.disc-tabs .ctab:focus-visible {
+  color: #fff;
+  border-color: var(--mo-red);
+}
+.disc-tabs .ctab.on {
+  background: #fff;
+  border-color: #fff;
+  color: #0a0a0a;
+  box-shadow: 3px 3px 0 #000;
+  transform: rotate(-0.4deg);
+}
+.disc-tabs + .dfind > .dtools.tbar {
+  margin-top: 0 !important;
+  border-top: 1px solid #23232a !important;
+  border-radius: 0 0 6px 6px !important;
+}
+@media (max-width: 700px) {
+  .disc-tabs {
+    padding: 4px;
+    margin: 6px 0 0;
+  }
+  .disc-tabs .ctabset {
+    gap: 4px;
+  }
+  .disc-tabs .ctab {
+    padding: 0 6px;
+    font-size: 13px;
+  }
+}
