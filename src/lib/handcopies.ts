@@ -33,8 +33,9 @@ export interface CopyChange {
   list?: string | null;
 }
 
-/** Same row = same printing, finish and list: the importer's own rule for adding copies to a row. */
-const rowKey = (e: Pick<Entry, 'profile' | 'cardId' | 'set' | 'cn' | 'foil' | 'list'>) => [e.profile, e.cardId, (e.set ?? '').toLowerCase(), e.cn ?? '', e.foil ? 'f' : '', e.list ?? ''].join('|');
+/** Same row = same printing, finish, condition, language and list: the importer's own rule for adding copies to a row. */
+const rowKey = (e: Pick<Entry, 'profile' | 'cardId' | 'set' | 'cn' | 'foil' | 'finish' | 'condition' | 'lang' | 'list'>) =>
+  [e.profile, e.cardId, (e.set ?? '').toLowerCase(), e.cn ?? '', e.finish ?? (e.foil ? 'f' : ''), e.condition ?? '', e.lang ?? '', e.list ?? ''].join('|');
 
 /**
  * Moves one copy out of row `rowId` with `change` applied. Returns the rows to save and the ids to delete (a new row
