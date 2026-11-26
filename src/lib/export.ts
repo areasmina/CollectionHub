@@ -2,9 +2,21 @@ import type { Deck, Entry, Profile } from './db';
 
 const q = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
 
+const finishLabel = (e: Entry) => (e.finish === 'etched' ? 'etched' : e.foil ? 'foil' : 'normal');
+
 /** Same columns the importer reads back. */
-export const collectionCsv = (entries: Entry[]) =>
-  ['Name,Quantity,Set code,Collector number,Foil,Scryfall ID', ...entries.map((e) => [q(e.name), e.qty, q(e.set ?? ''), q(e.cn ?? ''), e.foil ? 'foil' : 'normal', q(e.cardId)].join(','))].join('\n');
+export const collectionCsv = (entries: Entry[]) => {
+  const hasDetails = entries.some((e) => e.condition || e.lang);
+  const head = hasDetails ? 'Name,Quantity,Set code,Collector number,Foil,Scryfall ID,Condition,Language' : 'Name,Quantity,Set code,Collector number,Foil,Scryfall ID';
+  return [
+    head,
+    ...entries.map((e) => {
+      const base = [q(e.name), e.qty, q(e.set ?? ''), q(e.cn ?? ''), finishLabel(e), q(e.cardId)];
+      if (hasDetails) base.push(q(e.condition ?? ''), q(e.lang ?? ''));
+      return base.join(',');
+    }),
+  ].join('\n');
+};
 
 /** A cell a spreadsheet must never read as a formula (=, +, -, @ at the start). Only for cells the importer does not read
  *  back (binder and list names, which the person typed); card names stay exact so a file re-imports unchanged. */
@@ -18,7 +30,7 @@ const safe = (s: string) => q(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s);
 export const allBindersCsv = (binders: { name: string; entries: Entry[] }[]) =>
   [
     'Binder Name,Name,Quantity,Set code,Collector number,Foil,Scryfall ID,List',
-    ...binders.flatMap((b) => b.entries.map((e) => [safe(b.name), q(e.name), e.qty, q(e.set ?? ''), q(e.cn ?? ''), e.foil ? 'foil' : 'normal', q(e.cardId), safe(e.list ?? '')].join(','))),
+    ...binders.flatMap((b) => b.entries.map((e) => [safe(b.name), q(e.name), e.qty, q(e.set ?? ''), q(e.cn ?? ''), finishLabel(e), q(e.cardId), safe(e.list ?? '')].join(','))),
   ].join('\n');
 
 /** The binder as a list to send someone: a short heading (lines starting with # are skipped on import), then the same

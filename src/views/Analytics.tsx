@@ -165,12 +165,12 @@ export function Analytics({ entries, cards, decks, binder, profile }: { entries:
           <p className="atrend">
             <b>{pct(a.inDecks.used, of)}%</b>
             <span>
-              {a.inDecks.used.toLocaleString()} of your cards are in a deck · {a.inDecks.idle.toLocaleString()} sit idle
+              {a.inDecks.used.toLocaleString()} of your cards are in a deck · {a.inDecks.spareCopies.toLocaleString()} spare copies ({money(a.inDecks.spareUsd)}) free
             </span>
           </p>
           <ul className="abars">
-            <Bar s={{ key: 'used', label: 'In a deck', cards: a.inDecks.used, usd: 0 }} of={of} tone="good" />
-            <Bar s={{ key: 'idle', label: 'Idle', cards: a.inDecks.idle, usd: 0 }} of={of} />
+            <Bar s={{ key: 'used', label: 'In a deck', cards: a.inDecks.used, usd: a.inDecks.usedUsd }} of={of} tone="good" />
+            <Bar s={{ key: 'idle', label: 'Spare / idle', cards: a.inDecks.idle, usd: a.inDecks.spareUsd }} of={of} />
           </ul>
         </section>
         <Chart fig={4} kind="colours" title="COLOURS" note="by colour identity" slices={a.colours} />
@@ -178,6 +178,13 @@ export function Analytics({ entries, cards, decks, binder, profile }: { entries:
         <Chart fig={6} kind="types" title="CARD TYPES" slices={a.types} />
         <Chart fig={7} kind="rarity" title="RARITY" note="copies and what they're worth" slices={a.rarity} />
         <Chart fig={8} kind="sets" title="BIGGEST SETS" note="top 8" slices={a.sets} />
+        <Chart
+          fig={9}
+          kind="sets"
+          title="TOP SPARE CARDS"
+          note="most valuable copies outside active decks"
+          slices={a.topSpare.map((t) => ({ key: t.name, label: t.name, cards: t.spare, usd: t.usd }))}
+        />
       </div>
     </section>
   );
