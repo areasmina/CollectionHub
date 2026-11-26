@@ -217,6 +217,10 @@ export function Discover(s: Shared) {
     };
   }, [saved?.profile, sig, commanders.length, open, !!data]);
 
+  useEffect(() => {
+    if (open) scrollTo(0, 0);
+  }, [open]);
+
   if (open)
     return (
       <Suspense fallback={<CardSpin page />}>

@@ -15,9 +15,10 @@
   display: flex;
   flex-direction: column;
   background: var(--mo-surface);
-  border: 2px solid var(--mo-line-strong);
+  border: 1px solid var(--mo-line-2);
+  border-top: 2px solid var(--mo-red);
   border-radius: var(--mo-r-md);
-  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.92);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
   overflow: hidden;
 }
 
@@ -322,7 +323,22 @@
     align-items: flex-end;
   }
   .sheet {
-    border-radius: var(--mo-r-md) var(--mo-r-md) 0 0;
+    border-radius: 0;
     max-height: 92dvh;
+  }
+  .head {
+    padding: var(--mo-s2) var(--mo-s3);
+  }
+  .body {
+    padding: var(--mo-s3);
+  }
+  .tabBtn,
+  .close,
+  .toggleBtn,
+  .btn {
+    min-height: 44px;
+  }
+  .close {
+    min-width: 44px;
   }
 }

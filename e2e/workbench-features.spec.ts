@@ -161,4 +161,55 @@ test.describe('Collection & Decks Workbench Features', () => {
     await page.mouse.click(lip.x + lip.width / 2, lip.y + lip.height / 2);
     await expect(drawer).toHaveCount(0);
   });
+
+  test('Sleek punk zine cohesion: Discover tabs flush single-row and Saved Deck top clearance + single-row strip', async ({ page }, info) => {
+    await go(page, 'discover');
+
+    const tabs = page.locator('.disc-tabs .ctab');
+    await expect(tabs).toHaveCount(3);
+    await expect(tabs).toHaveText(['COMMANDERS', 'GUIDED BUILDER', 'TAG BUILDER']);
+
+    const tabMetrics = await tabs.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        return { top: Math.round(r.top), h: Math.round(r.height), bg: cs.backgroundColor, transform: cs.transform };
+      })
+    );
+    expect(new Set(tabMetrics.map((t) => t.top)).size).toBe(1);
+    expect(tabMetrics[0].bg).toBe('rgb(230, 0, 18)');
+    expect(tabMetrics[0].transform).toBe('none');
+    if (info.project.name === 'phone') {
+      for (const m of tabMetrics) expect(m.h).toBeGreaterThanOrEqual(44);
+    }
+
+    const tabsBox = (await page.locator('.disc-tabs').boundingBox())!;
+    const barBox = (await page.locator('.dfind > .dtools.tbar').boundingBox())!;
+    expect(Math.abs(barBox.y - (tabsBox.y + tabsBox.height))).toBeLessThanOrEqual(2);
+
+    // Saved Deck: dock island on top + COMPACT HEADER -> SHOW HEADER, verify .dstrip clears island and stays inline
+    await page.evaluate(() => localStorage.setItem('ch:island_dock', 'top'));
+    await go(page, 'decks');
+    await page.locator('.dcard').first().click();
+    await expect(page.locator('.forgemain > .dstrip')).toBeVisible();
+
+    await page.getByRole('button', { name: 'COMPACT HEADER' }).click();
+    await expect(page.getByRole('button', { name: 'SHOW HEADER' })).toBeVisible();
+
+    const navBox = (await page.locator('.pillnav.dock-top').boundingBox())!;
+    const stripBox = (await page.locator('.forgemain > .dstrip').boundingBox())!;
+    expect(stripBox.y).toBeGreaterThanOrEqual(navBox.y + navBox.height - 2);
+
+    const actButtons = page.locator('.forgemain > .dstrip > .dacts > .u-btn');
+    const actMetrics = await actButtons.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return { top: Math.round(r.top), h: Math.round(r.height) };
+      })
+    );
+    expect(new Set(actMetrics.map((b) => b.top)).size).toBe(1);
+    if (info.project.name === 'phone') {
+      for (const b of actMetrics) expect(b.h).toBeGreaterThanOrEqual(44);
+    }
+  });
 });

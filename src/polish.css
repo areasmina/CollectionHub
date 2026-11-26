@@ -1580,22 +1580,25 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   .dstrip > .dacts > :not(.tobuy, .bestfit, .forge) > button { width: 100%; justify-content: center; }
   /* one action alone (no BEST FOR MY CARDS while forging, for one) takes the whole row */
   .dstrip > .dacts > .forge:only-child, .dstrip > .dacts > .bestfit:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  /* Saved deck (.forgemain) holds 5 compact utility buttons: wrap as an inline row, never 5 full-width stacked blocks */
+  /* Saved deck (.forgemain) holds 5 compact utility buttons: single hairline row, scrollable if narrow */
   .forgemain .dstrip > .dacts {
     display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    gap: 0 !important;
     width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
   .forgemain .dstrip > .dacts > * {
-    flex: 1 1 auto !important;
+    flex: 1 0 auto !important;
     width: auto !important;
     grid-column: auto !important;
   }
   .forgemain .dstrip > .dacts > .u-btn {
-    padding: 0 10px !important;
+    padding: 0 7px !important;
     font-size: 12px !important;
     min-height: 44px !important;
+    white-space: nowrap;
   }
 }
 

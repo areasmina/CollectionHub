@@ -224,3 +224,16 @@
 .badgeOther {
   color: var(--mo-hazard);
 }
+
+@media (max-width: 700px) {
+  .btn,
+  .chip {
+    min-height: 44px;
+  }
+  .list {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  }
+  .textarea {
+    min-height: 180px;
+  }
+}

@@ -4161,18 +4161,6 @@ details.cat {
 .panel .small {
   font-size: 13px;
 }
-.legacymove {
-  margin-top: 18px;
-  padding-top: 12px;
-  border-top: 3px dashed var(--ink);
-}
-.legacymove > summary {
-  cursor: pointer;
-  font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
 .syncstate.conflict .row {
   margin-top: 10px;
 }

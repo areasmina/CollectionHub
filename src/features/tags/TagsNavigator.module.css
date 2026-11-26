@@ -65,8 +65,9 @@
   overflow-y: auto;
   background: var(--mo-surface);
   border: 1px solid var(--mo-line-strong);
+  border-top: 2px solid var(--mo-red);
   border-radius: var(--mo-r-sm);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.85);
   list-style: none;
   margin: 0;
   padding: var(--mo-s1);
@@ -210,13 +211,14 @@
   inset: 16px;
   z-index: var(--mo-z-sheet);
   background: var(--mo-surface);
-  border: 2px solid var(--mo-red);
+  border: 1px solid var(--mo-line-strong);
+  border-top: 2px solid var(--mo-red);
   border-radius: var(--mo-r-md);
   padding: var(--mo-s3);
   display: flex;
   flex-direction: column;
   gap: var(--mo-s2);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.88);
 }
 
 .graphSvg {
@@ -546,4 +548,32 @@
   font-family: var(--mo-display);
   font-size: 14px;
   letter-spacing: 0.06em;
+}
+
+@media (max-width: 700px) {
+  .graphSvg {
+    height: 360px;
+    min-height: 320px;
+  }
+  .hudBtn,
+  .starterChip,
+  .branchChip,
+  .showBtn,
+  .pipBtn,
+  .cardSearch {
+    min-height: 44px;
+  }
+  .pipBtn,
+  .hudBtn,
+  .moreBtn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .cardSearch {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .cardGrid {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  }
 }

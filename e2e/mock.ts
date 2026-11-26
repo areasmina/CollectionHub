@@ -37,7 +37,6 @@ export const edhJson = (numDecks: number) => ({ container: { json_dict: { card: 
 export async function mockWorld(page: Page) {
   await page.route(/cards\.scryfall\.io|svgs\.scryfall\.io/, (r) => r.fulfill({ body: PNG, contentType: 'image/png' }));
   await page.route(/frankfurter/, (r) => r.fulfill({ json: { rates: { CAD: 1.38 }, date: '2026-10-12' } }));
-  await page.route(/supabase\.co/, (r) => r.fulfill({ json: {} }));
   await page.route(/api\.scryfall\.com/, async (r) => {
     const u = new URL(r.request().url());
     if (u.pathname === '/cards/collection') {
