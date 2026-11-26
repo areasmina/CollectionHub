@@ -332,6 +332,49 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
     });
   };
 
+  const handleAutoBuild100 = () => {
+    if (!commander) return;
+    haptic('success');
+    let next = [...draftCards];
+    const order = ['lands', 'ramp', 'draw', 'removal', 'wipes', 'plan', 'rest'] as const;
+    for (const st of order) {
+      if (totalCardsIn(next) >= 100) break;
+      const raw = stepPicks(
+        st,
+        candidates,
+        { deck: next, cardOf, commander: commander.name, bracket, aggression },
+        { n: st === 'rest' ? 80 : 40, identity }
+      );
+      const picks = filterByMaxPrice(raw.picks, (n) => cardByKey.get(norm(n)), maxPriceCad);
+      if (st === 'lands') {
+        const targetLands = raw.target?.[0] ?? 37;
+        let currentLands = next.reduce((n, c) => n + (isLand(cardOf(c.name)?.type) ? c.qty : 0), 0);
+        for (const p of picks) {
+          if (currentLands >= targetLands || totalCardsIn(next) >= 100) break;
+          if (p.blocked || BASICS.has(norm(p.name)) || next.some((d) => norm(d.name) === norm(p.name))) continue;
+          next = adjustDeckCard(next, p.name, 1);
+          currentLands++;
+        }
+        next = autoFillBasics(next, cardOf, identity, targetLands, 100);
+        continue;
+      }
+      const targetMin = raw.target?.[0] ?? (st === 'rest' ? 99 : 8);
+      const need =
+        st === 'rest'
+          ? Math.max(0, 100 - totalCardsIn(next))
+          : Math.max(0, Math.min(targetMin - raw.have, 100 - totalCardsIn(next)));
+      if (need <= 0) continue;
+      const toAdd = picks.filter((p) => !p.blocked && !next.some((d) => norm(d.name) === norm(p.name))).slice(0, need);
+      for (const p of toAdd) {
+        if (totalCardsIn(next) >= 100) break;
+        next = adjustDeckCard(next, p.name, 1);
+      }
+    }
+    setDraftCards(next);
+    setStep('review');
+    onToast?.({ text: `Auto-built ${totalCardsIn(next)}/100 cards from your binder.` });
+  };
+
   const stats = useMemo(() => {
     if (!commander) return null;
     return deckStats(draftCards, cardOf, commander.name);
@@ -419,6 +462,11 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
         </div>
 
         <div className={s.topControls}>
+          {commander && totalCount < 100 && (
+            <button type="button" className={`${s.btn} ${s.btnHazard}`} onClick={handleAutoBuild100} title="Auto-fill all remaining steps from your binder up to 100 cards">
+              Auto-build 100
+            </button>
+          )}
           {(commander || draftCards.length > 0) && (
             <button type="button" className={s.btn} onClick={resetDraft} title="Clear current guided draft">
               Reset Draft

@@ -7,6 +7,7 @@ import { CardMenu, type Toast } from './CardMenu';
 import { YourCopies } from './YourCopies';
 import { norm } from '../lib/names';
 import { inUse } from '../lib/copies';
+import { activeNeed } from '../lib/folders';
 import { colourByCard } from '../lib/deckcolor';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { isCommander } from './Discover';
@@ -199,27 +200,30 @@ const RemoveBtn = ({ e }: { e: Entry }) => (
   </button>
 );
 
-function Items({ list, cards, view, onMenu, onPick, used, tints }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; onPick?: (e: Entry) => void; used?: Map<string, string[]>; tints?: Map<string, string[]> }) {
+function Items({ list, cards, view, onMenu, onPick, used, tints, freeOf }: { list: Entry[]; cards: Map<string, Card>; view: string; onMenu?: MenuFn; onPick?: (e: Entry) => void; used?: Map<string, string[]>; tints?: Map<string, string[]>; freeOf?: (name: string) => number }) {
   const pick = (e: Entry) => (onPick ? () => (haptic('open'), onPick(e)) : undefined);
-  // In your active decks: a small mark under the name ("in 2 decks", the deck names on hover).
+  // In your active decks: a small mark under the name ("in 2 decks · 1 free", the deck names on hover).
   const useMark = (e: Entry) => {
     const ds = used?.get(norm(e.name));
-    return ds?.length ? (
-      <span className="inuse" title={`In ${ds.join(', ')}`}>
+    if (!ds?.length) return null;
+    const free = freeOf?.(e.name);
+    return (
+      <span className="inuse" title={`In ${ds.join(', ')}${free !== undefined ? ` (${free} free)` : ''}`}>
         {/* one dot per deck, in that deck's colour */}
         {(tints?.get(norm(e.name)) ?? []).map((c) => (
           <i key={c} style={{ background: c }} aria-hidden="true" />
         ))}
         {' '}
         in {ds.length} {ds.length === 1 ? 'deck' : 'decks'}
+        {free !== undefined ? ` · ${free} free` : ''}
       </span>
-    ) : null;
+    );
   };
   const cmd = (e: Entry) => {
     const c = cards.get(e.cardId);
     return !!c && c.legal !== false && isCommander(c.type ?? '', c.text ?? '');
   };
-  const setLine = (e: Entry) => [e.set?.toUpperCase(), e.cn, e.foil && 'foil'].filter(Boolean).join(' ');
+  const setLine = (e: Entry) => [e.set?.toUpperCase(), e.cn, e.finish === 'etched' ? 'etched' : e.foil && 'foil', e.condition, e.lang && e.lang !== 'en' && e.lang.toUpperCase()].filter(Boolean).join(' ');
   if (view === 'grid')
     return (
       <ul className="zgrid cgrid2">
@@ -282,13 +286,17 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
   }, [toast]);
   const decks = useLiveQuery(() => (profile ? db.decks.where('profile').equals(profile).toArray() : []), [profile]) ?? [];
   const used = inUse(decks);
+  const need = activeNeed(decks);
   const tints = colourByCard(decks, norm); // each card glows in the colour of its deck
   const onMenu: MenuFn | undefined = profile ? (e, x, y) => setMenu({ e, x, y }) : undefined;
   // a card picture opens YOUR COPIES: every copy of that card, each one changed on its own (Guillermo, Nov 24)
   const [hand, setHand] = useState<string | null>(null);
   const closeHand = useCallback(() => setHand(null), []);
   const onPick = profile ? (e: Entry) => setHand(e.name) : undefined;
-  const owned = (name: string) => entries.filter((x) => norm(x.name) === norm(name)).reduce((n, x) => n + x.qty, 0);
+  const ownedCounts = new Map<string, number>();
+  for (const x of entries) ownedCounts.set(norm(x.name), (ownedCounts.get(norm(x.name)) ?? 0) + x.qty);
+  const owned = (name: string) => ownedCounts.get(norm(name)) ?? 0;
+  const freeOf = (name: string) => Math.max(0, owned(name) - (need.get(norm(name)) ?? 0));
   // Always opens in grid; LIST switches for this visit only.
   const [view, setView] = useState<'list' | 'grid'>('grid');
   const [group, setGroup] = usePref<'on' | 'off'>('ch:collgroup', 'off');
@@ -409,7 +417,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
                     {g.code.toUpperCase()} · {n}
                   </span>
                 </summary>
-                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} onPick={onPick} used={used} tints={tints} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
+                {open.has(g.code) && (g.list.length ? <Items list={g.list} cards={cards} view={view} onMenu={onMenu} onPick={onPick} used={used} tints={tints} freeOf={freeOf} /> : <p className="count" style={{ padding: '0 14px 12px' }}>No cards from this set.</p>)}
               </details>
             );
           })}
@@ -418,7 +426,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
         empty
       ) : (
         <>
-          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} onPick={onPick} used={used} tints={tints} />
+          <Items list={entries.slice(0, limit)} cards={cards} view={view} onMenu={onMenu} onPick={onPick} used={used} tints={tints} freeOf={freeOf} />
           {entries.length > limit && (
             <button className="btn secondary more" onClick={() => setLimit(limit + 200)}>
               SHOW MORE ({entries.length - limit} LEFT)
