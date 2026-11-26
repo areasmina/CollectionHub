@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { haptic } from '../../lib/haptics';
+import { setForgeCube, setForgeIsland } from '../../lib/nav';
 import { cad, shopUrl } from '../../lib/prices';
 
 /** Focus mode on the whole page while `on` (the nav and the page decoration step back). */
@@ -32,7 +33,7 @@ function useForgeKeys(onLeave: () => void, onUndo?: () => void) {
   }, []);
 }
 
-/** The Forge's own top bar: FORGE stamp, the deck, the last undo, SAVE (commander page) and ✕ LEAVE. */
+/** The Forge's live assistant state: synced into the Dynamic Island instead of hanging mid-page. */
 export function ForgeTop({
   label,
   sub,
@@ -51,67 +52,11 @@ export function ForgeTop({
   reserved?: boolean;
 }) {
   useForgeKeys(onLeave, undo?.run);
-  const bar = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const el = bar.current;
-    if (!el || typeof ResizeObserver !== 'function') return;
-    const root = document.documentElement.style;
-    const ro = new ResizeObserver(() => root.setProperty('--forgetop-h', `${Math.round(el.getBoundingClientRect().height)}px`));
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-      root.removeProperty('--forgetop-h');
-    };
-  }, []);
-  useEffect(() => {
-    const el = bar.current;
-    if (!el) return;
-    let raf = 0;
-    const check = () => {
-      raf = 0;
-      const top = parseFloat(getComputedStyle(el).top) || 0;
-      el.classList.toggle('stuck', scrollY > 0 && el.getBoundingClientRect().top <= top + 0.5);
-    };
-    const soon = () => void (raf ||= requestAnimationFrame(check));
-    check();
-    addEventListener('scroll', soon, { passive: true });
-    addEventListener('resize', soon);
-    el.addEventListener('transitionend', soon);
-    return () => {
-      cancelAnimationFrame(raf);
-      removeEventListener('scroll', soon);
-      removeEventListener('resize', soon);
-      el.removeEventListener('transitionend', soon);
-    };
-  }, []);
-  return (
-    <div className="forgetop" role="toolbar" aria-label={`Forge: ${label}`} ref={bar}>
-      <span className="fstamp" aria-hidden="true">
-        FORGE
-      </span>
-      <span className="ftitle">
-        {reserved && (
-          <span className="fres" title="This deck holds its copies: other decks can't use them">
-            RESERVED
-          </span>
-        )}
-        {sub && <small>{sub}</small>}
-      </span>
-      {undo && (
-        <button className="u-btn ghost fundo" onClick={() => (haptic('undo'), undo.run())} title="Undo (Ctrl+Z)">
-          ↺ UNDO <small>{undo.text}</small>
-        </button>
-      )}
-      {onSave && (
-        <button className="u-btn primary forge" onClick={onSave} disabled={saving}>
-          SAVE
-        </button>
-      )}
-      <button className="u-btn ghost fleave" onClick={() => (haptic('tap'), onLeave())} title="Leave the Forge (Esc)">
-        ✕ LEAVE
-      </button>
-    </div>
-  );
+    setForgeIsland({ label, sub, undo, onLeave, onSave, saving, reserved });
+  }, [label, sub, undo, onLeave, onSave, saving, reserved]);
+  useEffect(() => () => setForgeIsland(null), []);
+  return null;
 }
 
 const FACES = [
@@ -181,16 +126,11 @@ export function ForgeCube({ grid, buyCount }: { grid: { current: HTMLElement | n
     const top = bar.current?.getBoundingClientRect().top ?? 0;
     if (top < 0) bar.current?.scrollIntoView({ block: 'start' });
   };
-  return (
-    <div className="fcube" ref={bar} role="tablist" aria-label="Deck faces: swipe sideways">
-      {FACES.map(([, label], i) => (
-        <button key={label} type="button" role="tab" aria-selected={face === i} onClick={() => go(i)}>
-          {label}
-          {label === 'TO BUY' && buyCount ? <small>{buyCount}</small> : null}
-        </button>
-      ))}
-    </div>
-  );
+  useEffect(() => {
+    setForgeCube({ face, buyCount, onFace: go });
+  }, [face, buyCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => setForgeCube(null), []);
+  return null;
 }
 
 /** The cube's TO BUY face on a saved deck: the cards you don't own, cheapest first, each price a shop link. */

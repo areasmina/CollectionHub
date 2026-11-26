@@ -344,3 +344,214 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     gap: 4px !important;
   }
 }
+
+/* ── Context-Adaptive Dynamic Island (Supaste fluid + Forge Assistant) ── */
+.pillnav {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+}
+.pillnav .island-membrane {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.pillnav.forging-island .island-membrane {
+  background: rgba(12, 7, 8, 0.94) !important;
+  border-color: rgba(255, 68, 24, 0.72) !important;
+  box-shadow: 0 0 22px rgba(230, 0, 18, 0.28), 0 10px 28px rgba(0, 0, 0, 0.75) !important;
+}
+.forge-island-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+}
+.pillnav .forgetop {
+  position: static !important;
+  top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.pillnav .forgetop .fstamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #e60012 0%, #ff5500 100%);
+  color: #ffffff;
+  font: 400 12.5px/1 var(--mo-display);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pillnav .forgetop .forge-ember {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff3b0;
+  box-shadow: 0 0 8px #ffcc00;
+  animation: forgePulse 1.6s ease-in-out infinite;
+}
+@keyframes forgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.82); }
+}
+.pillnav .forgetop .ftitle {
+  font: 400 10.5px/1 var(--mo-mono);
+  color: #cfcfe0;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+.pillnav .forgetop .u-btn {
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0f0f5;
+  font: 400 12px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.pillnav .forgetop .u-btn.primary.forge {
+  background: #e60012;
+  border-color: #ff4422;
+  color: #ffffff;
+}
+.pillnav .forgetop .u-btn:hover,
+.pillnav .forgetop .u-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+.pillnav .fcube {
+  display: none;
+}
+@media (max-width: 700px) {
+  .pillnav.forging-island {
+    max-width: calc(100vw - 16px);
+  }
+  .pillnav .forgetop .fstamp,
+  .pillnav .forgetop .u-btn,
+  .pillnav .forgetop .forge-nav-btn {
+    min-height: 44px !important;
+  }
+  .pillnav .fcube {
+    display: flex !important;
+    align-items: stretch;
+    gap: 3px;
+    width: 100%;
+    padding: 2px;
+    margin: 0 !important;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+  }
+  .pillnav .fcube > button {
+    flex: 1 1 0;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent;
+    color: #c8c8d4;
+    font: 400 12px/1 var(--mo-display);
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .pillnav .fcube > button[aria-selected='true'] {
+    background: #e60012;
+    color: #ffffff;
+  }
+  .pillnav .fcube > button > small {
+    background: var(--mo-yellow);
+    color: #0a0a0a;
+    padding: 1px 5px;
+    border-radius: 999px;
+    font: 700 10px/1.2 var(--mo-mono);
+  }
+}
+
+/* ── Dwarf Blacksmith Forge Realm (html.forging) ── */
+html.forging body {
+  background-color: #080607 !important;
+  background-image:
+    radial-gradient(ellipse 90% 38% at 50% 0%, rgba(230, 0, 18, 0.16) 0%, rgba(255, 85, 0, 0.06) 45%, transparent 75%),
+    radial-gradient(ellipse 80% 30% at 50% 100%, rgba(255, 68, 0, 0.11) 0%, transparent 65%) !important;
+}
+html.forging .dtools.tbar,
+html.forging .dpanel,
+html.forging .fsugg {
+  border-color: #36191c !important;
+}
+html.forging .lists.drop-over {
+  outline: 2px solid #ff4418 !important;
+  box-shadow: inset 0 0 28px rgba(255, 68, 24, 0.18) !important;
+}
+
+/* ── 3-Rule Mobile Density Pass Across All 4 Views (<= 700px) ── */
+@media (max-width: 700px) {
+  /* 1. Micro-telemetry status strip + single slim action bar */
+  .forgemain > .dstrip > .dstatus {
+    font-size: 10.5px !important;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .dlist .dribbon {
+    padding: 6px 8px !important;
+    gap: 4px 10px !important;
+    font-size: 11px !important;
+    border-radius: 3px !important;
+  }
+  .dlist .dribbon > span {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .dlist .dribbon b {
+    font-size: 15px !important;
+  }
+
+  /* 2. Compact masthead & hero-to-content ratio */
+  .coll .chead2 {
+    padding: 2px 0 !important;
+  }
+  .dlist .decksbar {
+    padding: 6px 0 4px !important;
+  }
+  .vhero {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+
+  /* 3. Single slim toolbar row */
+  .dtools.tbar {
+    padding: 2px 4px !important;
+    gap: 3px !important;
+  }
+  .coll .collbar {
+    padding: 2px 4px !important;
+    gap: 3px !important;
+  }
+}

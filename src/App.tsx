@@ -6,7 +6,20 @@ import { ownedMap } from './lib/compare';
 import { db, type Card } from './lib/db';
 import { norm } from './lib/names';
 import { Discover } from './views/Discover';
-import { canLeave, getBack, onBackChange, onDiscoverSub, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
+import {
+  canLeave,
+  getBack,
+  getForgeCube,
+  getForgeIsland,
+  onBackChange,
+  onDiscoverSub,
+  onForgeCubeChange,
+  onForgeIslandChange,
+  onOpenCollection,
+  onOpenDeck,
+  onOpenDeckList,
+  openDeck,
+} from './lib/nav';
 import { codeFromHash } from './lib/synccode';
 import { useSyncState, useSyncCode, syncCode, type SyncStatus } from './lib/syncstate';
 import { turnOn, turnOff } from './lib/sync';
@@ -273,6 +286,19 @@ export default function App() {
   }, [dock]);
   const [backFn, setBackFn] = useState<(() => void) | null>(null);
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
+  const [forgeState, setForgeState] = useState(() => getForgeIsland());
+  const [forgeCube, setForgeCube] = useState(() => getForgeCube());
+  const [forgeNavMode, setForgeNavMode] = useState(false);
+  const [forgeActionsOpen, setForgeActionsOpen] = useState(true);
+  useEffect(() => onForgeIslandChange(() => {
+    const next = getForgeIsland();
+    setForgeState(next);
+    if (!next) {
+      setForgeNavMode(false);
+      setForgeActionsOpen(true);
+    }
+  }), []);
+  useEffect(() => onForgeCubeChange(() => setForgeCube(getForgeCube())), []);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
   const [deckHome, setDeckHome] = useState(0); // bumping it remounts Decks: back to the deck list
   const here = (t: Tab) => tab === t;
@@ -364,7 +390,7 @@ export default function App() {
       )}
       <nav
         ref={navRef}
-        className={`pillnav notch dock-${dock}${navAway ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}`}
+        className={`pillnav notch dock-${dock}${navAway && !forgeState ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState ? ' forging-island' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
         onPointerDown={onIslandDown()}
@@ -425,48 +451,119 @@ export default function App() {
 
         {/* Crisp text content container (never distorted) */}
         <div className="island-content">
-          {backFn && (
-            <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
-              <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="2.5" />
-              </svg>
-            </button>
-          )}
-          <div className="pill">
-            {NAV.map(([t, label]) => (
+          {forgeState && !forgeNavMode ? (
+            <div className="forge-island-wrap">
+              <div className="forgetop" role="toolbar" aria-label={`Forge: ${forgeState.label}`}>
+                <button
+                  type="button"
+                  className="fstamp"
+                  onClick={() => (haptic('tap'), setForgeActionsOpen((o) => !o))}
+                  title={forgeActionsOpen ? 'Collapse Forge controls' : 'Expand Forge controls'}
+                  aria-expanded={forgeActionsOpen}
+                >
+                  <span className="forge-ember" aria-hidden="true" />
+                  FORGE
+                </button>
+                {forgeActionsOpen && (
+                  <>
+                    {forgeState.sub && (
+                      <span className="ftitle">
+                        <small>{forgeState.sub}</small>
+                      </span>
+                    )}
+                    {forgeState.undo && (
+                      <button className="u-btn ghost fundo" onClick={() => (haptic('undo'), forgeState.undo?.run())} title="Undo (Ctrl+Z)">
+                        ↺ UNDO
+                      </button>
+                    )}
+                    {forgeState.onSave && (
+                      <button className="u-btn primary forge" onClick={forgeState.onSave} disabled={forgeState.saving}>
+                        SAVE
+                      </button>
+                    )}
+                    <button className="u-btn ghost fleave" onClick={() => (haptic('tap'), forgeState.onLeave())} title="Leave the Forge (Esc)">
+                      ✕ LEAVE
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="pjump forge-nav-btn"
+                  aria-label="Sections menu"
+                  title="Switch sections"
+                  onClick={() => (haptic('tap'), setForgeNavMode(true))}
+                >
+                  ☰
+                </button>
+              </div>
+              {forgeCube && (
+                <div className="fcube" role="tablist" aria-label="Deck faces: swipe sideways">
+                  {(['CARDS', 'ANALYSIS', 'TO BUY'] as const).map((lbl, i) => (
+                    <button key={lbl} type="button" role="tab" aria-selected={forgeCube.face === i} onClick={() => forgeCube.onFace(i)}>
+                      {lbl}
+                      {lbl === 'TO BUY' && forgeCube.buyCount ? <small>{forgeCube.buyCount}</small> : null}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {forgeState && (
+                <button
+                  type="button"
+                  className="pback forge-back-pill"
+                  aria-label="Back to Forge controls"
+                  title="Back to Forge controls"
+                  onClick={() => (haptic('tap'), setForgeNavMode(false))}
+                >
+                  🔥
+                </button>
+              )}
+              {!forgeState && backFn && (
+                <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
+                  <svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M11 2 L4 8 L11 14" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                  </svg>
+                </button>
+              )}
+              <div className="pill">
+                {NAV.map(([t, label]) => (
+                  <button
+                    key={t}
+                    aria-current={here(t) ? 'page' : undefined}
+                    onPointerDown={onIslandDown(t)}
+                    onClick={() => {
+                      if (dragRef.current.didDrag) return;
+                      haptic('select');
+                      if (t === 'discover') goDiscover();
+                      else if (t === 'decks') goDecks();
+                      else goTab(t);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <button
-                key={t}
-                aria-current={here(t) ? 'page' : undefined}
-                onPointerDown={onIslandDown(t)}
-                onClick={() => {
+                type="button"
+                className="pjump"
+                aria-label="Quick Jump (Ctrl+K)"
+                title="Quick Jump (Ctrl+K / Cmd+K)"
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (dragRef.current.didDrag) return;
-                  haptic('select');
-                  if (t === 'discover') goDiscover();
-                  else if (t === 'decks') goDecks();
-                  else goTab(t);
+                  haptic('open');
+                  setJumpSignal((n) => n + 1);
                 }}
               >
-                {label}
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <circle cx="6.8" cy="6.8" r="4.5" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <path d="M10.2 10.2 L14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
               </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="pjump"
-            aria-label="Quick Jump (Ctrl+K)"
-            title="Quick Jump (Ctrl+K / Cmd+K)"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (dragRef.current.didDrag) return;
-              haptic('open');
-              setJumpSignal((n) => n + 1);
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-              <circle cx="6.8" cy="6.8" r="4.5" fill="none" stroke="currentColor" strokeWidth="2" />
-              <path d="M10.2 10.2 L14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
+            </>
+          )}
           {/* Sync indicator + Dynamic Island sync trigger: only tapping the light opens sync; holding 2s collapses */}
           <div
             className={`syncpill ${currentCode ? 'on' : 'off'}`}

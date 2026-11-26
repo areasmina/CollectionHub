@@ -100,3 +100,36 @@ const BACK = 'ch:back';
 export const setBack = (f: (() => void) | null) => ((back = f), dispatchEvent(new Event(BACK)));
 export const getBack = () => back;
 export const onBackChange = (f: () => void) => (addEventListener(BACK, f), () => removeEventListener(BACK, f));
+
+/** Context-adaptive Dynamic Island state for Forge mode (replaces the hanging middle Forge bar). */
+export interface ForgeIslandState {
+  label: string;
+  sub?: string;
+  undo?: { text: string; run: () => void };
+  onLeave: () => void;
+  onSave?: () => void;
+  saving?: boolean;
+  reserved?: boolean;
+}
+let forgeIsland: ForgeIslandState | null = null;
+const FORGE_ISLAND = 'ch:forgeisland';
+export const setForgeIsland = (next: ForgeIslandState | null) => {
+  forgeIsland = next;
+  dispatchEvent(new Event(FORGE_ISLAND));
+};
+export const getForgeIsland = () => forgeIsland;
+export const onForgeIslandChange = (f: () => void) => (addEventListener(FORGE_ISLAND, f), () => removeEventListener(FORGE_ISLAND, f));
+
+export interface ForgeCubeState {
+  face: number;
+  buyCount?: number;
+  onFace: (i: number) => void;
+}
+let forgeCube: ForgeCubeState | null = null;
+const FORGE_CUBE = 'ch:forgecube';
+export const setForgeCube = (next: ForgeCubeState | null) => {
+  forgeCube = next;
+  dispatchEvent(new Event(FORGE_CUBE));
+};
+export const getForgeCube = () => forgeCube;
+export const onForgeCubeChange = (f: () => void) => (addEventListener(FORGE_CUBE, f), () => removeEventListener(FORGE_CUBE, f));
