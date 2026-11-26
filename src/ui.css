@@ -2899,18 +2899,32 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .tbar .fbody .segs {
   display: flex !important;
   flex: 1 1 auto !important;
-  gap: 0 !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 .tbar .fbody .segs button {
-  flex: 1 1 0 !important;
+  flex: 0 1 auto !important;
   min-width: 0 !important;
-  height: 28px !important;
-  min-height: 28px !important;
-  font-size: 12px !important;
-  font-weight: 800 !important;
-  padding: 0 4px !important;
-  font-family: var(--u-display, sans-serif) !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 14px !important;
+  background: #141419 !important;
+  background-image: none !important;
+  border: 1px solid #2c2c36 !important;
+  border-radius: 999px !important;
+  color: #d4d4de !important;
+  font: 700 12px/1 var(--u-mono, monospace) !important;
   letter-spacing: 0.04em !important;
+  box-shadow: none !important;
+}
+.tbar .fbody .segs button[aria-checked='true'] {
+  background: #e60012 !important;
+  border-color: #e60012 !important;
+  color: #ffffff !important;
 }
 .tbar .fbody .pickgrid {
   display: grid !important;
@@ -3680,43 +3694,47 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   align-items: center !important;
   justify-content: center !important;
   font-family: var(--an, "Anton", sans-serif) !important;
-  font-size: 15px !important;
+  font-size: 13.5px !important;
   letter-spacing: 0.05em !important;
   text-transform: uppercase !important;
-  padding: 6px 14px !important;
+  padding: 0 12px !important;
+  min-height: 40px;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
-  border: 2px solid #000000 !important;
-  box-shadow: 2px 2px 0 #000000 !important;
+  border: 1px solid #2c2c36 !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
   line-height: 1.2 !important;
 }
 
 :is(.coll, .dlist) .slip-btn.deck {
-  background: #ffffff !important;
-  color: #0a0a0a !important;
+  background: #141419 !important;
+  color: #e8e8f0 !important;
+  border-color: #2c2c36 !important;
 }
 
 :is(.coll, .dlist) .slip-btn.deck:hover {
-  background: #f0ede6 !important;
-  transform: translate(-1px, -1px) !important;
-  box-shadow: 3px 3px 0 #000000 !important;
+  background: #1e1e26 !important;
+  color: #ffffff !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 :is(.coll, .dlist) .slip-btn.import {
   background: var(--accent, #e60012) !important;
   color: #ffffff !important;
-  border-color: #000000 !important;
+  border-color: #e60012 !important;
 }
 
 :is(.coll, .dlist) .slip-btn.import:hover {
   background: #ff1a2b !important;
-  transform: translate(-1px, -1px) !important;
-  box-shadow: 3px 3px 0 #000000 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 :is(.coll, .dlist) .slip-btn:active {
-  transform: translate(1px, 1px) !important;
-  box-shadow: 1px 1px 0 #000000 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .coll .slip b {

@@ -85,13 +85,12 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin: 14px 0 20px;
-  padding: 12px 14px;
-  background: #141418;
-  border: 1px solid #2e2e38;
-  border-left: 3px solid #e60012;
-  border-radius: 4px;
+  gap: 8px;
+  margin: 6px 0 12px;
+  padding: 10px 12px;
+  background: #0d0d10;
+  border: 1px solid #23232a;
+  border-radius: 6px;
 }
 
 .decktoolbar .dsearchbox {

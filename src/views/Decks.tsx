@@ -285,7 +285,7 @@ export function Decks(s: Shared) {
             left, + NEW DECK (ink) and IMPORT (red) on the right. A phone has no room beside the ransom letters, so there
             the same row sits on its own lane under the title, again exactly as Collection's does. */}
         <div className="decksbar">
-          <Title text="MY DECKS" label="My decks" size={narrow ? 44 : 64} seed={33} after={!narrow ? <span className="titleacts">{dtabrow}</span> : undefined} />
+          <Title text="MY DECKS" label="My decks" size={narrow ? 26 : 56} seed={33} after={!narrow ? <span className="titleacts">{dtabrow}</span> : undefined} />
         </div>
         {narrow && <nav className="ctabs dtabs" aria-label="My decks view">{dtabrow}</nav>}
         <ShortAlert items={short} />

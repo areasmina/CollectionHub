@@ -58,30 +58,25 @@ for (const dock of ['top', 'bottom', 'left', 'right'] as const)
     }
   });
 
-test('Island docked top: never on the Forge bar\'s name or ✕ LEAVE', async ({ page }, info) => {
+test('Island docked top: hosts the Forge bar in-viewport and never covers the deck toolbar', async ({ page }, info) => {
   await start(page, 'top');
   await page.locator('.dcard', { hasText: 'Tatyova Lands' }).click();
-  await expect(page.locator('.forgetop')).toBeVisible();
+  await expect(page.locator('.pillnav.dock-top.forging-island')).toBeVisible();
+  await expect(page.locator('.pillnav .forgetop')).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));
   await settle(page);
   await expect(page.locator('.pillnav.away')).toHaveCount(0);
-  expect(await under(page, '.forgetop .fstamp, .forgetop .ftitle, .forgetop button')).toBe(0);
+  for (const sel of ['.pillnav .forgetop .fstamp', '.pillnav .forgetop .fleave']) {
+    const ok = await page.locator(sel).evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      if (r.top < 0) return false;
+      const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!at && (e === at || e.contains(at));
+    });
+    expect(ok, `${sel} is clipped or covered`).toBe(true);
+  }
+  expect(await under(page, '.lists > .dtools.tbar')).toBe(0);
   await page.screenshot({ path: `test-results/island-clear-forge-top-${info.project.name}.png` });
-  // going down the island leaves and the bar goes back to the top edge; coming up, both come back. (Only where the bar
-  // moves: from 1100px wide the Forge scrolls inside its own panes and the island rests in the bar's empty middle.)
-  if ((page.viewportSize()?.width ?? 0) >= 1100) return;
-  await page.evaluate(() => void ((document.querySelector('.stage') as HTMLElement).style.minHeight = `${innerHeight * 3}px`)); // room to scroll
-  await page.mouse.wheel(0, 1000); // past the deck hero: the bar pins once the hero above it has scrolled away
-  await expect(page.locator('.pillnav.away')).toHaveCount(1);
-  await settle(page);
-  // the bar glides up into the lane the island leaves behind, so wait for it to arrive rather than catching it mid-way
-  await expect
-    .poll(() => page.locator('.forgetop').evaluate((e) => Math.round(e.getBoundingClientRect().y)), { timeout: 6000 })
-    .toBe(0);
-  await page.mouse.wheel(0, -200);
-  await expect(page.locator('.pillnav.away')).toHaveCount(0);
-  await settle(page);
-  expect(await under(page, '.forgetop .fstamp, .forgetop .ftitle, .forgetop button')).toBe(0);
 });
 
 test('Island docked bottom on a phone: the Forge suggestions sheet peeks above it', async ({ page }, info) => {

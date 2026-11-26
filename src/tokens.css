@@ -483,9 +483,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     color: #ffffff;
   }
   .pillnav .fcube > button > small {
-    background: var(--mo-yellow);
-    color: #0a0a0a;
-    padding: 1px 5px;
+    background: #fff824 !important;
+    color: #0a0a0a !important;
+    padding: 1px 6px;
     border-radius: 999px;
     font: 700 10px/1.2 var(--mo-mono);
   }
@@ -574,13 +574,6 @@ html.forging .lists.drop-over {
   height: auto !important;
   align-items: center !important;
 }
-.pillnav .fcube > button > small {
-  background: #fff824 !important;
-  color: #0a0a0a !important;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font: 700 10px/1.2 var(--mo-mono);
-}
 html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .dpage {
   padding-top: 64px !important;
 }
@@ -593,7 +586,7 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .d
   }
 }
 
-/* Commander Hero: clean deck pills & balanced FROM YOUR BINDER / TO BUY row */
+/* Commander Hero: clean deck pills & calm Oversight-inspired hairline tiles */
 .vmeta .mydecks {
   display: inline-flex;
   flex-wrap: wrap;
@@ -615,50 +608,45 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .d
   line-height: 1.25;
 }
 .vmeta .mydecks-pill .decklink:hover {
-  color: var(--mo-yellow) !important;
+  color: #fff824 !important;
+}
+.vhero .vtile:not(.vnote) {
+  background: #101014;
+  border: 1px solid #24242e;
+  border-radius: 4px;
+  box-shadow: none;
 }
 .vtile.vnote {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   gap: 8px !important;
-  border: 1px solid #262630 !important;
+  background: transparent !important;
+  border: 1px solid #24242e !important;
   padding: 8px 10px !important;
-  border-radius: 3px !important;
+  border-radius: 4px !important;
+}
+.dstrip .dacts .u-btn:not(.primary) {
+  background: #121217;
+  border: 1px solid #2a2a35;
+  border-radius: 4px;
+  box-shadow: none;
 }
 .dstrip .dacts .u-btn.tobuy {
   border-color: #3a3418 !important;
   background: #12110c !important;
 }
 
-/* Cohesive Filter Menus: unify GEAR / PRICE CAP segmented controls with dark hairline pills */
-.tbmore .fbody .u-seg {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  background: transparent !important;
-  border: 0 !important;
-  padding: 0 !important;
-  box-shadow: none !important;
+/* Calm Options Sheet surfaces across Commander, Collection & Decks */
+.dtools.tbar > .tbmore > .fbody {
+  background: #101014 !important;
+  border: 1px solid #262630 !important;
+  border-radius: 8px !important;
 }
-.tbmore .fbody .u-seg > button {
-  min-height: 36px;
-  padding: 6px 12px !important;
-  background: #141418 !important;
-  background-image: none !important;
-  border: 1px solid #2e2e38 !important;
-  border-radius: 999px !important;
-  color: #d4d4de !important;
-  font: 700 11px/1 var(--mo-mono) !important;
-  box-shadow: none !important;
+.dtools.tbar > .tbmore > .fbody .optrow {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1c1c24;
 }
-.tbmore .fbody .u-seg > button[aria-checked='true'] {
-  background: #e60012 !important;
-  border-color: #e60012 !important;
-  color: #ffffff !important;
-}
-@media (max-width: 700px) {
-  .tbmore .fbody .u-seg > button {
-    min-height: 44px !important;
-  }
+.dtools.tbar > .tbmore > .fbody .optrow:last-of-type {
+  border-bottom: 0;
 }

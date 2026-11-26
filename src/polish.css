@@ -1878,38 +1878,39 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin: 10px 0 12px;
-  padding: 6px;
-  background: #0a0a0a;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.6px);
-  background-size: 5px 5px;
-  border: 2px solid var(--u-text, #fff);
-  box-shadow: 5px 5px 0 #000;
+  padding: 4px;
+  background: #0d0d10;
+  background-image: none;
+  border: 1px solid #23232a;
+  border-radius: 6px;
+  box-shadow: none;
 }
 :is(.coll, .dlist) .ctabset {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 :is(.coll, .dlist) .ctab {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-height: 44px;
-  padding: 0 14px;
+  padding: 0 12px;
   background: transparent;
-  border: 1px solid #3a3a46;
-  color: #b5b5b5;
-  font: 400 15px var(--an, 'Anton', sans-serif);
-  letter-spacing: 0.08em;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #a8a8b6;
+  font: 400 14px var(--an, 'Anton', sans-serif);
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transform: rotate(-0.5deg);
+  transform: none;
   transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
 :is(.coll, .dlist) .ctab + .ctab {
-  transform: rotate(0.6deg);
+  transform: none;
 }
 :is(.coll, .dlist) .ctab:hover,
 :is(.coll, .dlist) .ctab:focus-visible {
@@ -1917,21 +1918,22 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   border-color: var(--u-red, #e60012);
 }
 :is(.coll, .dlist) .ctab.on {
-  background: #fff;
-  border-color: #fff;
-  color: #0a0a0a;
-  box-shadow: 3px 3px 0 #000;
+  background: #e60012;
+  border-color: #e60012;
+  color: #ffffff;
+  box-shadow: none;
 }
 :is(.coll, .dlist) .ctab .ctab-n {
   font: 400 11px var(--u-mono, monospace);
   letter-spacing: 0.04em;
   padding: 1px 5px;
-  background: var(--u-red, #e60012);
-  color: #fff;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
 }
 :is(.coll, .dlist) .ctab:not(.on) .ctab-n {
-  background: #1a1a20;
-  color: #8a8a9a;
+  background: #1c1c24;
+  color: #9a9aa8;
 }
 :is(.coll, .dlist) .ctab-acts {
   display: flex;
@@ -2702,9 +2704,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   .coll .chead2 { margin-bottom: 0 !important; padding: 2px 0 4px !important; }
   .coll .chead2 .titlewrap { padding-top: 6px !important; padding-bottom: 4px !important; }
   :is(.coll, .dlist) .ctabs { margin: 4px 0 0 !important; padding: 3px 4px !important; gap: 4px !important; }
-  :is(.coll, .dlist) .ctab { min-height: 44px !important; padding: 0 9px !important; font-size: 13.5px !important; }
+  .coll .ctabs { flex-wrap: nowrap !important; }
+  .coll .ctabset { gap: 4px !important; }
+  :is(.coll, .dlist) .ctab { min-height: 44px !important; padding: 0 8px !important; font-size: 13px !important; }
   :is(.coll, .dlist) .ctab-acts { gap: 4px !important; }
-  :is(.coll, .dlist) .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 9px !important; font-size: 13px !important; }
+  :is(.coll, .dlist) .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 8px !important; font-size: 12.5px !important; }
   .coll .coll-listbar { padding: 3px 6px !important; }
   .coll .coll-listbar .list-tab { min-height: 44px !important; padding: 0 10px !important; }
   .dpage.coll .collbar { padding-top: 2px !important; padding-bottom: 2px !important; }
@@ -2722,9 +2726,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 
 /* The GEAR and BUY UNDER tiles kept the full-size segmented control's 58px frame while their buttons were shrunk to
    28px inside the sheet, which left an empty white band under each one. The frame now takes the height of the tiles. */
-.tbar .fbody .segs { height: auto !important; align-items: stretch !important; border-width: 2px !important; }
-.tbar .fbody .segs button { height: 36px !important; min-height: 36px !important; }
-.tbar .fbody .segs button + button { border-left-width: 2px !important; }
+.tbar .fbody .segs { height: auto !important; align-items: stretch !important; border-width: 0 !important; gap: 6px !important; background: transparent !important; }
+.tbar .fbody .segs button { height: 36px !important; min-height: 36px !important; border: 1px solid #2c2c36 !important; border-radius: 999px !important; }
+.tbar .fbody .segs button + button { border-left-width: 1px !important; }
 @media (max-width: 699px) {
   .tbar .fbody .segs button { height: 44px !important; min-height: 44px !important; }
 }
@@ -2799,23 +2803,26 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    the quiet ones, so every word keeps its contrast against the red. */
 .titlewrap > .titleacts { flex-wrap: nowrap; }
 .titlewrap > .titleacts .u-btn.primary,
-.titlewrap > .titleacts .ctab.on {
-  background: #0a0a0a !important;
+.titlewrap > .titleacts .ctab.on,
+.titlewrap > .titleacts .slip-btn.import {
+  background: #e60012 !important;
   color: #ffffff !important;
-  border: 2px solid #ffffff !important;
-  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid #ff4d5a !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
 }
-.titlewrap > .titleacts :is(.u-btn, .slip-btn, .dfold, .ctab):not(.primary):not(.on) {
-  background: rgba(255, 255, 255, 0.94) !important;
-  color: #0a0a0a !important;
-  border: 2px solid #0a0a0a !important;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35) !important;
+.titlewrap > .titleacts :is(.u-btn, .slip-btn, .dfold, .ctab):not(.primary):not(.on):not(.import) {
+  background: #111115 !important;
+  color: #e4e4ee !important;
+  border: 1px solid #2e2e3a !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
 }
 .titlewrap > .titleacts > * + *,
 .titlewrap > .titleacts .ctabset { gap: 6px; }
 .titlewrap > .titleacts .ctab { transform: none; }
-.titlewrap > .titleacts .ctab .ctab-n { background: var(--u-red, #e60012); color: #fff; }
-.titlewrap > .titleacts .ctab.on .ctab-n { background: #ffffff; color: #0a0a0a; }
+.titlewrap > .titleacts .ctab .ctab-n { background: #1c1c24; color: #9a9aa8; }
+.titlewrap > .titleacts .ctab.on .ctab-n { background: rgba(0, 0, 0, 0.35); color: #ffffff; }
 
 /* The white outline around the Collection block goes (Guillermo, Nov 15, image 3, and again for phones on his
    merge note: "I still see the white line charts in mobile"): the frame was drawing a box around a toolbar.

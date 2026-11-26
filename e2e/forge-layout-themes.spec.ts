@@ -24,7 +24,7 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
   const overflowX = await filterThemes.evaluate((el) => window.getComputedStyle(el).overflowX);
   expect(flexWrap).toBe('nowrap');
   expect(overflowX).toMatch(/auto|scroll/);
-  await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/filter-themes-${info.project.name}.png` });
+  await page.screenshot({ path: `test-results/filter-themes-${info.project.name}.png` });
 
   // Close filter
   await filterSummary.click();
@@ -38,11 +38,12 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
     await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
   }
 
-  // 3. Verify FORGE bar is right below the commander hero card
+  // 3. Verify FORGE bar lives inside the Dynamic Island and never clips or overlaps the hero
   const vhero = page.locator('.vhero');
-  const forgetop = page.locator('.forgetop');
-  const dstrip = page.locator('.dstrip');
+  const island = page.locator('.pillnav.forging-island');
+  const forgetop = island.locator('.forgetop');
 
+  await expect(island).toBeVisible();
   await expect(forgetop).toBeVisible();
   await expect(vhero).toBeVisible();
 
@@ -51,18 +52,12 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
 
   const heroBox = await vhero.boundingBox();
   const forgeBox = await forgetop.boundingBox();
-  const stripBox = await dstrip.boundingBox();
 
   expect(heroBox).not.toBeNull();
   expect(forgeBox).not.toBeNull();
-
-  // Hero, then the FORGE bar, which sits directly on top of the deck tabs so the two pin as one block (Guillermo,
-  // Nov 15: the bar used to break apart when you scrolled back up). The status strip holds nothing while forging
-  // since its cost line moved up into the hero's squares, so it takes no room between them.
-  expect(forgeBox!.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height - 10);
-  if (stripBox) {
-    expect(stripBox.y).toBeGreaterThanOrEqual(heroBox!.y + heroBox!.height - 10);
-    expect(forgeBox!.y).toBeGreaterThanOrEqual(stripBox.y + stripBox.height - 10);
+  expect(forgeBox!.y).toBeGreaterThanOrEqual(0);
+  if (await island.evaluate((el) => el.classList.contains('dock-top'))) {
+    expect(heroBox!.y).toBeGreaterThanOrEqual(forgeBox!.y + forgeBox!.height - 8);
   }
 
   // 4. Verify JUST BUILD IT button is on top of suggestions right panel
@@ -101,5 +96,5 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
   }
 
   // Take screenshot for visual verification
-  await page.screenshot({ path: `C:/Users/areas/.gemini/antigravity/brain/ebdbe213-871a-4d82-8b68-48aa6175428d/forge-layout-${info.project.name}.png` });
+  await page.screenshot({ path: `test-results/forge-layout-${info.project.name}.png` });
 });

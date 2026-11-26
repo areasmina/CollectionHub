@@ -65,13 +65,13 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 12px 0 16px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(255, 248, 36, 0.08) 0%, rgba(20, 20, 18, 0.98) 100%);
-  border: 1px solid rgba(255, 248, 36, 0.45);
-  border-left: 5px solid #fff824;
-  border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(255, 248, 36, 0.03);
+  margin: 10px 0 14px;
+  padding: 10px 14px;
+  background: #101014;
+  border: 1px solid #282832;
+  border-left: 3px solid #fff824;
+  border-radius: 4px;
+  box-shadow: none;
 }
 .dpage .wildcard .wtag {
   display: inline-flex;

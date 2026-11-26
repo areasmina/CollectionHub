@@ -25,14 +25,11 @@ const box = (page: Page, sel: string) => page.locator(sel).first().evaluate((e) 
   const r = e.getBoundingClientRect();
   return { top: r.top, bottom: r.bottom };
 });
-const fill = (page: Page) => page.locator('.forgetop').evaluate((e) => getComputedStyle(e, '::before').content);
 
-test('Island on top: the Forge bar paints nothing over the deck price line until it is pinned', async ({ page }) => {
+test('Island on top: the Forge Island contains the Forge bar and leaves the deck price strip uncovered', async ({ page }) => {
   await islandOnTop(page);
-  await expect(page.locator('.pillnav.dock-top')).toHaveCount(1);
-  // at rest the bar is in the page, so no fill above it, and the price line just above it is fully visible
-  await expect(page.locator('.forgetop')).not.toHaveClass(/stuck/);
-  expect(['none', 'normal']).toContain(await fill(page));
+  await expect(page.locator('.pillnav.dock-top.forging-island')).toHaveCount(1);
+  expect((await box(page, '.pillnav .forgetop')).top).toBeGreaterThanOrEqual(0);
   const strip = page.locator('.dstrip, .vnote').first();
   if (await strip.count()) {
     const hit = await strip.evaluate((e) => {
@@ -46,29 +43,25 @@ test('Island on top: the Forge bar paints nothing over the deck price line until
   }
 });
 
-test('Phone, island on top: the deck toolbar sits right under the Forge tabs, with no overlap', async ({ page }, info) => {
+test('Phone, island on top: the Forge tabs sit inside the Island under the Forge bar and clear the deck toolbar', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'the CARDS · ANALYSIS · TO BUY cube is phone only');
   await islandOnTop(page);
-  const cube = await box(page, '.fcube');
+  const ftop = await box(page, '.pillnav .forgetop');
+  const cube = await box(page, '.pillnav .fcube');
   const tools = await box(page, '.lists > .dtools.tbar');
   const hint = await box(page, '.lists > .forgehint');
-  expect(tools.top - cube.bottom).toBeLessThanOrEqual(28); // was 64px of empty band
+  expect(cube.top).toBeGreaterThanOrEqual(ftop.bottom - 2);
   expect(tools.top).toBeGreaterThanOrEqual(cube.bottom - 1);
-  expect(tools.bottom).toBeLessThanOrEqual(hint.top + 1); // the toolbar no longer slides over the hint line
+  expect(tools.bottom).toBeLessThanOrEqual(hint.top + 1);
 });
 
-test('Phone, island on top: pinned, the Forge bar sits under the island and the tabs under the bar', async ({ page }, info) => {
+test('Phone, island on top: scrolled, the Forge Island stays docked with accessible tabs and full tap targets', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'the CARDS · ANALYSIS · TO BUY cube is phone only');
   await islandOnTop(page);
   await page.mouse.wheel(0, 900);
-  await page.waitForTimeout(400);
-  await page.mouse.wheel(0, -150); // scrolling up brings the island back
-  await expect(page.locator('.pillnav.dock-top:not(.away)')).toHaveCount(1);
-  await expect(page.locator('.forgetop')).toHaveClass(/stuck/);
-  await expect.poll(() => fill(page)).not.toBe('none');
-  await expect.poll(async () => (await box(page, '.forgetop')).top).toBeGreaterThanOrEqual(45);
-  // the tabs are below the bar, not hidden behind it
-  await expect.poll(async () => (await box(page, '.fcube')).top - (await box(page, '.forgetop')).bottom).toBeGreaterThanOrEqual(-2);
-  // every tab is still a full tap target
+  await page.waitForTimeout(300);
+  await expect(page.locator('.pillnav.dock-top.forging-island:not(.away)')).toHaveCount(1);
+  await expect.poll(async () => (await box(page, '.pillnav .forgetop')).top).toBeGreaterThanOrEqual(0);
+  await expect.poll(async () => (await box(page, '.pillnav .fcube')).top - (await box(page, '.pillnav .forgetop')).bottom).toBeGreaterThanOrEqual(-2);
   for (const b of await page.locator('.fcube > button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
 });
