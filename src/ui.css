@@ -669,42 +669,6 @@
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.25);
 }
-.pillnav .syncpill .sync-main {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 100%;
-  padding: 0 8px 0 10px;
-  border: 0;
-  background: transparent;
-  color: var(--u-text);
-  font: inherit;
-  cursor: pointer;
-  border-radius: 999px;
-  transition: all 0.15s ease;
-}
-.pillnav .syncpill .sync-main:hover {
-  color: #ffffff;
-}
-.pillnav .syncpill .sync-gear {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 50%;
-  color: var(--u-muted, #888888);
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-.pillnav .syncpill .sync-gear:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.2);
-  transform: rotate(45deg);
-}
 .pillnav .syncpill .sdot {
   width: 10px;
   height: 10px;
@@ -1189,10 +1153,6 @@ main.dpage {
 .dstrip .power .k {
   color: var(--u-muted);
   font-size: 12px;
-}
-.dstrip .power .car {
-  color: var(--u-muted);
-  font-size: 11px;
 }
 .dstrip .power .segs {
   display: flex;
@@ -1764,11 +1724,6 @@ main.dpage {
 }
 
 /* the commander card's one-time hint: flat, on the card's foot */
-.vcard .cmdrhint {
-  transform: translateX(-50%);
-  box-shadow: none;
-  font: 400 12px var(--u-mono);
-}
 .dpage .ztile .timg {
   border: 0;
   border-radius: 4.75% / 3.5%;
@@ -1779,9 +1734,6 @@ main.dpage {
 .dpage .timg > .pen,
 .dpage .thumb > .pen {
   display: none;
-}
-.vcard .cmdrbtn .cmdrhint {
-  bottom: var(--s2);
 }
 .vslash {
   top: 14%;
@@ -2002,17 +1954,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   font-size: 13px;
 }
 /* missing = grey, flat (red is for the one primary action); the tile itself is already dimmed */
-.dpage .ztile .misstape {
-  transform: none;
-  background: var(--u-grey);
-  color: var(--u-text);
-  box-shadow: none;
-  clip-path: none;
-  font: 400 12px var(--u-display);
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
-}
-
 /* ---------- 5. Discover: loud frame (title, eye, tagline) → one toolbar → flat commander grid ---------- */
 .discohero {
   position: relative;
@@ -2752,91 +2693,9 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   font: 400 13px var(--u-mono);
   color: var(--u-muted);
 }
-.addpage {
-  display: grid;
-  gap: var(--s3);
-  max-width: 720px;
-  margin: 0 0 var(--s7);
-  padding: var(--s4);
-}
-.addpage.u-panel > * + * {
-  border-top: 0;
-}
-.addpage h2 {
-  margin: 0;
-  font: 400 24px/1 var(--u-display);
-  letter-spacing: 1px;
-}
-.addpage .small {
-  margin: 0;
-  font: 400 12px/1.4 var(--u-mono);
-  color: var(--u-muted);
-}
-.addpage > label:not(.file) {
-  display: grid;
-  gap: var(--s1);
-  font: 400 12px var(--u-mono);
-  color: var(--u-muted);
-}
-.addpage input:not([type='file']),
-.addpage textarea {
-  box-sizing: border-box;
-  width: 100%;
-  padding: var(--s2) var(--s3);
-  min-height: var(--tap);
-  background: var(--u-ink);
-  color: var(--u-text);
-  border: 1px solid var(--u-line2);
-  font: 400 14px/1.5 var(--u-mono);
-}
-.addpage .file {
-  justify-self: start;
-}
-.addpage .file input {
-  display: none;
-}
-.addpage > .u-btn.primary {
-  justify-self: start;
-}
-.addpage .error {
-  color: var(--u-red);
-}
-
 /* My decks shelf (on Collection): one sideways row of flat tiles, SEE ALL at the end */
 .shelf {
   margin: 0 0 var(--s5);
-}
-.shelfhead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-  margin-bottom: var(--s3);
-}
-.shelfhead h2 {
-  margin: 0;
-}
-.shelftitle {
-  padding: 0;
-  min-height: var(--tap);
-  background: none;
-  border: 0;
-  color: var(--u-text);
-  font: 400 20px/1 var(--u-display);
-  letter-spacing: 1px;
-  cursor: pointer;
-}
-.shelftitle:hover {
-  color: var(--u-yellow);
-}
-.shelf ul.shelfrow {
-  display: flex;
-  gap: var(--s3);
-  margin: 0;
-  padding: 0 0 var(--s2);
-  list-style: none;
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
 }
 .shelf li {
   position: relative;
@@ -2903,15 +2762,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .shelf li.off > button {
   opacity: 0.55;
 }
-.shelf li.seeall > button {
-  justify-content: center;
-  padding: var(--s3) 0;
-}
-.shelf li.seeall .arr {
-  padding: 0 var(--s3);
-  font: 400 24px/1 var(--u-display);
-}
-
 /* ==========================================================================
    UI OVERHAUL ENHANCEMENTS: OPAQUE POPOVERS, BRACKET FIT REASONS,
    THEME PILLS, DISCOVER COLOR HOVER GLOW, S/M/L SIZING & SYMBIOTE CHEESE DOCKING
@@ -3549,17 +3399,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   justify-content: center !important;
 }
 
-.pillnav.dock-left .syncpill .sync-main,
-.pillnav.dock-right .syncpill .sync-main {
-  width: 100% !important;
-  height: 100% !important;
-  padding: 0 10px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-}
-
 .pillnav.dock-left .syncpill span:not(.sdot),
 .pillnav.dock-right .syncpill span:not(.sdot) {
   display: inline-block !important;
@@ -3727,21 +3566,9 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 
 /* Options dropdown anchors to the left underneath the options button */
 @media (min-width: 701px) {
-  .dtools.tbar > .tbmore > .fbody {
-    left: 0 !important;
-    right: auto !important;
-    top: calc(100% + 4px) !important;
-    max-width: min(440px, calc(100vw - 24px)) !important;
   }
-}
 @media (max-width: 700px) {
-  .dtools.tbar > .tbmore > .fbody {
-    left: 0 !important;
-    right: auto !important;
-    top: calc(100% + 4px) !important;
-    max-width: min(440px, calc(100vw - 24px)) !important;
   }
-}
 
 /* Keep quick buttons visible and horizontally scrollable */
 .dtools.tbar > .tquick,
@@ -3987,13 +3814,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   min-width: 180px !important;
 }
 
-.coll .slip-acts {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  z-index: 3 !important;
-}
-
 :is(.coll, .dlist) .slip-btn {
   display: inline-flex !important;
   align-items: center !important;
@@ -4119,18 +3939,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Summary line closed / open state */
-.coll .dash .dhide {
-  font-family: var(--an, sans-serif) !important;
-  font-size: 14px !important;
-  letter-spacing: 1px !important;
-  color: #ffffff !important;
-}
-
 /* Decks top addpage section */
-.addpage {
-  margin: 16px 0 24px !important;
-}
-
 /* Single Size Cycle Button in toolbar (replaces 3-button S/M/L) */
 .qzoom-btn {
   height: 36px !important;
@@ -4839,18 +4648,9 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 
 /* Hide redundant SHOW pick from filter menu on desktop/tablet where it is in the search bar */
 @media (min-width: 701px) {
-  .tbar .pickgrid .sbox.show-pick,
-  .tbar .sbox.show-pick {
-    display: none !important;
   }
-}
 
 /* Quick pills visible on desktop & tablet (> 700px); on phones (<= 700px), hide so toolbar stays <= 52px */
-.dtools.tbar > .tquick,
-.tbar > .tquick {
-  display: inline-flex !important;
-}
-
 @media (max-width: 700px) {
   .dtools.tbar > .tquick,
   .tbar > .tquick {
@@ -4859,12 +4659,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 }
 
 /* Target Bracket popover inside vtile.fit aligns to right: 0 to prevent phone viewport spill */
-.vtile.fit .vpop,
-.vhero .vtile.fit .vpop {
-  left: auto !important;
-  right: 0 !important;
-}
-
 /* ==========================================================================
    DYNAMIC ISLAND SYNC POPUP: PUNK ZINE COMPOSITION (NO EMOJIS, CLEAN HIERARCHY)
    ========================================================================== */
@@ -6096,36 +5890,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   color: #88889a !important;
 }
 
-.deckmenu .swatches {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 8px !important;
-  padding-top: 2px !important;
-}
-
-.deckmenu .swatches button {
-  width: 24px !important;
-  height: 24px !important;
-  min-height: 24px !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  border: 2px solid #141418 !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
-  cursor: pointer !important;
-  transition: transform 0.12s ease !important;
-}
-
-.deckmenu .swatches button:hover {
-  transform: scale(1.15) !important;
-  box-shadow: 0 0 0 2px #ffffff !important;
-}
-
-.deckmenu .swatches button[aria-checked='true'] {
-  outline: 2px solid #ffffff !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 2px #000000 !important;
-}
-
 /* "also in" deck pills */
 .cardmenu li.using {
   display: flex !important;
@@ -6462,26 +6226,7 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 .dribbonwrap {
   display: block;
 }
-.dribbon-acts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s2);
-  margin: var(--s3) 0 var(--s4);
-}
 /* Inside the info panel: the buttons take their own full-width row, no box of their own. */
-.dribbon > .dribbon-acts {
-  flex: 1 0 100%;
-  margin: 4px 0 0;
-  padding: 0;
-  background: none;
-  border: 0;
-  box-shadow: none;
-}
-.dsizebar {
-  display: flex;
-  justify-content: flex-end;
-  margin: var(--s2) 0;
-}
 .dimport {
   width: min(94vw, 520px);
   display: grid;

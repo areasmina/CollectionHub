@@ -147,13 +147,6 @@ h2 {
   clip-path: polygon(2% 0, 98% 7%, 100% 24%, 96% 42%, 100% 60%, 96% 80%, 99% 100%, 1% 94%, 4% 78%, 0 58%, 3% 38%, 0 18%);
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
 }
-.stripe {
-  background: repeating-linear-gradient(-45deg, var(--hazard) 0 8px, var(--ink) 8px 16px);
-}
-.jag {
-  clip-path: polygon(0 6%, 5% 0, 40% 3%, 72% 0, 100% 4%, 97% 35%, 100% 70%, 96% 100%, 60% 96%, 25% 100%, 0 95%, 3% 55%);
-}
-
 .warn {
   position: relative;
   display: inline-block;
@@ -332,16 +325,6 @@ main {
   letter-spacing: 0.5px;
   text-shadow: 3px 3px 0 var(--accent);
 }
-.lefthead {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-}
-.righthead {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
 .binder {
   min-height: 44px;
   max-width: 44vw;
@@ -374,9 +357,6 @@ main {
 .themes button[aria-pressed='true'] {
   background: var(--ink);
   color: var(--white);
-}
-.iconbtn {
-  border: 2px solid var(--text);
 }
 .tabs {
   display: flex;
@@ -477,22 +457,6 @@ main {
 .ztitle {
   position: relative;
 }
-.caption {
-  position: relative;
-  z-index: 2;
-  margin: 14px 0 0;
-  font-family: var(--se);
-  font-size: 15px;
-  line-height: 1.6;
-}
-.caption > span {
-  background: var(--ink);
-  color: var(--hazard);
-  padding: 3px 8px;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-}
-
 /* ---------- buttons ---------- */
 .btn {
   min-height: 48px;
@@ -537,20 +501,6 @@ main {
   padding: 0 16px;
   box-shadow: 3px 3px 0 var(--accent);
 }
-.stencil {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--ink);
-  color: var(--danger-text);
-  border: 3px dashed var(--accent);
-  font-family: 'Black Ops One', sans-serif;
-  font-size: 16px;
-  letter-spacing: 1px;
-  padding: 0 16px;
-}
-
 .price {
   display: inline-block;
   background: var(--hazard);
@@ -756,50 +706,6 @@ a.price:hover {
 
 /* ---------- commander page ---------- */
 
-.chead {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  align-items: center;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--raised);
-}
-.chead .cn {
-  font-family: var(--an);
-  font-size: 26px;
-  line-height: 1.1;
-}
-.chead .right {
-  margin-left: auto;
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-}
-.chead .right a {
-  font-family: var(--se);
-  font-size: 14px;
-}
-.chead .bigpct {
-  font-family: var(--an);
-  font-size: 40px;
-  line-height: 1;
-}
-.cbody {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  align-items: center;
-  margin-top: 24px;
-}
-
-.cbody .titlewrap {
-  flex: 999 1 420px;
-  min-width: 0;
-  padding: 34px 10px 30px 14px;
-}
-
 .cell {
   display: flex;
   flex-direction: column;
@@ -864,22 +770,6 @@ a.price:hover {
   font-size: 36px;
   line-height: 1;
 }
-.match .meter {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.match .meter small {
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 .plate {
   position: relative;
   height: 58px;
@@ -904,15 +794,6 @@ a.price:hover {
 }
 .plate::after {
   bottom: 0;
-}
-.plate .wedge {
-  flex: none;
-  width: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ink);
-  clip-path: polygon(0 0, 100% 0, 78% 100%, 0 100%);
 }
 .plate .amt {
   flex: 1;
@@ -1595,11 +1476,6 @@ a.price::after,
   position: absolute;
   inset: -8px -6px;
 }
-.chead .right a {
-  display: inline-block;
-  min-height: 44px;
-}
-
 /* Dropdown menus: native option lists get light paper, dark ink (readable in both themes). */
 select option {
   background: #ffffff;
@@ -1610,30 +1486,6 @@ select option {
 }
 
 /* List / grid switch on the commander page */
-.viewsw {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0;
-  margin-top: 28px;
-}
-.viewsw button {
-  min-height: 44px;
-  min-width: 96px;
-  background: var(--bg);
-  color: var(--text);
-  border: 3px solid var(--text);
-  font-family: var(--an);
-  font-size: 17px;
-  letter-spacing: 0.5px;
-}
-.viewsw button + button {
-  border-left: 0;
-}
-.viewsw button[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--white);
-  border-color: var(--accent);
-}
 .deckgrid.after-sw {
   margin-top: 14px;
 }
@@ -1718,10 +1570,6 @@ select option {
   z-index: 45;
   background: rgba(0, 0, 0, 0.55);
 }
-.cbody .titlewrap {
-  cursor: pointer;
-}
-
 button.logo {
   background: none;
   border: 0;
@@ -1767,15 +1615,7 @@ button.logo {
     gap: 8px;
     padding: 8px 16px 10px;
   }
-  .lefthead {
-    justify-content: flex-start;
-  }
-  .righthead {
-    width: 100%;
-    gap: 8px;
-    align-items: stretch;
-  }
-  .binder {
+      .binder {
     flex: 1;
     max-width: none;
     height: 48px;
@@ -1789,57 +1629,10 @@ button.logo {
     height: 100%;
     width: 48px;
   }
-  .righthead .iconbtn {
-    width: 48px;
-    height: 48px;
-    flex: none;
   }
-}
 
 /* ---------- HUB drawer: thin red strip + hanging tab; logo/binder/theme/sync slide down on hover, focus or tap ---------- */
 
-.hubslide {
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  right: 0;
-  top: 9px;
-  transform: translateY(-100%);
-  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.2, 1);
-}
-.hubslide.open {
-  transform: none;
-}
-.hubinner {
-  justify-content: space-between;
-  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
-}
-.hubtabwrap {
-  position: absolute;
-  top: 100%;
-  right: 16px;
-  filter: drop-shadow(3px 4px 0 rgba(0, 0, 0, 0.85)) drop-shadow(0 6px 6px rgba(0, 0, 0, 0.45));
-}
-.hubtab {
-  display: block;
-  min-height: 44px;
-  min-width: 64px;
-  padding: 0 16px 8px;
-  border: 0;
-  background: var(--accent);
-  color: var(--white);
-  font-family: var(--an);
-  font-size: 28px;
-  line-height: 1;
-  letter-spacing: 1px;
-  clip-path: polygon(0 0, 100% 0, 97% 70%, 100% 100%, 64% 88%, 40% 100%, 6% 90%, 3% 60%);
-  transform: rotate(-1.5deg);
-  transform-origin: top center;
-}
-.hubtab:focus-visible {
-  outline: 3px solid var(--hazard);
-  outline-offset: 2px;
-}
 /* Section tabs stay visible: under the strip on desktop, the bottom bar on phones. */
 .navbar {
   padding: 18px 24px 12px;
@@ -1851,21 +1644,12 @@ button.logo {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     border-bottom: 0;
   }
-  .hubinner {
-    padding-top: 12px;
   }
-}
 @media (prefers-reduced-motion: reduce) {
-  .hubslide {
-    transition: none;
   }
-}
 
 /* Discover filters on phones: full-width panel, collapsible behind the FILTERS button */
 
-.filters.shut .caption {
-  display: none;
-}
 @media (max-width: 700px) {
 
   .colours {
@@ -1884,14 +1668,7 @@ button.logo {
   .navbar {
     display: none;
   }
-  .hubinner {
-    justify-content: flex-start;
-    gap: 22px;
-  }
-  .hubinner .righthead {
-    margin-left: auto;
-  }
-}
+    }
 
 /* ---------- Collection: list/grid, editable quantity, group by set ---------- */
 .cardopts {
@@ -1900,9 +1677,6 @@ button.logo {
   align-items: center;
   gap: 10px 22px;
   margin-top: 16px;
-}
-.cardopts .viewsw {
-  margin-top: 0;
 }
 .cardopts .check {
   min-height: 44px;
@@ -1948,12 +1722,6 @@ button.logo {
   font-size: 20px;
 }
 /* Collection grid: a Jinx-style spray-paint quantity, then the price on a scrap of yellow tape. */
-.cgrid2 .ctrl {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
 .qtyedit.jinx {
   position: relative;
   border: 0;
@@ -2181,13 +1949,6 @@ button.logo {
   gap: 12px;
   margin-top: 26px;
 }
-.dtools .viewsw {
-  margin-top: 0;
-}
-.dtools .viewsw button {
-  min-width: 80px;
-  padding: 0 12px;
-}
 .dtools .grow {
   flex: 1;
 }
@@ -2273,16 +2034,7 @@ ul.popnote .small {
   .dtools {
     gap: 10px;
   }
-  .dtools .viewsw {
-    flex: 1 1 140px;
-  }
-  .dtools .viewsw button {
-    flex: 1;
-    min-width: 0;
-    padding: 0 6px;
-    font-size: 15px;
-  }
-  .dtools .sticker,
+      .dtools .sticker,
   .dtools .stencil {
     flex: 1 1 auto;
     justify-content: center;
@@ -2294,10 +2046,7 @@ ul.popnote .small {
   display: none;
 }
 @media (max-width: 700px) {
-  .wideonly {
-    display: none;
-  }
-  .narrowonly {
+    .narrowonly {
     display: inline;
   }
 }
@@ -3832,45 +3581,8 @@ ul.popnote .small {
 /* Filter bar: dark search with magnifier, SORT label + dark select, mana-symbol colour buttons, on a taped strip */
 
 /* Grid / List switch: icon + word, dark pills, red when active */
-.viewsw {
-  gap: 6px;
-}
-.viewsw button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 0 14px;
-  background: #1b1b1b;
-  color: #ddd;
-  border: 2px solid #333;
-  border-radius: 6px;
-  font-family: 'Archivo', sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0;
-}
-.viewsw button + button {
-  border-left: 2px solid #333;
-}
-.viewsw button[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-:root[data-theme='light'] .viewsw button[aria-pressed='false'] {
-  background: #f1f1f1;
-  color: #222;
-  border-color: #ccc;
-}
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) .viewsw button[aria-pressed='false'] {
-    background: #f1f1f1;
-    color: #222;
-    border-color: #ccc;
   }
-}
 
 .logo .brandmark .hat {
   filter: drop-shadow(1px 1px 0 rgba(230, 0, 18, 0.7));
@@ -3998,44 +3710,10 @@ ul.popnote .small {
 /* Tablets / narrow desktop windows: the top-3 widget gets its own row under the ticket stub + slip */
 
 /* ---------- automatic sync status ---------- */
-.syncbtn {
-  position: relative;
-}
-.syncbtn::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 9px;
-  height: 9px;
-  border: 2px solid var(--bg);
-  border-radius: 50%;
-  background: transparent;
-}
-.syncbtn.s-synced::after {
-  background: #3ecf6e;
-}
-.syncbtn.s-syncing::after {
-  background: var(--hazard);
-  animation: syncpulse 0.9s ease-in-out infinite alternate;
-}
-.syncbtn.s-offline::after {
-  background: #8a8a8a;
-}
-.syncbtn.s-conflict::after,
-.syncbtn.s-error::after {
-  background: var(--accent);
-  width: 11px;
-  height: 11px;
-}
 @keyframes syncpulse {
   to {
     opacity: 0.3;
   }
-}
-.hubtab.alert::after {
-  content: ' !';
-  color: var(--hazard);
 }
 .syncstate {
   display: flex;
@@ -4055,10 +3733,7 @@ ul.popnote .small {
   font-size: 14px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .syncbtn.s-syncing::after {
-    animation: none;
   }
-}
 .syncdot {
   width: 10px;
   height: 10px;
@@ -4100,26 +3775,9 @@ ul.popnote .small {
 /* Right-click / hold the deck header for the same menu */
 
 /* Grid / list: two small icon buttons in the first card section, beside the commander */
-.viewsw.mini {
-  float: right;
-  margin: 12px 12px 4px 8px;
-  position: relative;
-  z-index: 1;
-}
 /* a lone card (the commander): sit in the empty space beside it without narrowing the grid */
 details.cat {
   position: relative;
-}
-.viewsw.mini.over {
-  float: none;
-  position: absolute;
-  right: 0;
-  margin-top: 12px;
-}
-.viewsw.mini button {
-  min-width: 44px;
-  min-height: 40px;
-  padding: 0 10px;
 }
 @media (max-width: 700px) {
   /* GROUP + SORT side by side, label tag + choice on one line */
@@ -4128,10 +3786,7 @@ details.cat {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .dtools .grow {
-    display: none;
-  }
-  .dtools .sbox.pick {
+    .dtools .sbox.pick {
     min-width: 0;
     min-height: 40px;
     border-width: 2px;
@@ -4344,15 +3999,6 @@ details.cat {
 
 /* Decks home: your saved decks on a shelf above the commanders you can build */
 
-.count .canbuild {
-  font-family: var(--an);
-  font-weight: 400;
-  background: var(--hazard);
-  color: var(--ink);
-  padding: 0 8px;
-  margin-right: 6px;
-}
-
 /* The Forge: deck page hint + the commander page's FORGE IT button */
 
 .btn.forge {
@@ -4373,15 +4019,6 @@ details.cat {
   padding: 6px 8px;
   font-family: var(--se);
   font-size: 14px;
-}
-.cardmenu .inl {
-  background: none;
-  border: 0;
-  padding: 0;
-  color: var(--accent);
-  font: inherit;
-  text-decoration: underline;
-  min-height: 32px;
 }
 .cardmenu li > button:disabled {
   opacity: 0.45;
@@ -4547,36 +4184,6 @@ details.cat {
 
 /* The hub (logo, binder, theme, haptics, sync): a sheet that rises above the pill */
 
-.hubslide {
-  position: absolute;
-  top: auto;
-  left: 50%;
-  right: auto;
-  bottom: calc(92px + env(safe-area-inset-bottom));
-  width: min(620px, calc(100vw - 32px));
-  transform: translate(-50%, 24px);
-  opacity: 0;
-  visibility: hidden;
-  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.18s, visibility 0s 0.22s;
-}
-.hubslide.open {
-  transform: translate(-50%, 0);
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.18s;
-}
-.hubslide .hubinner {
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 14px 16px;
-  background: var(--bg);
-  border: 3px solid var(--text);
-  box-shadow: 6px 6px 0 var(--accent);
-}
-.hubslide .hubinner .righthead {
-  margin-left: 0;
-}
 .toast {
   bottom: calc(96px + env(safe-area-inset-bottom));
 }
@@ -4701,22 +4308,6 @@ details.cat {
   top: 6px;
   right: 6px;
 }
-.misstape {
-  position: absolute;
-  top: 18%;
-  left: -6px;
-  z-index: 3;
-  background: var(--accent);
-  color: var(--white);
-  font-family: var(--an);
-  font-size: 15px;
-  letter-spacing: 1px;
-  padding: 2px 10px;
-  transform: rotate(-6deg);
-  box-shadow: 3px 3px 0 var(--ink);
-  pointer-events: none;
-}
-
 /* Collection match: bar from the left, % inside the red burst on the right */
 .match {
   padding: 0 0 0 12px;
@@ -4918,14 +4509,6 @@ details.cat {
   min-width: 0;
   margin: 0;
 }
-.viewsw.icons {
-  display: flex;
-  flex: 0 0 auto;
-}
-.viewsw.icons button {
-  min-width: 48px;
-  padding: 0 10px;
-}
 .toolmore {
   flex: 0 0 auto;
 }
@@ -4970,11 +4553,7 @@ details.cat {
   .cardopts.tools1 > .sbox .tab {
     display: none;
   }
-  .viewsw.icons button {
-    min-width: 44px;
-    padding: 0 8px;
   }
-}
 
 /* Copies, Arena style: four pips centred under the card, filled per copy you own; "+N" past four */
 .tally {
@@ -5233,20 +4812,6 @@ details.cat {
 .cmdrbtn:focus-visible .cmdrmore b {
   max-width: 80px;
 }
-.cmdrhint {
-  position: absolute;
-  left: 50%;
-  bottom: -14px;
-  transform: translateX(-50%) rotate(-3deg);
-  white-space: nowrap;
-  background: var(--hazard);
-  color: var(--ink);
-  font-family: var(--se);
-  font-size: 13px;
-  padding: 3px 10px;
-  box-shadow: 2px 2px 0 var(--ink);
-  pointer-events: none;
-}
 @media (prefers-reduced-motion: reduce) {
   .cmdrbtn,
   .cmdrmore,
@@ -5359,44 +4924,6 @@ details.cat {
   background: transparent;
   color: var(--text);
 }
-.cardopts.tools1 .viewsw.icons button[aria-pressed='true'] {
-  background: var(--r, #e60012);
-  color: var(--white);
-}
-.zoomsw {
-  display: flex;
-  align-items: stretch;
-  flex: 0 0 auto;
-}
-.zoomsw button {
-  min-width: 40px;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: 0;
-  color: #8a8a8a;
-  cursor: pointer;
-}
-.zoomsw button[aria-checked='true'] {
-  color: var(--hazard);
-}
-.zoomsw .zc {
-  display: block;
-  border: 2px solid currentColor;
-  border-radius: 2px;
-}
-.zoomsw .zc.s {
-  width: 9px;
-  height: 13px;
-}
-.zoomsw .zc.m {
-  width: 13px;
-  height: 18px;
-}
-.zoomsw .zc.l {
-  width: 17px;
-  height: 24px;
-}
 /* card sizes */
 .collbar[data-zoom='s'] ~ * .cgrid2,
 .collbar[data-zoom='s'] ~ .cgrid2 {
@@ -5411,10 +4938,7 @@ details.cat {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 @media (max-width: 700px) {
-  .zoomsw button {
-    min-width: 34px;
-  }
-  .collbar[data-zoom='s'] ~ * .cgrid2,
+    .collbar[data-zoom='s'] ~ * .cgrid2,
   .collbar[data-zoom='s'] ~ .cgrid2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -5485,16 +5009,6 @@ details.cat {
   flex: 1 1 auto;
   min-width: 0;
 }
-.dtools > .viewsw.mini {
-  position: static;
-  flex: 0 0 auto;
-  display: flex;
-  align-self: stretch;
-}
-.dtools > .viewsw.mini button {
-  height: 100%;
-}
-
 /* FILTERS sheet: With card / Without card (EDHREC) */
 .cfilter {
   display: grid;
@@ -5502,10 +5016,6 @@ details.cat {
   margin-top: var(--sp2);
   padding-top: var(--sp2);
   border-top: 1px dashed #9a9a9a;
-}
-.cfilter .cfbtns {
-  display: flex;
-  gap: var(--sp2);
 }
 .cfilter .btn {
   min-height: 40px;
@@ -5735,10 +5245,6 @@ details.cat {
 }
 
 /* 3. Colour meanings: yellow = money, hazard stripes = real warnings. Decorative stripes turn red / black. */
-.stripe {
-  background: repeating-linear-gradient(-45deg, var(--accent) 0 8px, var(--ink) 8px 16px);
-}
-
 /* 4. Deck sections: no white boxes. A plain header row on the grid, and the cards of small sections sit side
    by side, so a 1-card section no longer leaves a row of empty width. */
 .deckgrid > .lists {
@@ -5838,29 +5344,6 @@ details.cat {
 }
 
 /* 6. Clean hero: rank · decks · EDHREC on one small meta line under it */
-.cmetaline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp1) var(--sp3);
-  margin: var(--sp2) var(--sp1) 0;
-  font-family: var(--se);
-  font-size: 13px;
-  letter-spacing: 1px;
-  color: var(--muted);
-}
-.cmetaline > * + *::before {
-  content: '·';
-  margin-right: var(--sp3);
-  color: var(--muted);
-}
-.cmetaline a {
-  color: var(--text);
-}
-.cmetaline {
-  justify-content: flex-start;
-  width: fit-content;
-  max-width: 100%;
-}
 @media (max-width: 700px) {
   /* phones: two card columns across the page, so two small sections sit side by side */
   .deckgrid > .lists > details.cat {
@@ -5888,9 +5371,6 @@ details.cat {
 .deckgrid > .lists > details.cat > summary {
   width: 0;
   min-width: 100%;
-}
-.cmetaline > * + *::before {
-  display: inline-block;
 }
 @media (max-width: 700px) {
   .deckgrid > .lists {
@@ -5938,24 +5418,6 @@ details.cat {
   font-size: 11px;
   opacity: 0.7;
   margin-left: var(--sp1);
-}
-.deckmenu .swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.deckmenu .swatches button {
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  padding: 0;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  cursor: pointer;
-}
-.deckmenu .swatches button[aria-checked='true'] {
-  outline: 3px solid var(--ink);
-  outline-offset: 2px;
 }
 /* collection: a card in an active deck glows faintly in that deck's colour (full on hover); dots name the decks */
 .ctile.live .cart {
@@ -6129,26 +5591,6 @@ details.cat {
   top: calc(100% + 3px);
   border: 3px solid var(--text);
   box-shadow: 6px 6px 0 var(--accent);
-}
-.lists > .dtools > .viewsw.mini {
-  float: none;
-  position: static;
-  display: flex;
-  flex: 0 0 auto;
-  margin: 0;
-}
-.lists > .dtools > .viewsw.mini button {
-  height: 100%;
-  min-height: 48px;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  color: var(--text);
-}
-.lists > .dtools > .viewsw.mini button[aria-pressed='true'] {
-  background: var(--accent);
-  color: var(--white);
 }
 @media (max-width: 700px) {
   /* phones: SEARCH takes the first row, the rest share the second */
@@ -6330,28 +5772,11 @@ details.cat {
     font-size: 16px; /* readable, and stops iOS zooming in */
     min-height: 44px;
   }
-  .collbar > .cardopts.tools1 > .zoomsw {
-    flex: 1 1 auto;
-    border-left: 0;
-    justify-content: space-around;
   }
-}
 /* the binder switch next to the binder's name */
 .binderswap {
   align-self: flex-start;
   margin-top: var(--sp2, 8px);
-}
-.syncbtn .synclbl {
-  font-family: var(--se);
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  margin-left: 6px;
-}
-.syncbtn {
-  width: auto !important;
-  padding: 0 12px !important;
-  display: inline-flex;
-  align-items: center;
 }
 /* $$$ never wraps onto two lines */
 
@@ -6553,18 +5978,6 @@ main {
   font-size: 14px;
   letter-spacing: 1px;
   color: var(--muted);
-}
-.tbar .fbody .viewsw,
-.tbar .fbody .zoomsw {
-  display: flex;
-  position: static;
-  float: none;
-  margin: 0;
-}
-.tbar .fbody .viewsw button,
-.tbar .fbody .zoomsw button {
-  min-height: 40px;
-  min-width: 44px;
 }
 .tbar .fbody .sbox.pick {
   width: 100%;
@@ -6853,10 +6266,6 @@ main {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-}
-.tbar .fbody .cfilter .cfbtns {
-  display: flex;
-  gap: 8px;
 }
 .tbar .fbody .cfilter .btn {
   margin: 0;
