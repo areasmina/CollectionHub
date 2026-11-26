@@ -118,6 +118,25 @@ describe('guidedState', () => {
     expect(byMv.find((p) => p.label === '2 MV')?.cards.map((c) => c.name)).toEqual(['Arcane Signet', 'Blood Artist']);
   });
 
+  it('supports primary vs all-roles placement in Tabletop categories mode', () => {
+    const cards: DeckCard[] = [{ name: 'Prismari Command', qty: 1 }];
+    const cardOf = () => ({
+      type: 'Instant',
+      text: 'Choose two — Add {U}{R}; or Target player draws two cards; or Destroy target artifact.',
+      cmc: 3,
+    });
+
+    const primary = groupForTabletop(cards, cardOf, 'categories', undefined, undefined, 'primary');
+    expect(primary.filter((p) => p.cards.length > 0).map((p) => p.label)).toEqual(['Ramp']);
+
+    const allRoles = groupForTabletop(cards, cardOf, 'categories', undefined, undefined, 'all');
+    expect(allRoles.filter((p) => p.cards.length > 0).map((p) => p.label)).toEqual([
+      'Ramp',
+      'Card Advantage',
+      'Removal',
+    ]);
+  });
+
   it('filters picks by per-card CAD cap while retaining unpriced offline cards', () => {
     const mkPick = (name: string): StepPick => ({
       name,

@@ -454,6 +454,21 @@
   background: var(--mo-surface-hover);
 }
 
+.pileCardArt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pileThumb {
+  width: 28px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 2px;
+  border: 1px solid var(--mo-line);
+  flex-shrink: 0;
+}
+
 .pileCardMv {
   font-family: var(--mo-mono);
   font-size: 10px;

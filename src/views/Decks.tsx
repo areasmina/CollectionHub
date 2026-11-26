@@ -43,13 +43,24 @@ import { CardLine, CardTile, CmdrCard, CycleBtn, OutsideLinks, SaltStat, priced 
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
-import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
+import { getDeckSnapshots, saveDeckSnapshot } from '../lib/deckhistory';
 import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '../lib/drafts';
 
 const HandSheet = lazy(() => import('../features/hand/HandSheet').then((m) => ({ default: m.HandSheet })));
 const RuleZeroModal = lazy(() => import('../features/rulezero/RuleZeroModal').then((m) => ({ default: m.RuleZeroModal })));
 const BalanceSheet = lazy(() => import('../features/balance/BalanceSheet').then((m) => ({ default: m.BalanceSheet })));
 import { BracketStat, Curve, DeckNotes, GROUPINGS, GroupPick, PickCommander, type Grouping } from '../features/decks/DeckMetaParts';
+import { DeckFolderBar } from '../features/decks/DeckFolderBar';
+import { HistoryDrawer } from '../features/decks/HistoryDrawer';
+import {
+  assignDeckFolder,
+  filterDecksByFolder,
+  folderOfDeck,
+  loadDeckFolders,
+  saveDeckFolders,
+  type DeckFolderStore,
+  type FolderFilter,
+} from '../features/decks/deckOrg';
 
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
@@ -200,7 +211,27 @@ function ColourWheel({ value, onPick }: { value: string; onPick: (c: string) => 
   );
 }
 
-function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: MenuAt; onClose: () => void; onDeleted?: () => void; onOpen: (id: number) => void }) {
+function DeckMenu({
+  deck,
+  at,
+  onClose,
+  onDeleted,
+  onOpen,
+  onHistory,
+  folders,
+  currentFolder,
+  onFolderChange,
+}: {
+  deck: Deck;
+  at: MenuAt;
+  onClose: () => void;
+  onDeleted?: () => void;
+  onOpen: (id: number) => void;
+  onHistory?: () => void;
+  folders?: string[];
+  currentFolder?: string;
+  onFolderChange?: (folder: string | null) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const [copied, setCopied] = useState(false);
@@ -355,29 +386,33 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                   <small className="cmenu-meta">save current deck version</small>
                 </button>
               </li>
-              {deck.id && getDeckSnapshots(deck.id).length > 0 && (
+              {deck.id && onHistory && (
                 <li>
                   <button
                     role="menuitem"
-                    onClick={act(async () => {
-                      const snaps = getDeckSnapshots(deck.id!);
-                      const listStr = snaps
-                        .map((s, i) => `${i + 1}. [${new Date(s.at).toLocaleDateString()} ${new Date(s.at).toLocaleTimeString()}] ${s.label || ''} (${s.cardCount} cards)`)
-                        .slice(0, 8)
-                        .join('\n');
-                      const choice = prompt(`Select snapshot number to restore:\n\n${listStr}\n\nEnter number (1-${Math.min(snaps.length, 8)}):`);
-                      const idx = Number(choice) - 1;
-                      if (!isNaN(idx) && snaps[idx]) {
-                        if (confirm(`Restore "${snaps[idx].label}"? A safety snapshot will be created automatically.`)) {
-                          await restoreDeckSnapshot(deck, snaps[idx]);
-                          haptic('success');
-                        }
-                      }
-                    })}
+                    onClick={act(() => onHistory())}
                   >
-                    <span className="cmenu-main">RESTORE VERSION...</span>
-                    <small className="cmenu-meta">{getDeckSnapshots(deck.id).length} saved snapshots</small>
+                    <span className="cmenu-main">VERSION HISTORY</span>
+                    <small className="cmenu-meta">{getDeckSnapshots(deck.id).length} saved snapshots · diff &amp; restore</small>
                   </button>
+                </li>
+              )}
+              {deck.id && folders && folders.length > 0 && onFolderChange && (
+                <li style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span className="cmenu-meta">FOLDER</span>
+                  <select
+                    aria-label={`Assign folder for ${deck.name}`}
+                    value={currentFolder ?? ''}
+                    onChange={(e) => (onFolderChange(e.target.value || null), close())}
+                    style={{ maxWidth: 150 }}
+                  >
+                    <option value="">Unfiled</option>
+                    {folders.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
                 </li>
               )}
               <li className="sep" role="separator" />
@@ -404,6 +439,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
 }
 
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
   // Owned copies are shared out oldest deck first, so the share matches the list (a shared card counts for one deck only).
   const siblings = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [deck];
   const sum = { ...summarize(deck.cards.map((c) => c.name), s.mine, s.other), ...deckShareOf(siblings, deck.id, s.mine) };
@@ -826,7 +862,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
 
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
 
-        {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
+        {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} onHistory={() => setHistoryOpen(true)} />}
+        {historyOpen && deck.id && <HistoryDrawer deck={deck} onClose={() => setHistoryOpen(false)} />}
 
         {/* The FORGE bar sits directly above the deck tabs (Guillermo, Nov 15: "bar breaks when you move up"):
             with nothing between them the two pin as one block, and the hero scrolls away behind it. */}
@@ -1129,6 +1166,17 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
+  const [folderStore, setFolderStore] = useState<DeckFolderStore>(() => loadDeckFolders(s.profile));
+  const [folderFilter, setFolderFilter] = useState<FolderFilter>('all');
+  const [historyDeck, setHistoryDeck] = useState<Deck | null>(null);
+  useEffect(() => {
+    setFolderStore(loadDeckFolders(s.profile));
+    setFolderFilter('all');
+  }, [s.profile]);
+  const updateFolderStore = (next: DeckFolderStore) => {
+    setFolderStore(next);
+    saveDeckFolders(s.profile, next);
+  };
   // Phones (Nov 19): the theme and tag badges on a deck tile are plain labels. They were 18px buttons, too small for a
   // thumb, and the TAGS row above the decks already filters by the same names, so a tap on the tile just opens the deck.
   const [phone, setPhone] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches);
@@ -1171,7 +1219,7 @@ export function Decks(s: Shared) {
   const deckThemeNames = (d: Deck) => themesOf(d).map((t) => t.label);
   const allTags = [...new Set(decks.flatMap((d) => [...(d.tags ?? []), ...deckThemeNames(d)]))].filter(Boolean);
 
-  const filteredDecks = decks
+  const filteredDecks = filterDecksByFolder(decks, folderStore, folderFilter)
     .filter((d) => {
       if (dq.trim()) {
         const q = dq.toLowerCase().trim();
@@ -1388,7 +1436,28 @@ export function Decks(s: Shared) {
             )}
           </div>
         </div>
-        {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
+        {decks.length > 0 && (
+          <DeckFolderBar
+            decks={decks}
+            store={folderStore}
+            active={folderFilter}
+            onChangeStore={updateFolderStore}
+            onSelect={setFolderFilter}
+          />
+        )}
+        {menuDeck && listMenu && (
+          <DeckMenu
+            deck={menuDeck}
+            at={listMenu.at}
+            onClose={() => setListMenu(null)}
+            onOpen={(id) => (setListMenu(null), setOpen(id))}
+            onHistory={() => setHistoryDeck(menuDeck)}
+            folders={folderStore.folders}
+            currentFolder={folderOfDeck(folderStore, menuDeck.id)}
+            onFolderChange={(folder) => menuDeck.id && updateFolderStore(assignDeckFolder(folderStore, menuDeck.id, folder))}
+          />
+        )}
+        {historyDeck && historyDeck.id && <HistoryDrawer deck={historyDeck} onClose={() => setHistoryDeck(null)} />}
         <ul className="dgrid cgrid" data-zoom={dzoom} id="dpane-decks" role="tabpanel" aria-labelledby="dtab-decks">
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };

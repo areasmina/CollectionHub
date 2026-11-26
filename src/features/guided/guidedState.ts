@@ -58,6 +58,8 @@ export const BASIC_NAMES = ['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', '
 export const MAX_SEED_CARDS = 12;
 
 export type TabletopGroupBy = 'categories' | 'type' | 'mv';
+export type TabletopPlacement = 'primary' | 'all';
+export type TabletopStackStyle = 'compact' | 'art';
 
 export interface CommanderMatch {
   card: Card;
@@ -197,7 +199,8 @@ export function groupForTabletop(
   cardOf: (name: string) => Pick<Card, 'type' | 'text' | 'cmc'> | undefined,
   mode: TabletopGroupBy,
   commander?: string,
-  partner?: string
+  partner?: string,
+  placement: TabletopPlacement = 'primary'
 ): TabletopPile[] {
   const resolve = withBasicFallback(cardOf as (name: string) => Card | undefined);
   const leadSet = new Set([commander, partner].filter(Boolean).map((n) => norm(n!)));
@@ -227,8 +230,17 @@ export function groupForTabletop(
         continue;
       }
       const roles = meta ? roleOf({ name: entry.name, type: meta.type, text: meta.text ?? '' }) : [];
-      const primary = ROLE_ORDER.find((r) => roles.includes(r.key));
-      push(primary ? primary.label : 'Plan / Synergy', entry);
+      if (placement === 'all') {
+        const matched = ROLE_ORDER.filter((r) => roles.includes(r.key));
+        if (matched.length > 0) {
+          for (const m of matched) push(m.label, entry);
+        } else {
+          push('Plan / Synergy', entry);
+        }
+      } else {
+        const primary = ROLE_ORDER.find((r) => roles.includes(r.key));
+        push(primary ? primary.label : 'Plan / Synergy', entry);
+      }
     }
 
     const order = ['Commander', 'Lands', ...ROLE_ORDER.map((r) => r.label), 'Plan / Synergy'];

@@ -1,6 +1,14 @@
+import { useState } from 'react';
 import type { Card, DeckCard } from '../../lib/db';
 import { norm } from '../../lib/names';
-import { BASIC_LAND_FOR, groupForTabletop, withBasicFallback, type TabletopGroupBy } from './guidedState';
+import {
+  BASIC_LAND_FOR,
+  groupForTabletop,
+  withBasicFallback,
+  type TabletopGroupBy,
+  type TabletopPlacement,
+  type TabletopStackStyle,
+} from './guidedState';
 import s from './GuidedBuilder.module.css';
 
 interface TabletopViewProps {
@@ -24,8 +32,11 @@ export function TabletopView({
   cardOf,
   onAdjustCard,
 }: TabletopViewProps) {
+  const [placement, setPlacement] = useState<TabletopPlacement>('primary');
+  const [stackStyle, setStackStyle] = useState<TabletopStackStyle>('compact');
+
   const resolve = withBasicFallback(cardOf);
-  const piles = groupForTabletop(cards, resolve, groupBy, commander, partner);
+  const piles = groupForTabletop(cards, resolve, groupBy, commander, partner, placement);
   const leadSet = new Set([commander, partner].filter(Boolean).map((n) => norm(n!)));
 
   const colorBasics = identity
@@ -58,6 +69,52 @@ export function TabletopView({
                 {label}
               </button>
             ))}
+          </div>
+        </div>
+
+        {groupBy === 'categories' && (
+          <div className={s.dialGroup}>
+            <span className={s.dialLabel}>Placement</span>
+            <div className={s.seg} role="group" aria-label="Card placement mode">
+              <button
+                type="button"
+                className={s.segBtn}
+                aria-pressed={placement === 'primary'}
+                onClick={() => setPlacement('primary')}
+              >
+                Primary
+              </button>
+              <button
+                type="button"
+                className={s.segBtn}
+                aria-pressed={placement === 'all'}
+                onClick={() => setPlacement('all')}
+              >
+                All Roles
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className={s.dialGroup}>
+          <span className={s.dialLabel}>Stack</span>
+          <div className={s.seg} role="group" aria-label="Tabletop stack style">
+            <button
+              type="button"
+              className={s.segBtn}
+              aria-pressed={stackStyle === 'compact'}
+              onClick={() => setStackStyle('compact')}
+            >
+              Compact
+            </button>
+            <button
+              type="button"
+              className={s.segBtn}
+              aria-pressed={stackStyle === 'art'}
+              onClick={() => setStackStyle('art')}
+            >
+              Art
+            </button>
           </div>
         </div>
 
@@ -114,16 +171,26 @@ export function TabletopView({
                     const meta = resolve(entry.name);
                     return (
                       <button
-                        key={entry.name}
+                        key={`${pile.id}-${entry.name}`}
                         type="button"
                         className={s.pileCard}
                         title={isLead ? 'Commander' : `Click to remove 1x ${entry.name}`}
                         disabled={isLead}
                         onClick={() => onAdjustCard(entry.name, -1)}
                       >
-                        <span>
-                          {entry.qty > 1 ? `${entry.qty}x ` : ''}
-                          {entry.name}
+                        <span className={stackStyle === 'art' ? s.pileCardArt : undefined}>
+                          {stackStyle === 'art' && meta?.img && (
+                            <img
+                              className={s.pileThumb}
+                              src={meta.img.replace('/small/', '/art_crop/')}
+                              alt=""
+                              loading="lazy"
+                            />
+                          )}
+                          <span>
+                            {entry.qty > 1 ? `${entry.qty}x ` : ''}
+                            {entry.name}
+                          </span>
                         </span>
                         <span className={s.pileCardMv}>
                           {isLead ? 'CMD' : meta?.cmc != null ? `${meta.cmc}` : ''}
