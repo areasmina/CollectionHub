@@ -7,8 +7,8 @@ import { finishUsd, toCad } from './prices';
 export const COLOURS = ['W', 'U', 'B', 'R', 'G', 'C'] as const;
 export const COLOUR_NAME: Record<string, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green', C: 'Colourless' };
 export const TYPES = ['Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Land'] as const;
-export type Show = 'all' | 'commanders' | 'indeck' | 'free';
-export const SHOW_LABEL: Record<Show, string> = { all: 'All', commanders: 'Commanders', indeck: 'In a deck', free: 'Not in a deck' };
+export type Show = 'all' | 'commanders' | 'indeck' | 'free' | 'spare';
+export const SHOW_LABEL: Record<Show, string> = { all: 'All', commanders: 'Commanders', indeck: 'In a deck', free: 'Not in a deck', spare: 'Spare copies' };
 /** Mana value buckets (Scryfall's mana value; lands and cards with no cost are 0). */
 export const MVS = ['0', '1', '2', '3', '4', '5', '6', '7+'] as const;
 /** Price bands per copy, in ≈CA$, at your printing and finish (the same price the card shows). Bands never overlap. */
@@ -73,6 +73,8 @@ export interface FilterEnv {
   /** names (norm) of cards in an active deck */
   inDeck: (name: string) => boolean;
   isCommander: (card: Card) => boolean;
+  /** true when total owned copies exceed copies committed to active decks */
+  hasSpare?: (name: string) => boolean;
 }
 
 export function matches(e: Entry, f: CollFilter, env: FilterEnv): boolean {
@@ -89,6 +91,7 @@ export function matches(e: Entry, f: CollFilter, env: FilterEnv): boolean {
   if (f.show === 'commanders' && !(c && env.isCommander(c))) return false;
   if (f.show === 'indeck' && !env.inDeck(e.name)) return false;
   if (f.show === 'free' && env.inDeck(e.name)) return false;
+  if (f.show === 'spare' && !(env.hasSpare ? env.hasSpare(e.name) : !env.inDeck(e.name))) return false;
   // mana value and price need the card's data, like colours and types; a card with no price never passes a price band
   if (f.mv.length && !(c && c.cmc != null && f.mv.includes(mvOf(c.cmc)))) return false;
   if (f.prices.length) {

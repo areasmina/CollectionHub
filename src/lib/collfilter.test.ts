@@ -30,10 +30,12 @@ describe('binder filters', () => {
   it('groups together narrow further (all of them)', () => {
     expect(names({ ...noFilter(), colours: ['C'], types: ['Creature'] })).toEqual(['Wurmcoil']);
   });
-  it('show: commanders, in a deck, not in a deck', () => {
+  it('show: commanders, in a deck, not in a deck, spare copies', () => {
     expect(names({ ...noFilter(), show: 'commanders' })).toEqual(['Tatyova']);
     expect(names({ ...noFilter(), show: 'indeck' })).toEqual(['Sol Ring']);
     expect(names({ ...noFilter(), show: 'free' })).toEqual(['Tatyova', 'Cultivate', 'Wurmcoil', 'Unknown']);
+    const spareEnv: FilterEnv = { ...env, hasSpare: (n) => n === 'Sol Ring' || n === 'Cultivate' };
+    expect(applyFilter(all, { ...noFilter(), show: 'spare' }, spareEnv).map((x) => x.name)).toEqual(['Sol Ring', 'Cultivate']);
   });
   it('rarity: any picked rarity matches; a card with no rarity yet is left out', () => {
     expect(names({ ...noFilter(), rarities: ['rare'] })).toEqual(['Tatyova']);

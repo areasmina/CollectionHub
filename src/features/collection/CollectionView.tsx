@@ -3,6 +3,7 @@ import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState 
 import { worthOf } from '../../lib/analytics';
 import { saveCardListSoon } from '../../lib/cardlist';
 import { applyFilter, filterCount, noFilter, type CollFilter } from '../../lib/collfilter';
+import { ownedMap } from '../../lib/compare';
 import { inUse } from '../../lib/copies';
 import { db, type Card } from '../../lib/db';
 import { deckPicUrls } from '../../lib/deckpics';
@@ -162,6 +163,7 @@ export function Collection({
   const dq = useDeferredValue(q);
   const usedIn = useMemo(() => inUse(deckRows), [deckRows]);
   const need = useMemo(() => activeNeed(deckRows), [deckRows]);
+  const ownedCounts = useMemo(() => ownedMap(entries), [entries]);
   const { inTab, shown } = useMemo(() => {
     const inTab =
       activeList === 'all'
@@ -169,7 +171,12 @@ export function Collection({
         : activeList === 'unlisted'
           ? entries.filter((e) => !e.list)
           : rowsWithin(entries, activeList);
-    const listFiltered = applyFilter(inTab, filter, { cardOf: (e) => cards.get(e.cardId), inDeck: (n) => usedIn.has(norm(n)), isCommander: (c) => !!c.legal && isCommander(c.type, c.text) });
+    const listFiltered = applyFilter(inTab, filter, {
+      cardOf: (e) => cards.get(e.cardId),
+      inDeck: (n) => usedIn.has(norm(n)),
+      isCommander: (c) => !!c.legal && isCommander(c.type, c.text),
+      hasSpare: (n) => (ownedCounts.get(norm(n)) ?? 0) > (need.get(norm(n)) ?? 0),
+    });
     const sorted = [...listFiltered].sort((a, b) => {
       if (sortOrder === 'name-desc') return b.name.localeCompare(a.name);
       if (sortOrder === 'price-desc') {
@@ -189,7 +196,7 @@ export function Collection({
     });
     const shown = searchByText(sorted, dq, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
     return { inTab, shown };
-  }, [entries, activeList, filter, cards, usedIn, sortOrder, dq]);
+  }, [entries, activeList, filter, cards, usedIn, ownedCounts, need, sortOrder, dq]);
 
   const activeFolderStats = useMemo(
     () => (activeList !== 'all' && activeList !== 'unlisted' ? folderStats(inTab, entries, need, cards) : null),
