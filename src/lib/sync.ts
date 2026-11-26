@@ -1,5 +1,6 @@
 import { db, type Deck, type Entry, type Profile } from './db';
 import { exportAllDeckSnapshots, importAllDeckSnapshots, type DeckSnapshot } from './deckhistory';
+import { exportAllDeckFolders, importAllDeckFolders, type SyncedDeckFolders } from '../features/decks/deckOrg';
 import { resolveRows } from './scryfall';
 import { cleanCode, keysFor, newCode, seal, unseal, type Keys } from './synccode';
 import { mergeSync, type MergeReport, type SyncData } from './syncmerge';
@@ -26,6 +27,7 @@ export interface Snapshot {
   entries: Entry[];
   decks: Deck[];
   history?: Record<string, DeckSnapshot[]>;
+  deckFolders?: Record<number, SyncedDeckFolders>;
 }
 
 let cached: { code: string; keys: Keys } | null = null;
@@ -74,7 +76,17 @@ async function download(code?: string): Promise<{ v: number; snap: Snapshot } | 
 async function snapshot(): Promise<Snapshot> {
   const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
   const history = exportAllDeckSnapshots(decks);
-  return { app: 'collectionhub', fmt: 1, at: Date.now(), profiles, entries, decks, ...(Object.keys(history).length ? { history } : {}) };
+  const deckFolders = exportAllDeckFolders(profiles, decks);
+  return {
+    app: 'collectionhub',
+    fmt: 1,
+    at: Date.now(),
+    profiles,
+    entries,
+    decks,
+    ...(Object.keys(history).length ? { history } : {}),
+    ...(Object.keys(deckFolders).length ? { deckFolders } : {}),
+  };
 }
 
 /** Why a sync would destroy data, or null when it's safe. Counts are card entries + decks. */
@@ -113,8 +125,8 @@ export async function push(opts: { base?: number; force?: boolean; code?: string
 const BASE = 'sync:base';
 /** Remembers the copy this device and the cloud both hold at version `v`. */
 export async function matched(v: number, d: SyncData) {
-  const { profiles, entries, decks, history } = d;
-  await db.edhrec.put({ path: BASE, data: { v, profiles, entries, decks, ...(history ? { history } : {}) }, at: Date.now() });
+  const { profiles, entries, decks, history, deckFolders } = d;
+  await db.edhrec.put({ path: BASE, data: { v, profiles, entries, decks, ...(history ? { history } : {}), ...(deckFolders ? { deckFolders } : {}) }, at: Date.now() });
 }
 /** The shared copy, only when it belongs to version `v` (the one this device last matched). */
 export async function baseFor(v: number): Promise<SyncData | null> {
@@ -136,7 +148,14 @@ export interface Backup {
 const local = async (): Promise<SyncData> => {
   const [profiles, entries, decks] = await Promise.all([db.profiles.toArray(), db.entries.toArray(), db.decks.toArray()]);
   const history = exportAllDeckSnapshots(decks);
-  return { profiles, entries, decks, ...(Object.keys(history).length ? { history } : {}) };
+  const deckFolders = exportAllDeckFolders(profiles, decks);
+  return {
+    profiles,
+    entries,
+    decks,
+    ...(Object.keys(history).length ? { history } : {}),
+    ...(Object.keys(deckFolders).length ? { deckFolders } : {}),
+  };
 };
 async function keepBackup(why: string, d?: SyncData) {
   const data = d ?? (await local());
@@ -164,7 +183,9 @@ async function replaceLocal(d: SyncData) {
     await db.entries.bulkAdd(d.entries);
     await db.decks.bulkAdd(d.decks);
   });
-  importAllDeckSnapshots(await db.decks.toArray(), d.history);
+  const savedDecks = await db.decks.toArray();
+  importAllDeckSnapshots(savedDecks, d.history);
+  importAllDeckFolders(savedDecks, d.deckFolders);
 }
 /** Puts a backup back on this device (what is here now becomes a backup first, so a restore can be undone too). */
 export async function restoreBackup(path?: string) {

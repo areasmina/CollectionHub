@@ -1,5 +1,6 @@
 import type { Deck, Entry, Profile } from './db';
 import { mergeSnapshotLists, type DeckSnapshot } from './deckhistory';
+import { mergeDeckFolders, type SyncedDeckFolders } from '../features/decks/deckOrg';
 
 /**
  * Card-by-card sync merge (Phase 5D). When this device and the cloud both changed since they last matched, the two
@@ -17,6 +18,7 @@ export interface SyncData {
   entries: Entry[];
   decks: Deck[];
   history?: Record<string, DeckSnapshot[]>;
+  deckFolders?: Record<number, SyncedDeckFolders>;
 }
 export interface MergeReport {
   /** Card or deck changes taken from the other copy. */
@@ -189,11 +191,13 @@ function mergeHistory(mine?: Record<string, DeckSnapshot[]>, theirs?: Record<str
 export function mergeSync(base: SyncData | null, mine: SyncData, theirs: SyncData): { data: SyncData; report: MergeReport } {
   const report: MergeReport = { taken: 0, doubled: 0 };
   const history = mergeHistory(mine.history, theirs.history);
+  const deckFolders = mergeDeckFolders(mine.deckFolders, theirs.deckFolders);
   const data: SyncData = {
     profiles: mergeProfiles(base?.profiles ?? null, mine.profiles, theirs.profiles),
     entries: mergeEntries(base?.entries ?? null, mine.entries, theirs.entries, report),
     decks: mergeDecks(base?.decks ?? null, mine.decks, theirs.decks, report),
     ...(history ? { history } : {}),
+    ...(deckFolders ? { deckFolders } : {}),
   };
   return { data, report };
 }

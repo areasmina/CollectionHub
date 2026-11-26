@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BASICS } from '../lib/compare';
 import { db, type Deck } from '../lib/db';
 import { addToDeck, assignCardToList, changeQty, manageBinderLists, moveCardToBinder, removeFromDeck, removeOneFromBinder, setBinderFoil, setCommander, setFoil, setPrinting } from '../lib/deckedit';
+import { allFolders, showPath } from '../lib/folders';
 import { printingsOf } from '../lib/scryfall';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
@@ -278,16 +279,16 @@ export function CardMenu({
                         NO LIST (UNLISTED)
                       </button>
                     </li>
-                    {binderLists.map((l) => (
+                    {allFolders(binderLists).map((l) => (
                       <li key={l}>
                         <button
                           onClick={act(async () => {
                             haptic('success');
                             const undo = await assignCardToList(profile, name, l, c?.foil);
-                            toast({ text: `${name}: assigned to ${l}`, undo });
+                            toast({ text: `${name}: assigned to ${showPath(l)}`, undo });
                           })}
                         >
-                          {l}
+                          {showPath(l)}
                         </button>
                       </li>
                     ))}

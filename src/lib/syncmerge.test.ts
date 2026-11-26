@@ -158,4 +158,18 @@ describe('mergeSync: deck history', () => {
     expect(out['1|krenko']).toHaveLength(30);
     expect(out['1|krenko'][0].id).toBe('k34');
   });
+
+  it('merges deckFolders across devices without duplicating folders case-insensitively', () => {
+    const mine: SyncData = {
+      ...data([]),
+      deckFolders: { 1: { folders: ['cEDH', 'Casual'], assignByName: { atraxa: 'cEDH' } } },
+    };
+    const theirs: SyncData = {
+      ...data([]),
+      deckFolders: { 1: { folders: ['cedh', 'Precons'], assignByName: { krenko: 'Precons', atraxa: 'Precons' } } },
+    };
+    const out = mergeSync(null, mine, theirs).data.deckFolders!;
+    expect(out[1].folders).toEqual(['cEDH', 'Casual', 'Precons']);
+    expect(out[1].assignByName).toEqual({ atraxa: 'cEDH', krenko: 'Precons' });
+  });
 });

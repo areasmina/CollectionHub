@@ -5,9 +5,9 @@ import { saveCardListSoon } from '../../lib/cardlist';
 import { applyFilter, filterCount, noFilter, type CollFilter } from '../../lib/collfilter';
 import { inUse } from '../../lib/copies';
 import { db, type Card } from '../../lib/db';
-import { manageBinderLists } from '../../lib/deckedit';
 import { deckPicUrls } from '../../lib/deckpics';
 import { collectionCsv, collectionText, download } from '../../lib/export';
+import { allFolders, applyFolderPlan, depthOf, MAX_DEPTH, parentOf, planAddFolder, planDeleteFolder, rowsWithin, showPath } from '../../lib/folders';
 import { haptic, haptic as buzz } from '../../lib/haptics';
 import { norm } from '../../lib/names';
 import { openDeckList } from '../../lib/nav';
@@ -135,6 +135,8 @@ export function Collection({
 
   const currentProf = useLiveQuery(() => db.profiles.get(profile), [profile]);
   const customLists = currentProf?.lists ?? [];
+  const folderTree = useMemo(() => allFolders(customLists), [customLists]);
+  const [addingSubTo, setAddingSubTo] = useState<string | null>(null);
 
   const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))])).filter(Boolean).map((c) => [c!.id, c!])), [entries]) ?? new Map<string, Card>();
   const copies = (rows: { qty: number }[]) => rows.reduce((n, e) => n + e.qty, 0);
@@ -156,11 +158,12 @@ export function Collection({
   const dq = useDeferredValue(q);
   const usedIn = useMemo(() => inUse(deckRows), [deckRows]);
   const { inTab, shown } = useMemo(() => {
-    const inTab = entries.filter((e) => {
-      if (activeList === 'all') return true;
-      if (activeList === 'unlisted') return !e.list;
-      return e.list === activeList;
-    });
+    const inTab =
+      activeList === 'all'
+        ? entries
+        : activeList === 'unlisted'
+          ? entries.filter((e) => !e.list)
+          : rowsWithin(entries, activeList);
     const listFiltered = applyFilter(inTab, filter, { cardOf: (e) => cards.get(e.cardId), inDeck: (n) => usedIn.has(norm(n)), isCommander: (c) => !!c.legal && isCommander(c.type, c.text) });
     const sorted = [...listFiltered].sort((a, b) => {
       if (sortOrder === 'name-desc') return b.name.localeCompare(a.name);
@@ -327,24 +330,35 @@ export function Collection({
               <button type="button" role="tab" aria-selected={activeList === 'unlisted'} className={`list-tab${activeList === 'unlisted' ? ' active' : ''}`} onClick={() => (buzz('select'), setActiveList('unlisted'))}>
                 UNLISTED <span className="tab-count">{copies(entries.filter((e) => !e.list)).toLocaleString()}</span>
               </button>
-              {customLists.map((l) => {
-                const count = copies(entries.filter((e) => e.list === l)).toLocaleString();
+              {folderTree.map((l) => {
+                const count = copies(rowsWithin(entries, l)).toLocaleString();
+                const isSub = depthOf(l) > 1;
                 return (
                   <span key={l} className="list-tab-wrap">
-                    <button type="button" role="tab" aria-selected={activeList === l} className={`list-tab${activeList === l ? ' active' : ''}`} onClick={() => (buzz('select'), setActiveList(l))}>
-                      {l.toUpperCase()} <span className="tab-count">{count}</span>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeList === l}
+                      className={`list-tab${activeList === l ? ' active' : ''}`}
+                      title={showPath(l)}
+                      onClick={() => (buzz('select'), setActiveList(l))}
+                    >
+                      {isSub ? `↳ ${showPath(l).toUpperCase()}` : showPath(l).toUpperCase()} <span className="tab-count">{count}</span>
                     </button>
                     <button
                       type="button"
                       className="list-del-btn"
-                      title={`Delete list ${l}`}
-                      aria-label={`Delete list ${l}`}
+                      title={`Delete folder ${showPath(l)}`}
+                      aria-label={`Delete folder ${showPath(l)}`}
                       onClick={async (ev) => {
                         ev.stopPropagation();
-                        if (!confirm(`Delete list "${l}"? Cards on this list will become unlisted.`)) return;
+                        const parent = parentOf(l);
+                        if (!confirm(`Delete folder "${showPath(l)}"? Cards will move to ${parent ? showPath(parent) : 'Unlisted'}.`)) return;
                         buzz('warn');
-                        if (activeList === l) setActiveList('all');
-                        await manageBinderLists(profile, 'remove', l);
+                        const plan = planDeleteFolder(customLists, entries, l);
+                        if (!plan.ok) return;
+                        if (activeList === l || activeList.startsWith(`${l}/`)) setActiveList(parent ?? 'all');
+                        await applyFolderPlan(profile, plan);
                       }}
                     >
                       ✕
@@ -353,34 +367,54 @@ export function Collection({
                 );
               })}
               {!addingListInline ? (
-                <button
-                  type="button"
-                  className="list-tab add-btn"
-                  onClick={() => {
-                    buzz('open');
-                    setAddingListInline(true);
-                  }}
-                >
-                  + NEW LIST
-                </button>
+                <>
+                  {activeList !== 'all' && activeList !== 'unlisted' && depthOf(activeList) < MAX_DEPTH && (
+                    <button
+                      type="button"
+                      className="list-tab add-btn"
+                      title={`Create subfolder inside ${showPath(activeList)}`}
+                      onClick={() => {
+                        buzz('open');
+                        setAddingSubTo(activeList);
+                        setAddingListInline(true);
+                      }}
+                    >
+                      + SUBFOLDER
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="list-tab add-btn"
+                    onClick={() => {
+                      buzz('open');
+                      setAddingSubTo(null);
+                      setAddingListInline(true);
+                    }}
+                  >
+                    + NEW FOLDER
+                  </button>
+                </>
               ) : (
                 <span className="list-new-inline">
                   <input
                     type="text"
                     value={newListNameInline}
                     onChange={(e) => setNewListNameInline(e.target.value)}
-                    placeholder="New list name…"
+                    placeholder={addingSubTo ? `Inside ${showPath(addingSubTo)}…` : 'New folder name…'}
                     autoFocus
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter' && newListNameInline.trim()) {
                         e.preventDefault();
-                        const trimmed = newListNameInline.trim();
-                        await manageBinderLists(profile, 'add', trimmed);
+                        const plan = planAddFolder(customLists, addingSubTo, newListNameInline.trim());
+                        if (!plan.ok) return alert(plan.why);
+                        await applyFolderPlan(profile, plan);
                         buzz('success');
-                        setActiveList(trimmed);
+                        setActiveList(plan.lists.at(-1) ?? 'all');
                         setNewListNameInline('');
+                        setAddingSubTo(null);
                         setAddingListInline(false);
                       } else if (e.key === 'Escape') {
+                        setAddingSubTo(null);
                         setAddingListInline(false);
                       }
                     }}
@@ -390,18 +424,26 @@ export function Collection({
                     className="u-btn primary"
                     disabled={!newListNameInline.trim()}
                     onClick={async () => {
-                      const trimmed = newListNameInline.trim();
-                      if (!trimmed) return;
-                      await manageBinderLists(profile, 'add', trimmed);
+                      const plan = planAddFolder(customLists, addingSubTo, newListNameInline.trim());
+                      if (!plan.ok) return alert(plan.why);
+                      await applyFolderPlan(profile, plan);
                       buzz('success');
-                      setActiveList(trimmed);
+                      setActiveList(plan.lists.at(-1) ?? 'all');
                       setNewListNameInline('');
+                      setAddingSubTo(null);
                       setAddingListInline(false);
                     }}
                   >
                     ADD
                   </button>
-                  <button type="button" className="u-btn ghost" onClick={() => setAddingListInline(false)}>
+                  <button
+                    type="button"
+                    className="u-btn ghost"
+                    onClick={() => {
+                      setAddingSubTo(null);
+                      setAddingListInline(false);
+                    }}
+                  >
                     ✕
                   </button>
                 </span>
