@@ -170,3 +170,10 @@
 .triggerBtn:hover {
   border-color: var(--mo-red);
 }
+
+@media (max-width: 700px) {
+  .triggerBtn {
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+}

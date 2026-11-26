@@ -46,3 +46,9 @@
   --mo-z-pop: 400;
   --mo-z-sheet: 1010;
 }
+
+@media (max-width: 700px) {
+  .u-seg button {
+    min-height: 44px;
+  }
+}

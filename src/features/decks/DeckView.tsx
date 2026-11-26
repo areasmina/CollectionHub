@@ -5,11 +5,11 @@ import { inUseChip } from '../../brain/chips';
 import { offIdentity } from '../../brain/identity';
 import { pinCard, recordTaste } from '../../brain/store';
 import { commanderThemes } from '../../brain/themes';
-import { bracketFit, readiness } from '../../brain/validate';
+import { bracketFit, deckRules, readiness } from '../../brain/validate';
 import { AGGRESSION, killCheck } from '../../brain/win';
 import { allocate } from '../../lib/allocation';
 import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type SortKey } from '../../lib/arrange';
-import { commanderSlug, pairIdentity } from '../../lib/commander';
+import { canPair, commanderSlug, pairIdentity } from '../../lib/commander';
 import { BASICS, statusOf, summarize } from '../../lib/compare';
 import { notOffered } from '../../lib/collsearch';
 import { takenBy, type shortfalls } from '../../lib/copies';
@@ -191,6 +191,11 @@ export function DeckView({
   const aggression = (({ upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' }) as Record<string, 'patient' | 'hungry' | 'lethal'>)[deck.source ?? ''] ?? prof?.brain?.aggression ?? 'hungry';
   const ready = readiness({ deck: deck.cards, cardOf, commander: deck.commander, partner: deck.partner, identity: ci, bracket: aim, aggression });
   const fit = bracketFit(call, aim);
+  const failedRules = hydrating ? [] : deckRules({ deck: deck.cards, cardOf, commander: deck.commander, partner: deck.partner, identity: ci, skipIdentity: !cmdr }).filter((r) => !r.ok);
+  const invalidPair = !hydrating && !!(deck.commander && deck.partner && cmdr && partner && !canPair({ name: cmdr.name, card: cmdr }, { name: partner.name, card: partner }));
+  const legalReason = invalidPair
+    ? `${deck.commander!.split(',')[0]} & ${deck.partner!.split(',')[0]} cannot legally pair`
+    : failedRules[0]?.says ?? '';
   const refBracket = deck.source === 'cedh' ? 'cedh' : call.bracket >= 4 ? (st.lands <= 30 ? 'cedh' : 'optimized') : call.bracket === 3 ? 'upgraded' : 'core';
   const [ref, setRef] = useState<RefShape | undefined>();
   useEffect(() => {
@@ -396,6 +401,14 @@ export function DeckView({
 
         <section className="dstrip" aria-label="Deck status" style={{ paddingInline: 12 }}>
           <p className="dstatus" role="status">
+            {(failedRules.length > 0 || invalidPair) && (
+              <span
+                title={[...(invalidPair ? [legalReason] : []), ...failedRules.map((r) => r.says)].join('\n')}
+                style={{ color: '#ff6b76', fontWeight: 800, letterSpacing: '0.04em', marginRight: 10 }}
+              >
+                NOT LEGAL · {invalidPair ? 'invalid partner pair' : `${failedRules[0].label}: ${failedRules[0].value}`}{failedRules.length > 1 ? ` (+${failedRules.length - 1})` : ''}
+              </span>
+            )}
             {pricesIn && (
               <span className="dcost" title={`${PRICE_METHOD} ${fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}`}>
                 deck ≈{cad(deckCost)}
