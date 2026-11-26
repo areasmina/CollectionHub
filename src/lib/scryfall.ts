@@ -12,6 +12,24 @@ const req = (url: string, init: RequestInit, tries = 2, onWait?: (ms: number) =>
 const post = (path: string, body: unknown, tries = 2, onWait?: (ms: number) => void) =>
   req(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, tries, onWait);
 
+/** Builds Scryfall search queries for `cheapest`, staying safely under Scryfall's query length limit. */
+export function batchCheapestQueries(keys: [string, string][], maxChars = 800, maxCount = 25): { batch: [string, string][]; query: string }[] {
+  const out: { batch: [string, string][]; query: string }[] = [];
+  let cur: [string, string][] = [];
+  const toQuery = (b: [string, string][]) => `(${b.map(([, n]) => `!"${n.replace(/"/g, '')}"`).join(' or ')}) game:paper`;
+  for (const item of keys) {
+    const next = [...cur, item];
+    if (cur.length > 0 && (next.length > maxCount || toQuery(next).length > maxChars)) {
+      out.push({ batch: cur, query: toQuery(cur) });
+      cur = [item];
+    } else {
+      cur = next;
+    }
+  }
+  if (cur.length > 0) out.push({ batch: cur, query: toQuery(cur) });
+  return out;
+}
+
 /** Cheapest paper printing (USD, non-foil first) per card name, cached a week. */
 export async function cheapest(names: string[], onProgress?: (cheap: Map<string, Cheap>) => void): Promise<Map<string, Cheap>> {
   const keys = [...new Map(names.map((n) => [norm(n), n.split(/\s\/\/?\s/)[0]])).entries()];
@@ -20,9 +38,7 @@ export async function cheapest(names: string[], onProgress?: (cheap: Map<string,
   (await db.cheap.bulkGet(keys.map(([k]) => k))).forEach((c) => c && Date.now() - c.at < WEEK && (c.id || !c.usd) && out.set(c.key, c)); // entries from before `id` are fetched again
   if (out.size) onProgress?.(new Map(out));
   const need = keys.filter(([k]) => !out.has(k));
-  for (let i = 0; i < need.length; i += 40) {
-    const batch = need.slice(i, i + 40);
-    const q = `(${batch.map(([, n]) => `!"${n.replace(/"/g, '')}"`).join(' or ')}) game:paper`;
+  for (const { batch, query: q } of batchCheapestQueries(need)) {
     const best = new Map<string, Cheap>(batch.map(([k]) => [k, { key: k, at: Date.now() }]));
     let url: string | undefined = `${API}/cards/search?unique=prints&q=${encodeURIComponent(q)}`;
     while (url) {

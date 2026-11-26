@@ -1,0 +1,226 @@
+.root {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(340px, 1.3fr);
+  gap: var(--mo-s4);
+  margin-top: var(--mo-s3);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pane {
+  background: var(--mo-surface);
+  border: 1px solid var(--mo-line);
+  border-radius: var(--mo-r-md);
+  padding: var(--mo-s3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mo-s3);
+  min-width: 0;
+}
+
+.headRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--mo-s2);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--mo-display);
+  font-size: 20px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.hint {
+  margin: 0;
+  font-family: var(--mo-mono);
+  font-size: 12px;
+  color: var(--mo-muted);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 260px;
+  padding: var(--mo-s3);
+  background: var(--mo-bg);
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+  color: var(--mo-text);
+  font-family: var(--mo-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.btnRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mo-s2);
+}
+
+.btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+  background: var(--mo-surface-2);
+  color: var(--mo-text);
+  font-family: var(--mo-display);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}
+
+.btnPrimary {
+  background: var(--mo-red);
+  border-color: var(--mo-red);
+  color: #fff;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--mo-s2);
+}
+
+.stat {
+  background: var(--mo-bg);
+  border: 1px solid var(--mo-line);
+  border-radius: var(--mo-r-sm);
+  padding: var(--mo-s2);
+}
+
+.statLbl {
+  display: block;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  color: var(--mo-muted);
+  text-transform: uppercase;
+}
+
+.statVal {
+  font-family: var(--mo-display);
+  font-size: 20px;
+  color: var(--mo-text);
+}
+
+.statVal[data-accent='true'] {
+  color: var(--mo-hazard);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filterBtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+  background: var(--mo-surface-2);
+  color: var(--mo-muted);
+  font-family: var(--mo-mono);
+  font-size: 12px;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--mo-red);
+  background: var(--mo-red-soft);
+  color: var(--mo-text);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: var(--mo-s2);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--mo-surface-2);
+  border: 1px solid var(--mo-line);
+  border-radius: var(--mo-r-sm);
+  padding: 6px;
+}
+
+.card[data-status='missing'] .img {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+}
+
+.card[data-status='other'] .img {
+  opacity: 0.72;
+}
+
+.img {
+  width: 100%;
+  aspect-ratio: 488 / 680;
+  border-radius: 5% / 3.5%;
+  object-fit: cover;
+  background: var(--mo-bg);
+}
+
+.placeholder {
+  width: 100%;
+  aspect-ratio: 488 / 680;
+  border-radius: 5% / 3.5%;
+  border: 1px dashed var(--mo-line-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mo-muted);
+}
+
+.name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-family: var(--mo-mono);
+  font-size: 10.5px;
+  color: var(--mo-muted);
+}
+
+.badgeMissing {
+  color: #ff6b76;
+}
+
+.badgeOwned {
+  color: var(--mo-ok);
+}
+
+.badgeOther {
+  color: var(--mo-hazard);
+}

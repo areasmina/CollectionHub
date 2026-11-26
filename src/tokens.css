@@ -1,0 +1,48 @@
+/* Midnight Override — Core Design Tokens for new CSS Modules (src/features/**). */
+:root {
+  /* Surfaces & ink */
+  --mo-bg: #0a0a0a;
+  --mo-surface: #121215;
+  --mo-surface-2: #19191f;
+  --mo-surface-hover: #212129;
+  --mo-ink: #0a0a0a;
+  --mo-text: #ffffff;
+  --mo-muted: #b5b5b5;
+  --mo-subtle: #888894;
+  --mo-paper: #f4f1ea;
+
+  /* Lines & borders */
+  --mo-line: #282830;
+  --mo-line-2: #3a3a46;
+  --mo-line-strong: rgba(255, 255, 255, 0.22);
+
+  /* Accents */
+  --mo-red: #e60012;
+  --mo-red-soft: rgba(230, 0, 18, 0.16);
+  --mo-hazard: #ffcc00;
+  --mo-hazard-soft: rgba(255, 204, 0, 0.14);
+  --mo-ok: #2fa35a;
+  --mo-ok-soft: rgba(47, 163, 90, 0.16);
+  --mo-blue: #2f7fd8;
+  --mo-blue-soft: rgba(47, 127, 216, 0.16);
+
+  /* Typography */
+  --mo-display: 'Anton', system-ui, sans-serif;
+  --mo-body: 'Archivo', system-ui, sans-serif;
+  --mo-mono: 'Space Mono', ui-monospace, monospace;
+  --mo-type: 'Special Elite', monospace;
+
+  /* Spacing & radii */
+  --mo-s1: 4px;
+  --mo-s2: 8px;
+  --mo-s3: 12px;
+  --mo-s4: 16px;
+  --mo-s5: 24px;
+  --mo-r-sm: 4px;
+  --mo-r-md: 8px;
+
+  /* Layers */
+  --mo-z-sticky: 20;
+  --mo-z-pop: 400;
+  --mo-z-sheet: 1010;
+}

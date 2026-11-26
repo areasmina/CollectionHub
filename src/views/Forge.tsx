@@ -667,6 +667,7 @@ export function ForgeSuggest({
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role | ''>('');
   const [more, setMore] = useState(false);
+  const [allThemes, setAllThemes] = useState(false);
   const [sheet, setSheet] = useState(false); // phones: the bottom sheet is pulled up
   const [pane, setPane] = useState<'sugg' | 'buy'>('sugg');
   // Theme chips (EDHREC's tags as rules-text tests, brain/themes.ts): the picked one filters the list and adds "fits <theme>".
@@ -911,8 +912,8 @@ export function ForgeSuggest({
           ))}
       </div>
       {themes.length > 0 && (
-        <div className="themes fthemes" role="group" aria-label="EDHREC themes">
-          {themes.map((t) => (
+        <div className="themes fthemes" role="group" aria-label="EDHREC themes" style={{ flexWrap: 'wrap', overflowX: 'visible' }}>
+          {(allThemes ? themes : themes.slice(0, 8)).map((t) => (
             <button
               key={t.slug}
               type="button"
@@ -924,6 +925,15 @@ export function ForgeSuggest({
               #{t.value.toLowerCase()}
             </button>
           ))}
+          {themes.length > 8 && (
+            <button
+              type="button"
+              className="u-chip theme"
+              onClick={() => (haptic('select'), setAllThemes((v) => !v))}
+            >
+              {allThemes ? 'LESS' : `+${themes.length - 8} MORE`}
+            </button>
+          )}
         </div>
       )}
       {onCf && (

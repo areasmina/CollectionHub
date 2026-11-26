@@ -52,9 +52,9 @@ import { CompactIcon, Pips, Ransom, heroRoom, RiseBars, GridIcon, ListIcon } fro
 import { Menu, Meter, Sheet } from './parts';
 
 // The 'As Commander' popularity view is hidden for now; set true to bring the View switch back.
-/** Where a deck opened from Discover starts: MED power (bracket 4) and MAX budget ($$$). */
-const OPEN_BRACKET = 'optimized';
-const OPEN_BUDGET = 'expensive';
+/** Open at Discover's All-brackets / Any-budget baseline so the tile % owned matches what opens here. */
+const OPEN_BRACKET = '';
+const OPEN_BUDGET = '';
 /** The POWER dial also sets how hungry the build checks are (Min = patient, Med = hungry, Max = lethal). */
 const AGGRESSION_OF: Record<string, 'patient' | 'hungry' | 'lethal'> = { '': 'hungry', upgraded: 'patient', optimized: 'hungry', cedh: 'lethal' };
 const SHOW_AS_COMMANDER = false;

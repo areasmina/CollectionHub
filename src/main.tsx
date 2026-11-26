@@ -19,9 +19,8 @@ import '@fontsource/shippori-mincho-b1/latin-800.css';
 import '@fontsource/space-mono/latin-400.css';
 import '@fontsource/space-mono/latin-700.css';
 import '@fontsource/special-elite/latin-400.css';
-import './styles.css';
-import './ui.css'; // THE OVERHAUL: tokens + the 7 parts; loaded last, so it wins over the old rules it replaces
-import './polish.css'; // Nov 11 spacing & composition pass, loaded after ui.css so it wins
+import './legacy.css';
+import './tokens.css';
 
 // The service worker reloads the page when a new version takes over. Right after a sign-in redirect that reload would
 // throw away the session in the URL, so wait until Supabase has saved it.

@@ -3,7 +3,7 @@ import { notOffered } from '../lib/collsearch';
 import { deckColour, hsvHex, wheelColour } from '../lib/deckcolor';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { deckShareOf, deckShares } from '../lib/deckshare';
 import { addToDeck, removeFromDeck, replaceInDeck, setCommander } from '../lib/deckedit';
@@ -36,168 +36,32 @@ import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type 
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { shortfalls, takenBy } from '../lib/copies';
-import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
+import { freeDeckName, onOpenDeck, openCollection, openDiscoverSub, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
 import { DeckCompare } from './DeckCompare';
 import { CardLine, CardTile, CmdrCard, CycleBtn, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
 import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, PageDecor } from './zine';
 
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
-import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
+import { getDeckSnapshots, saveDeckSnapshot } from '../lib/deckhistory';
 import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '../lib/drafts';
 
-/** A deck's own note and tags (saved on this device, synced on Push). */
-function DeckNotes({ deck }: { deck: Deck }) {
-  const [tag, setTag] = useState('');
-  const tags = deck.tags ?? [];
-  const draftKey = `deck_note_${deck.id}`;
-  const initialNote = getDraftCheckpoint<string>(draftKey) ?? deck.note ?? '';
-  const [noteText, setNoteText] = useState(initialNote);
-
-  const addTag = () => {
-    const t = tag.trim().toLowerCase().slice(0, 30);
-    if (t && !tags.includes(t)) db.decks.update(deck.id!, { tags: [...tags, t] });
-    setTag('');
-  };
-
-  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setNoteText(val);
-    setDraftCheckpoint(draftKey, val);
-  };
-
-  const handleNoteBlur = async () => {
-    if (noteText !== (deck.note ?? '')) {
-      await db.decks.update(deck.id!, { note: noteText });
-    }
-    clearDraftCheckpoint(draftKey);
-  };
-
-  return (
-    <section className="decknotes" aria-label="Deck note and tags">
-      <label className="notebook">
-        <textarea
-          aria-label="Deck note"
-          rows={3}
-          placeholder="game plan, who it's for, what to swap next_"
-          value={noteText}
-          onChange={handleNoteChange}
-          onBlur={handleNoteBlur}
-        />
-      </label>
-      <div className="tagrow">
-        {tags.map((t) => (
-          <button key={t} className="dtag" aria-label={`Remove tag ${t}`} onClick={() => db.decks.update(deck.id!, { tags: tags.filter((x) => x !== t) })}>
-            #{t} <span aria-hidden="true">×</span>
-          </button>
-        ))}
-        <input aria-label="New tag" placeholder="+ tag_" value={tag} onChange={(e) => setTag(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTag()} onBlur={addTag} />
-      </div>
-    </section>
-  );
-}
-
-const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
-type Grouping = 'type' | 'mv' | 'own' | 'none';
-const GROUPINGS: [Grouping, string][] = [
-  ['type', 'CARD TYPE'],
-  ['mv', 'MANA VALUE'],
-  ['own', 'OWNED / MISSING'],
-  ['none', 'NO GROUPS'],
-];
-
-/** GROUP and SHOW as the sheet's own chip rows (Nov 15 round 5): the panel holds no dropdown any more. */
-function GroupPick({ grouping, show, onGroup, onShow }: { grouping: Grouping; show: Show; onGroup: (g: Grouping) => void; onShow: (v: Show) => void }) {
-  return (
-    <>
-      <ChipPick label="GROUP" value={grouping} options={GROUPINGS} onChange={onGroup} />
-      <ChipPick label="SHOW" value={show} options={SHOWS} onChange={onShow} />
-    </>
-  );
-}
-
-/** Bracket estimate stamp; tap shows the reasons. */
-function BracketStat({ call, cedh }: { call: BracketCall; cedh?: boolean }) {
-  // Bracket 5 is about intent, so it is never guessed. When you forged the deck from EDHREC's cEDH list, that is the intent.
-  const plus = cedh && call.bracket === 4;
-  return (
-    <details className="scrap bracket">
-      <summary aria-label={`Estimated bracket ${call.bracket}${plus ? ' or 5, built from cEDH data' : ''}. Show why`}>
-        <span className="k">BRACKET</span>
-        <span className="bstamp">
-          {ROMAN[call.bracket]}
-          {plus && '+'}
-        </span>
-        <span className="caret" aria-hidden="true">
-          ▾
-        </span>
-      </summary>
-      <ul className="popnote">
-        {plus && (
-          <li>
-            <b>IV+ · built from cEDH data</b>: forged from EDHREC's cEDH list, so it's meant for bracket 5 tables
-          </li>
-        )}
-        {call.reasons.map((r) => (
-          <li key={r}>{r}</li>
-        ))}
-        {call.gameChangers.length > 0 && (
-          <li>
-            Game Changers: <b>{call.gameChangers.join(', ')}</b>
-          </li>
-        )}
-        {call.combos.length > 0 && (
-          <li>
-            Two-card combos (Commander Spellbook): <b>{call.combos.map((c) => `${c.cards.join(' + ')}${c.early ? ' (early)' : ''}`).join(', ')}</b>
-          </li>
-        )}
-        <li className="small">
-          An estimate from the official bracket rules we can check: Game Changers, mass land denial, chained extra turns and two-card combos
-          {call.combosChecked ? '' : ' (combo list still loading)'}. Bracket I vs II and V depend on how the deck is meant to play.
-        </li>
-      </ul>
-    </details>
-  );
-}
-
-/** A deck saved without a commander: suggest the likely one (one tap sets it); the card menu can set any card. */
-function PickCommander({ deck, cardOf }: { deck: Deck; cardOf: (name: string) => Card | undefined }) {
-  const guess = guessCommander(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })));
-  return (
-    <aside className="shortalert pickcmdr" role="status">
-      <b>▲ NO COMMANDER</b>{' '}
-      {guess ? (
-        <>
-          This deck has no commander yet. It looks like <mark>{guess}</mark>.{' '}
-          <button className="btn" onClick={() => (haptic('success'), setCommander(deck, guess))}>
-            SET AS COMMANDER
-          </button>
-        </>
-      ) : (
-        'This deck has no commander yet. Right-click (or long-press) a card and choose Set as commander.'
-      )}
-    </aside>
-  );
-}
-
-/** Make a deck card the commander (the previous one stays in the deck as a normal card). */
-
-/** Card menu (right-click / press and hold): commander, links, foil, copies, remove from deck or binder. */
-/** Mana curve: non-land cards by mana value (7 = 7+). */
-function Curve({ curve }: { curve: number[] }) {
-  const max = Math.max(1, ...curve);
-  return (
-    <div className="curve" role="img" aria-label={`Mana curve: ${curve.map((n, i) => `${n} at ${i === 7 ? '7 or more' : i}`).join(', ')}`}>
-      {curve.map((n, i) => (
-        <span key={i} className="col">
-          <span className="n">{n || ''}</span>
-          <span className="bar" style={{ height: `${(n / max) * 100}%` }} />
-          <span className="mv">{i === 7 ? '7+' : i}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
+const HandSheet = lazy(() => import('../features/hand/HandSheet').then((m) => ({ default: m.HandSheet })));
+const RuleZeroModal = lazy(() => import('../features/rulezero/RuleZeroModal').then((m) => ({ default: m.RuleZeroModal })));
+const BalanceSheet = lazy(() => import('../features/balance/BalanceSheet').then((m) => ({ default: m.BalanceSheet })));
+const PasteCheck = lazy(() => import('../features/check/PasteCheck').then((m) => ({ default: m.PasteCheck })));
+import { BracketStat, Curve, DeckNotes, GROUPINGS, GroupPick, PickCommander, type Grouping } from '../features/decks/DeckMetaParts';
+import { DeckFolderBar } from '../features/decks/DeckFolderBar';
+import { HistoryDrawer } from '../features/decks/HistoryDrawer';
+import {
+  assignDeckFolder,
+  filterDecksByFolder,
+  folderOfDeck,
+  loadDeckFolders,
+  saveDeckFolders,
+  type DeckFolderStore,
+  type FolderFilter,
+} from '../features/decks/deckOrg';
 
 const PIPC: Record<string, string> = { W: '#E9DDB5', U: '#3F6FC6', B: '#2A2A30', R: '#B5463A', G: '#2F7D4A', C: '#8A8A8A' };
 
@@ -348,7 +212,27 @@ function ColourWheel({ value, onPick }: { value: string; onPick: (c: string) => 
   );
 }
 
-function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: MenuAt; onClose: () => void; onDeleted?: () => void; onOpen: (id: number) => void }) {
+function DeckMenu({
+  deck,
+  at,
+  onClose,
+  onDeleted,
+  onOpen,
+  onHistory,
+  folders,
+  currentFolder,
+  onFolderChange,
+}: {
+  deck: Deck;
+  at: MenuAt;
+  onClose: () => void;
+  onDeleted?: () => void;
+  onOpen: (id: number) => void;
+  onHistory?: () => void;
+  folders?: string[];
+  currentFolder?: string;
+  onFolderChange?: (folder: string | null) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const file = (ext: string) => `${deck.name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const [copied, setCopied] = useState(false);
@@ -503,29 +387,33 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
                   <small className="cmenu-meta">save current deck version</small>
                 </button>
               </li>
-              {deck.id && getDeckSnapshots(deck.id).length > 0 && (
+              {deck.id && onHistory && (
                 <li>
                   <button
                     role="menuitem"
-                    onClick={act(async () => {
-                      const snaps = getDeckSnapshots(deck.id!);
-                      const listStr = snaps
-                        .map((s, i) => `${i + 1}. [${new Date(s.at).toLocaleDateString()} ${new Date(s.at).toLocaleTimeString()}] ${s.label || ''} (${s.cardCount} cards)`)
-                        .slice(0, 8)
-                        .join('\n');
-                      const choice = prompt(`Select snapshot number to restore:\n\n${listStr}\n\nEnter number (1-${Math.min(snaps.length, 8)}):`);
-                      const idx = Number(choice) - 1;
-                      if (!isNaN(idx) && snaps[idx]) {
-                        if (confirm(`Restore "${snaps[idx].label}"? A safety snapshot will be created automatically.`)) {
-                          await restoreDeckSnapshot(deck, snaps[idx]);
-                          haptic('success');
-                        }
-                      }
-                    })}
+                    onClick={act(() => onHistory())}
                   >
-                    <span className="cmenu-main">RESTORE VERSION...</span>
-                    <small className="cmenu-meta">{getDeckSnapshots(deck.id).length} saved snapshots</small>
+                    <span className="cmenu-main">VERSION HISTORY</span>
+                    <small className="cmenu-meta">{getDeckSnapshots(deck.id).length} saved snapshots · diff &amp; restore</small>
                   </button>
+                </li>
+              )}
+              {deck.id && folders && folders.length > 0 && onFolderChange && (
+                <li style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span className="cmenu-meta">FOLDER</span>
+                  <select
+                    aria-label={`Assign folder for ${deck.name}`}
+                    value={currentFolder ?? ''}
+                    onChange={(e) => (onFolderChange(e.target.value || null), close())}
+                    style={{ maxWidth: 150 }}
+                  >
+                    <option value="">Unfiled</option>
+                    {folders.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
                 </li>
               )}
               <li className="sep" role="separator" />
@@ -552,6 +440,7 @@ function DeckMenu({ deck, at, onClose, onDeleted, onOpen }: { deck: Deck; at: Me
 }
 
 function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; onBack: () => void; onOpen: (id: number) => void; short: ReturnType<typeof shortfalls> }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
   // Owned copies are shared out oldest deck first, so the share matches the list (a shared card counts for one deck only).
   const siblings = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [deck];
   const sum = { ...summarize(deck.cards.map((c) => c.name), s.mine, s.other), ...deckShareOf(siblings, deck.id, s.mine) };
@@ -561,9 +450,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
     setBack(onBack);
     return () => void setBack(null);
   }, [deck.id]);
-  const byKey =
-    useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])), [deck]) ??
-    new Map<string, Card>();
+  const cardsRaw = useLiveQuery(
+    async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])),
+    [deck],
+  );
+  const byKey = cardsRaw ?? new Map<string, Card>();
   const cheap = useLiveQuery(async () => new Map((await db.cheap.bulkGet(deck.cards.map((c) => norm(c.name)))).filter(Boolean).map((c) => [c!.key, c!])), [deck]) ?? new Map<string, Cheap>();
   const cardOf = (name: string) => withCheapest(byKey.get(norm(name)), cheap);
   const [gc, setGc] = useState<Set<string> | null | undefined>(undefined);
@@ -593,6 +484,24 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const cubeRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
+  const [handOpen, setHandOpen] = useState(false);
+  const [ruleZeroOpen, setRuleZeroOpen] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
+  const [compactHero, setCompactHero] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:compact_hero') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleCompactHero = () => {
+    setCompactHero((v) => {
+      try {
+        localStorage.setItem('ch:forge:compact_hero', String(!v));
+      } catch {}
+      return !v;
+    });
+  };
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
   const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
   const [toast, setToastNow] = useState<{ text: string; undo?: () => unknown } | null>(null);
@@ -640,6 +549,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   };
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
+  const hydrating = deck.cards.length > 0 && (cardsRaw === undefined || (st.total > 0 && st.unknown >= st.total));
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
   const partner = deck.partner ? byKey.get(norm(deck.partner)) : undefined;
@@ -818,7 +728,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
       <main className="dpage forgemain">
         {/* THE OVERHAUL, saved deck: the same hero → strip → toolbar → cards as the commander page. The hero is the loud
             frame (ransom name, one red slash) and holds the match %; the strip holds what the deck costs and what it lacks. */}
-        <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
+        {!compactHero && (
+          <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
           {cmdr?.img && (
             <div className="vcard">
               <CmdrCard
@@ -843,8 +754,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <Pips ci={ci} size={20} />
               {deck.commander && <span>{deck.commander.split(' // ')[0]}</span>}
               <span>{st.total} cards</span>
-              <span>{st.lands} lands</span>
-              {st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
+              {!hydrating && <span>{st.lands} lands</span>}
+              {!hydrating && st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
               <SaltStat names={deck.cards.map((c) => c.name)} />
               <BracketStat call={call} cedh={deck.source === 'cedh'} />
               {deck.commander && <OutsideLinks commander={deck.commander} edhrecPath={`commanders/${slug(deck.commander)}`} />}
@@ -859,12 +770,19 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
                 </small>
               </span>
             </div>
-            <ReadyTiles ready={ready} fit={fit} cardNames={deck.cards.map((c) => c.name)} />
+            {hydrating ? (
+              <p className="small muted" role="status" style={{ margin: '8px 0 0' }}>
+                Loading card data &amp; readiness checks…
+              </p>
+            ) : (
+              <ReadyTiles ready={ready} fit={fit} cardNames={deck.cards.map((c) => c.name)} />
+            )}
           </div>
         </section>
+        )}
 
         {/* The one strip: what the deck costs, what it still lacks, copies short. */}
-        <section className="dstrip" aria-label="Deck status">
+        <section className="dstrip" aria-label="Deck status" style={{ paddingInline: 12 }}>
           <p className="dstatus" role="status">
             {pricesIn && (
               <span className="dcost" title={`${PRICE_METHOD} ${fetchedNote(deck.cards.map((c) => cardOf(c.name)?.priceAt ?? cardOf(c.name)?.at))}`}>
@@ -885,14 +803,73 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <span>every card is yours ({ownDetails.assignedHere} in this deck)</span>
             )}
           </p>
-          <div className="dacts">
+          <div className="dacts" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <ShortAlert items={shortHere} inline currentDeck={deck.name} />
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setBalanceOpen(true))}>
+              BALANCE
+            </button>
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHandOpen(true))}>
+              HAND &amp; ODDS
+            </button>
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setRuleZeroOpen(true))}>
+              RULE ZERO
+            </button>
+            {deck.id && (
+              <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHistoryOpen(true))}>
+                HISTORY
+              </button>
+            )}
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), toggleCompactHero())}>
+              {compactHero ? 'SHOW HEADER' : 'COMPACT HEADER'}
+            </button>
           </div>
         </section>
 
+        {balanceOpen && (
+          <Suspense fallback={null}>
+            <BalanceSheet
+              deck={deck}
+              ctx={swapCtx}
+              candidates={candidates}
+              identity={ci}
+              pinned={pins.in}
+              never={never}
+              recOf={slotInfo}
+              cardOf={anyCard}
+              call={call}
+              aggression={aggression}
+              gameChangers={gc}
+              onToast={setToast}
+              onClose={() => setBalanceOpen(false)}
+            />
+          </Suspense>
+        )}
+
+        {handOpen && (
+          <Suspense fallback={null}>
+            <HandSheet deckName={deck.name} cards={deck.cards} commander={deck.commander} partner={deck.partner} st={st} cardOf={cardOf} onClose={() => setHandOpen(false)} />
+          </Suspense>
+        )}
+        {ruleZeroOpen && (
+          <Suspense fallback={null}>
+            <RuleZeroModal
+              deckName={deck.name}
+              commander={deck.commander}
+              commanderImg={cmdr?.img}
+              ci={ci}
+              ownedPct={sum.pct}
+              st={st}
+              call={call}
+              cedh={deck.source === 'cedh'}
+              onClose={() => setRuleZeroOpen(false)}
+            />
+          </Suspense>
+        )}
+
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
 
-        {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} />}
+        {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} onHistory={() => setHistoryOpen(true)} />}
+        {historyOpen && deck.id && <HistoryDrawer deck={deck} onClose={() => setHistoryOpen(false)} />}
 
         {/* The FORGE bar sits directly above the deck tabs (Guillermo, Nov 15: "bar breaks when you move up"):
             with nothing between them the two pin as one block, and the hero scrolls away behind it. */}
@@ -1195,6 +1172,17 @@ export function Decks(s: Shared) {
   const [dsort, setDsort] = useState<'updated-desc' | 'name-asc' | 'name-desc' | 'match-desc' | 'power-desc' | 'power-asc' | 'cards-desc'>('updated-desc');
   const [dstatus, setDstatus] = useState<'all' | 'ready' | 'in-progress' | 'active'>('all');
   const [dtag, setDtag] = useState<string>('all');
+  const [folderStore, setFolderStore] = useState<DeckFolderStore>(() => loadDeckFolders(s.profile));
+  const [folderFilter, setFolderFilter] = useState<FolderFilter>('all');
+  const [historyDeck, setHistoryDeck] = useState<Deck | null>(null);
+  useEffect(() => {
+    setFolderStore(loadDeckFolders(s.profile));
+    setFolderFilter('all');
+  }, [s.profile]);
+  const updateFolderStore = (next: DeckFolderStore) => {
+    setFolderStore(next);
+    saveDeckFolders(s.profile, next);
+  };
   // Phones (Nov 19): the theme and tag badges on a deck tile are plain labels. They were 18px buttons, too small for a
   // thumb, and the TAGS row above the decks already filters by the same names, so a tap on the tile just opens the deck.
   const [phone, setPhone] = useState(() => typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches);
@@ -1208,7 +1196,7 @@ export function Decks(s: Shared) {
   // DECKS | STATS, the same two faces as Collection's CARDS | ANALYTICS (Guillermo, Nov 19: "make the two sections look
   // cohesive"). The page always opens on the decks, so the stat tiles start out of the way every time, like Collection's.
   // COMPARE (Nov 24) puts two of your decks side by side; it shows from two decks up and saves nothing.
-  const [dtabPick, setDtab] = useState<'decks' | 'stats' | 'compare'>('decks');
+  const [dtabPick, setDtab] = useState<'decks' | 'stats' | 'compare' | 'check'>('decks');
   const dtab = dtabPick === 'compare' && decks.length < 2 ? 'decks' : dtabPick; // a deck deleted down to one: back to DECKS
   // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
   const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
@@ -1237,7 +1225,7 @@ export function Decks(s: Shared) {
   const deckThemeNames = (d: Deck) => themesOf(d).map((t) => t.label);
   const allTags = [...new Set(decks.flatMap((d) => [...(d.tags ?? []), ...deckThemeNames(d)]))].filter(Boolean);
 
-  const filteredDecks = decks
+  const filteredDecks = filterDecksByFolder(decks, folderStore, folderFilter)
     .filter((d) => {
       if (dq.trim()) {
         const q = dq.toLowerCase().trim();
@@ -1302,8 +1290,8 @@ export function Decks(s: Shared) {
   const dtabrow = (
     <>
       <div className="ctabset" role="tablist" aria-label="My decks view">
-        {([['decks', 'DECKS'], ['stats', 'STATS'], ['compare', 'COMPARE']] as const)
-          .filter(([v]) => v === 'decks' || decks.length > (v === 'compare' ? 1 : 0))
+        {([['decks', 'DECKS'], ['stats', 'STATS'], ['compare', 'COMPARE'], ['check', 'CHECK LIST']] as const)
+          .filter(([v]) => v === 'decks' || v === 'check' || decks.length > (v === 'compare' ? 1 : 0))
           .map(([v, label]) => (
             <button
               key={v}
@@ -1321,6 +1309,9 @@ export function Decks(s: Shared) {
           ))}
       </div>
       <div className="ctab-acts decksactions">
+        <button type="button" className="slip-btn deck" onClick={() => (haptic('open'), openDiscoverSub('guided'))} title="Build step-by-step in Guided Deckbuilder + Tabletop">
+          + GUIDED
+        </button>
         <button type="button" className="slip-btn deck" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
           + NEW DECK
         </button>
@@ -1381,6 +1372,13 @@ export function Decks(s: Shared) {
           </div>
         )}
         {dtab === 'compare' && decks.length > 1 && <DeckCompare decks={decks} priced={priced} gc={gcAll} shareById={shareById} />}
+        {dtab === 'check' && (
+          <div id="dpane-check" role="tabpanel" aria-labelledby="dtab-check">
+            <Suspense fallback={null}>
+              <PasteCheck mine={s.mine} other={s.other} binderName={s.binderName} otherName={s.otherName} />
+            </Suspense>
+          </div>
+        )}
         {dtab === 'decks' && (
         <>
         {/* Decks Workbench Toolbar (ManaBox-style, Nov 14): row 1 is the search and the sort, row 2 one sliding row of
@@ -1454,7 +1452,28 @@ export function Decks(s: Shared) {
             )}
           </div>
         </div>
-        {menuDeck && listMenu && <DeckMenu deck={menuDeck} at={listMenu.at} onClose={() => setListMenu(null)} onOpen={(id) => (setListMenu(null), setOpen(id))} />}
+        {decks.length > 0 && (
+          <DeckFolderBar
+            decks={decks}
+            store={folderStore}
+            active={folderFilter}
+            onChangeStore={updateFolderStore}
+            onSelect={setFolderFilter}
+          />
+        )}
+        {menuDeck && listMenu && (
+          <DeckMenu
+            deck={menuDeck}
+            at={listMenu.at}
+            onClose={() => setListMenu(null)}
+            onOpen={(id) => (setListMenu(null), setOpen(id))}
+            onHistory={() => setHistoryDeck(menuDeck)}
+            folders={folderStore.folders}
+            currentFolder={folderOfDeck(folderStore, menuDeck.id)}
+            onFolderChange={(folder) => menuDeck.id && updateFolderStore(assignDeckFolder(folderStore, menuDeck.id, folder))}
+          />
+        )}
+        {historyDeck && historyDeck.id && <HistoryDrawer deck={historyDeck} onClose={() => setHistoryDeck(null)} />}
         <ul className="dgrid cgrid" data-zoom={dzoom} id="dpane-decks" role="tabpanel" aria-labelledby="dtab-decks">
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
