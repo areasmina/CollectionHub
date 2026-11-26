@@ -52,4 +52,42 @@
   .ctabset .ctab {
     min-height: 44px;
   }
+  .pillnav .pjump {
+    position: relative;
+  }
+  .pillnav .pjump::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    min-width: 100%;
+    min-height: 100%;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.pillnav.collapsed .pjump {
+  display: none !important;
+}
+.pillnav .pjump {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--u-text);
+  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: background 0.14s, transform 0.14s;
+}
+.pillnav .pjump:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.06);
+}
+.pillnav:is(.dock-left, .dock-right) .pjump {
+  width: 30px !important;
+  height: 30px !important;
+  margin: 0 auto !important;
 }

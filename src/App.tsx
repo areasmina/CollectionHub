@@ -453,7 +453,7 @@ export default function App() {
           </div>
           <button
             type="button"
-            className="pback"
+            className="pjump"
             aria-label="Quick Jump (Ctrl+K)"
             title="Quick Jump (Ctrl+K / Cmd+K)"
             onClick={(e) => {

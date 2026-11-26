@@ -5713,8 +5713,7 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
    Cohesive composition across CardMenu, DeckMenu, and BinderMenu
    ========================================================================== */
 .cardmenu,
-.deckmenu,
-.bmenu {
+.deckmenu {
   position: fixed !important;
   z-index: 9999 !important;
   width: min(340px, calc(100vw - 24px)) !important;
