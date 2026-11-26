@@ -58,7 +58,7 @@ describe('analyse', () => {
   });
 
   it('says what sits in a deck and what is idle', () => {
-    expect(a.inDecks).toEqual({ used: 3, idle: 2, decks: 1 }); // Sol Ring, Forest and the commander
+    expect(a.inDecks).toMatchObject({ used: 3, idle: 2, decks: 1 }); // Sol Ring, Forest and the commander
   });
 
   it('has no history until a snapshot exists', () => {
@@ -124,5 +124,11 @@ describe('the full analysis page (Phase 2, Nov 23): at a glance and rarity', () 
     const none = analyse([entry('x')], new Map([['x', card('x', {})]]), []);
     expect(none.dearest).toBeNull();
     expect(none.average).toBe(0);
+  });
+
+  it('computes binder utilization (usedUsd vs spareUsd) and topSpare cards outside active decks', () => {
+    expect(a.inDecks.usedUsd).toBeGreaterThan(0);
+    expect(a.inDecks.spareUsd).toBeGreaterThanOrEqual(20); // Titan ($20) is idle
+    expect(a.topSpare[0]).toMatchObject({ name: 'titan', spare: 1, usd: 20 });
   });
 });

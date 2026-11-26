@@ -1,5 +1,6 @@
 import { db, type Card, type Deck, type Entry } from './db';
 import { groupOf } from './deckstats';
+import { activeNeed } from './folders';
 import { norm } from './names';
 import { finishUsd } from './prices';
 
@@ -33,7 +34,8 @@ export interface Analytics {
   rarity: Slice[]; // common, uncommon, rare, mythic, then anything else (special, bonus, unknown)
   dearest: { name: string; usd: number; foil: boolean } | null; // the most valuable single copy, at its finish
   average: number; // worth per copy, USD
-  inDecks: { used: number; idle: number; decks: number };
+  inDecks: { used: number; idle: number; decks: number; usedUsd: number; spareUsd: number; spareCopies: number };
+  topSpare: { name: string; spare: number; unitUsd: number; usd: number }[];
   history: ValuePoint[];
 }
 
@@ -176,6 +178,33 @@ export function analyse(
   const keys = new Map<string, boolean>();
   for (const { e, c } of rows) keys.set(c?.key ?? norm(e.name), wanted.has(c?.key ?? norm(e.name)));
   const used = [...keys.values()].filter(Boolean).length;
+  const need = activeNeed(decks);
+  const byName = new Map<string, { name: string; copies: number; usd: number }>();
+  for (const { e, c, usd: rowUsd } of rows) {
+    const name = c?.name ?? e.name;
+    const k = norm(name);
+    const cur = byName.get(k) ?? { name, copies: 0, usd: 0 };
+    cur.copies += e.qty;
+    cur.usd += rowUsd;
+    byName.set(k, cur);
+  }
+  let usedUsd = 0;
+  let spareUsd = 0;
+  let spareCopies = 0;
+  const topSpare: Analytics['topSpare'] = [];
+  for (const [k, v] of byName) {
+    const inActive = Math.min(v.copies, need.get(k) ?? 0);
+    const spare = Math.max(0, v.copies - inActive);
+    const unitUsd = v.copies > 0 ? v.usd / v.copies : 0;
+    usedUsd += inActive * unitUsd;
+    spareUsd += spare * unitUsd;
+    spareCopies += spare;
+    if (spare > 0 && unitUsd > 0) {
+      topSpare.push({ name: v.name, spare, unitUsd, usd: Math.round(spare * unitUsd * 100) / 100 });
+    }
+  }
+  topSpare.sort((a, b) => b.usd - a.usd || a.name.localeCompare(b.name));
+
   const copies = entries.reduce((n, e) => n + e.qty, 0);
   const usd = Math.round(rows.reduce((n, r) => n + r.usd, 0) * 100) / 100;
   return {
@@ -190,7 +219,15 @@ export function analyse(
     rarity: raritySlices(rows),
     dearest: dearestCopy(rows),
     average: copies ? Math.round((usd / copies) * 100) / 100 : 0,
-    inDecks: { used, idle: keys.size - used, decks: decks.length },
+    inDecks: {
+      used,
+      idle: keys.size - used,
+      decks: decks.length,
+      usedUsd: Math.round(usedUsd * 100) / 100,
+      spareUsd: Math.round(spareUsd * 100) / 100,
+      spareCopies,
+    },
+    topSpare: topSpare.slice(0, 6),
     history: valueHistory(entries, snaps),
   };
 }

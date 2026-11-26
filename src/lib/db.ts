@@ -36,6 +36,9 @@ export interface Entry {
   set?: string;
   cn?: string;
   foil?: boolean;
+  finish?: 'normal' | 'foil' | 'etched';
+  condition?: string;
+  lang?: string;
   added?: number; // first seen (ManaBox 'Added', else import time), ms
   list?: string; // custom list tag inside binder (e.g. 'Trade', 'Commanders')
 }

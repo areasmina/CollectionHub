@@ -99,4 +99,19 @@ describe('a whole collection in one file', () => {
     expect(rows[99_999]).toMatchObject({ name: 'Card, Number 99999', id: id(99_999), set: 'tst', cn: '100000' });
     expect(ms).toBeLessThan(5000); // a slow CI machine still does this in well under a second or two
   });
+
+  it('preserves per-entry condition, language, and etched finish without merging distinct finishes/conditions', () => {
+    const csv = [
+      'Name,Quantity,Set code,Collector number,Foil,Condition,Language',
+      'Sol Ring,1,cmm,410,etched,near_mint,en',
+      'Sol Ring,1,cmm,410,foil,lightly_played,ja',
+      'Sol Ring,1,cmm,410,etched,near_mint,en',
+    ].join('\n');
+    const p = parseImport(csv);
+    expect(p.errors).toEqual([]);
+    const merged = mergeRows(p.rows);
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toMatchObject({ name: 'Sol Ring', qty: 2, foil: true, finish: 'etched', condition: 'near_mint', lang: 'en' });
+    expect(merged[1]).toMatchObject({ name: 'Sol Ring', qty: 1, foil: true, condition: 'lightly_played', lang: 'ja' });
+  });
 });

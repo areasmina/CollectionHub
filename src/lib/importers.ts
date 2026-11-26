@@ -5,6 +5,9 @@ export interface Row {
   cn?: string;
   id?: string;
   foil?: boolean;
+  finish?: 'normal' | 'foil' | 'etched';
+  condition?: string;
+  lang?: string;
   added?: string; // date the card entered the collection (ManaBox 'Added')
   section?: string;
   edge?: boolean; // alone in a short block at the very start or end of a text list (where exports put the commander)
@@ -48,7 +51,9 @@ const COLS = {
   set: ['set code', 'set', 'edition code', 'edition', 'set_code'],
   cn: ['collector number', 'card number', 'number', 'collector_number', 'cn'],
   id: ['scryfall id', 'scryfall_id', 'scryfallid'],
-  foil: ['foil', 'printing'],
+  foil: ['foil', 'printing', 'finish'],
+  condition: ['condition', 'card condition'],
+  lang: ['language', 'lang'],
   added: ['added', 'date added', 'added at'],
 };
 const col = (header: string[], names: string[]) => header.findIndex((h) => names.includes(h.trim().toLowerCase()));
@@ -69,7 +74,21 @@ function parseCsvImport(text: string, delim: string): Parsed | null {
     if (!name) return errors.push({ line, text: r.join(delim), reason: 'No card name' });
     if (!Number.isInteger(qty) || qty < 1) return errors.push({ line, text: r.join(delim), reason: `Bad quantity "${qtyText}"` });
     const get = (k: number) => (k >= 0 && r[k]?.trim()) || undefined;
-    rows.push({ name, qty, set: get(c.set), cn: get(c.cn), id: get(c.id), foil: c.foil >= 0 && !NOT_FOIL.includes((r[c.foil] ?? '').trim().toLowerCase()), added: get(c.added) });
+    const rawFoil = c.foil >= 0 ? (r[c.foil] ?? '').trim().toLowerCase() : '';
+    const finish: Row['finish'] = rawFoil === 'etched' ? 'etched' : c.foil >= 0 && !NOT_FOIL.includes(rawFoil) ? 'foil' : 'normal';
+    const foil = finish === 'foil' || finish === 'etched';
+    rows.push({
+      name,
+      qty,
+      set: get(c.set),
+      cn: get(c.cn),
+      id: get(c.id),
+      foil,
+      ...(finish === 'etched' ? { finish } : {}),
+      ...(get(c.condition) ? { condition: get(c.condition) } : {}),
+      ...(get(c.lang) ? { lang: get(c.lang) } : {}),
+      added: get(c.added),
+    });
   });
   const manabox = header.some((h) => h.trim().toLowerCase() === 'manabox id');
   return { format: manabox ? 'manabox' : 'csv', rows, errors };
@@ -116,13 +135,14 @@ function parseText(text: string): Parsed {
     if (cat && /commander/i.test(cat[1])) rowSection = 'Commander';
     if (/\*CMDR\*/i.test(s)) rowSection = 'Commander'; // Moxfield's commander mark
     s = s.replace(/\*CMDR\*/gi, '');
-    const foil = /\*[FE]\*/.test(s);
+    const etched = /\*E\*/.test(s);
+    const foil = etched || /\*F\*/.test(s);
     s = s.replace(/\^[^^]*\^/g, '').replace(/\[[^\]]*\]/g, '').replace(/\*[FE]\*/g, '').trim();
     const sc = /\s+\(([A-Za-z0-9]{2,6})\)(?:\s+(\S+))?$/.exec(s);
     if (sc) s = s.slice(0, sc.index).trim();
     if (!s) return errors.push({ line, text: raw, reason: 'No card name' });
     if (qty < 1) return errors.push({ line, text: raw, reason: 'Quantity must be at least 1' });
-    rows.push({ name: s, qty, set: sc?.[1], cn: sc?.[2], foil, section: rowSection });
+    rows.push({ name: s, qty, set: sc?.[1], cn: sc?.[2], foil, ...(etched ? { finish: 'etched' as const } : {}), section: rowSection });
     blockOf.push(block);
   });
   // A block of 1–2 single cards at the very start or end, set apart by a blank line, is where Moxfield / MTGO exports
@@ -150,7 +170,7 @@ export function parseImport(input: string): Parsed {
 export function mergeRows(rows: Row[]): Row[] {
   const m = new Map<string, Row>();
   for (const r of rows) {
-    const k = [r.id ?? r.name.toLowerCase(), r.set ?? '', r.cn ?? '', r.foil ? 'f' : ''].join('|');
+    const k = [r.id ?? r.name.toLowerCase(), r.set ?? '', r.cn ?? '', r.finish ?? (r.foil ? 'f' : ''), r.condition ?? '', r.lang ?? ''].join('|');
     const prev = m.get(k);
     if (prev) prev.qty += r.qty;
     else m.set(k, { ...r });
