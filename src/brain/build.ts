@@ -5,6 +5,7 @@ import { norm } from '../lib/names';
 import type { SubCard } from '../lib/subs';
 import { inIdentity } from './identity';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from './score';
+import { synergyParts, type DeckSynergy, type SynPart } from './synergy';
 import { landColours } from './validate';
 import type { Aggression } from './win';
 import { STACK_WEIGHTS, themeRoleOf } from './themes';
@@ -46,16 +47,29 @@ export interface Built {
   refused: { name: string; why: string }[];
 }
 
+export const RESTRICTED_MANA = /spend this mana only|activate only if/i;
+
 /**
- * How well an owned land fits the deck's mana (Karsten's colour math, Deck Wizard owned_duals): `made` = how many of the
- * deck's colours it makes, `colour` = 0.1 per colour weighted by how much the deck asks for it (`demand` 0–1 per
- * colour), `tapped` = -0.05 when it always enters tapped. Shared by the builder and the guided mana base step.
+ * How well an owned land fits the deck's mana (Karsten's colour math, Deck Wizard owned_duals + restricted_mana):
+ * `made` = how many of the deck's colours it makes, `colour` = 0.1 per colour weighted by how much the deck asks
+ * for it (`demand` 0–1 per colour), `tapped` = -0.05 when it always enters tapped, `restricted` = -0.06 when
+ * coloured mana has conditional strings attached (unless matching a tribal synergy), `synergy` = capped engine synergy.
  */
-export function landFit(meta: Pick<Card, 'type' | 'text'>, colours: string[], demand: (colour: string) => number) {
+export function landFit(
+  meta: Pick<Card, 'type' | 'text'>,
+  colours: string[],
+  demand: (colour: string) => number,
+  syn?: DeckSynergy,
+  commanderLabel?: string,
+): { made: number; cols: string[]; colour: number; tapped: number; restricted: number; synergy: number; synParts: SynPart[] } {
   const cols = [...landColours(meta)].filter((x) => colours.includes(x));
   const colour = 0.1 * cols.reduce((s, x) => s + (0.75 + 0.5 * demand(x)), 0);
   const tapped = /enters (the battlefield )?tapped/i.test(meta.text) && !/unless/i.test(meta.text) ? -0.05 : 0;
-  return { made: cols.length, cols, colour, tapped };
+  const synParts = syn ? synergyParts(meta, syn, commanderLabel) : [];
+  const synergy = Math.min(0.14, synParts.reduce((s, p) => s + p.value, 0));
+  const tribalMatch = synParts.some((p) => /type|tribe|creatures/.test(p.label));
+  const restricted = cols.length > 0 && RESTRICTED_MANA.test(meta.text ?? '') && !tribalMatch ? -0.06 : 0;
+  return { made: cols.length, cols, colour, tapped, restricted, synergy, synParts };
 }
 
 export function buildDeck(o: {
@@ -172,13 +186,15 @@ export function buildDeck(o: {
   const maxDemand = Math.max(1, ...colours.map((x) => pips[x] + 0.5 * multiPip[x]));
   const landSlots = slots - (deck.length - lead.length);
   const nonbasicMax = Math.max(0, landSlots - (BASICS_MIN[colours.length] ?? 0));
+  const finalSyn = deckNeeds(ctx).synergy;
+  const cmdLabel = o.commander.split(',')[0];
   const ranked = pool
     .filter((c) => isLand(c.meta.type) && !has.has(norm(c.name)))
     .map((c) => {
-      const f = landFit(c.meta, colours, (x) => (pips[x] + 0.5 * multiPip[x]) / maxDemand);
-      return { c, made: f.made, rank: (c.incl ?? 0) + f.colour + f.tapped };
+      const f = landFit(c.meta, colours, (x) => (pips[x] + 0.5 * multiPip[x]) / maxDemand, finalSyn, cmdLabel);
+      return { c, made: f.made, synergy: f.synergy, rank: (c.incl ?? 0) + f.colour + f.tapped + f.restricted + f.synergy };
     })
-    .filter((x) => x.made > 0 || (x.c.incl ?? 0) > 0)
+    .filter((x) => x.made > 0 || (x.c.incl ?? 0) > 0 || x.synergy > 0)
     .sort((a, b) => b.rank - a.rank || a.c.name.localeCompare(b.c.name))
     .map((x) => x.c.name);
   const lands: string[] = [];

@@ -264,6 +264,7 @@ export function DeckView({
   const recInfo = recInfoOf(sugg?.lists ?? [], norm, (c) => binderCard.get(norm(c.name)) ?? byKey.get(norm(c.name)) ?? edhCards.get(norm(c.name)));
   const listed = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) === 'owned' && !never.has(norm(c.name)));
   const candidates = binderCandidates(listed, binder, ci, never).filter((c) => !inDeck.has(norm(c.name)));
+  const unownedCandidates = [...recInfo.values()].filter((c) => statusOf(c.name, s.mine) !== 'owned' && !never.has(norm(c.name)) && !inDeck.has(norm(c.name)));
   const slotInfo = (name: string): SubCard => {
     const card = cardOf(name);
     return { ...recInfo.get(norm(name)), name, type: card?.type, cmc: card?.cmc };
@@ -442,11 +443,13 @@ export function DeckView({
               deck={deck}
               ctx={swapCtx}
               candidates={candidates}
+              unownedCandidates={unownedCandidates}
               identity={ci}
               pinned={pins.in}
               never={never}
               recOf={slotInfo}
               cardOf={anyCard}
+              priceOf={(n) => toCad(anyCard(n)?.usd)}
               call={call}
               aggression={aggression}
               gameChangers={gc}

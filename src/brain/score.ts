@@ -1,3 +1,4 @@
+import { BASICS } from '../lib/compare';
 import { edhSignal, type SubCard } from '../lib/subs';
 import { roleOf, deckStats, isLand, EXTRA_TURN, LANDS_BY_BRACKET, MLD, TARGETS, type Role } from '../lib/deckstats';
 import { norm } from '../lib/names';
@@ -177,8 +178,22 @@ export function scoreCard(c: SubCard, ctx: DeckContext, needs: Needs = deckNeeds
   }
 
   // What the card does with the commander and the deck's own engines (brain/synergy.ts): works with no EDHREC numbers.
-  if (card && !(type && isLand(type)))
-    for (const sp of synergyParts(card, needs.synergy, ctx.commander?.split(',')[0] ?? 'your commander')) parts.push({ label: sp.label, value: sp.value, source: 'card text' });
+  const cmdLabel = ctx.commander?.split(',')[0] ?? 'your commander';
+  if (card && !(type && isLand(type))) {
+    for (const sp of synergyParts(card, needs.synergy, cmdLabel)) parts.push({ label: sp.label, value: sp.value, source: 'card text' });
+  } else if (card && type && isLand(type) && !BASICS.has(norm(c.name))) {
+    const [lo] = LANDS_BY_BRACKET[ctx.bracket] ?? TARGETS.lands;
+    const wantNow = Math.round(lo * Math.min(1, needs.stats.total / 100));
+    if (needs.stats.lands < wantNow) {
+      let left = 0.12;
+      for (const sp of synergyParts(card, needs.synergy, cmdLabel)) {
+        const v = Math.min(sp.value, left);
+        if (v <= 0.005) break;
+        parts.push({ label: sp.label, value: v, source: 'card text' });
+        left -= v;
+      }
+    }
+  }
 
   // Copies: a card you own, all of whose copies other active decks already use, would leave one of the decks short.
   const tk = ctx.taken?.(c.name);

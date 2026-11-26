@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { landFit } from './build';
 import { deckSynergy, profileOf, synergyParts, SYN_CAP } from './synergy';
 import { scoreCard, suggestCards, type DeckContext } from './score';
 
@@ -82,5 +83,46 @@ describe('copies: a card whose every copy sits in another deck', () => {
     const ctx: DeckContext = { ...ctxOf('Discard Lord'), taken: (n) => (n === 'Mind Rot' ? { own: 1, used: 1, by: ['Atraxa'] } : undefined) };
     const order = suggestCards([{ name: 'Mind Rot' }, { name: 'Vanilla Bear' }], ctx).map((s) => s.name);
     expect(order[0]).toBe('Vanilla Bear');
+  });
+});
+
+describe('Brain v2: trigger doublers, synergy lands, and restricted-mana guard', () => {
+  it('recognizes trigger doublers when the deck/commander supports the matching engine', () => {
+    const etbCommander = C('Legendary Creature — Merfolk Wizard', 'When Etb Commander enters, draw two cards.');
+    const doubler = C('Artifact', 'If an artifact or creature entering causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.');
+    const deck = [
+      { name: 'Etb Commander', qty: 1 },
+      { name: 'Etb Ally', qty: 6 },
+    ];
+    const localCardOf = (n: string) =>
+      n === 'Etb Commander' ? etbCommander : n === 'Etb Ally' ? C('Creature — Elf', 'When Etb Ally enters, create a 1/1 token.') : cards[n];
+    const syn = deckSynergy(deck, localCardOf, 'Etb Commander');
+    const parts = synergyParts(doubler, syn, 'Etb Commander');
+    expect(parts.some((p) => p.label.includes('enter-the-battlefield triggers'))).toBe(true);
+
+    // Silent when deck has no ETB triggers at all
+    const vanillaSyn = deckSynergy([{ name: 'Vanilla Bear', qty: 1 }], cardOf, 'Vanilla Bear');
+    expect(synergyParts(doubler, vanillaSyn, 'Vanilla Bear')).toEqual([]);
+  });
+
+  it('penalizes restricted coloured mana unless tribal synergy matches, and rewards utility land synergy', () => {
+    const restricted = C('Land', '{T}: Add {C}. {T}: Add one mana of any color. Spend this mana only to cast a Goblin spell.');
+    const clean = C('Land', '{T}: Add {U} or {B}.');
+    const synNonTribal = deckSynergy([{ name: 'Discard Lord', qty: 1 }, { name: 'Sac Outlet', qty: 5 }], cardOf, 'Discard Lord');
+    const nonTribalFit = landFit(restricted, ['U', 'B'], () => 0.5, synNonTribal, 'Discard Lord');
+    expect(nonTribalFit.restricted).toBe(-0.06);
+    expect(landFit(clean, ['U', 'B'], () => 0.5, synNonTribal, 'Discard Lord').restricted).toBe(0);
+
+    // Tribal commander excuses the creature-type restriction
+    const goblinBoss = C('Legendary Creature — Goblin', 'Goblin creatures you control get +1/+1.');
+    const synTribal = deckSynergy([{ name: 'Goblin Boss', qty: 1 }], () => goblinBoss, 'Goblin Boss');
+    expect(landFit(restricted, ['R'], () => 0.5, synTribal, 'Goblin Boss').restricted).toBe(0);
+
+    // Utility land with sacrifice synergy gets a capped synergy boost
+    const synWithPayoffs = deckSynergy([{ name: 'Discard Lord', qty: 1 }, { name: 'Blood Artist', qty: 4 }], cardOf, 'Discard Lord');
+    const phyTower = C('Land', '{T}, Sacrifice a creature: Add {B}{B}.');
+    const fitTower = landFit(phyTower, ['B'], () => 0.5, synWithPayoffs, 'Discard Lord');
+    expect(fitTower.synergy).toBeGreaterThan(0);
+    expect(fitTower.synergy).toBeLessThanOrEqual(0.14);
   });
 });
