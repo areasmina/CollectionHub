@@ -183,9 +183,96 @@
   text-align: left;
 }
 
-.handCard[data-bottoming='true']:hover {
+.handCard[data-bottoming='true']:hover,
+.handCard[data-playable='true']:hover {
   border-color: var(--mo-red);
   transform: translateY(-2px);
+}
+
+.handCard[data-playable='true'] {
+  border-color: var(--mo-ok);
+}
+
+.statusLine {
+  font-family: var(--mo-mono);
+  font-size: 11.5px;
+  color: var(--mo-muted);
+}
+
+.boardBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--mo-bg);
+  border: 1px solid var(--mo-line);
+  border-radius: var(--mo-r-sm);
+}
+
+.zoneRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoneLbl {
+  min-width: 96px;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  color: var(--mo-subtle);
+  letter-spacing: 0.06em;
+}
+
+.zoneItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.permChip {
+  min-height: 28px;
+  padding: 3px 9px;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+  background: var(--mo-surface-2);
+  color: var(--mo-text);
+  font-family: var(--mo-mono);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.permChip[data-playable='true'] {
+  border-color: var(--mo-ok);
+  color: var(--mo-ok);
+}
+
+.permChip[data-tapped='true'] {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.permChip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.czReturn {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--mo-line);
+  border-radius: var(--mo-r-sm);
+  background: transparent;
+  color: var(--mo-muted);
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  cursor: pointer;
 }
 
 .handImg {
