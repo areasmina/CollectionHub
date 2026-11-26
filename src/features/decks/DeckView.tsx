@@ -399,7 +399,7 @@ export function DeckView({
           </section>
         )}
 
-        <section className="dstrip" aria-label="Deck status" style={{ paddingInline: 12 }}>
+        <section className="dstrip" aria-label="Deck status">
           <p className="dstatus" role="status">
             {(failedRules.length > 0 || invalidPair) && (
               <span
@@ -428,8 +428,8 @@ export function DeckView({
               <span>every card is yours ({ownDetails.assignedHere} in this deck)</span>
             )}
           </p>
-          <div className="dacts" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <ShortAlert items={shortHere} inline currentDeck={deck.name} />
+          <ShortAlert items={shortHere} inline currentDeck={deck.name} />
+          <div className="dacts">
             <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setBalanceOpen(true))}>
               BALANCE
             </button>

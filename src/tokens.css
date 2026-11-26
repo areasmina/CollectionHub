@@ -38,8 +38,8 @@
   --mo-s3: 12px;
   --mo-s4: 16px;
   --mo-s5: 24px;
-  --mo-r-sm: 4px;
-  --mo-r-md: 8px;
+  --mo-r-sm: 2px;
+  --mo-r-md: 2px;
 
   /* Layers */
   --mo-z-sticky: 20;
@@ -92,21 +92,24 @@
   margin: 0 auto !important;
 }
 
-/* Discover mode tabs: Midnight Override zine tab bar flush with search bar */
+/* Discover mode tabs: Minimalist sleek punk-zine hairline bar (matches .fcube) */
 .disc-tabs {
   display: flex;
-  align-items: center;
-  padding: 6px 8px;
-  margin: 8px 0 0;
-  background: #0a0a0a;
-  border: 1px solid #23232a;
-  border-bottom: 0;
-  border-radius: 6px 6px 0 0;
+  align-items: stretch;
+  padding: 0;
+  margin: 10px 0 0;
+  background: #0a0a0d;
+  border: 1px solid #282830;
+  border-bottom: 2px solid var(--mo-red);
+  border-radius: 0;
+}
+.disc-tabs:has(+ .dfind) {
+  border-bottom: 1px solid #282830;
 }
 .disc-tabs .ctabset {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 0;
   width: 100%;
   min-width: 0;
 }
@@ -115,47 +118,132 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  min-height: 40px;
   padding: 0 12px;
-  background: #0d0d11;
-  border: 2px solid #2c2c34;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid #24242c;
+  border-radius: 0;
   color: var(--mo-muted);
   font: 400 15px/1 var(--mo-display);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   white-space: nowrap;
   cursor: pointer;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  transform: none;
+  box-shadow: none;
+  transition: color 0.12s, background 0.12s;
 }
-.disc-tabs .ctab + .ctab {
-  transform: rotate(0.5deg);
+.disc-tabs .ctab:last-child {
+  border-right: 0;
 }
 .disc-tabs .ctab:hover,
 .disc-tabs .ctab:focus-visible {
-  color: #fff;
-  border-color: var(--mo-red);
+  color: #ffffff;
+  background: #15151c;
 }
 .disc-tabs .ctab.on {
-  background: #fff;
-  border-color: #fff;
-  color: #0a0a0a;
-  box-shadow: 3px 3px 0 #000;
-  transform: rotate(-0.4deg);
+  background: var(--mo-red);
+  color: #ffffff;
+  transform: none;
+  box-shadow: none;
 }
 .disc-tabs + .dfind > .dtools.tbar {
   margin-top: 0 !important;
-  border-top: 1px solid #23232a !important;
-  border-radius: 0 0 6px 6px !important;
+  border-top: 0 !important;
+  border-radius: 0 !important;
 }
 @media (max-width: 700px) {
   .disc-tabs {
-    padding: 4px;
     margin: 6px 0 0;
   }
-  .disc-tabs .ctabset {
-    gap: 4px;
-  }
   .disc-tabs .ctab {
+    min-height: 44px;
     padding: 0 6px;
     font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* Saved Deck (.forgemain): clear top-docked Dynamic Island when hero is hidden (SHOW HEADER mode) */
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has(> .vhero)) {
+  padding-top: 52px !important;
+}
+
+/* Saved Deck (.forgemain) status & utility strip: sleek minimalist hairline bar */
+.forgemain > .dstrip {
+  background: transparent;
+  border: 0;
+  padding: 6px 0 8px !important;
+  height: auto !important;
+  min-height: 0;
+  gap: 8px 12px !important;
+  align-items: center;
+}
+.forgemain > .dstrip > .dstatus {
+  font: 400 12px/1.35 var(--mo-mono);
+  color: var(--mo-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.forgemain > .dstrip > .dacts {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  background: #0c0c10;
+  border: 1px solid #282830;
+}
+.forgemain > .dstrip > .dacts > .u-btn {
+  min-height: 36px;
+  padding: 0 11px !important;
+  border: 0 !important;
+  border-right: 1px solid #24242c !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #d4d4de !important;
+  font: 400 13px/1 var(--mo-display) !important;
+  letter-spacing: 0.05em !important;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.forgemain > .dstrip > .dacts > .u-btn:last-child {
+  border-right: 0 !important;
+}
+.forgemain > .dstrip > .dacts > .u-btn:hover,
+.forgemain > .dstrip > .dacts > .u-btn:focus-visible {
+  background: #181820 !important;
+  color: #ffffff !important;
+}
+@media (max-width: 700px) {
+  .forgemain > .dstrip {
+    padding: 4px 0 6px !important;
+    gap: 6px !important;
+  }
+  .forgemain > .dstrip > .dstatus {
+    flex: 1 1 100%;
+    order: 0 !important;
+    font-size: 11.5px;
+    padding: 0 2px;
+  }
+  .forgemain > .dstrip > .dacts {
+    order: 1 !important;
+    width: 100% !important;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .forgemain > .dstrip > .dacts::-webkit-scrollbar {
+    display: none;
+  }
+  .forgemain > .dstrip > .dacts > .u-btn {
+    flex: 1 0 auto !important;
+    min-height: 44px !important;
+    min-width: 44px !important;
+    padding: 0 7px !important;
+    font-size: 12px !important;
+    letter-spacing: 0.04em !important;
+    justify-content: center;
   }
 }

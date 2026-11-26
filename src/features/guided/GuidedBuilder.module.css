@@ -151,9 +151,9 @@
 }
 
 .stepBtnActive {
-  border-color: var(--mo-hazard);
-  background: var(--mo-hazard-soft);
-  color: var(--mo-text);
+  border-color: var(--mo-red);
+  background: var(--mo-red);
+  color: #ffffff;
 }
 
 .stepNum {
@@ -168,8 +168,8 @@
 }
 
 .stepBtnActive .stepNum {
-  background: var(--mo-hazard);
-  color: var(--mo-ink);
+  background: #0a0a0a;
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -451,7 +451,6 @@
   color: var(--mo-text);
   font-size: 12px;
   cursor: pointer;
-  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.45);
 }
 
 .pileCard + .pileCard {
@@ -530,4 +529,37 @@
   flex-wrap: wrap;
   gap: var(--mo-s2);
   align-items: center;
+}
+
+@media (max-width: 700px) {
+  .topBar,
+  .pane {
+    padding: var(--mo-s2) var(--mo-s3);
+  }
+  .stepper {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .stepper::-webkit-scrollbar {
+    display: none;
+  }
+  .stepBtn {
+    flex: 0 0 auto;
+    min-height: 44px;
+  }
+  .segBtn,
+  .btn,
+  .input {
+    min-height: 44px;
+  }
+  .miniBtn {
+    min-width: 38px;
+    min-height: 38px;
+  }
+  .pilesGrid {
+    grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+    gap: var(--mo-s2);
+  }
 }
