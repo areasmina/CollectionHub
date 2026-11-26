@@ -1,5 +1,6 @@
 // "Midnight Override" zine kit: ransom titles, marker doodles, page decor, pips (design/midnight-override-spec.md).
 import { memo, useEffect, useMemo, useRef } from 'react';
+import { BrandMark } from './BrandMark';
 
 const frac = (x: number) => x - Math.floor(x);
 
@@ -620,28 +621,13 @@ export function ManaIcon({ c }: { c: string }) {
   );
 }
 
-/** Header logo: sketchy cream wizard hat + DECKMAGE (one word) in xeroxed cream cut-out tiles with black letters (owner's logo style). */
+/** Header logo: crisp dual-card BrandMark + condensed DECKMAGE wordmark. */
 export function Logo() {
-  const tile = (ch: string, i: number) => {
-    const r = Math.sin(i * 12.9898 + 4.1) * 43758.5453;
-    const f = r - Math.floor(r);
-    return (
-      <span key={i} className="lt" style={{ transform: `rotate(${(f * 7 - 3.5).toFixed(1)}deg) translateY(${Math.round(f * 4 - 2)}px)` }}>
-        {ch}
-      </span>
-    );
-  };
   return (
     <span className="brandmark">
-      <svg className="hat" width="40" height="34" viewBox="0 0 40 34" aria-hidden="true" fill="none" stroke="#efe6d2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 27 C14 24 28 24 36 27 C30 30 12 30 6 27Z" strokeWidth="2.2" />
-        <path d="M11 26 C13 18 15 10 23 4 C21 9 24 13 27 16 C25 17 26 21 29 26" strokeWidth="2.2" />
-        <path d="M23 4 C27 3 29 6 29 9" strokeWidth="2" />
-        <path d="M14 21 l2 -1 M18 15 l1.5 -1 M21 22 l2 -0.5 M17 24 l1 -1" strokeWidth="1.8" />
-        <path d="M2 12 l5 -1.5 M1 17 l5 0 M3 22 l4 -1.5" strokeWidth="1.8" />
-      </svg>
-      <span className="word xerox" aria-hidden="true">
-        {'DECKMAGE'.split('').map((c, i) => tile(c, i))}
+      <BrandMark size={28} />
+      <span className="word brandword" aria-hidden="true">
+        DECK<span className="accent">MAGE</span>
       </span>
     </span>
   );

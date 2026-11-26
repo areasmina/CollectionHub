@@ -2,6 +2,7 @@ import { haptic } from './lib/haptics';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CardSpin } from './views/CardSpin';
+import { BrandMark } from './views/BrandMark';
 import { ownedMap } from './lib/compare';
 import { db, type Card } from './lib/db';
 import { norm } from './lib/names';
@@ -346,7 +347,8 @@ export default function App() {
     const nav = navRef.current;
     if (!nav || typeof ResizeObserver === 'undefined') return;
     const root = document.documentElement;
-    const put = () => root.style.setProperty('--island-w', `${nav.offsetWidth}px`);
+    // --island-h lets the page clear a top-docked island by exactly its height (no guessed 116px gaps).
+    const put = () => (root.style.setProperty('--island-w', `${nav.offsetWidth}px`), root.style.setProperty('--island-h', `${nav.offsetHeight}px`));
     put();
     const ro = new ResizeObserver(put);
     ro.observe(nav);
@@ -462,10 +464,7 @@ export default function App() {
                   aria-expanded={forgeActionsOpen}
                 >
                   <span className="forge-card-icon" aria-hidden="true">
-                    <picture>
-                      <source srcSet="/card-spin.png" media="(prefers-reduced-motion: reduce)" />
-                      <img src="/card-spin.webp" alt="" width={18} height={24} />
-                    </picture>
+                    <BrandMark fire size={22} />
                   </span>
                   FORGE
                 </button>
@@ -523,12 +522,14 @@ export default function App() {
                   onClick={() => (haptic('tap'), setForgeNavMode(false))}
                 >
                   <span className="forge-card-icon" aria-hidden="true">
-                    <picture>
-                      <source srcSet="/card-spin.png" media="(prefers-reduced-motion: reduce)" />
-                      <img src="/card-spin.webp" alt="" width={18} height={24} />
-                    </picture>
+                    <BrandMark fire size={26} />
                   </span>
                 </button>
+              )}
+              {!forgeState && !backFn && (
+                <span className="pbrand" aria-hidden="true">
+                  <BrandMark size={24} />
+                </span>
               )}
               {!forgeState && backFn && (
                 <button className="pback" aria-label="Back" title="Back" onClick={() => (haptic('tap'), backFn())}>
