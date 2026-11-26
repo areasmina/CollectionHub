@@ -248,6 +248,7 @@ export default function App() {
   };
 
   const [sync, setSync] = useState(!!authReturn || !!incomingCode);
+  const [jumpSignal, setJumpSignal] = useState(0);
   const syncSt = useSyncState(); // back from a sign-in redirect: show the result
   useBrainData(); // card roles + combo files: re-render every view once they arrive
   useEffect(() => void loadBrainData(), []);
@@ -450,6 +451,23 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="pback"
+            aria-label="Quick Jump (Ctrl+K)"
+            title="Quick Jump (Ctrl+K / Cmd+K)"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (dragRef.current.didDrag) return;
+              haptic('open');
+              setJumpSignal((n) => n + 1);
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <circle cx="6.8" cy="6.8" r="4.5" fill="none" stroke="currentColor" strokeWidth="2" />
+              <path d="M10.2 10.2 L14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
           {/* Sync indicator + Dynamic Island sync trigger: only tapping the light opens sync; holding 2s collapses */}
           <div
             className={`syncpill ${currentCode ? 'on' : 'off'}`}
@@ -502,7 +520,7 @@ export default function App() {
         </Suspense>
       )}
       <PreviewLayer />
-      <JumpBar profile={profile} mine={mine} onSwitchTab={(t) => setTab(t)} />
+      <JumpBar profile={profile} mine={mine} onSwitchTab={(t) => setTab(t)} openSignal={jumpSignal} />
       {tab === 'discover' && <Discover key={home} {...shared} />}
       <Suspense fallback={<CardSpin page />}>
         {tab === 'collection' && (

@@ -13,14 +13,22 @@ interface JumpBarProps {
   profile: number;
   mine: Map<string, number>;
   onSwitchTab: (tab: 'discover' | 'decks' | 'collection') => void;
+  openSignal?: number;
 }
 
-export function JumpBar({ profile, mine, onSwitchTab }: JumpBarProps) {
+export function JumpBar({ profile, mine, onSwitchTab, openSignal = 0 }: JumpBarProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const [tags, setTags] = useState<TagSummary[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (openSignal > 0) {
+      setQuery('');
+      setOpen(true);
+    }
+  }, [openSignal]);
 
   // Only query Dexie while JumpBar is open so idle pages use zero extra card memory
   const decks =
@@ -119,22 +127,7 @@ export function JumpBar({ profile, mine, onSwitchTab }: JumpBarProps) {
     }
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className={s.triggerBtn}
-        aria-label="Quick jump (Ctrl+K)"
-        title="Quick Jump (Ctrl+K / Cmd+K)"
-        onClick={() => {
-          setQuery('');
-          setOpen(true);
-        }}
-      >
-        ⌘K JUMP
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
     <div
