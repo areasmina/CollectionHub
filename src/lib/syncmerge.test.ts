@@ -138,3 +138,24 @@ describe('merge3: binder settings', () => {
     expect(out).toEqual([{ id: 1, name: 'Main', lists: ['Trade'] }, { id: 2, name: 'Trade' }]);
   });
 });
+
+describe('mergeSync: deck history', () => {
+  it('merges snapshots across devices, dedupes by id, sorts newest first, and caps at 30', () => {
+    const snap = (id: string, at: number) => ({ id, at, label: id, cardCount: 1, cards: [{ name: 'Sol Ring', qty: 1 }] });
+    const mine: SyncData = {
+      ...data([]),
+      history: { '1|atraxa': [snap('s1', 100), snap('s3', 300)] },
+    };
+    const theirs: SyncData = {
+      ...data([]),
+      history: {
+        '1|atraxa': [snap('s1', 100), snap('s2', 200)],
+        '1|krenko': Array.from({ length: 35 }, (_, i) => snap(`k${i}`, i + 1)),
+      },
+    };
+    const out = mergeSync(null, mine, theirs).data.history!;
+    expect(out['1|atraxa'].map((s) => s.id)).toEqual(['s3', 's2', 's1']);
+    expect(out['1|krenko']).toHaveLength(30);
+    expect(out['1|krenko'][0].id).toBe('k34');
+  });
+});
