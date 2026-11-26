@@ -7,7 +7,7 @@ import { inUse } from '../../lib/copies';
 import { db, type Card } from '../../lib/db';
 import { deckPicUrls } from '../../lib/deckpics';
 import { collectionCsv, collectionText, download } from '../../lib/export';
-import { allFolders, applyFolderPlan, depthOf, MAX_DEPTH, parentOf, planAddFolder, planDeleteFolder, rowsWithin, showPath } from '../../lib/folders';
+import { activeNeed, allFolders, applyFolderPlan, childPath, depthOf, folderStats, leafOf, MAX_DEPTH, parentOf, planAddFolder, planDeleteFolder, planMoveFolder, planRenameFolder, rowsWithin, showPath } from '../../lib/folders';
 import { haptic, haptic as buzz } from '../../lib/haptics';
 import { norm } from '../../lib/names';
 import { openDeckList } from '../../lib/nav';
@@ -137,6 +137,10 @@ export function Collection({
   const customLists = currentProf?.lists ?? [];
   const folderTree = useMemo(() => allFolders(customLists), [customLists]);
   const [addingSubTo, setAddingSubTo] = useState<string | null>(null);
+  const [folderAction, setFolderAction] = useState<null | { mode: 'rename' | 'move'; value: string }>(null);
+  useEffect(() => {
+    setFolderAction(null);
+  }, [activeList]);
 
   const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set(entries.map((e) => e.cardId))])).filter(Boolean).map((c) => [c!.id, c!])), [entries]) ?? new Map<string, Card>();
   const copies = (rows: { qty: number }[]) => rows.reduce((n, e) => n + e.qty, 0);
@@ -157,6 +161,7 @@ export function Collection({
 
   const dq = useDeferredValue(q);
   const usedIn = useMemo(() => inUse(deckRows), [deckRows]);
+  const need = useMemo(() => activeNeed(deckRows), [deckRows]);
   const { inTab, shown } = useMemo(() => {
     const inTab =
       activeList === 'all'
@@ -185,6 +190,25 @@ export function Collection({
     const shown = searchByText(sorted, dq, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
     return { inTab, shown };
   }, [entries, activeList, filter, cards, usedIn, sortOrder, dq]);
+
+  const activeFolderStats = useMemo(
+    () => (activeList !== 'all' && activeList !== 'unlisted' ? folderStats(inTab, entries, need, cards) : null),
+    [activeList, inTab, entries, need, cards],
+  );
+  const hasChildren = activeList !== 'all' && activeList !== 'unlisted' && folderTree.some((p) => p !== activeList && p.startsWith(`${activeList}/`));
+  const moveTargets = useMemo(() => {
+    if (activeList === 'all' || activeList === 'unlisted') return [];
+    const opts: { value: string; label: string }[] = [];
+    if (parentOf(activeList)) opts.push({ value: '', label: 'Top level' });
+    if (!hasChildren) {
+      for (const f of folderTree) {
+        if (depthOf(f) === 1 && f !== activeList && f !== parentOf(activeList)) {
+          opts.push({ value: f, label: showPath(f) });
+        }
+      }
+    }
+    return opts;
+  }, [activeList, folderTree, hasChildren]);
 
   const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
@@ -449,6 +473,114 @@ export function Collection({
                 </span>
               )}
             </div>
+            {activeFolderStats && activeList !== 'all' && activeList !== 'unlisted' && (
+              <div className="folder-meta-bar" aria-label={`Folder summary for ${showPath(activeList)}`}>
+                <span className="folder-meta-facts">
+                  <strong>{showPath(activeList)}</strong> · {activeFolderStats.copies.toLocaleString()} {activeFolderStats.copies === 1 ? 'copy' : 'copies'} · {activeFolderStats.unique.toLocaleString()} unique ·{' '}
+                  {activeFolderStats.usd > 0 ? `≈${cad(activeFolderStats.usd)}` : 'CA$—'} ·{' '}
+                  <strong>{activeFolderStats.spare.toLocaleString()} spare</strong> (free from active decks)
+                </span>
+                <span className="folder-meta-acts">
+                  {folderAction === null ? (
+                    <>
+                      <button
+                        type="button"
+                        className="u-btn ghost"
+                        onClick={() => (buzz('open'), setFolderAction({ mode: 'rename', value: leafOf(activeList) }))}
+                      >
+                        RENAME
+                      </button>
+                      {moveTargets.length > 0 && (
+                        <button
+                          type="button"
+                          className="u-btn ghost"
+                          onClick={() => (buzz('open'), setFolderAction({ mode: 'move', value: moveTargets[0].value }))}
+                        >
+                          MOVE
+                        </button>
+                      )}
+                    </>
+                  ) : folderAction.mode === 'rename' ? (
+                    <span className="list-new-inline">
+                      <input
+                        type="text"
+                        aria-label="Rename folder"
+                        value={folderAction.value}
+                        onChange={(e) => setFolderAction({ mode: 'rename', value: e.target.value })}
+                        autoFocus
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter' && folderAction.value.trim()) {
+                            e.preventDefault();
+                            const plan = planRenameFolder(customLists, entries, activeList, folderAction.value);
+                            if (!plan.ok) return alert(plan.why);
+                            const nextPath = childPath(parentOf(activeList), folderAction.value.replace(/\s+/g, ' ').trim());
+                            await applyFolderPlan(profile, plan);
+                            buzz('success');
+                            setFolderAction(null);
+                            setActiveList(nextPath);
+                          } else if (e.key === 'Escape') {
+                            setFolderAction(null);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="u-btn primary"
+                        disabled={!folderAction.value.trim()}
+                        onClick={async () => {
+                          const plan = planRenameFolder(customLists, entries, activeList, folderAction.value);
+                          if (!plan.ok) return alert(plan.why);
+                          const nextPath = childPath(parentOf(activeList), folderAction.value.replace(/\s+/g, ' ').trim());
+                          await applyFolderPlan(profile, plan);
+                          buzz('success');
+                          setFolderAction(null);
+                          setActiveList(nextPath);
+                        }}
+                      >
+                        SAVE
+                      </button>
+                      <button type="button" className="u-btn ghost" onClick={() => setFolderAction(null)}>
+                        ✕
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="list-new-inline">
+                      <select
+                        aria-label="Move folder destination"
+                        className="coll-sort-select"
+                        value={folderAction.value}
+                        onChange={(e) => setFolderAction({ mode: 'move', value: e.target.value })}
+                      >
+                        {moveTargets.map((t) => (
+                          <option key={t.value || '__top'} value={t.value}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="u-btn primary"
+                        onClick={async () => {
+                          const targetParent = folderAction.value || null;
+                          const plan = planMoveFolder(customLists, entries, activeList, targetParent);
+                          if (!plan.ok) return alert(plan.why);
+                          const nextPath = childPath(targetParent, leafOf(activeList));
+                          await applyFolderPlan(profile, plan);
+                          buzz('success');
+                          setFolderAction(null);
+                          setActiveList(nextPath);
+                        }}
+                      >
+                        APPLY
+                      </button>
+                      <button type="button" className="u-btn ghost" onClick={() => setFolderAction(null)}>
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
           </section>
         )}
 
