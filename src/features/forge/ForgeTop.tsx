@@ -1,0 +1,233 @@
+import { useEffect, useRef, useState } from 'react';
+import { haptic } from '../../lib/haptics';
+import { cad, shopUrl } from '../../lib/prices';
+
+/** Focus mode on the whole page while `on` (the nav and the page decoration step back). */
+export function useForgeMode(on: boolean) {
+  useEffect(() => {
+    if (!on) return;
+    const el = document.documentElement;
+    el.classList.add('forging');
+    return () => el.classList.remove('forging');
+  }, [on]);
+}
+
+/** Leave the Forge with Esc (unless a window is open on top) and undo the last change with Ctrl/Cmd+Z. */
+function useForgeKeys(onLeave: () => void, onUndo?: () => void) {
+  const live = useRef({ onLeave, onUndo });
+  live.current = { onLeave, onUndo };
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement | null)?.closest?.('input, textarea, select');
+      const over = document.querySelector('.swapnote, .note-pop, .cmenu, .leavenote, [role="dialog"], [role="alertdialog"]');
+      if (e.key === 'Escape' && !over && !typing) return live.current.onLeave();
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !typing && live.current.onUndo) {
+        e.preventDefault();
+        haptic('undo');
+        live.current.onUndo();
+      }
+    };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, []);
+}
+
+/** The Forge's own top bar: FORGE stamp, the deck, the last undo, SAVE (commander page) and ✕ LEAVE. */
+export function ForgeTop({
+  label,
+  sub,
+  undo,
+  onLeave,
+  onSave,
+  saving,
+  reserved,
+}: {
+  label: string;
+  sub?: string;
+  undo?: { text: string; run: () => void };
+  onLeave: () => void;
+  onSave?: () => void;
+  saving?: boolean;
+  reserved?: boolean;
+}) {
+  useForgeKeys(onLeave, undo?.run);
+  const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el || typeof ResizeObserver !== 'function') return;
+    const root = document.documentElement.style;
+    const ro = new ResizeObserver(() => root.setProperty('--forgetop-h', `${Math.round(el.getBoundingClientRect().height)}px`));
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.removeProperty('--forgetop-h');
+    };
+  }, []);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    let raf = 0;
+    const check = () => {
+      raf = 0;
+      const top = parseFloat(getComputedStyle(el).top) || 0;
+      el.classList.toggle('stuck', scrollY > 0 && el.getBoundingClientRect().top <= top + 0.5);
+    };
+    const soon = () => void (raf ||= requestAnimationFrame(check));
+    check();
+    addEventListener('scroll', soon, { passive: true });
+    addEventListener('resize', soon);
+    el.addEventListener('transitionend', soon);
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener('scroll', soon);
+      removeEventListener('resize', soon);
+      el.removeEventListener('transitionend', soon);
+    };
+  }, []);
+  return (
+    <div className="forgetop" role="toolbar" aria-label={`Forge: ${label}`} ref={bar}>
+      <span className="fstamp" aria-hidden="true">
+        FORGE
+      </span>
+      <span className="ftitle">
+        {reserved && (
+          <span className="fres" title="This deck holds its copies: other decks can't use them">
+            RESERVED
+          </span>
+        )}
+        {sub && <small>{sub}</small>}
+      </span>
+      {undo && (
+        <button className="u-btn ghost fundo" onClick={() => (haptic('undo'), undo.run())} title="Undo (Ctrl+Z)">
+          ↺ UNDO <small>{undo.text}</small>
+        </button>
+      )}
+      {onSave && (
+        <button className="u-btn primary forge" onClick={onSave} disabled={saving}>
+          SAVE
+        </button>
+      )}
+      <button className="u-btn ghost fleave" onClick={() => (haptic('tap'), onLeave())} title="Leave the Forge (Esc)">
+        ✕ LEAVE
+      </button>
+    </div>
+  );
+}
+
+const FACES = [
+  ['.lists', 'CARDS'],
+  ['.forge-analysis', 'ANALYSIS'],
+  ['.forge-buy', 'TO BUY'],
+] as const;
+
+export function ForgeCube({ grid, buyCount }: { grid: { current: HTMLElement | null }; buyCount?: number }) {
+  const [face, setFace] = useState(0);
+  const bar = useRef<HTMLDivElement>(null);
+  const faceRef = useRef(0);
+  useEffect(() => {
+    const g = grid.current;
+    if (!g) return;
+    const phone = matchMedia('(max-width: 700px)');
+    const paneOf = (i: number) => g.querySelector<HTMLElement>(`:scope > ${FACES[i][0]}`);
+    const fit = () => {
+      if (!phone.matches) return void (g.style.height = '');
+      const p = paneOf(faceRef.current);
+      if (p) g.style.height = `${p.offsetHeight}px`;
+    };
+    const sync = () => {
+      if (!phone.matches) return;
+      let best = 0;
+      FACES.forEach((_, i) => {
+        const p = paneOf(i);
+        const b = paneOf(best);
+        if (p && b && Math.abs(p.offsetLeft - g.scrollLeft) < Math.abs(b.offsetLeft - g.scrollLeft)) best = i;
+      });
+      if (best !== faceRef.current) {
+        faceRef.current = best;
+        setFace(best);
+        haptic('select');
+        const top = bar.current?.getBoundingClientRect().top ?? 0;
+        if (top < 0) bar.current?.scrollIntoView({ block: 'start' });
+      }
+      fit();
+    };
+    let t = 0;
+    const onScroll = () => (clearTimeout(t), (t = window.setTimeout(sync, 60)));
+    g.addEventListener('scroll', onScroll, { passive: true });
+    const ro = new ResizeObserver(fit);
+    FACES.forEach((_, i) => {
+      const p = paneOf(i);
+      if (p) ro.observe(p);
+    });
+    phone.addEventListener('change', fit);
+    fit();
+    return () => {
+      clearTimeout(t);
+      g.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+      phone.removeEventListener('change', fit);
+      g.style.height = '';
+    };
+  }, [grid]);
+  const go = (i: number) => {
+    const g = grid.current;
+    const p = g?.querySelector<HTMLElement>(`:scope > ${FACES[i][0]}`);
+    if (!g || !p) return;
+    haptic('select');
+    faceRef.current = i;
+    setFace(i);
+    g.style.height = `${p.offsetHeight}px`;
+    g.scrollTo({ left: p.offsetLeft, behavior: 'smooth' });
+    const top = bar.current?.getBoundingClientRect().top ?? 0;
+    if (top < 0) bar.current?.scrollIntoView({ block: 'start' });
+  };
+  return (
+    <div className="fcube" ref={bar} role="tablist" aria-label="Deck faces: swipe sideways">
+      {FACES.map(([, label], i) => (
+        <button key={label} type="button" role="tab" aria-selected={face === i} onClick={() => go(i)}>
+          {label}
+          {label === 'TO BUY' && buyCount ? <small>{buyCount}</small> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** The cube's TO BUY face on a saved deck: the cards you don't own, cheapest first, each price a shop link. */
+export function BuyList({ items, binder }: { items: { name: string; qty: number; cad?: number }[]; binder: string }) {
+  const total = items.reduce((n, c) => n + (c.cad ?? 0) * c.qty, 0);
+  const rows = [...items].sort((a, b) => (a.cad ?? 1e9) - (b.cad ?? 1e9) || a.name.localeCompare(b.name));
+  return (
+    <section className="fbuylist" aria-label="To buy">
+      <h3>
+        TO BUY{' '}
+        <small>
+          {items.reduce((n, c) => n + c.qty, 0)} cards{total > 0 ? ` · ≈${cad(total)}` : ''}
+        </small>
+      </h3>
+      {rows.length === 0 ? (
+        <p className="fbuy-none">Nothing to buy: every card is in {binder}.</p>
+      ) : (
+        <ul>
+          {rows.map((c) => (
+            <li key={c.name}>
+              <span className="nm">
+                {c.qty > 1 ? `${c.qty}× ` : ''}
+                {c.name}
+              </span>
+              {c.cad != null ? (
+                <a className="u-sticker" href={shopUrl(c.name)} target="_blank" rel="noreferrer" title={`Find ${c.name} in a shop`}>
+                  ≈{cad(c.cad)}
+                </a>
+              ) : (
+                <a className="fbuy-find" href={shopUrl(c.name)} target="_blank" rel="noreferrer">
+                  FIND ↗
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
