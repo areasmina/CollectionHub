@@ -487,12 +487,49 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   transition: transform 0.28s var(--mo-ease-out), opacity 0.22s ease;
 }
 .pillnav .island-membrane {
+  overflow: hidden;
   transition:
     transform 0.28s var(--mo-ease-out),
     border-radius 0.28s var(--mo-ease-out),
     background-color 0.25s ease,
     border-color 0.25s ease,
     box-shadow 0.25s ease;
+}
+.pillnav .island-membrane .island-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--mo-red), #ff7a1a);
+  transition: width 0.25s var(--mo-ease-out);
+  pointer-events: none;
+}
+.pillnav .island-membrane .island-progress.warn {
+  background: var(--mo-yellow);
+}
+.pillnav .island-membrane .island-progress.ok {
+  background: var(--mo-green);
+}
+.pillnav .syncpill.act-busy {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.pillnav .syncpill.act-ok {
+  border-color: rgba(43, 214, 90, 0.5);
+}
+.pillnav .syncpill.act-ok .sync-lbl {
+  color: var(--mo-green);
+}
+.pillnav .syncpill.act-warn {
+  border-color: rgba(255, 248, 36, 0.5);
+}
+.pillnav .syncpill.act-warn .sync-lbl {
+  color: var(--mo-yellow);
+}
+.pillnav .syncpill.act-err {
+  border-color: rgba(230, 0, 18, 0.55);
+}
+.pillnav .syncpill.act-err .sync-lbl {
+  color: #ff6b76;
 }
 .pillnav.forging-island .island-membrane {
   background:

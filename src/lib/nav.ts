@@ -133,3 +133,21 @@ export const setForgeCube = (next: ForgeCubeState | null) => {
 };
 export const getForgeCube = () => forgeCube;
 export const onForgeCubeChange = (f: () => void) => (addEventListener(FORGE_CUBE, f), () => removeEventListener(FORGE_CUBE, f));
+
+/** Context-adaptive Dynamic Island live activity (imports, sync transitions, rate-limit waits). */
+export interface IslandActivity {
+  kind: 'import' | 'sync';
+  label: string;
+  done?: number;
+  total?: number;
+  wait?: number;
+  tone?: 'busy' | 'ok' | 'warn' | 'err';
+}
+let islandActivity: IslandActivity | null = null;
+const ISLAND_ACTIVITY = 'ch:islandactivity';
+export const setIslandActivity = (next: IslandActivity | null) => {
+  islandActivity = next;
+  dispatchEvent(new Event(ISLAND_ACTIVITY));
+};
+export const getIslandActivity = () => islandActivity;
+export const onIslandActivityChange = (f: () => void) => (addEventListener(ISLAND_ACTIVITY, f), () => removeEventListener(ISLAND_ACTIVITY, f));

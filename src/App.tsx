@@ -12,10 +12,12 @@ import {
   getBack,
   getForgeCube,
   getForgeIsland,
+  getIslandActivity,
   onBackChange,
   onDiscoverSub,
   onForgeCubeChange,
   onForgeIslandChange,
+  onIslandActivityChange,
   onOpenCollection,
   onOpenDeck,
   onOpenDeckList,
@@ -289,6 +291,9 @@ export default function App() {
   useEffect(() => onBackChange(() => setBackFn(() => getBack())), []);
   const [forgeState, setForgeState] = useState(() => getForgeIsland());
   const [forgeCube, setForgeCube] = useState(() => getForgeCube());
+  const [islandActivity, setIslandActivityState] = useState(() => getIslandActivity());
+  const [syncFlash, setSyncFlash] = useState<'synced' | null>(null);
+  const prevSyncRef = useRef<SyncStatus>(syncSt.status);
   const [forgeNavMode, setForgeNavMode] = useState(false);
   const [forgeActionsOpen, setForgeActionsOpen] = useState(true);
   useEffect(() => onForgeIslandChange(() => {
@@ -300,6 +305,16 @@ export default function App() {
     }
   }), []);
   useEffect(() => onForgeCubeChange(() => setForgeCube(getForgeCube())), []);
+  useEffect(() => onIslandActivityChange(() => setIslandActivityState(getIslandActivity())), []);
+  useEffect(() => {
+    const prev = prevSyncRef.current;
+    prevSyncRef.current = syncSt.status;
+    if (prev === 'syncing' && syncSt.status === 'synced') {
+      setSyncFlash('synced');
+      const t = window.setTimeout(() => setSyncFlash(null), 2600);
+      return () => clearTimeout(t);
+    }
+  }, [syncSt.status]);
   const [home, setHome] = useState(0); // bumping it remounts Discover: back to the commander list
   const [deckHome, setDeckHome] = useState(0); // bumping it remounts Decks: back to the deck list
   const here = (t: Tab) => tab === t;
@@ -449,7 +464,14 @@ export default function App() {
               : undefined,
             transformOrigin: dock === 'top' ? 'top center' : dock === 'bottom' ? 'bottom center' : dock === 'left' ? 'left center' : 'right center',
           }}
-        />
+        >
+          {islandActivity?.done !== undefined && islandActivity.total && islandActivity.total > 0 && !islandCollapsed && (
+            <span
+              className={`island-progress ${islandActivity.tone ?? 'busy'}`}
+              style={{ width: `${Math.min(100, Math.round((islandActivity.done / islandActivity.total) * 100))}%` }}
+            />
+          )}
+        </div>
 
         {/* Crisp text content container (never distorted) */}
         <div className="island-content">
@@ -575,40 +597,68 @@ export default function App() {
               </button>
             </>
           )}
-          {/* Sync indicator + Dynamic Island sync trigger: only tapping the light opens sync; holding 2s collapses */}
-          <div
-            className={`syncpill ${currentCode ? 'on' : 'off'}`}
-            onClick={(e) => {
-              if ((e.target as HTMLElement).classList.contains('sdot')) return;
-              haptic('open');
-              setIslandOpen((prev) => !prev);
-            }}
-          >
-            <span
-              role="button"
-              tabIndex={0}
-              className={`sdot ${currentCode ? syncSt.status : 'off'}`}
-              aria-label={`Sync light: ${currentCode ? syncSt.status : 'off'}. Tap light for sync settings, hold 2s to collapse`}
-              title="Tap light for Sync settings, hold 2s to collapse island"
-              onPointerDown={handleLightDown}
-              onPointerUp={handleLightUp}
-              onPointerCancel={() => {
-                if (lightPressTimer.current) {
-                  clearTimeout(lightPressTimer.current);
-                  lightPressTimer.current = null;
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
+          {/* Sync indicator + Dynamic Island live activity: only tapping the light opens sync; holding 2s collapses */}
+          {(() => {
+            const actTone = islandActivity?.tone ?? (syncFlash === 'synced' ? 'ok' : currentCode && (syncSt.status === 'error' || syncSt.status === 'conflict') ? 'err' : currentCode && syncSt.status === 'syncing' ? 'busy' : '');
+            const actPct = islandActivity?.done !== undefined && islandActivity.total && islandActivity.total > 0
+              ? ` ${Math.min(100, Math.round((islandActivity.done / islandActivity.total) * 100))}%`
+              : '';
+            const syncLabel = islandActivity
+              ? `${islandActivity.label}${actPct}`
+              : syncFlash === 'synced'
+                ? 'SYNCED'
+                : currentCode
+                  ? syncSt.status === 'syncing'
+                    ? 'SYNCING…'
+                    : syncSt.status === 'conflict' || syncSt.status === 'error'
+                      ? 'SYNC ERR'
+                      : 'SYNC'
+                  : 'SYNC';
+            const dotClass = islandActivity
+              ? islandActivity.tone === 'ok'
+                ? 'synced'
+                : islandActivity.tone === 'err'
+                  ? 'error'
+                  : 'syncing'
+              : currentCode
+                ? syncSt.status
+                : 'off';
+            return (
+              <div
+                className={`syncpill ${currentCode ? 'on' : 'off'}${actTone ? ` act-${actTone}` : ''}`}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).classList.contains('sdot')) return;
                   haptic('open');
                   setIslandOpen((prev) => !prev);
-                }
-              }}
-            />
-            <span className="sync-lbl">{currentCode ? (syncSt.status === 'syncing' ? 'SYNCING…' : 'SYNC') : 'SYNC'}</span>
-          </div>
+                }}
+              >
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className={`sdot ${dotClass}`}
+                  aria-label={`Sync light: ${currentCode ? syncSt.status : 'off'}. Tap light for sync settings, hold 2s to collapse`}
+                  title="Tap light for Sync settings, hold 2s to collapse island"
+                  onPointerDown={handleLightDown}
+                  onPointerUp={handleLightUp}
+                  onPointerCancel={() => {
+                    if (lightPressTimer.current) {
+                      clearTimeout(lightPressTimer.current);
+                      lightPressTimer.current = null;
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      haptic('open');
+                      setIslandOpen((prev) => !prev);
+                    }
+                  }}
+                />
+                <span className="sync-lbl">{syncLabel}</span>
+              </div>
+            );
+          })()}
           {/* Visual dock lip/grip handle (does not open menus) */}
           <div className="island-lip" aria-hidden="true">
             <span className="lip-bar" />

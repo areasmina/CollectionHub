@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { importCollection, importDeck, type ImportResult } from '../../lib/actions';
 import { haptic } from '../../lib/haptics';
 import { parseImport } from '../../lib/importers';
-import { freeDeckName, openDeck } from '../../lib/nav';
+import { freeDeckName, openDeck, setIslandActivity } from '../../lib/nav';
 import { SAMPLE_COLLECTION } from '../../lib/sample';
 import { parseBackupJson, restoreBackupFile } from '../../lib/sync';
 import { Progress } from '../../views/shared';
@@ -89,13 +89,17 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
     setResult(null);
     setBackupNotice('');
     setBusy({ done: 0, total: backupSnap.entries.length });
+    setIslandActivity({ kind: 'import', label: 'RESTORING', done: 0, total: backupSnap.entries.length, tone: 'busy' });
     try {
       const r = await restoreBackupFile(input);
       setBig(null);
       setText('');
       setBackupNotice(`Restored ${r.binders} binder${r.binders === 1 ? '' : 's'}, ${r.cards.toLocaleString()} entries, and ${r.decks} deck${r.decks === 1 ? '' : 's'}.`);
+      setIslandActivity({ kind: 'import', label: 'RESTORED', tone: 'ok' });
+      setTimeout(() => setIslandActivity(null), 2400);
     } catch (e) {
       setError(`Restore failed: ${(e as Error).message}`);
+      setIslandActivity(null);
     }
     setBusy(null);
   }
@@ -105,13 +109,27 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
     setError('');
     setResult(null);
     setBusy({ done: 0, total: 0 });
+    setIslandActivity({ kind: 'import', label: 'IMPORTING', done: 0, total: 0, tone: 'busy' });
     try {
-      const r = await importCollection(profile, raw, replace, (done, total, wait) => setBusy({ done, total, wait }));
+      const r = await importCollection(profile, raw, replace, (done, total, wait) => {
+        setBusy({ done, total, wait });
+        setIslandActivity({
+          kind: 'import',
+          label: wait ? 'WAIT…' : 'IMPORT',
+          done,
+          total,
+          wait,
+          tone: wait ? 'warn' : 'busy',
+        });
+      });
       setResult(r);
       setBig(null);
       setText((r.failed ?? []).map((f) => `${f.qty} ${f.name}${f.set && f.cn ? ` (${f.set.toUpperCase()}) ${f.cn}` : ''}${f.foil ? ' *F*' : ''}`).join('\n'));
+      setIslandActivity({ kind: 'import', label: 'IMPORTED', tone: 'ok' });
+      setTimeout(() => setIslandActivity(null), 2400);
     } catch (e) {
       setError(`Import failed: ${(e as Error).message}. Nothing was lost; try again.`);
+      setIslandActivity(null);
     }
     setBusy(null);
   }
@@ -120,17 +138,24 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
     setError('');
     setResult(null);
     setBusy({ done: 0, total: 0 });
+    setIslandActivity({ kind: 'import', label: 'IMPORTING', done: 0, total: 0, tone: 'busy' });
     try {
       const p = parseImport(text);
       const cmdrRow = p.rows.find((r) => /commander/i.test(r.section ?? '')) ?? p.rows[0];
       const baseName = cmdrRow ? `${cmdrRow.name.split(' // ')[0]} deck` : 'Imported deck';
       const deckName = await freeDeckName(profile, baseName);
-      const r = await importDeck(profile, deckName, text, (done, total) => setBusy({ done, total }));
+      const r = await importDeck(profile, deckName, text, (done, total) => {
+        setBusy({ done, total });
+        setIslandActivity({ kind: 'import', label: 'IMPORT', done, total, tone: 'busy' });
+      });
       setText('');
       haptic('success');
+      setIslandActivity({ kind: 'import', label: 'DECK READY', tone: 'ok' });
+      setTimeout(() => setIslandActivity(null), 2400);
       openDeck(r.deck.name);
     } catch (e) {
       setError(`Deck import failed: ${(e as Error).message}`);
+      setIslandActivity(null);
     }
     setBusy(null);
   }
