@@ -88,4 +88,32 @@ describe('tagState', () => {
     expect(starterTags(idx)).toContain(1);
     expect(starterTags(idx)).toContain(2);
   });
+
+  it('evaluates OR unions alone, AND + OR combined, and OR + NOT exclusions', () => {
+    const idx = fixture();
+    const owned = new Set<string>();
+    // curiosity (3 -> 0, 1) OR draw (1 -> 0, 1, 2, 4, 5) without card 0 (Counterspell? card 0 is in curiosity, let's check):
+    // enchantment-engine (2 -> 1, 4, 5)
+    const orOnly = evalTagQuery(
+      idx,
+      [
+        { tagIdx: 2, mode: 'or' },
+        { tagIdx: 3, mode: 'or' },
+      ],
+      { owned, show: 'all' }
+    );
+    expect(orOnly.map((r) => r.name)).toContain('Counterspell');
+    expect(orOnly.map((r) => r.name)).toContain('Sram, Senior Edificer');
+
+    const andWithOr = evalTagQuery(
+      idx,
+      [
+        { tagIdx: 1, mode: 'include' },
+        { tagIdx: 2, mode: 'or' },
+        { tagIdx: 3, mode: 'exclude' },
+      ],
+      { owned, show: 'all' }
+    );
+    expect(andWithOr.map((r) => r.name)).toEqual(['Sythis, Harvest\'s Hand', 'Sram, Senior Edificer']);
+  });
 });

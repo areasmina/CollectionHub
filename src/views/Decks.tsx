@@ -36,7 +36,7 @@ import { onlyOk, ONLYS, shows, sortBy, SHOWS, SORTS, type Only, type Show, type 
 import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../lib/scryfall';
 import { BuyList, ForgeCube, ForgeMeters, ForgeSuggest, ForgeTop, useDeckDrop, useForgeMode } from './Forge';
 import { shortfalls, takenBy } from '../lib/copies';
-import { freeDeckName, onOpenDeck, openCollection, setBack, takeDeck } from '../lib/nav';
+import { freeDeckName, onOpenDeck, openCollection, openDiscoverSub, setBack, takeDeck } from '../lib/nav';
 import { importDeck } from '../lib/actions';
 import { DeckCompare } from './DeckCompare';
 import { CardLine, CardTile, CmdrCard, CycleBtn, OutsideLinks, SaltStat, priced as atFinish, priceSum, scryfallUrl, ShortAlert, DeckLight, ChipPick, ToolBar, OptRow, SetChips, SearchIcon, VIEW_KEY, useBinder, useStored, useMenuPress, type Shared } from './shared';
@@ -49,6 +49,7 @@ import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '..
 const HandSheet = lazy(() => import('../features/hand/HandSheet').then((m) => ({ default: m.HandSheet })));
 const RuleZeroModal = lazy(() => import('../features/rulezero/RuleZeroModal').then((m) => ({ default: m.RuleZeroModal })));
 const BalanceSheet = lazy(() => import('../features/balance/BalanceSheet').then((m) => ({ default: m.BalanceSheet })));
+const PasteCheck = lazy(() => import('../features/check/PasteCheck').then((m) => ({ default: m.PasteCheck })));
 import { BracketStat, Curve, DeckNotes, GROUPINGS, GroupPick, PickCommander, type Grouping } from '../features/decks/DeckMetaParts';
 import { DeckFolderBar } from '../features/decks/DeckFolderBar';
 import { HistoryDrawer } from '../features/decks/HistoryDrawer';
@@ -813,6 +814,11 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setRuleZeroOpen(true))}>
               RULE ZERO
             </button>
+            {deck.id && (
+              <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHistoryOpen(true))}>
+                HISTORY
+              </button>
+            )}
             <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), toggleCompactHero())}>
               {compactHero ? 'SHOW HEADER' : 'COMPACT HEADER'}
             </button>
@@ -1190,7 +1196,7 @@ export function Decks(s: Shared) {
   // DECKS | STATS, the same two faces as Collection's CARDS | ANALYTICS (Guillermo, Nov 19: "make the two sections look
   // cohesive"). The page always opens on the decks, so the stat tiles start out of the way every time, like Collection's.
   // COMPARE (Nov 24) puts two of your decks side by side; it shows from two decks up and saves nothing.
-  const [dtabPick, setDtab] = useState<'decks' | 'stats' | 'compare'>('decks');
+  const [dtabPick, setDtab] = useState<'decks' | 'stats' | 'compare' | 'check'>('decks');
   const dtab = dtabPick === 'compare' && decks.length < 2 ? 'decks' : dtabPick; // a deck deleted down to one: back to DECKS
   // Card size for the deck grid (S = three across on phones; the same S / M / L as the Collection).
   const [dzoom, setDzoomState] = useState<'s' | 'm' | 'l'>(() => {
@@ -1284,8 +1290,8 @@ export function Decks(s: Shared) {
   const dtabrow = (
     <>
       <div className="ctabset" role="tablist" aria-label="My decks view">
-        {([['decks', 'DECKS'], ['stats', 'STATS'], ['compare', 'COMPARE']] as const)
-          .filter(([v]) => v === 'decks' || decks.length > (v === 'compare' ? 1 : 0))
+        {([['decks', 'DECKS'], ['stats', 'STATS'], ['compare', 'COMPARE'], ['check', 'CHECK LIST']] as const)
+          .filter(([v]) => v === 'decks' || v === 'check' || decks.length > (v === 'compare' ? 1 : 0))
           .map(([v, label]) => (
             <button
               key={v}
@@ -1303,6 +1309,9 @@ export function Decks(s: Shared) {
           ))}
       </div>
       <div className="ctab-acts decksactions">
+        <button type="button" className="slip-btn deck" onClick={() => (haptic('open'), openDiscoverSub('guided'))} title="Build step-by-step in Guided Deckbuilder + Tabletop">
+          + GUIDED
+        </button>
         <button type="button" className="slip-btn deck" onClick={createBlankDeck} title="Start a fresh deck from scratch in The Forge">
           + NEW DECK
         </button>
@@ -1363,6 +1372,13 @@ export function Decks(s: Shared) {
           </div>
         )}
         {dtab === 'compare' && decks.length > 1 && <DeckCompare decks={decks} priced={priced} gc={gcAll} shareById={shareById} />}
+        {dtab === 'check' && (
+          <div id="dpane-check" role="tabpanel" aria-labelledby="dtab-check">
+            <Suspense fallback={null}>
+              <PasteCheck mine={s.mine} other={s.other} binderName={s.binderName} otherName={s.otherName} />
+            </Suspense>
+          </div>
+        )}
         {dtab === 'decks' && (
         <>
         {/* Decks Workbench Toolbar (ManaBox-style, Nov 14): row 1 is the search and the sort, row 2 one sliding row of

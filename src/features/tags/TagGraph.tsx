@@ -1,11 +1,9 @@
 import { useMemo, useRef, useState } from 'react';
-import { countOwnedForTag, type TagIndex } from './tagState';
+import { DIGITAL_ONLY_TAGS, countOwnedForTag, type TagIndex } from './tagState';
 import styles from './TagsNavigator.module.css';
 
 const NODE_W = 206;
 const NODE_H = 38;
-const COL_GAP = 26;
-const ROW_GAP = 72;
 const MAX_CHILDREN_PER_NODE = 16;
 
 interface LayoutNode {
@@ -13,10 +11,11 @@ interface LayoutNode {
   tagIdx: number;
   x: number;
   y: number;
-  row: number;
+  angle?: number;
   isMore?: boolean;
   moreCount?: number;
-  parentTagIdx?: number;
+  digitalNote?: string;
+  digitalLabel?: string;
 }
 
 interface LayoutEdge {
@@ -26,124 +25,176 @@ interface LayoutEdge {
   toTag: number;
 }
 
-/** Computes a clean layered DAG layout around `rootIdx` and all currently `expanded` nodes. */
-function buildGraphLayout(index: TagIndex, rootIdx: number, expanded: Set<number>) {
+/**
+ * Computes a radial/orbital layout centered on `rootIdx` at (0, 0).
+ * Parents arc above root; direct children orbit around root in a clean ellipse so
+ * arrows never cross sibling nodes or create false parent-child visual nesting.
+ */
+function buildGraphLayout(index: TagIndex, rootIdx: number, expanded: Set<number>, formatMode: 'paper' | 'online') {
   const { tags } = index.data;
-  const nodesMap = new Map<number, { tagIdx: number; row: number }>();
+  const nodes = new Map<string, LayoutNode>();
   const edges: LayoutEdge[] = [];
   const edgeSeen = new Set<string>();
-  const moreNodes: LayoutNode[] = [];
 
-  const addNode = (tagIdx: number, row: number) => {
-    const prev = nodesMap.get(tagIdx);
-    if (!prev) nodesMap.set(tagIdx, { tagIdx, row });
-  };
-  const addEdge = (fromTag: number, toTag: number) => {
-    const key = `${fromTag}->${toTag}`;
+  const addEdge = (from: string, to: string, fromTag: number, toTag: number) => {
+    const key = `${from}->${to}`;
     if (edgeSeen.has(key)) return;
     edgeSeen.add(key);
-    edges.push({ from: `t-${fromTag}`, to: `t-${toTag}`, fromTag, toTag });
+    edges.push({ from, to, fromTag, toTag });
   };
 
-  addNode(rootIdx, 0);
+  // 1. Center root
+  nodes.set(`t-${rootIdx}`, { id: `t-${rootIdx}`, tagIdx: rootIdx, x: -NODE_W / 2, y: -NODE_H / 2 });
 
-  // Show immediate parents of root (row -1) and parents of any expanded node when expanded
-  const queue: { tagIdx: number; row: number }[] = [{ tagIdx: rootIdx, row: 0 }];
-  const walked = new Set<number>();
+  const rootTag = tags[rootIdx];
+  const parents = rootTag?.parents.slice(0, 5) ?? [];
 
-  while (queue.length > 0) {
-    const cur = queue.shift()!;
-    if (walked.has(cur.tagIdx)) continue;
-    walked.add(cur.tagIdx);
+  // 2. Parents in clean upper arc
+  if (parents.length > 0) {
+    const gap = NODE_W + 28;
+    const totalW = parents.length * NODE_W + (parents.length - 1) * 28;
+    parents.forEach((pIdx, idx) => {
+      const x = -totalW / 2 + idx * gap;
+      const y = -270 - (parents.length > 2 ? Math.abs(idx - (parents.length - 1) / 2) * 18 : 0);
+      nodes.set(`t-${pIdx}`, { id: `t-${pIdx}`, tagIdx: pIdx, x, y });
+      addEdge(`t-${pIdx}`, `t-${rootIdx}`, pIdx, rootIdx);
+    });
+  }
 
-    const t = tags[cur.tagIdx];
-    // Always include direct parents of the root; include parents of other expanded nodes too
-    if (cur.tagIdx === rootIdx || expanded.has(cur.tagIdx)) {
-      for (const p of t.parents.slice(0, 6)) {
-        addNode(p, cur.row - 1);
-        addEdge(p, cur.tagIdx);
-      }
-    }
+  // 3. Direct children + optional digital-only ghosts (e.g. `seek` under `card advantage`) orbiting around root
+  if (expanded.has(rootIdx) && rootTag) {
+    const sortedKids = [...rootTag.children].sort((a, b) => index.cardsOfMemo(b).size - index.cardsOfMemo(a).size);
+    const visibleKids = sortedKids.slice(0, MAX_CHILDREN_PER_NODE);
+    const matchingDigital = DIGITAL_ONLY_TAGS.filter(
+      (d) =>
+        d.parentLabel.toLowerCase() === rootTag.label.toLowerCase() &&
+        !visibleKids.some((k) => tags[k]?.label.toLowerCase() === d.label.toLowerCase())
+    );
 
-    if (expanded.has(cur.tagIdx)) {
-      // Sort children by total cards desc so most meaningful sub-branches appear first
-      const sortedKids = [...t.children].sort((a, b) => index.cardsOfMemo(b).size - index.cardsOfMemo(a).size);
-      const visibleKids = sortedKids.slice(0, MAX_CHILDREN_PER_NODE);
-      for (const child of visibleKids) {
-        addNode(child, cur.row + 1);
-        addEdge(cur.tagIdx, child);
-        if (expanded.has(child)) {
-          queue.push({ tagIdx: child, row: cur.row + 1 });
+    const orbitItems: Array<
+      | { kind: 'tag'; tagIdx: number }
+      | { kind: 'digital'; id: string; label: string; note: string }
+      | { kind: 'more'; count: number }
+    > = [
+      ...visibleKids.map((tagIdx) => ({ kind: 'tag' as const, tagIdx })),
+      ...matchingDigital.map((d) => ({ kind: 'digital' as const, id: d.id, label: d.label, note: d.note })),
+      ...(sortedKids.length > MAX_CHILDREN_PER_NODE
+        ? [{ kind: 'more' as const, count: sortedKids.length - MAX_CHILDREN_PER_NODE }]
+        : []),
+    ];
+
+    const n = orbitItems.length;
+    if (n > 0) {
+      const rx = Math.max(330, Math.min(540, n * 38));
+      const ry = Math.max(220, Math.min(340, n * 24));
+      // Leave upper gap for parents (-125deg to -55deg -> reserve ~70deg span around -PI/2 when parents exist)
+      const hasParents = parents.length > 0;
+      const startAngle = hasParents ? -Math.PI / 2 + 0.62 : -Math.PI / 2;
+      const sweep = hasParents ? Math.PI * 2 - 1.24 : Math.PI * 2;
+
+      orbitItems.forEach((item, idx) => {
+        const angle = n === 1 ? Math.PI / 2 : startAngle + (sweep * idx) / (hasParents ? Math.max(1, n - 1) : n);
+        const cx = Math.cos(angle) * rx;
+        const cy = Math.sin(angle) * ry;
+        const x = cx - NODE_W / 2;
+        const y = cy - NODE_H / 2;
+
+        if (item.kind === 'more') {
+          const moreId = `more-${rootIdx}`;
+          nodes.set(moreId, {
+            id: moreId,
+            tagIdx: rootIdx,
+            x,
+            y,
+            isMore: true,
+            moreCount: item.count,
+          });
+          addEdge(`t-${rootIdx}`, moreId, rootIdx, -1);
+          return;
         }
-      }
-      if (sortedKids.length > MAX_CHILDREN_PER_NODE) {
-        const moreId = `more-${cur.tagIdx}`;
-        moreNodes.push({
-          id: moreId,
-          tagIdx: cur.tagIdx,
-          parentTagIdx: cur.tagIdx,
-          x: 0,
-          y: 0,
-          row: cur.row + 1,
-          isMore: true,
-          moreCount: sortedKids.length - MAX_CHILDREN_PER_NODE,
-        });
-        edges.push({ from: `t-${cur.tagIdx}`, to: moreId, fromTag: cur.tagIdx, toTag: -1 });
-      }
+
+        if (item.kind === 'digital') {
+          const dId = `digital-${item.id}`;
+          nodes.set(dId, {
+            id: dId,
+            tagIdx: -1,
+            x,
+            y,
+            digitalLabel: item.label,
+            digitalNote: formatMode === 'paper' ? `${item.note} · greyed in Paper mode` : item.note,
+          });
+          addEdge(`t-${rootIdx}`, dId, rootIdx, -2);
+          return;
+        }
+
+        const childIdx = item.tagIdx;
+        const childId = `t-${childIdx}`;
+        if (!nodes.has(childId)) {
+          nodes.set(childId, { id: childId, tagIdx: childIdx, x, y, angle });
+        }
+        addEdge(`t-${rootIdx}`, childId, rootIdx, childIdx);
+
+        // 4. Expanded grandchildren radiate outward along child's orbital angle
+        if (expanded.has(childIdx)) {
+          const grandKids = [...tags[childIdx].children]
+            .sort((a, b) => index.cardsOfMemo(b).size - index.cardsOfMemo(a).size)
+            .slice(0, 6);
+          grandKids.forEach((gIdx, gPos) => {
+            const gId = `t-${gIdx}`;
+            if (!nodes.has(gId)) {
+              const offset = grandKids.length === 1 ? 0 : ((gPos / (grandKids.length - 1)) - 0.5) * 0.85;
+              const ga = angle + offset;
+              const gx = Math.cos(ga) * (rx + 230) - NODE_W / 2;
+              const gy = Math.sin(ga) * (ry + 170) - NODE_H / 2;
+              nodes.set(gId, { id: gId, tagIdx: gIdx, x: gx, y: gy, angle: ga });
+            }
+            addEdge(childId, gId, childIdx, gIdx);
+          });
+        }
+      });
     }
   }
 
-  // Group nodes by row and distribute horizontally
-  const byRow = new Map<number, LayoutNode[]>();
-  for (const n of nodesMap.values()) {
-    const list = byRow.get(n.row) ?? [];
-    list.push({ id: `t-${n.tagIdx}`, tagIdx: n.tagIdx, x: 0, y: 0, row: n.row });
-    byRow.set(n.row, list);
-  }
-  for (const m of moreNodes) {
-    const list = byRow.get(m.row) ?? [];
-    list.push(m);
-    byRow.set(m.row, list);
-  }
-
-  const rows = [...byRow.keys()].sort((a, b) => a - b);
-  const allNodes: LayoutNode[] = [];
+  const allNodes = [...nodes.values()];
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
   let maxY = -Infinity;
-
-  for (const r of rows) {
-    const rowNodes = byRow.get(r)!;
-    // Wrap very wide rows into 2 sub-rows of at most 6 pills to keep aspect ratio readable
-    const perLine = Math.max(4, Math.min(6, rowNodes.length));
-    rowNodes.forEach((node, idx) => {
-      const subRow = Math.floor(idx / perLine);
-      const col = idx % perLine;
-      const colsInThisLine = Math.min(perLine, rowNodes.length - subRow * perLine);
-      const totalW = colsInThisLine * NODE_W + (colsInThisLine - 1) * COL_GAP;
-      node.x = -totalW / 2 + col * (NODE_W + COL_GAP);
-      node.y = r * (NODE_H + ROW_GAP) + subRow * (NODE_H + 22);
-      minX = Math.min(minX, node.x);
-      maxX = Math.max(maxX, node.x + NODE_W);
-      minY = Math.min(minY, node.y);
-      maxY = Math.max(maxY, node.y + NODE_H);
-      allNodes.push(node);
-    });
+  for (const node of allNodes) {
+    minX = Math.min(minX, node.x);
+    maxX = Math.max(maxX, node.x + NODE_W);
+    minY = Math.min(minY, node.y);
+    maxY = Math.max(maxY, node.y + NODE_H);
   }
 
-  const byId = new Map(allNodes.map((n) => [n.id, n]));
   return {
     nodes: allNodes,
-    byId,
+    byId: nodes,
     edges,
     bounds: {
-      minX: Number.isFinite(minX) ? minX - 40 : -200,
-      minY: Number.isFinite(minY) ? minY - 40 : -150,
-      width: Number.isFinite(maxX - minX) ? Math.max(420, maxX - minX + 80) : 420,
-      height: Number.isFinite(maxY - minY) ? Math.max(300, maxY - minY + 80) : 300,
+      minX: Number.isFinite(minX) ? minX - 48 : -320,
+      minY: Number.isFinite(minY) ? minY - 48 : -240,
+      width: Number.isFinite(maxX - minX) ? Math.max(640, maxX - minX + 96) : 640,
+      height: Number.isFinite(maxY - minY) ? Math.max(460, maxY - minY + 96) : 460,
     },
   };
+}
+
+/** Compute the clean point on a node rectangle boundary facing a target point. */
+function rectAnchor(from: LayoutNode, to: LayoutNode) {
+  const fx = from.x + NODE_W / 2;
+  const fy = from.y + NODE_H / 2;
+  const tx = to.x + NODE_W / 2;
+  const ty = to.y + NODE_H / 2;
+  const dx = tx - fx;
+  const dy = ty - fy;
+  if (dx === 0 && dy === 0) return { x: fx, y: fy };
+  const hw = NODE_W / 2;
+  const hh = NODE_H / 2;
+  const sx = Math.abs(dx) > 0 ? hw / Math.abs(dx) : Infinity;
+  const sy = Math.abs(dy) > 0 ? hh / Math.abs(dy) : Infinity;
+  const t = Math.min(sx, sy);
+  return { x: fx + dx * t, y: fy + dy * t };
 }
 
 export function TagGraph({
@@ -151,6 +202,7 @@ export function TagGraph({
   rootIdx,
   selectedTags,
   owned,
+  formatMode,
   onSelectTag,
   onOpenBrowse,
 }: {
@@ -158,6 +210,7 @@ export function TagGraph({
   rootIdx: number;
   selectedTags: Set<number>;
   owned: Set<string>;
+  formatMode: 'paper' | 'online';
   onSelectTag: (tagIdx: number) => void;
   onOpenBrowse: (tagIdx: number) => void;
 }) {
@@ -165,6 +218,7 @@ export function TagGraph({
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [fullCanvas, setFullCanvas] = useState(false);
   const dragRef = useRef<{ active: boolean; startX: number; startY: number; baseX: number; baseY: number; moved: boolean }>({
     active: false,
     startX: 0,
@@ -183,12 +237,17 @@ export function TagGraph({
     setZoom(1);
   }
 
-  const layout = useMemo(() => buildGraphLayout(index, rootIdx, expanded), [index, rootIdx, expanded]);
+  const layout = useMemo(
+    () => buildGraphLayout(index, rootIdx, expanded, formatMode),
+    [index, rootIdx, expanded, formatMode]
+  );
 
   const counts = useMemo(() => {
     const m = new Map<number, { owned: number; total: number }>();
     for (const n of layout.nodes) {
-      if (!n.isMore && !m.has(n.tagIdx)) m.set(n.tagIdx, countOwnedForTag(index, n.tagIdx, owned));
+      if (!n.isMore && n.tagIdx >= 0 && !m.has(n.tagIdx)) {
+        m.set(n.tagIdx, countOwnedForTag(index, n.tagIdx, owned));
+      }
     }
     return m;
   }, [layout.nodes, index, owned]);
@@ -208,9 +267,9 @@ export function TagGraph({
   };
 
   const fitView = () => {
-    const scaleX = 760 / layout.bounds.width;
-    const scaleY = 460 / layout.bounds.height;
-    setZoom(Math.max(0.45, Math.min(1.2, Number(Math.min(scaleX, scaleY).toFixed(2)))));
+    const scaleX = 900 / layout.bounds.width;
+    const scaleY = 580 / layout.bounds.height;
+    setZoom(Math.max(0.45, Math.min(1.25, Number(Math.min(scaleX, scaleY).toFixed(2)))));
     setPan({ x: 0, y: 0 });
   };
 
@@ -218,7 +277,7 @@ export function TagGraph({
   const cy = layout.bounds.minY + layout.bounds.height / 2;
 
   return (
-    <div className={styles.graphWrap}>
+    <div className={fullCanvas ? styles.graphWrapExpanded : styles.graphWrap}>
       <div className={styles.graphHud}>
         <span className={styles.graphCount}>{layout.nodes.filter((n) => !n.isMore).length} tags on canvas</span>
         <div className={styles.graphBtns} role="group" aria-label="Graph controls">
@@ -233,6 +292,9 @@ export function TagGraph({
           </button>
           <button type="button" className={styles.hudBtn} onClick={resetView}>
             RESET
+          </button>
+          <button type="button" className={styles.hudBtn} aria-pressed={fullCanvas} onClick={() => setFullCanvas((v) => !v)}>
+            {fullCanvas ? 'SHRINK' : 'EXPAND'}
           </button>
         </div>
       </div>
@@ -263,7 +325,7 @@ export function TagGraph({
       >
         <defs>
           <marker id="tag-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="rgba(255,255,255,0.35)" />
+            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="rgba(255,255,255,0.4)" />
           </marker>
           <marker id="tag-arrow-hot" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#e60012" />
@@ -271,27 +333,26 @@ export function TagGraph({
         </defs>
 
         <g transform={`translate(${cx + pan.x}, ${cy + pan.y}) scale(${zoom}) translate(${-cx}, ${-cy})`}>
-          {/* Edges */}
+          {/* Radial / Orbital Edges */}
           {layout.edges.map((e) => {
             const a = layout.byId.get(e.from);
             const b = layout.byId.get(e.to);
             if (!a || !b) return null;
-            const x1 = a.x + NODE_W / 2;
-            const y1 = a.y + NODE_H;
-            const x2 = b.x + NODE_W / 2;
-            const y2 = b.y;
-            const midY = (y1 + y2) / 2;
+            const p1 = rectAnchor(a, b);
+            const p2 = rectAnchor(b, a);
             const hot =
               hoverIdx !== null
                 ? e.fromTag === hoverIdx || e.toTag === hoverIdx
                 : selectedTags.has(e.fromTag) || selectedTags.has(e.toTag);
             return (
-              <path
+              <line
                 key={`${e.from}-${e.to}`}
-                d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2 - 4}`}
-                fill="none"
-                stroke={hot ? '#e60012' : 'rgba(255,255,255,0.22)'}
-                strokeWidth={hot ? 2 : 1.4}
+                x1={p1.x}
+                y1={p1.y}
+                x2={p2.x}
+                y2={p2.y}
+                stroke={hot ? '#e60012' : 'rgba(255,255,255,0.26)'}
+                strokeWidth={hot ? 2.2 : 1.4}
                 markerEnd={hot ? 'url(#tag-arrow-hot)' : 'url(#tag-arrow)'}
               />
             );
@@ -312,9 +373,30 @@ export function TagGraph({
                   onClick={() => onOpenBrowse(n.tagIdx)}
                   onKeyDown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && onOpenBrowse(n.tagIdx)}
                 >
-                  <rect width={NODE_W} height={NODE_H} rx={6} fill="#19191f" stroke="#ffcc00" strokeDasharray="4 3" strokeWidth={1.4} />
+                  <rect width={NODE_W} height={NODE_H} rx={4} fill="#19191f" stroke="#ffcc00" strokeDasharray="4 3" strokeWidth={1.4} />
                   <text x={NODE_W / 2} y={23} textAnchor="middle" fill="#ffcc00" fontSize="12" fontFamily="Space Mono, monospace">
                     +{n.moreCount} MORE IN BROWSE →
+                  </text>
+                </g>
+              );
+            }
+
+            if (n.digitalLabel) {
+              return (
+                <g
+                  key={n.id}
+                  data-node={n.id}
+                  transform={`translate(${n.x}, ${n.y})`}
+                  opacity={formatMode === 'paper' ? 0.42 : 0.85}
+                >
+                  <title>{n.digitalNote}</title>
+                  <rect width={NODE_W} height={NODE_H} rx={4} fill="#121215" stroke="#3a3a46" strokeDasharray="3 3" strokeWidth={1.2} />
+                  <circle cx={14} cy={NODE_H / 2} r={4.5} fill="#888894" pointerEvents="none" />
+                  <text x={25} y={16} fill="#b5b5b5" fontSize="12" fontWeight="700" fontFamily="Archivo, sans-serif" pointerEvents="none">
+                    {n.digitalLabel}
+                  </text>
+                  <text x={25} y={30} fill="#888894" fontSize="10" fontFamily="Space Mono, monospace" pointerEvents="none">
+                    ONLINE / ARENA ONLY
                   </text>
                 </g>
               );
@@ -342,7 +424,7 @@ export function TagGraph({
                 <rect
                   width={NODE_W}
                   height={NODE_H}
-                  rx={6}
+                  rx={4}
                   fill={isSel ? '#241116' : isRoot ? '#1c1c24' : '#121215'}
                   stroke={isSel ? '#e60012' : isRoot ? '#ffcc00' : '#3a3a46'}
                   strokeDasharray={isSel ? '4 2' : undefined}
@@ -378,7 +460,7 @@ export function TagGraph({
                       }
                     }}
                   >
-                    <rect width={22} height={24} rx={4} fill={isExp ? '#e60012' : '#212129'} stroke="#3a3a46" strokeWidth={1} />
+                    <rect width={22} height={24} rx={3} fill={isExp ? '#e60012' : '#212129'} stroke="#3a3a46" strokeWidth={1} />
                     <text x={11} y={16} textAnchor="middle" fill="#ffffff" fontSize="14" fontWeight="700" fontFamily="Space Mono, monospace" pointerEvents="none">
                       {isExp ? '−' : '+'}
                     </text>

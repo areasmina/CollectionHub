@@ -7,17 +7,20 @@ import { authReturn } from './lib/authreturn';
 // Registers the change tracker before anything writes, so automatic sync sees every edit.
 import './lib/syncstate';
 // Fonts ship with the app (also offline) instead of loading from Google.
-// Trimmed to 3 core Midnight Override families (display, UI sans, mono).
 import '@fontsource/anton/latin-400.css';
 import '@fontsource/archivo/latin-400.css';
 import '@fontsource/archivo/latin-600.css';
 import '@fontsource/archivo/latin-800.css';
+import '@fontsource/archivo-black/latin-400.css';
+import '@fontsource/alfa-slab-one/latin-400.css';
+import '@fontsource/black-ops-one/latin-400.css';
+import '@fontsource/playfair-display/latin-900-italic.css';
+import '@fontsource/shippori-mincho-b1/latin-800.css';
 import '@fontsource/space-mono/latin-400.css';
 import '@fontsource/space-mono/latin-700.css';
+import '@fontsource/special-elite/latin-400.css';
+import './legacy.css';
 import './tokens.css';
-import './styles.css';
-import './ui.css'; // THE OVERHAUL: tokens + the 7 parts; loaded last, so it wins over the old rules it replaces
-import './polish.css'; // Nov 11 spacing & composition pass, loaded after ui.css so it wins
 
 // The service worker reloads the page when a new version takes over. Right after a sign-in redirect that reload would
 // throw away the session in the URL, so wait until Supabase has saved it.

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { binderCandidates } from '../../brain/candidates';
 import { stepPicks } from '../../brain/guided';
 import { inIdentity } from '../../brain/identity';
@@ -7,7 +7,7 @@ import { AGGRESSION, type Aggression } from '../../brain/win';
 import { BASICS, summarize } from '../../lib/compare';
 import { pairIdentity } from '../../lib/commander';
 import { db, type Card, type Deck, type DeckCard } from '../../lib/db';
-import { bracketOf, deckStats } from '../../lib/deckstats';
+import { bracketOf, deckStats, isLand } from '../../lib/deckstats';
 import { deckText } from '../../lib/export';
 import { haptic } from '../../lib/haptics';
 import { freeDeckName, openDeck } from '../../lib/nav';
@@ -49,32 +49,123 @@ const PRICE_CAPS: Array<{ label: string; value: number | null }> = [
 
 const BRACKET_OPTIONS = [2, 3, 4, 5] as const;
 
+interface GuidedDraft {
+  commanderKey: string | null;
+  draftCards: DeckCard[];
+  deckName: string;
+  step: WizardStep;
+  bracket: number;
+  aggression: Aggression;
+}
+
+const draftKeyFor = (profile: number) => `ch:guided_draft_${profile}`;
+
+function loadGuidedDraft(profile: number): GuidedDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKeyFor(profile));
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Partial<GuidedDraft>;
+    if (!p || !Array.isArray(p.draftCards)) return null;
+    return {
+      commanderKey: typeof p.commanderKey === 'string' ? p.commanderKey : null,
+      draftCards: p.draftCards,
+      deckName: typeof p.deckName === 'string' ? p.deckName : '',
+      step: WIZARD_STEPS.includes(p.step as WizardStep) ? (p.step as WizardStep) : 'commander',
+      bracket: typeof p.bracket === 'number' ? p.bracket : 3,
+      aggression: p.aggression === 'patient' || p.aggression === 'hungry' || p.aggression === 'lethal' ? p.aggression : 'hungry',
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuilderProps) {
   const binderCards = useBinder(profile);
-  const allCachedCards = useLiveQuery(() => db.cards.toArray(), []) ?? [];
+  const initialDraft = useMemo(() => loadGuidedDraft(profile), [profile]);
 
-  const [step, setStep] = useState<WizardStep>('commander');
+  const [step, setStep] = useState<WizardStep>(() => initialDraft?.step ?? 'commander');
   const [startMode, setStartMode] = useState<'commander' | 'cards'>('commander');
   const [viewMode, setViewMode] = useState<'tabletop' | 'classic'>('tabletop');
   const [groupBy, setGroupBy] = useState<TabletopGroupBy>('categories');
-  const [bracket, setBracket] = useState<number>(3);
-  const [aggression, setAggression] = useState<Aggression>('hungry');
+  const [bracket, setBracket] = useState<number>(() => initialDraft?.bracket ?? 3);
+  const [aggression, setAggression] = useState<Aggression>(() => initialDraft?.aggression ?? 'hungry');
   const [maxPriceCad, setMaxPriceCad] = useState<number | null>(null);
 
   const [query, setQuery] = useState('');
   const [seedCards, setSeedCards] = useState<Card[]>([]);
+  const [savedCommanderKey, setSavedCommanderKey] = useState<string | null>(() => initialDraft?.commanderKey ?? null);
   const [commander, setCommander] = useState<Card | null>(null);
-  const [draftCards, setDraftCards] = useState<DeckCard[]>([]);
-  const [deckName, setDeckName] = useState('');
+  const [draftCards, setDraftCards] = useState<DeckCard[]>(() => initialDraft?.draftCards ?? []);
+  const [deckName, setDeckName] = useState(() => initialDraft?.deckName ?? '');
   const [saving, setSaving] = useState(false);
 
-  // Index cached/binder cards by normalized name for instant lookup (prefer owned binder copy).
+  // Memory-lean: only query draft card keys (plus an 80-card fallback when binder is empty), never full db.cards.toArray()
+  const draftKeys = useMemo(() => {
+    const keys = draftCards.map((c) => norm(c.name));
+    if (savedCommanderKey && !keys.includes(savedCommanderKey)) keys.push(savedCommanderKey);
+    return keys;
+  }, [draftCards, savedCommanderKey]);
+
+  const extraDbCards =
+    useLiveQuery(async () => {
+      const hits = draftKeys.length ? await db.cards.where('key').anyOf(draftKeys).toArray() : [];
+      if (binderCards.length === 0) {
+        const sample = await db.cards.filter((c) => c.legal !== false).limit(80).toArray();
+        return [...hits, ...sample];
+      }
+      return hits;
+    }, [draftKeys.join('|'), binderCards.length]) ?? [];
+
+  // Index binder + draft cards by normalized name (prefer owned binder copy).
   const cardByKey = useMemo(() => {
     const map = new Map<string, Card>();
-    for (const c of allCachedCards) if (!map.has(c.key)) map.set(c.key, c);
+    for (const c of extraDbCards) if (!map.has(c.key)) map.set(c.key, c);
     for (const c of binderCards) map.set(c.key, c);
     return map;
-  }, [allCachedCards, binderCards]);
+  }, [extraDbCards, binderCards]);
+
+  // Resolve persisted commander once card data arrives
+  useEffect(() => {
+    if (!commander && savedCommanderKey) {
+      const found = cardByKey.get(savedCommanderKey);
+      if (found) setCommander(found);
+    }
+  }, [cardByKey, commander, savedCommanderKey]);
+
+  // Persist draft across reloads/tab switches
+  useEffect(() => {
+    try {
+      const cmdKey = commander?.key ?? savedCommanderKey;
+      if (!cmdKey && draftCards.length === 0) {
+        localStorage.removeItem(draftKeyFor(profile));
+        return;
+      }
+      const payload: GuidedDraft = {
+        commanderKey: cmdKey,
+        draftCards,
+        deckName,
+        step,
+        bracket,
+        aggression,
+      };
+      localStorage.setItem(draftKeyFor(profile), JSON.stringify(payload));
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [aggression, bracket, commander, deckName, draftCards, profile, savedCommanderKey, step]);
+
+  const resetDraft = () => {
+    haptic('tap');
+    setCommander(null);
+    setSavedCommanderKey(null);
+    setDraftCards([]);
+    setSeedCards([]);
+    setDeckName('');
+    setStep('commander');
+    try {
+      localStorage.removeItem(draftKeyFor(profile));
+    } catch {}
+  };
 
   const cardOf = useCallback(
     (name: string) => withBasicFallback((n) => cardByKey.get(norm(n)))(name),
@@ -82,8 +173,8 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
   );
 
   const cardPool = useMemo(() => {
-    return binderCards.length > 0 ? binderCards : allCachedCards.filter((c) => c.legal !== false);
-  }, [binderCards, allCachedCards]);
+    return binderCards.length > 0 ? binderCards : extraDbCards.filter((c) => c.legal !== false);
+  }, [binderCards, extraDbCards]);
 
   const identity = useMemo(() => {
     return commander ? pairIdentity(commander.ci) : [];
@@ -107,6 +198,7 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
   const selectCommander = (cmd: Card) => {
     haptic('success');
     setCommander(cmd);
+    setSavedCommanderKey(cmd.key);
     if (!deckName.trim()) {
       setDeckName(`${cmd.name.split(',')[0]} (Guided)`);
     }
@@ -180,7 +272,22 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
     haptic('success');
     if (step === 'lands') {
       const targetLands = stepRead?.target?.[0] ?? 37;
-      setDraftCards((prev) => autoFillBasics(prev, cardOf, identity, targetLands, 100));
+      setDraftCards((prev) => {
+        let next = prev;
+        let currentLands = next.reduce((n, c) => n + (isLand(cardOf(c.name)?.type) ? c.qty : 0), 0);
+        // Pick top owned nonbasic lands first, then top up remaining slots evenly with basics
+        if (stepRead) {
+          const ownedNonbasics = stepRead.picks.filter(
+            (p) => !p.blocked && !BASICS.has(norm(p.name)) && !next.some((d) => norm(d.name) === norm(p.name))
+          );
+          for (const land of ownedNonbasics) {
+            if (currentLands >= targetLands || totalCardsIn(next) >= 100) break;
+            next = adjustDeckCard(next, land.name, 1);
+            currentLands++;
+          }
+        }
+        return autoFillBasics(next, cardOf, identity, targetLands, 100);
+      });
       return;
     }
     const targetMin = stepRead?.target?.[0] ?? (step === 'rest' ? 99 : 8);
@@ -239,6 +346,9 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
         source: 'guided',
       };
       await db.decks.add(deck);
+      try {
+        localStorage.removeItem(draftKeyFor(profile));
+      } catch {}
       haptic('success');
       onToast?.({ text: `Saved "${name}" (${totalCount} cards).` });
       openDeck(name);
@@ -289,6 +399,11 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
         </div>
 
         <div className={s.topControls}>
+          {(commander || draftCards.length > 0) && (
+            <button type="button" className={s.btn} onClick={resetDraft} title="Clear current guided draft">
+              Reset Draft
+            </button>
+          )}
           <div className={s.seg} role="group" aria-label="Deck workspace view">
             <button
               type="button"

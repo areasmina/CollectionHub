@@ -27,8 +27,8 @@ const LIST = 'ch:opendecklist';
 export const openDeckList = () => dispatchEvent(new Event(LIST));
 export const onOpenDeckList = (f: () => void) => (addEventListener(LIST, f), () => removeEventListener(LIST, f));
 
-/** Jump straight to a Discover sub-tab ('commanders' | 'tags' | 'check' | 'guided') from anywhere (e.g. Ctrl/Cmd+K). */
-export type DiscoverSubTab = 'commanders' | 'tags' | 'check' | 'guided';
+/** Jump straight to a Discover sub-tab ('commanders' | 'tags' | 'guided') from anywhere (e.g. Ctrl/Cmd+K). */
+export type DiscoverSubTab = 'commanders' | 'tags' | 'guided';
 const DISCOVER_SUB = 'ch:discoversub';
 let pendingDiscoverSub: DiscoverSubTab | null = null;
 export function openDiscoverSub(sub: DiscoverSubTab) {
@@ -44,6 +44,24 @@ export const onDiscoverSub = (f: (sub: DiscoverSubTab) => void) => {
   const h = (e: Event) => f((e as CustomEvent<DiscoverSubTab>).detail);
   addEventListener(DISCOVER_SUB, h);
   return () => removeEventListener(DISCOVER_SUB, h);
+};
+
+/** Deep-link a specific tag in the Tag Navigator (e.g. from Ctrl/Cmd+K). */
+const OPEN_TAG = 'ch:opentag';
+let pendingTagQuery: string | null = null;
+export function openTagInNavigator(tagLabelOrId: string) {
+  pendingTagQuery = tagLabelOrId;
+  dispatchEvent(new CustomEvent(OPEN_TAG, { detail: tagLabelOrId }));
+}
+export function takePendingTag(): string | null {
+  const t = pendingTagQuery;
+  pendingTagQuery = null;
+  return t;
+}
+export const onPendingTag = (f: (tag: string) => void) => {
+  const h = (e: Event) => f((e as CustomEvent<string>).detail);
+  addEventListener(OPEN_TAG, h);
+  return () => removeEventListener(OPEN_TAG, h);
 };
 
 /** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */

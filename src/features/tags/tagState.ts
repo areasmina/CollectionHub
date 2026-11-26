@@ -95,8 +95,24 @@ export function countOwnedForTag(index: TagIndex, tagIdx: number, owned: Set<str
 
 export interface TagCondition {
   tagIdx: number;
-  mode: 'include' | 'exclude';
+  mode: 'include' | 'or' | 'exclude';
 }
+
+export interface DigitalOnlyTag {
+  id: string;
+  label: string;
+  parentLabel: string;
+  note: string;
+}
+
+export const DIGITAL_ONLY_TAGS: readonly DigitalOnlyTag[] = [
+  {
+    id: 'seek',
+    label: 'seek',
+    parentLabel: 'card advantage',
+    note: 'Digital / Arena only (no paper Commander cards)',
+  },
+];
 
 export type TagShow = 'owned' | 'all' | 'missing';
 
@@ -108,9 +124,8 @@ export interface TagCardMatch {
 }
 
 /**
- * Evaluates a set of include (`AND`) / exclude (`NOT`) tag conditions and filters by ownership & colour identity.
- * Colour filter uses Commander identity rules: a card matches `colours` when every pip in its identity is selected
- * (or the card is colorless and `'C'` is selected, or colorless cards are allowed inside a colour identity).
+ * Evaluates include (`AND`), union (`OR`), and exclude (`NOT`) tag conditions.
+ * When both `AND` and `OR` exist, cards must match all `AND` tags and at least one `OR` tag.
  */
 export function evalTagQuery(
   index: TagIndex,
@@ -124,24 +139,34 @@ export function evalTagQuery(
   },
 ): TagCardMatch[] {
   const includes = conditions.filter((c) => c.mode === 'include');
+  const ors = conditions.filter((c) => c.mode === 'or');
   const excludes = conditions.filter((c) => c.mode === 'exclude');
-  if (!includes.length) return [];
+  if (!includes.length && !ors.length) return [];
 
-  // Intersect from smallest include set first for speed on broad tags like `draw`
+  const orUnion = ors.length > 0 ? new Set<number>() : null;
+  if (orUnion) {
+    for (const c of ors) {
+      for (const idx of index.cardsOfMemo(c.tagIdx)) orUnion.add(idx);
+    }
+  }
+
+  // Intersect from smallest include set first for speed; fall back to `orUnion` when only `OR` tags exist
   const sets = includes.map((c) => index.cardsOfMemo(c.tagIdx)).sort((a, b) => a.size - b.size);
   const exclSets = excludes.map((c) => index.cardsOfMemo(c.tagIdx));
   const topUnion = new Set<number>();
-  for (const c of includes) {
+  for (const c of [...includes, ...ors]) {
     for (const t of index.topOfMemo(c.tagIdx)) topUnion.add(t);
   }
 
-  const [first, ...rest] = sets;
+  const baseSet = sets[0] ?? orUnion!;
+  const restIncludes = sets.slice(1);
   const colFilter = opts.colours && opts.colours.length > 0 ? new Set(opts.colours) : null;
   const q = opts.search?.trim().toLowerCase() ?? '';
   const out: TagCardMatch[] = [];
 
-  for (const cardIdx of first) {
-    if (rest.some((s) => !s.has(cardIdx))) continue;
+  for (const cardIdx of baseSet) {
+    if (restIncludes.some((s) => !s.has(cardIdx))) continue;
+    if (sets.length > 0 && orUnion && !orUnion.has(cardIdx)) continue;
     if (exclSets.some((s) => s.has(cardIdx))) continue;
     const name = index.data.cards[cardIdx];
     if (q && !name.toLowerCase().includes(q)) continue;

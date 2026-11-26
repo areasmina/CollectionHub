@@ -205,9 +205,24 @@
   font-size: 11px;
 }
 
+.graphWrapExpanded {
+  position: fixed;
+  inset: 16px;
+  z-index: var(--mo-z-sheet);
+  background: var(--mo-surface);
+  border: 2px solid var(--mo-red);
+  border-radius: var(--mo-r-md);
+  padding: var(--mo-s3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mo-s2);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+}
+
 .graphSvg {
   width: 100%;
-  height: 470px;
+  height: 620px;
+  min-height: 58vh;
   background-color: var(--mo-bg);
   background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px);
   background-size: 18px 18px;
@@ -215,6 +230,11 @@
   border-radius: var(--mo-r-sm);
   cursor: grab;
   touch-action: none;
+}
+
+.graphWrapExpanded .graphSvg {
+  height: 100%;
+  flex: 1;
 }
 
 .graphSvg:active {
@@ -329,6 +349,11 @@
   background: var(--mo-surface-2);
   font-family: var(--mo-mono);
   font-size: 12px;
+}
+
+.condPill[data-mode='or'] {
+  border-color: var(--mo-blue);
+  background: var(--mo-blue-soft);
 }
 
 .condPill[data-mode='exclude'] {

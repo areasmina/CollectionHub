@@ -7,7 +7,7 @@ import { db, type Card } from './lib/db';
 import { norm } from './lib/names';
 import { Discover } from './views/Discover';
 import { authReturn } from './lib/authreturn';
-import { canLeave, getBack, onBackChange, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
+import { canLeave, getBack, onBackChange, onDiscoverSub, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
 import { codeFromHash } from './lib/synccode';
 import { useSyncState, useSyncCode, syncCode, type SyncStatus } from './lib/syncstate';
 import { turnOn, turnOff } from './lib/sync';
@@ -310,6 +310,7 @@ export default function App() {
   useEffect(() => onOpenDeck(() => (setTab('decks'), window.scrollTo(0, 0))), []);
   useEffect(() => onOpenDeckList(() => (setTab('decks'), window.scrollTo(0, 0))), []);
   useEffect(() => onOpenCollection(() => (setTab('collection'), window.scrollTo(0, 0))), []);
+  useEffect(() => onDiscoverSub(() => (setTab('discover'), window.scrollTo(0, 0))), []);
   useEffect(() => store.set('ch:profile', String(profile)), [profile]);
 
   // The clear lane (phase 4 step 2): a side-docked island keeps a strip of the page free, as wide as the island itself.

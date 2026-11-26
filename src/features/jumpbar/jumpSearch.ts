@@ -25,10 +25,9 @@ export interface TagSummary {
 
 const QUICK_VIEWS: Array<{ id: string; title: string; subtitle: string; tab: 'discover' | 'decks' | 'collection'; subTab?: DiscoverSubTab }> = [
   { id: 'view-guided', title: 'Guided Deckbuilder', subtitle: 'Step-by-step 100-card builder + Tabletop view', tab: 'discover', subTab: 'guided' },
-  { id: 'view-tags', title: 'Scryfall Tag Navigator', subtitle: 'Browse functional & theme tag tree', tab: 'discover', subTab: 'tags' },
-  { id: 'view-check', title: 'Check List (Paste Deck)', subtitle: 'Compare any decklist against your binder', tab: 'discover', subTab: 'check' },
+  { id: 'view-tags', title: 'Tag Builder', subtitle: 'Browse Scryfall Tagger tree & bulk add to deck', tab: 'discover', subTab: 'tags' },
   { id: 'view-commanders', title: 'Discover Commanders', subtitle: 'Top commanders ranked by cards you own', tab: 'discover', subTab: 'commanders' },
-  { id: 'view-decks', title: 'My Decks', subtitle: 'Open saved decks, Balance to 100, Rule Zero', tab: 'decks' },
+  { id: 'view-decks', title: 'My Decks & Check List', subtitle: 'Saved decks, Folders, Balance, History & Paste Check', tab: 'decks' },
   { id: 'view-collection', title: 'My Collection', subtitle: 'Browse binder, import CSV, manage lists', tab: 'collection' },
 ];
 

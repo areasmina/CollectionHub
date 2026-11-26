@@ -5,6 +5,7 @@ import { cardFromList, cardList, smallPic, type CardList } from '../../lib/cardl
 import { db, type Card } from '../../lib/db';
 import { haptic } from '../../lib/haptics';
 import { norm } from '../../lib/names';
+import { onPendingTag, takePendingTag } from '../../lib/nav';
 import { resolveRows } from '../../lib/scryfall';
 import { findTags } from '../../lib/tags';
 import { CardMenu, type Toast } from '../../views/CardMenu';
@@ -44,10 +45,28 @@ export function TagsNavigator({
   const [focusTag, setFocusTag] = useState<number>(0);
   const [conditions, setConditions] = useState<TagCondition[]>([]);
   const [show, setShow] = useState<Show>('owned');
+  const [formatMode, setFormatMode] = useState<'paper' | 'online'>(() => {
+    try {
+      return localStorage.getItem('ch:format_mode') === 'online' ? 'online' : 'paper';
+    } catch {
+      return 'paper';
+    }
+  });
   const [colours, setColours] = useState<string[]>([]);
   const [cardFilter, setCardFilter] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [menu, setMenu] = useState<{ name: string; x: number; y: number } | null>(null);
+
+  const toggleFormatMode = () => {
+    haptic('select');
+    setFormatMode((prev) => {
+      const next = prev === 'paper' ? 'online' : 'paper';
+      try {
+        localStorage.setItem('ch:format_mode', next);
+      } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     let live = true;
@@ -59,28 +78,48 @@ export function TagsNavigator({
       }
       const idx = createTagIndex(d);
       setIndex(idx);
-      const first = starterTags(idx)[0] ?? 0;
+      const pending = takePendingTag();
+      const pendingIdx = pending
+        ? idx.byLabel.get(pending.toLowerCase()) ??
+          idx.data.tags.findIndex((t) => t.id === pending || t.label.toLowerCase() === pending.toLowerCase())
+        : -1;
+      const first = pendingIdx >= 0 ? pendingIdx : starterTags(idx)[0] ?? 0;
       setFocusTag(first);
       setConditions([{ tagIdx: first, mode: 'include' }]);
     });
     cardList().then((cl) => live && setListMap(cl));
+    const offTag = onPendingTag((tagName) => {
+      setIndex((curIdx) => {
+        if (!curIdx) return curIdx;
+        const foundIdx =
+          curIdx.byLabel.get(tagName.toLowerCase()) ??
+          curIdx.data.tags.findIndex((t) => t.id === tagName || t.label.toLowerCase() === tagName.toLowerCase());
+        if (foundIdx >= 0) {
+          setFocusTag(foundIdx);
+          setConditions([{ tagIdx: foundIdx, mode: 'include' }]);
+          setLimit(PAGE_SIZE);
+        }
+        return curIdx;
+      });
+    });
     return () => {
       live = false;
+      offTag();
     };
   }, []);
 
   const ownedSet = useMemo(() => new Set(mine.keys()), [mine]);
 
-  // All cached cards in Dexie keyed by norm(name) for instant images & colour identities
+  // Memory-lean: query only cards needed for colour filtering or currently visible results, not all db.cards
+  const [visibleKeys, setVisibleKeys] = useState<string[]>([]);
   const dbCards =
     useLiveQuery(async () => {
-      const all = await db.cards.toArray();
+      if (!visibleKeys.length) return new Map<string, Card>();
+      const hits = await db.cards.where('key').anyOf(visibleKeys).toArray();
       const map = new Map<string, Card>();
-      for (const c of all) {
-        if (!map.has(c.key)) map.set(c.key, c);
-      }
+      for (const c of hits) if (!map.has(c.key)) map.set(c.key, c);
       return map;
-    }, []) ?? new Map<string, Card>();
+    }, [visibleKeys.join('|')]) ?? new Map<string, Card>();
 
   const cardInfoOf = useMemo(() => {
     return (name: string): { img?: string; ci?: string[] } => {
@@ -113,6 +152,11 @@ export function TagsNavigator({
   }, [index, conditions, ownedSet, show, colours, cardInfoOf, cardFilter]);
 
   const visible = useMemo(() => matches.slice(0, limit), [matches, limit]);
+
+  useEffect(() => {
+    const keys = visible.map((m) => norm(m.name));
+    setVisibleKeys(keys);
+  }, [visible]);
 
   // Lazy-fetch Scryfall metadata only for visible cards that aren't in Dexie or oracle.json yet
   const [extraImgs, setExtraImgs] = useState<Map<string, Card>>(new Map());
@@ -201,7 +245,7 @@ export function TagsNavigator({
   };
 
   const activeTag = index.data.tags[focusTag];
-  const selectedSet = new Set(conditions.filter((c) => c.mode === 'include').map((c) => c.tagIdx));
+  const selectedSet = new Set(conditions.filter((c) => c.mode === 'include' || c.mode === 'or').map((c) => c.tagIdx));
   const ownedMatchesCount = matches.filter((m) => m.owned).length;
 
   return (
@@ -287,6 +331,7 @@ export function TagsNavigator({
               rootIdx={focusTag}
               selectedTags={selectedSet}
               owned={ownedSet}
+              formatMode={formatMode}
               onSelectTag={toggleConditionFromGraph}
               onOpenBrowse={(tIdx) => {
                 setFocusTag(tIdx);
@@ -396,13 +441,19 @@ export function TagsNavigator({
                     <button
                       type="button"
                       className={styles.condToggle}
-                      title="Toggle AND / NOT"
+                      title="Cycle condition: AND → OR → NOT"
                       onClick={() => {
                         haptic('select');
-                        setConditions((prev) => prev.map((c, j) => (j === i ? { ...c, mode: c.mode === 'include' ? 'exclude' : 'include' } : c)));
+                        setConditions((prev) =>
+                          prev.map((c, j) =>
+                            j === i
+                              ? { ...c, mode: c.mode === 'include' ? 'or' : c.mode === 'or' ? 'exclude' : 'include' }
+                              : c
+                          )
+                        );
                       }}
                     >
-                      {cond.mode === 'include' ? 'AND' : 'NOT'}
+                      {cond.mode === 'include' ? 'AND' : cond.mode === 'or' ? 'OR' : 'NOT'}
                     </button>
                     <span>{label}</span>
                     <button
@@ -426,6 +477,14 @@ export function TagsNavigator({
             <div className={styles.filterLeft}>
               <button type="button" className={styles.showBtn} onClick={cycleShow} title="Cycle: Owned Only → Missing Only → All Cards">
                 SHOW: {SHOWS.find(([v]) => v === show)?.[1]}
+              </button>
+              <button
+                type="button"
+                className={styles.showBtn}
+                onClick={toggleFormatMode}
+                title={formatMode === 'paper' ? 'Paper Commander: digital/Arena tags like seek are greyed out. Click to switch to Online.' : 'Online Mode: digital/Arena-only tags highlighted.'}
+              >
+                FORMAT: {formatMode === 'paper' ? 'PAPER' : 'ONLINE'}
               </button>
               {PIPS.map((p) => (
                 <button

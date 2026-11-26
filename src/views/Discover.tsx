@@ -6,7 +6,6 @@ import { CardSpin } from './CardSpin';
 
 const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m.CommanderView })));
 const TagsNavigator = lazy(() => import('../features/tags/TagsNavigator').then((m) => ({ default: m.TagsNavigator })));
-const PasteCheck = lazy(() => import('../features/check/PasteCheck').then((m) => ({ default: m.PasteCheck })));
 const GuidedBuilder = lazy(() => import('../features/guided/GuidedBuilder').then((m) => ({ default: m.GuidedBuilder })));
 import { db, type Card } from '../lib/db';
 import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edhrec';
@@ -299,7 +298,7 @@ export function Discover(s: Shared) {
         />
       </section>
 
-      <div className="u-seg" role="tablist" aria-label="Discover mode" style={{ marginBottom: 12, width: 'fit-content' }}>
+      <div className="u-seg" role="tablist" aria-label="Ways to build a deck" style={{ marginBottom: 12, width: 'fit-content' }}>
         <button
           type="button"
           role="tab"
@@ -311,26 +310,18 @@ export function Discover(s: Shared) {
         <button
           type="button"
           role="tab"
-          aria-selected={subTab === 'tags'}
-          onClick={() => (haptic('select'), setSubTab('tags'))}
-        >
-          TAGS
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={subTab === 'check'}
-          onClick={() => (haptic('select'), setSubTab('check'))}
-        >
-          CHECK LIST
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={subTab === 'guided'}
           onClick={() => (haptic('select'), setSubTab('guided'))}
         >
-          GUIDED
+          GUIDED BUILDER
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={subTab === 'tags'}
+          onClick={() => (haptic('select'), setSubTab('tags'))}
+        >
+          TAG BUILDER
         </button>
       </div>
 
@@ -342,10 +333,6 @@ export function Discover(s: Shared) {
             mine={s.mine}
             onToast={(t) => setToast({ text: t.text, undo: t.undo })}
           />
-        </Suspense>
-      ) : subTab === 'check' ? (
-        <Suspense fallback={<CardSpin page />}>
-          <PasteCheck mine={s.mine} other={s.other} binderName={s.binderName} otherName={s.otherName} />
         </Suspense>
       ) : subTab === 'guided' ? (
         <Suspense fallback={<CardSpin page />}>

@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { db } from '../../lib/db';
+import { db, type Deck } from '../../lib/db';
 import { haptic } from '../../lib/haptics';
-import { openCollection, openDeck, openDiscoverSub } from '../../lib/nav';
+import { norm } from '../../lib/names';
+import { openCollection, openDeck, openDiscoverSub, openTagInNavigator } from '../../lib/nav';
 import { openCard } from '../../views/shared';
 import { loadTagData } from '../tags/tagState';
 import s from './JumpBar.module.css';
@@ -21,8 +22,32 @@ export function JumpBar({ profile, mine, onSwitchTab }: JumpBarProps) {
   const [tags, setTags] = useState<TagSummary[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const decks = useLiveQuery(() => db.decks.where('profile').equals(profile).toArray(), [profile]) ?? [];
-  const cards = useLiveQuery(() => db.cards.toArray(), []) ?? [];
+  // Only query Dexie while JumpBar is open so idle pages use zero extra card memory
+  const decks =
+    useLiveQuery(
+      async (): Promise<Deck[]> => (open ? db.decks.where('profile').equals(profile).toArray() : []),
+      [open, profile]
+    ) ?? [];
+
+  const cards =
+    useLiveQuery(async () => {
+      if (!open) return [];
+      const q = norm(query);
+      if (q.length < 2) return [];
+      return db.cards
+        .where('key')
+        .startsWithIgnoreCase(q)
+        .limit(24)
+        .toArray()
+        .then(async (prefixHits) => {
+          if (prefixHits.length >= 12) return prefixHits;
+          // Fallback substring scan bounded to 40 matches if prefix didn't fill
+          return db.cards
+            .filter((c) => c.key.includes(q))
+            .limit(30)
+            .toArray();
+        });
+    }, [open, query]) ?? [];
 
   // Global Ctrl+K / Cmd+K shortcut
   useEffect(() => {
@@ -42,7 +67,7 @@ export function JumpBar({ profile, mine, onSwitchTab }: JumpBarProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Focus input & lazy-load tags when opened
+  // Focus input & lazy-load tags only when opened
   useEffect(() => {
     if (!open) return;
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -83,8 +108,9 @@ export function JumpBar({ profile, mine, onSwitchTab }: JumpBarProps) {
       return;
     }
     if (t.kind === 'tag') {
-      onSwitchTab('discover');
+      openTagInNavigator(t.name);
       openDiscoverSub('tags');
+      onSwitchTab('discover');
       return;
     }
     if (t.kind === 'card') {

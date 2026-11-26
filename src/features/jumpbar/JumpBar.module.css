@@ -2,8 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--mo-z-sheet);
-  background: rgba(5, 5, 8, 0.78);
-  backdrop-filter: blur(4px);
+  background: rgba(5, 5, 8, 0.86);
   display: grid;
   place-items: start center;
   padding: 68px 16px 24px;
