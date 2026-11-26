@@ -52,7 +52,7 @@ export function Segs({ label, value, options, onChange, roman }: { label: string
 export function ChipPick<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: readonly (readonly [T, string])[]; onChange: (v: T) => void }) {
   return (
     <OptRow label={label}>
-      <div className="chiprow" role="radiogroup" aria-label={label} onScroll={snapTick} style={{ flexWrap: 'wrap', rowGap: 6 }}>
+      <div className="chiprow" role="radiogroup" aria-label={label} onScroll={snapTick}>
         {options.map(([v, t]) => (
           <button key={v} type="button" role="radio" className="u-chip" aria-checked={value === v} aria-pressed={value === v} onClick={() => (haptic('select'), onChange(v))}>
             {t}

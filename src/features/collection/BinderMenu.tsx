@@ -39,7 +39,22 @@ export function BinderMenu({
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     addEventListener('pointerdown', out);
     addEventListener('keydown', esc);
-    return () => (removeEventListener('pointerdown', out), removeEventListener('keydown', esc));
+    const raf = requestAnimationFrame(() => {
+      const el = box.current?.querySelector('.bmenu') as HTMLElement | null;
+      if (!el) return;
+      el.style.removeProperty('left');
+      el.style.removeProperty('right');
+      const r = el.getBoundingClientRect();
+      if (r.right > innerWidth - 12) {
+        el.style.setProperty('left', 'auto', 'important');
+        el.style.setProperty('right', '0', 'important');
+        const r2 = el.getBoundingClientRect();
+        if (r2.left < 12) {
+          el.style.setProperty('right', `${r2.left - 12}px`, 'important');
+        }
+      }
+    });
+    return () => (cancelAnimationFrame(raf), removeEventListener('pointerdown', out), removeEventListener('keydown', esc));
   }, [open]);
 
   const act = (f: () => unknown) => () => (setOpen(false), f());

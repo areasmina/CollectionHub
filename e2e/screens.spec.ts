@@ -728,7 +728,7 @@ test('A + D: coverage line under the bar; OWNED quick filter; BUY UNDER marks, n
   await expect(page.locator('.vmatch small')).toContainText(/you own \d+ of \d+/);
   await expect(cov).not.toContainText('from your binder');
   await expect(page.locator('.vtile.fit summary')).toContainText(/FITS/); // decks open at Discover's All-brackets / Any-budget baseline
-  await expect(page.locator('.lists > .tbar .fnow')).toContainText('ALL');
+  await expect(page.locator('.lists > .tbar .qshow-btn')).toHaveText('ALL');
   const before = await cov.innerText();
   // filter to OWNED cards via toolbar search bar quick segment
   // (quick segments show above 700px; on phones the same filter is SHOW in ⋮)
