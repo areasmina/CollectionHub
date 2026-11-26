@@ -1149,6 +1149,7 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
 @media (max-width: 700px) {
   html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
   html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
+  html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .forgetop, html.forging .fsugg { transition: none !important; }

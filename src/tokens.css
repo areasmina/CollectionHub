@@ -555,3 +555,110 @@ html.forging .lists.drop-over {
     gap: 3px !important;
   }
 }
+
+/* ── Forge Dynamic Island height/clearance + Cohesive Filter Menus + Commander Hero Polish ── */
+.pillnav.forging-island {
+  height: auto !important;
+  min-height: 46px !important;
+  padding: 6px 10px !important;
+}
+.pillnav.forging-island.dock-top {
+  top: 0 !important;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 6px) !important;
+}
+.pillnav.forging-island .island-membrane {
+  height: 100% !important;
+  border-radius: 22px !important;
+}
+.pillnav.forging-island .island-content {
+  height: auto !important;
+  align-items: center !important;
+}
+.pillnav .fcube > button > small {
+  background: #fff824 !important;
+  color: #0a0a0a !important;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font: 700 10px/1.2 var(--mo-mono);
+}
+html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .dpage {
+  padding-top: 64px !important;
+}
+@media (max-width: 700px) {
+  html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) .dpage {
+    padding-top: 108px !important;
+  }
+  html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) {
+    bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* Commander Hero: clean deck pills & balanced FROM YOUR BINDER / TO BUY row */
+.vmeta .mydecks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.vmeta .mydecks-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  border-radius: 3px;
+}
+.vmeta .mydecks-pill .decklink {
+  color: #f2f2f2 !important;
+  text-decoration: none !important;
+  font-size: 11px;
+  line-height: 1.25;
+}
+.vmeta .mydecks-pill .decklink:hover {
+  color: var(--mo-yellow) !important;
+}
+.vtile.vnote {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  border: 1px solid #262630 !important;
+  padding: 8px 10px !important;
+  border-radius: 3px !important;
+}
+.dstrip .dacts .u-btn.tobuy {
+  border-color: #3a3418 !important;
+  background: #12110c !important;
+}
+
+/* Cohesive Filter Menus: unify GEAR / PRICE CAP segmented controls with dark hairline pills */
+.tbmore .fbody .u-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+.tbmore .fbody .u-seg > button {
+  min-height: 36px;
+  padding: 6px 12px !important;
+  background: #141418 !important;
+  background-image: none !important;
+  border: 1px solid #2e2e38 !important;
+  border-radius: 999px !important;
+  color: #d4d4de !important;
+  font: 700 11px/1 var(--mo-mono) !important;
+  box-shadow: none !important;
+}
+.tbmore .fbody .u-seg > button[aria-checked='true'] {
+  background: #e60012 !important;
+  border-color: #e60012 !important;
+  color: #ffffff !important;
+}
+@media (max-width: 700px) {
+  .tbmore .fbody .u-seg > button {
+    min-height: 44px !important;
+  }
+}

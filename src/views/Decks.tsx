@@ -379,19 +379,6 @@ export function Decks(s: Shared) {
                 </button>
               ))}
             </div>
-            {allTags.length > 0 && (
-              <div className="decktagpills" role="group" aria-label="Filter by tag">
-                <span className="tlabel">TAGS:</span>
-                <button type="button" className={`tagpill ${dtag === 'all' ? 'active' : ''}`} aria-pressed={dtag === 'all'} onClick={() => setDtag('all')}>
-                  ALL
-                </button>
-                {allTags.map((t) => (
-                  <button key={t} type="button" className={`tagpill ${dtag === t ? 'active' : ''}`} aria-pressed={dtag === t} onClick={() => setDtag(dtag === t ? 'all' : t)}>
-                    #{t}
-                  </button>
-                ))}
-              </div>
-            )}
             {/* SIZE joins the filters row (Guillermo, Nov 15): it used to float alone over the decks */}
             {decks.length > 0 && (
               <button
@@ -405,6 +392,19 @@ export function Decks(s: Shared) {
               </button>
             )}
           </div>
+          {allTags.length > 0 && (
+            <div className="decktagpills" role="group" aria-label="Filter by tag">
+              <span className="tlabel">TAGS:</span>
+              <button type="button" className={`tagpill ${dtag === 'all' ? 'active' : ''}`} aria-pressed={dtag === 'all'} onClick={() => setDtag('all')}>
+                ALL
+              </button>
+              {allTags.map((t) => (
+                <button key={t} type="button" className={`tagpill ${dtag === t ? 'active' : ''}`} aria-pressed={dtag === t} onClick={() => setDtag(dtag === t ? 'all' : t)}>
+                  #{t}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {decks.length > 0 && (
           <DeckFolderBar

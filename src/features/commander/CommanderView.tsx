@@ -766,7 +766,7 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                   <Segs label="Gear" value={budget} options={GEARS} onChange={setBudget} />
                 </OptRow>
                 {kind === 'average' && (
-                  <OptRow label="BUY UNDER">
+                  <OptRow label="PRICE CAP">
                     <Segs label="Buy under" value={capS} options={BUY_CAPS.map(([v, t]) => [v, v === '0' ? t : `CA${t}`, v === '0' ? 'No price cap on buy suggestions' : `Mark buy suggestions over CA${t} each (the deck never changes)`])} onChange={setCap} />
                   </OptRow>
                 )}

@@ -135,10 +135,9 @@ export function CommanderHero({
             {page && <SaltStat names={names} />}
             {mine.length > 0 && !saved && (
               <span className="mydecks">
-                your deck{mine.length > 1 ? 's' : ''}:{' '}
-                {(allMine ? mine : mine.slice(0, 3)).map((d, i) => (
-                  <span key={d.id}>
-                    {i > 0 && ', '}
+                <span className="mydecks-lbl">your deck{mine.length > 1 ? 's' : ''}:</span>
+                {(allMine ? mine : mine.slice(0, 3)).map((d) => (
+                  <span key={d.id} className="mydecks-pill">
                     <DeckLink name={d.name} />
                   </span>
                 ))}
