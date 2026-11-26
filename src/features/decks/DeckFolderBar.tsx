@@ -26,6 +26,7 @@ export function DeckFolderBar({
 }: DeckFolderBarProps) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [adding, setAdding] = useState(false);
 
   const unfiledCount = decks.filter((d) => !folderOfDeck(store, d.id)).length;
   const countIn = (folder: string) =>
@@ -89,22 +90,38 @@ export function DeckFolderBar({
         </span>
       ))}
 
-      <form className={s.addForm} onSubmit={submit}>
-        <input
-          type="text"
-          className={s.addInput}
-          aria-label="New deck folder name"
-          placeholder="+ folder..."
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (error) setError('');
-          }}
-        />
-        <button type="submit" className={s.btn}>
-          Add
+      {adding ? (
+        <form className={s.addForm} onSubmit={(e) => { submit(e); if (name.trim()) setAdding(false); }}>
+          <input
+            type="text"
+            className={s.addInput}
+            aria-label="New deck folder name"
+            placeholder="+ folder..."
+            autoFocus
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (error) setError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setAdding(false);
+                setError('');
+              }
+            }}
+          />
+          <button type="submit" className={s.btn}>
+            Add
+          </button>
+          <button type="button" className={s.btn} onClick={() => { setAdding(false); setError(''); }} aria-label="Cancel new folder">
+            ✕
+          </button>
+        </form>
+      ) : (
+        <button type="button" className={s.btn} onClick={() => setAdding(true)}>
+          + Folder
         </button>
-      </form>
+      )}
       {error && <div className={s.err}>{error}</div>}
     </div>
   );

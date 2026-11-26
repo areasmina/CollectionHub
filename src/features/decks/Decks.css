@@ -119,9 +119,11 @@
 
 .decktoolbar .dfilters {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .decktoolbar .dsortpick {
@@ -144,8 +146,26 @@
 
 .decktoolbar .dstatuspick {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: 6px;
+}
+
+.decktoolbar .dstatuspick::-webkit-scrollbar {
+  display: none;
+}
+
+.decktoolbar .dstatuspick > .u-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.decktoolbar .dfilters > .dsize {
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .decktoolbar .dstatuspick .u-chip {

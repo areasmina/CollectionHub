@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { db, type Deck } from '../../lib/db';
-import { deckColour, hsvHex, wheelColour } from '../../lib/deckcolor';
+import { deckColour, hsvHex } from '../../lib/deckcolor';
 import { getDeckSnapshots, saveDeckSnapshot } from '../../lib/deckhistory';
 import { deckArena, deckCsv, deckText, download } from '../../lib/export';
 import { haptic } from '../../lib/haptics';
@@ -9,31 +9,18 @@ import { freeDeckName } from '../../lib/nav';
 export type MenuAt = { x: number; y: number; anchor?: DOMRect };
 
 function ColourWheel({ value, onPick }: { value: string; onPick: (c: string) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
   const [hue, setHue] = useState(0);
-  const at = (e: React.PointerEvent) => {
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const dx = e.clientX - (r.left + r.width / 2);
-    const dy = e.clientY - (r.top + r.height / 2);
-    setHue((Math.atan2(dx, -dy) * (180 / Math.PI) + 360) % 360);
-    onPick(wheelColour(dx, dy, r.width / 2));
-  };
   return (
     <span className="cwheel-wrap">
       <div
-        ref={ref}
         className="cwheel"
         role="slider"
         tabIndex={0}
-        aria-label="Deck colour wheel: left and right turn the colour"
+        aria-label="Deck colour picker: click to choose any colour, or use arrow keys to step hue"
         aria-valuemin={0}
         aria-valuemax={359}
         aria-valuenow={Math.round(hue)}
         aria-valuetext={value}
-        onPointerDown={(e) => (e.currentTarget.setPointerCapture(e.pointerId), at(e))}
-        onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && at(e)}
         onKeyDown={(e) => {
           const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 10 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -10 : 0;
           if (!step) return;
@@ -44,6 +31,13 @@ function ColourWheel({ value, onPick }: { value: string; onPick: (c: string) => 
           onPick(hsvHex(h, 1, 1));
         }}
       >
+        <input
+          type="color"
+          className="cwheel-input"
+          value={value}
+          aria-label="Pick deck colour"
+          onChange={(e) => onPick(e.target.value)}
+        />
         <span className="cwheel-now" style={{ background: value }} aria-hidden="true" />
       </div>
       <code className="cwheel-val">{value.toUpperCase()}</code>

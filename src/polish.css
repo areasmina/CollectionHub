@@ -1054,7 +1054,8 @@ html.forging .vhero {
   .acts .swapbtn, .acts .morebtn, .morebtn,
   ul.zcompact > li.zrow .acts .swapbtn, ul.zcompact > li.zrow .acts .morebtn { width: 44px !important; min-width: 44px !important; height: 44px !important; min-height: 44px !important; }
   /* text-style buttons: the words stay small, the tap area is a full row high */
-  .decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  .decklink:not(.shortpop .decklink) { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: -13px !important; }
+  .shortpop .shortitem-deck-tag button.decklink { min-height: 44px !important; display: inline-flex !important; align-items: center !important; margin-block: 0 !important; text-align: left !important; line-height: 1.25 !important; text-decoration: none !important; color: #f2f2f2 !important; }
   /* the suggestions drawer's grab bar: the bar looks the same, the strip you can grab is 44px */
   .fsugg .fgrab { min-height: 44px !important; }
   .tagpill { min-width: 44px !important; justify-content: center !important; }
@@ -1071,7 +1072,7 @@ html.forging .vhero {
   .cardmenu li.using .deck-chip { height: 44px !important; min-height: 44px !important; padding: 0 12px !important; }
   .swapnote .close, .note-pop .close, .importbox-pop .close { min-width: 44px !important; min-height: 44px !important; }
   .bindermenu button { min-height: 44px !important; }
-  .deckmenu .cwheel { width: 112px !important; height: 112px !important; }
+  .deckmenu .cwheel { width: 44px !important; height: 44px !important; }
 }
 /* My Decks keeps its SHOW / HIDE STATS fold; Collection's became the CARDS | ANALYTICS tab (Nov 15). */
 @media (max-width: 700px) {
@@ -2053,20 +2054,33 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 .deckmenu .cwheel {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 44px;
+  height: 44px;
   flex: none;
-  border-radius: 50%;
-  cursor: crosshair;
-  touch-action: none;
+  border-radius: 4px;
+  cursor: pointer;
+  overflow: hidden;
   border: 2px solid var(--ink, #0a0a0a);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 2px 2px 0 rgba(0, 0, 0, 0.45);
-  background:
-    radial-gradient(circle at 50% 50%, #fff 0%, rgba(255, 255, 255, 0) 70%),
-    conic-gradient(
-      from 0deg,
-      #f00 0deg, #ff0 60deg, #0f0 120deg, #0ff 180deg, #00f 240deg, #f0f 300deg, #f00 360deg
-    );
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45), 2px 2px 0 rgba(0, 0, 0, 0.45);
+  background: linear-gradient(
+    135deg,
+    #ff2a55 0%,
+    #ffcc00 28%,
+    #22dd66 56%,
+    #00ccff 78%,
+    #aa44ff 100%
+  );
+}
+.deckmenu .cwheel-input {
+  position: absolute;
+  inset: -2px;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 .deckmenu .cwheel:focus-visible {
   outline: 3px solid var(--u-yellow, #ffcc00);
@@ -2074,14 +2088,13 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 .deckmenu .cwheel-now {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
-  border-radius: 50%;
-  border: 2px solid #0a0a0a;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65);
+  right: 3px;
+  bottom: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1.5px solid #0a0a0a;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
   pointer-events: none;
 }
 .deckmenu .cwheel-val {
@@ -2329,9 +2342,12 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   .coll .chead2 .titlewrap {
     display: flex !important;
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    padding-top: 10px !important;
-    padding-bottom: 8px !important;
+    max-width: 100%;
+    overflow: hidden;
+    padding-top: 8px !important;
+    padding-bottom: 6px !important;
   }
   .coll .chead2 .titlewrap > .ztitle {
     flex: 0 1 auto;
@@ -2343,9 +2359,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     margin: 0 !important;
   }
   .coll .chead2 .titlewrap > .bindermenu .bmbtn {
-    max-width: 44vw;
-    padding-left: 10px;
-    padding-right: 10px;
+    max-width: 38vw;
+    min-width: 0;
+    font-size: 13px;
+    padding-left: 8px;
+    padding-right: 8px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
