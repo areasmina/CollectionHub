@@ -70,14 +70,6 @@ export function setSyncCode(c: string | null) {
   }
   codeSubs.forEach((f) => f());
 }
-/** Whether this device is still signed in to the old (Supabase) sync, read without loading Supabase. */
-export function hasLegacySession() {
-  try {
-    return !!import.meta.env.VITE_SUPABASE_URL && Object.keys(localStorage).some((k) => /^sb-.*-auth-token$/.test(k));
-  } catch {
-    return false;
-  }
-}
 
 const changeSubs = new Set<() => void>();
 export const onLocalChange = (f: () => void) => (changeSubs.add(f), () => void changeSubs.delete(f));

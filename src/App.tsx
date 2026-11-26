@@ -6,7 +6,6 @@ import { ownedMap } from './lib/compare';
 import { db, type Card } from './lib/db';
 import { norm } from './lib/names';
 import { Discover } from './views/Discover';
-import { authReturn } from './lib/authreturn';
 import { canLeave, getBack, onBackChange, onDiscoverSub, onOpenCollection, onOpenDeck, onOpenDeckList, openDeck } from './lib/nav';
 import { codeFromHash } from './lib/synccode';
 import { useSyncState, useSyncCode, syncCode, type SyncStatus } from './lib/syncstate';
@@ -247,9 +246,9 @@ export default function App() {
     }
   };
 
-  const [sync, setSync] = useState(!!authReturn || !!incomingCode);
+  const [sync, setSync] = useState(!!incomingCode);
   const [jumpSignal, setJumpSignal] = useState(0);
-  const syncSt = useSyncState(); // back from a sign-in redirect: show the result
+  const syncSt = useSyncState();
   useBrainData(); // card roles + combo files: re-render every view once they arrive
   useEffect(() => void loadBrainData(), []);
   // The floating nav slides away while you scroll down and comes back on the way up (or near the top / bottom).

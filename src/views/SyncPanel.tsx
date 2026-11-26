@@ -1,11 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { syncNow } from '../lib/autosync';
 import { changeCode, lastBackup, link, mergeWithCloud, pull, push, turnOff, turnOn, undoPull } from '../lib/sync';
 import { codeLink, prettyCode } from '../lib/synccode';
-import { hasLegacySession, syncCode, useSyncState } from '../lib/syncstate';
-
-// The old sign-in sync, loaded only on devices that still use it (or to bring data back from it).
-const LegacyMove = lazy(() => import('./LegacyMove').then((m) => ({ default: m.LegacyMove })));
+import { syncCode, useSyncState } from '../lib/syncstate';
 
 type Result = { cards: number; decks: number };
 
@@ -18,7 +15,6 @@ export function SyncPanel({ onClose, incoming = '' }: { onClose: () => void; inc
   const [busy, setBusy] = useState(false);
   const st = useSyncState();
   const [backupAt, setBackupAt] = useState<number | null>(null);
-  const [legacy, setLegacy] = useState(hasLegacySession);
   useEffect(() => void lastBackup().then(setBackupAt), [busy]);
 
   const run = async (f: () => Promise<string | void>) => {
@@ -66,14 +62,11 @@ export function SyncPanel({ onClose, incoming = '' }: { onClose: () => void; inc
       {!code ? (
         <>
           <p className="muted">Right now your binders and decks are saved on this device only. Turn on sync to use them on your phone, computer and any browser.</p>
-          {/* Still signed in to the old sync: "Move to sync code" (below) turns sync on, after fetching the old copy if it's newer. */}
-          {!legacy && (
-            <div className="row">
-              <button className="btn" disabled={busy} onClick={() => run(async () => void (await turnOn()))}>
-                TURN ON SYNC
-              </button>
-            </div>
-          )}
+          <div className="row">
+            <button className="btn" disabled={busy} onClick={() => run(async () => void (await turnOn()))}>
+              TURN ON SYNC
+            </button>
+          </div>
           <p className="muted">Already turned it on somewhere else? Enter that sync code or paste its link:</p>
           <form className="row" onSubmit={(e) => (e.preventDefault(), doLink(typed))}>
             <input placeholder="xxxx-xxxx-xxxx-xxxx-xxxx" autoCapitalize="off" autoComplete="off" spellCheck={false} value={typed} onChange={(e) => setTyped(e.target.value)} aria-label="Sync code" />
@@ -148,11 +141,6 @@ export function SyncPanel({ onClose, incoming = '' }: { onClose: () => void; inc
             UNDO LAST PULL
           </button>
         </div>
-      )}
-      {(legacy || (!code && import.meta.env.VITE_SUPABASE_URL)) && (
-        <Suspense fallback={null}>
-          <LegacyMove hasCode={!!code} onSignedIn={() => setLegacy(true)} onDone={(m) => (setCode(syncCode()), setMsg(m), void syncNow())} />
-        </Suspense>
       )}
       {msg && <p role="status">{msg}</p>}
     </div>
