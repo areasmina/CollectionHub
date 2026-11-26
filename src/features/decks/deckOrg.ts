@@ -1,4 +1,4 @@
-import type { Deck, DeckCard } from '../../lib/db';
+import type { Deck, DeckCard, Profile } from '../../lib/db';
 import { cleanFolderName } from '../../lib/folders';
 import { norm } from '../../lib/names';
 
@@ -149,4 +149,70 @@ export function diffDeckSnapshot(
     totalAdded: toAdd.reduce((n, x) => n + x.qty, 0),
     totalRemoved: toRemove.reduce((n, x) => n + x.qty, 0),
   };
+}
+
+export interface SyncedDeckFolders {
+  folders: string[];
+  /** Assigned folder per deck, keyed by `norm(deck.name)` so assignments survive Dexie ID reassignment across devices. */
+  assignByName: Record<string, string>;
+}
+
+/** Collects deck folders & assignments across all profiles, keyed by `profile` -> `SyncedDeckFolders`. */
+export function exportAllDeckFolders(profiles: Profile[], decks: Deck[]): Record<number, SyncedDeckFolders> {
+  const out: Record<number, SyncedDeckFolders> = {};
+  if (typeof localStorage === 'undefined') return out;
+  for (const p of profiles) {
+    const store = loadDeckFolders(p.id);
+    const assignByName: Record<string, string> = {};
+    for (const d of decks) {
+      if (d.profile !== p.id || d.id == null) continue;
+      const f = store.assign[String(d.id)];
+      if (f) assignByName[norm(d.name)] = f;
+    }
+    if (store.folders.length || Object.keys(assignByName).length) {
+      out[p.id] = { folders: store.folders, assignByName };
+    }
+  }
+  return out;
+}
+
+/** Restores synced deck folders into localStorage for the saved decks on this device. */
+export function importAllDeckFolders(decks: Deck[], data?: Record<number, SyncedDeckFolders>) {
+  if (!data || typeof localStorage === 'undefined') return;
+  for (const [pidStr, synced] of Object.entries(data)) {
+    const profile = Number(pidStr);
+    if (!Number.isFinite(profile) || !synced) continue;
+    const assign: Record<string, string> = {};
+    for (const d of decks) {
+      if (d.profile !== profile || d.id == null) continue;
+      const folder = synced.assignByName?.[norm(d.name)];
+      if (folder) assign[String(d.id)] = folder;
+    }
+    saveDeckFolders(profile, { folders: synced.folders ?? [], assign });
+  }
+}
+
+/** Unions deck folders (case-insensitively) and merges deck-name folder assignments across devices. */
+export function mergeDeckFolders(
+  mine?: Record<number, SyncedDeckFolders>,
+  theirs?: Record<number, SyncedDeckFolders>,
+): Record<number, SyncedDeckFolders> | undefined {
+  if (!mine && !theirs) return undefined;
+  const out: Record<number, SyncedDeckFolders> = {};
+  for (const k of new Set([...Object.keys(mine ?? {}), ...Object.keys(theirs ?? {})])) {
+    const pid = Number(k);
+    const m = mine?.[pid];
+    const t = theirs?.[pid];
+    const seen = new Set<string>();
+    const folders: string[] = [];
+    for (const f of [...(m?.folders ?? []), ...(t?.folders ?? [])]) {
+      const low = f.toLowerCase();
+      if (!seen.has(low)) (seen.add(low), folders.push(f));
+    }
+    const assignByName = { ...(t?.assignByName ?? {}), ...(m?.assignByName ?? {}) };
+    if (folders.length || Object.keys(assignByName).length) {
+      out[pid] = { folders, assignByName };
+    }
+  }
+  return Object.keys(out).length ? out : undefined;
 }

@@ -68,7 +68,7 @@ export default defineConfig({
       output: {
         // Libraries change rarely: their own files stay cached across app updates.
         manualChunks: (id) =>
-          id.includes('node_modules/@supabase') ? 'supabase' : id.includes('node_modules/react') || id.includes('node_modules/scheduler') ? 'react' : id.includes('node_modules/dexie') ? 'dexie' : undefined,
+          id.includes('node_modules/react') || id.includes('node_modules/scheduler') ? 'react' : id.includes('node_modules/dexie') ? 'dexie' : undefined,
       },
     },
   },

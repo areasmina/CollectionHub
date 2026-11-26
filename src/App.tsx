@@ -20,6 +20,7 @@ import { islandScroll, type IslandScroll } from './lib/island';
 import { UNASSIGNED_NAME, UNASSIGNED_PROFILE } from './lib/deckedit';
 import { savedProfile } from './lib/ownership';
 import { startKeepOnScreen } from './lib/onscreen';
+import { startAutoSync } from './lib/autosync';
 startKeepOnScreen(); // pop-ups under buttons never run off the screen
 
 // Pages other than Discover, and the sync panel, load on first use so the first open is quick.
@@ -33,7 +34,7 @@ idle(() => {
   import('./views/Commander');
   import('./views/Collection');
   import('./views/Decks');
-  import('./lib/autosync').then((m) => m.startAutoSync());
+  startAutoSync();
 });
 
 type Tab = 'discover' | 'collection' | 'decks';
