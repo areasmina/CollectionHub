@@ -48,7 +48,8 @@
 }
 
 @media (max-width: 700px) {
-  .u-seg button {
+  .u-seg button,
+  .ctabset .ctab {
     min-height: 44px;
   }
 }
