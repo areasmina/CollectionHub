@@ -6,6 +6,7 @@ import { CardSpin } from './CardSpin';
 
 const CommanderView = lazy(() => import('./Commander').then((m) => ({ default: m.CommanderView })));
 const TagsNavigator = lazy(() => import('../features/tags/TagsNavigator').then((m) => ({ default: m.TagsNavigator })));
+const PasteCheck = lazy(() => import('../features/check/PasteCheck').then((m) => ({ default: m.PasteCheck })));
 import { db, type Card } from '../lib/db';
 import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
@@ -77,7 +78,7 @@ function PressTile({ onMenu, children, ...props }: { onMenu: (x: number, y: numb
 }
 
 export function Discover(s: Shared) {
-  const [subTab, setSubTab] = useState<'commanders' | 'tags'>('commanders');
+  const [subTab, setSubTab] = useState<'commanders' | 'tags' | 'check'>('commanders');
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
   // The tile menu (right-click / press and hold) and the note it leaves behind (copied, saved + UNDO).
@@ -313,6 +314,14 @@ export function Discover(s: Shared) {
         >
           TAGS
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={subTab === 'check'}
+          onClick={() => (haptic('select'), setSubTab('check'))}
+        >
+          CHECK LIST
+        </button>
       </div>
 
       {subTab === 'tags' ? (
@@ -323,6 +332,10 @@ export function Discover(s: Shared) {
             mine={s.mine}
             onToast={(t) => setToast({ text: t.text, undo: t.undo })}
           />
+        </Suspense>
+      ) : subTab === 'check' ? (
+        <Suspense fallback={<CardSpin page />}>
+          <PasteCheck mine={s.mine} other={s.other} binderName={s.binderName} otherName={s.otherName} />
         </Suspense>
       ) : (
         <>

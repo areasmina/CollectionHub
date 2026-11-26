@@ -3,7 +3,7 @@ import { notOffered } from '../lib/collsearch';
 import { deckColour, hsvHex, wheelColour } from '../lib/deckcolor';
 import { searchByText } from '../lib/search';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BASICS, statusOf, summarize } from '../lib/compare';
 import { deckShareOf, deckShares } from '../lib/deckshare';
 import { addToDeck, removeFromDeck, replaceInDeck, setCommander } from '../lib/deckedit';
@@ -45,6 +45,9 @@ import { CompactIcon, Pips, Ransom, heroRoom, Tape, Title, GridIcon, ListIcon, P
 import { addCounts, calculateDeckOwnership } from '../lib/ownership';
 import { getDeckSnapshots, restoreDeckSnapshot, saveDeckSnapshot } from '../lib/deckhistory';
 import { getDraftCheckpoint, setDraftCheckpoint, clearDraftCheckpoint } from '../lib/drafts';
+
+const HandSheet = lazy(() => import('../features/hand/HandSheet').then((m) => ({ default: m.HandSheet })));
+const RuleZeroModal = lazy(() => import('../features/rulezero/RuleZeroModal').then((m) => ({ default: m.RuleZeroModal })));
 
 /** A deck's own note and tags (saved on this device, synced on Push). */
 function DeckNotes({ deck }: { deck: Deck }) {
@@ -595,6 +598,23 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
   const cubeRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ card: DeckCard; x: number; y: number } | null>(null);
   const [deckMenu, setDeckMenu] = useState<MenuAt | null>(null);
+  const [handOpen, setHandOpen] = useState(false);
+  const [ruleZeroOpen, setRuleZeroOpen] = useState(false);
+  const [compactHero, setCompactHero] = useState(() => {
+    try {
+      return localStorage.getItem('ch:forge:compact_hero') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggleCompactHero = () => {
+    setCompactHero((v) => {
+      try {
+        localStorage.setItem('ch:forge:compact_hero', String(!v));
+      } catch {}
+      return !v;
+    });
+  };
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
   const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
   const [toast, setToastNow] = useState<{ text: string; undo?: () => unknown } | null>(null);
@@ -821,7 +841,8 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
       <main className="dpage forgemain">
         {/* THE OVERHAUL, saved deck: the same hero → strip → toolbar → cards as the commander page. The hero is the loud
             frame (ransom name, one red slash) and holds the match %; the strip holds what the deck costs and what it lacks. */}
-        <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
+        {!compactHero && (
+          <section className={`vhero dhero hasmenu${cmdr?.img ? '' : ' noimg'}`} {...heroPress} aria-label={`${deck.name}: deck`} title="Right-click (or press and hold) for deck options">
           {cmdr?.img && (
             <div className="vcard">
               <CmdrCard
@@ -871,6 +892,7 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
             )}
           </div>
         </section>
+        )}
 
         {/* The one strip: what the deck costs, what it still lacks, copies short. */}
         <section className="dstrip" aria-label="Deck status" style={{ paddingInline: 12 }}>
@@ -894,10 +916,40 @@ function DeckView({ deck, s, onBack, onOpen, short }: { deck: Deck; s: Shared; o
               <span>every card is yours ({ownDetails.assignedHere} in this deck)</span>
             )}
           </p>
-          <div className="dacts">
+          <div className="dacts" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             <ShortAlert items={shortHere} inline currentDeck={deck.name} />
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHandOpen(true))}>
+              HAND &amp; ODDS
+            </button>
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setRuleZeroOpen(true))}>
+              RULE ZERO
+            </button>
+            <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), toggleCompactHero())}>
+              {compactHero ? 'SHOW HEADER' : 'COMPACT HEADER'}
+            </button>
           </div>
         </section>
+
+        {handOpen && (
+          <Suspense fallback={null}>
+            <HandSheet deckName={deck.name} cards={deck.cards} commander={deck.commander} partner={deck.partner} st={st} cardOf={cardOf} onClose={() => setHandOpen(false)} />
+          </Suspense>
+        )}
+        {ruleZeroOpen && (
+          <Suspense fallback={null}>
+            <RuleZeroModal
+              deckName={deck.name}
+              commander={deck.commander}
+              commanderImg={cmdr?.img}
+              ci={ci}
+              ownedPct={sum.pct}
+              st={st}
+              call={call}
+              cedh={deck.source === 'cedh'}
+              onClose={() => setRuleZeroOpen(false)}
+            />
+          </Suspense>
+        )}
 
         {!deck.commander && <PickCommander deck={deck} cardOf={cardOf} />}
 

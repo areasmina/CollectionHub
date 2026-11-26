@@ -304,7 +304,36 @@ export function TagsNavigator({
                       {focusCounts.self.owned} of {focusCounts.self.total} yours
                     </span>
                   </div>
-                  {activeTag.description && <p className={styles.tagDesc}>{activeTag.description}</p>}
+                  {activeTag.description && (
+                    <p className={styles.tagDesc}>
+                      {activeTag.description.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, idx) => {
+                        const m = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+                        if (!m) return <span key={idx}>{part}</span>;
+                        const [, linkLabel, rawSlug] = m;
+                        const slugLower = rawSlug.trim().toLowerCase();
+                        const target = index.byLabel.get(slugLower) ?? index.byLabel.get(slugLower.replace(/-/g, ' '));
+                        if (target === undefined) return <span key={idx}>{linkLabel}</span>;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => pickTag(target, false)}
+                            style={{
+                              background: 'none',
+                              border: 0,
+                              padding: 0,
+                              font: 'inherit',
+                              color: 'var(--mo-hazard)',
+                              textDecoration: 'underline',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {linkLabel}
+                          </button>
+                        );
+                      })}
+                    </p>
+                  )}
                   {activeTag.aliases.length > 0 && <span className={styles.aliases}>Aliases: {activeTag.aliases.join(', ')}</span>}
                   <div className={styles.branchChips} style={{ marginTop: 6 }}>
                     <button type="button" className={styles.branchChip} onClick={() => pickTag(focusTag, false)}>

@@ -1,0 +1,142 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mo-z-sheet);
+  background: rgba(0, 0, 0, 0.76);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--mo-s4);
+}
+
+.card {
+  width: min(560px, 100%);
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: var(--mo-bg);
+  border: 2px solid var(--mo-red);
+  box-shadow: 6px 6px 0 var(--mo-red), 0 20px 50px rgba(0, 0, 0, 0.9);
+  border-radius: var(--mo-r-sm);
+  padding: var(--mo-s4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--mo-s3);
+}
+
+.top {
+  display: flex;
+  gap: var(--mo-s3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.art {
+  width: 78px;
+  aspect-ratio: 488 / 680;
+  object-fit: cover;
+  border-radius: 5% / 3.5%;
+  border: 1px solid var(--mo-line-strong);
+  flex: none;
+}
+
+.kicker {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--mo-hazard);
+  color: var(--mo-ink);
+  font-family: var(--mo-display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.deckName {
+  margin: 4px 0 2px;
+  font-family: var(--mo-display);
+  font-size: 24px;
+  line-height: 1.08;
+  text-transform: uppercase;
+}
+
+.sub {
+  font-family: var(--mo-mono);
+  font-size: 12px;
+  color: var(--mo-muted);
+}
+
+.close {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--mo-line-2);
+  background: var(--mo-surface);
+  color: var(--mo-text);
+  border-radius: var(--mo-r-sm);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--mo-s2);
+}
+
+.statBox {
+  background: var(--mo-surface);
+  border: 1px solid var(--mo-line);
+  padding: var(--mo-s2);
+  border-radius: var(--mo-r-sm);
+}
+
+.statLbl {
+  display: block;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  color: var(--mo-muted);
+  text-transform: uppercase;
+}
+
+.statVal {
+  font-family: var(--mo-display);
+  font-size: 19px;
+  color: var(--mo-text);
+}
+
+.section {
+  background: var(--mo-surface);
+  border: 1px solid var(--mo-line);
+  border-radius: var(--mo-r-sm);
+  padding: var(--mo-s2) var(--mo-s3);
+}
+
+.secTitle {
+  font-family: var(--mo-display);
+  font-size: 12px;
+  letter-spacing: 0.07em;
+  color: var(--mo-hazard);
+  margin-bottom: 4px;
+}
+
+.list {
+  margin: 0;
+  padding-left: 16px;
+  font-family: var(--mo-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.rolesRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--mo-mono);
+  font-size: 12px;
+}
+
+.copyBtn {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--mo-r-sm);
+  background: var(--mo-red);
+  color: #fff;
+  font-family: var(--mo-display);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+}
