@@ -305,109 +305,132 @@ export const Tape = ({ style }: { style: React.CSSProperties }) => <span aria-hi
 
 type Orb = { el: React.ReactNode; ring: 0 | 1; at: number; size: number; twinkle?: boolean };
 
-/** Discover header art in the owner's style: a flaming eye over a surreal blue-purple mountainscape. Everything else
- *  (the owner's cherub and devil engravings, moon, hearts, stars, skulls, a card) orbits it on two tilted rings in 3D:
- *  farther items shrink, dim and pass behind the fire, nearer ones grow and pass in front with a shadow. Positions
- *  are set per frame on the DOM (no re-render); fire, blink, iris and twinkles are CSS (styles.css .eyedoodle).
- *  With reduced motion everything holds still. Decorative. */
+const MANA_FAN = [
+  { code: 'W', label: 'White', frame: '#F3E7B0', accent: '#FFF7D6', iris: '#D8A21C', glow: '#F3E7B0', dx: -82, dy: 14, rot: -20 },
+  { code: 'U', label: 'Blue', frame: '#2F7FD8', accent: '#82C8FF', iris: '#38A2FF', glow: '#2F7FD8', dx: -41, dy: -2, rot: -10 },
+  { code: 'B', label: 'Black', frame: '#8A5CF6', accent: '#C8AEFF', iris: '#A978FF', glow: '#7C4DFF', dx: 0, dy: -10, rot: 0 },
+  { code: 'R', label: 'Red', frame: '#E60012', accent: '#FF7034', iris: '#FF4518', glow: '#E60012', dx: 41, dy: -2, rot: 10 },
+  { code: 'G', label: 'Green', frame: '#2FA35A', accent: '#7DE89C', iris: '#2FD068', glow: '#2FA35A', dx: 82, dy: 14, rot: 20 },
+] as const;
+
+/** Discover header art: 5 floating mana-color cards (W/U/B/R/G) fanned together, each housing an eye that
+ *  tracks the pointer (or phone gyroscope tilt), orbited in 3D by all five MTG mana symbols and twinkling stars. */
 export const EyeDoodle = memo(function EyeDoodle({ bare = false }: { bare?: boolean }) {
-  const ink = '#1c120c';
-  const red = '#c9402a';
-  const orange = '#e58a2b';
-  const yellow = '#f2c63e';
+  const ink = '#141115';
   const cream = '#f3e6c9';
-  const lid = '#a8231a'; // eye lids and lashes, red like the reference
-  const iris = '#4f86c0';
+  const yellow = '#f2c63e';
   const cx = 180;
-  const cy = 134;
-  const tongues = (r1: number, rLong: number, rShort: number, n: number, rot: number, wob: number) =>
-    Array.from({ length: n }, (_, i) => {
-      const a = ((i / n) * 360 + rot) * (Math.PI / 180);
-      const r2 = (i % 2 ? rShort : rLong) + Math.sin(i * 2.3 + wob) * 6;
-      const w = (Math.PI / n) * 1.05;
-      const pt = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.86).toFixed(1)}`;
-      return `M${pt(a - w, r1)} C${pt(a - w * 0.6, (r1 + r2) * 0.55)} ${pt(a - w * 0.3, r2 * 0.9)} ${pt(a + w * (0.15 + 0.15 * Math.sin(wob + i)), r2)} C${pt(a + w * 0.1, r2 * 0.8)} ${pt(a + w * 0.7, (r1 + r2) * 0.5)} ${pt(a + w, r1)}Z`;
-    }).join(' ');
-  const fire = (f: number) => (
-    <g key={f} className={`ef f${f}`}>
-      <path d={tongues(36, 76, 60, 20, f * 5, f * 1.7)} fill={red} strokeWidth="2.4" />
-      <path d={tongues(36, 64, 52, 20, 9 + f * 4, f * 2.1 + 1)} fill={orange} strokeWidth="2" />
-      <path d={tongues(36, 52, 44, 20, f * 6, f * 2.9 + 2)} fill={yellow} strokeWidth="1.8" />
-    </g>
-  );
+  const cy = 148;
   const star = (r: number) => `M0 ${-r} Q${r * 0.15} ${-r * 0.15} ${r} 0 Q${r * 0.15} ${r * 0.15} 0 ${r} Q${-r * 0.15} ${r * 0.15} ${-r} 0 Q${-r * 0.15} ${-r * 0.15} 0 ${-r}Z`;
-  const skull = (
-    <g>
-      <path d="M-11 2 C-11 -14 11 -14 11 2 C11 6 8 7 7 9 L7 13 L-7 13 L-7 9 C-8 7 -11 6 -11 2Z" fill={cream} />
-      <circle cx="-4.5" cy="1" r="3.4" fill={ink} />
-      <circle cx="4.5" cy="1" r="3.4" fill={ink} />
-      <path d="M0 5 l-1.6 3 h3.2Z" fill={ink} strokeWidth="1" />
-      <path d="M-3.5 10 v3 M0 10 v3 M3.5 10 v3" strokeWidth="1.2" />
-    </g>
-  );
-  const heart = (
-    <g>
-      <path d="M-6 -8 C-10 -15 -5 -20 -2 -23 C-3 -17 1 -15 1 -11 C3 -17 6 -20 9 -22 C8 -16 10 -12 8 -7Z" fill={orange} />
-      <path d="M0 13 C-7 7 -16 1 -14 -6 C-13 -12 -4 -13 0 -6 C4 -13 13 -12 14 -6 C16 1 7 7 0 13Z" fill={red} />
-      <path d="M-8 -5 C-10 -2 -9 1 -7 3" fill="none" stroke={cream} strokeWidth="1.8" />
-    </g>
-  );
+  const manaGlyph = (code: string, color: string) => {
+    if (code === 'W') {
+      return (
+        <g transform="scale(0.85)" fill={color} stroke={ink} strokeWidth="1.4">
+          <circle r="5.5" />
+          {Array.from({ length: 8 }, (_, k) => (
+            <rect key={k} x="-1.2" y="-11" width="2.4" height="4.2" rx="1" transform={`rotate(${k * 45})`} />
+          ))}
+        </g>
+      );
+    }
+    if (code === 'U') {
+      return (
+        <g transform="translate(-12 -12)" fill={color} stroke={ink} strokeWidth="1.6" strokeLinejoin="round">
+          <path d="M12 2 C8 9 5 12 5 15.5 A7 7 0 0 0 19 15.5 C19 12 16 9 12 2Z" />
+        </g>
+      );
+    }
+    if (code === 'B') {
+      return (
+        <g transform="translate(-12 -12)" fill={color} stroke={ink} strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M12 3 C6.5 3 4 6.5 4 10.5 C4 13.5 6 15 7 15.5 L7 19 L17 19 L17 15.5 C18 15 20 13.5 20 10.5 C20 6.5 17.5 3 12 3Z" />
+          <circle cx="9.2" cy="11" r="1.9" fill={ink} stroke="none" />
+          <circle cx="14.8" cy="11" r="1.9" fill={ink} stroke="none" />
+          <path d="M9.5 18.5 v2 M12 18.5 v2 M14.5 18.5 v2" stroke={ink} strokeWidth="1.4" />
+        </g>
+      );
+    }
+    if (code === 'R') {
+      return (
+        <g transform="translate(-12 -12)" fill={color} stroke={ink} strokeWidth="1.5" strokeLinejoin="round">
+          <path d="M12 2 C13 6 17 7 17 12 A5 5 0 0 1 7 12 C7 9.5 8.5 8 9.5 6.5 C9.5 9 11 10 12 10 C10.5 7.5 11 4.5 12 2Z" />
+          <path d="M6 18.5 Q12 22 18 18.5" fill="none" stroke={color} strokeWidth="2" />
+        </g>
+      );
+    }
+    return (
+      <g transform="translate(-12 -12)" fill={color} stroke={ink} strokeWidth="1.5" strokeLinejoin="round">
+        <path d="M12 2 C7 2 4.5 5.5 5 9 C3 10.5 3.5 14 6.5 14.5 C7.5 16 10 16 11 15 L11 21 L13 21 L13 15 C14 16 16.5 16 17.5 14.5 C20.5 14 21 10.5 19 9 C19.5 5.5 17 2 12 2Z" />
+      </g>
+    );
+  };
   const orbs: Orb[] = [
-    { ring: 0, at: 0, size: 1, el: <image href="/cherub.png" x="-36" y="-38" width="72" height="75" /> },
-    { ring: 0, at: 180, size: 1, el: <image href="/imp.png" x="-38" y="-37" width="76" height="73" /> },
-    { ring: 0, at: 60, size: 1, el: <path d="M6 -15 A16 16 0 1 0 6 15 A18 18 0 0 1 6 -15Z" fill={yellow} /> },
-    { ring: 0, at: 120, size: 1, el: <image href="/chaos-heart.png" x="-19" y="-26" width="38" height="46" /> },
-    { ring: 0, at: 240, size: 0.9, el: skull },
-    { ring: 0, at: 300, size: 0.95, el: <g transform="rotate(-10)"><rect x="-10" y="-14" width="20" height="28" rx="3" fill={cream} /><rect x="-6" y="-10" width="12" height="10" fill={red} /><path d="M-6 4 h12 M-6 8 h9" strokeWidth="1.4" /></g> },
-    { ring: 1, at: 20, size: 0.8, twinkle: true, el: <path d={star(10)} fill={yellow} /> },
-    { ring: 1, at: 80, size: 0.7, el: skull },
-    { ring: 1, at: 140, size: 0.7, twinkle: true, el: <path d={star(8)} fill={cream} /> },
-    { ring: 1, at: 200, size: 0.75, twinkle: true, el: <g><path d={star(9)} fill={yellow} /><circle r="2" fill={cream} stroke="none" /></g> },
-    { ring: 1, at: 260, size: 0.6, el: heart },
-    { ring: 1, at: 320, size: 0.65, twinkle: true, el: <path d={star(7)} fill={yellow} /> },
+    { ring: 0, at: 0, size: 1, el: manaGlyph('W', '#F3E7B0') },
+    { ring: 0, at: 72, size: 1, el: manaGlyph('U', '#2F7FD8') },
+    { ring: 0, at: 144, size: 1, el: manaGlyph('B', '#A882FF') },
+    { ring: 0, at: 216, size: 1, el: manaGlyph('R', '#E60012') },
+    { ring: 0, at: 288, size: 1, el: manaGlyph('G', '#2FA35A') },
+    { ring: 1, at: 25, size: 0.8, twinkle: true, el: <path d={star(9)} fill={yellow} stroke={ink} strokeWidth="1.2" /> },
+    { ring: 1, at: 95, size: 0.72, twinkle: true, el: <path d={star(7)} fill={cream} stroke={ink} strokeWidth="1.1" /> },
+    { ring: 1, at: 165, size: 0.75, twinkle: true, el: <g><path d={star(8.5)} fill="#FF5520" stroke={ink} strokeWidth="1.1" /><circle r="1.8" fill={cream} stroke="none" /></g> },
+    { ring: 1, at: 235, size: 0.7, twinkle: true, el: <path d={star(7.5)} fill="#82C8FF" stroke={ink} strokeWidth="1.1" /> },
+    { ring: 1, at: 305, size: 0.72, twinkle: true, el: <path d={star(8)} fill="#7DE89C" stroke={ink} strokeWidth="1.1" /> },
   ];
-  // ring 0: wide, slow; ring 1: tighter, tipped the other way, faster and counter-rotating
   const RINGS = [
-    { rx: 136, ry: 46, tip: -8, period: 46000, dir: 1 },
-    { rx: 104, ry: 38, tip: 14, period: 30000, dir: -1 },
+    { rx: 142, ry: 44, tip: -9, period: 36000, dir: 1 },
+    { rx: 112, ry: 34, tip: 13, period: 26000, dir: -1 },
   ];
   const back = useRef<SVGGElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const irisRef = useRef<SVGGElement>(null);
-  // The iris follows the mouse while it moves; after 3 s without movement (and on touch) it roams on its own.
-  // On mobile/gyroscope devices, the eye tracks device tilt in reverse so it follows the user's face!
+  const irisRefs = useRef<(SVGGElement | null)[]>([]);
+  // All five card eyes follow the mouse while it moves (or device tilt on mobile); after idle they re-center.
   useEffect(() => {
     const svg = svgRef.current;
-    const ir = irisRef.current;
-    if (!svg || !ir) return;
+    if (!svg) return;
     let idle = 0;
     const move = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse') return;
       const b = svg.getBoundingClientRect();
-      const ex = b.left + (cx / 360) * b.width;
-      const ey = b.top + ((cy - 42) / 214) * b.height;
-      const dx = e.clientX - ex;
-      const dy = e.clientY - ey;
-      const d = Math.hypot(dx, dy) || 1;
-      const k = Math.min(1, d / 260);
-      ir.style.transform = `translate(${((dx / d) * 16 * k).toFixed(1)}px, ${((dy / d) * 7 * k).toFixed(1)}px)`;
+      if (!b.width || !b.height) return;
+      MANA_FAN.forEach((card, idx) => {
+        const ir = irisRefs.current[idx];
+        if (!ir) return;
+        const ex = b.left + ((cx + card.dx) / 360) * b.width;
+        const ey = b.top + ((cy + card.dy - 5 - 42) / 214) * b.height;
+        const dx = e.clientX - ex;
+        const dy = e.clientY - ey;
+        const d = Math.hypot(dx, dy) || 1;
+        const k = Math.min(1, d / 240);
+        ir.style.transform = `translate(${((dx / d) * 5.2 * k).toFixed(1)}px, ${((dy / d) * 2.8 * k).toFixed(1)}px)`;
+      });
       svg.classList.add('tracking');
       clearTimeout(idle);
-      idle = window.setTimeout(() => (svg.classList.remove('tracking'), (ir.style.transform = '')), 3000);
+      idle = window.setTimeout(() => {
+        svg.classList.remove('tracking');
+        irisRefs.current.forEach((ir) => {
+          if (ir) ir.style.transform = '';
+        });
+      }, 3000);
     };
     addEventListener('pointermove', move, { passive: true });
 
-    // Gyroscope tracking for mobile: invert phone tilt so eye looks up towards user
     const onOrient = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
       const g = Math.max(-45, Math.min(45, e.gamma));
-      const b = Math.max(-45, Math.min(45, e.beta - 45));
-      const tx = (-g / 45) * 16;
-      const ty = (-b / 45) * 7;
-      ir.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+      const bt = Math.max(-45, Math.min(45, e.beta - 45));
+      const tx = (-g / 45) * 5.2;
+      const ty = (-bt / 45) * 2.8;
+      irisRefs.current.forEach((ir) => {
+        if (ir) ir.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+      });
       svg.classList.add('tracking');
       clearTimeout(idle);
-      idle = window.setTimeout(() => (svg.classList.remove('tracking'), (ir.style.transform = '')), 4000);
+      idle = window.setTimeout(() => {
+        svg.classList.remove('tracking');
+        irisRefs.current.forEach((ir) => {
+          if (ir) ir.style.transform = '';
+        });
+      }, 4000);
     };
 
     if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
@@ -440,13 +463,12 @@ export const EyeDoodle = memo(function EyeDoodle({ bare = false }: { bare?: bool
         const y0 = depth * r.ry;
         const x = cx + x0 * Math.cos(tip) - y0 * Math.sin(tip);
         const y = cy + x0 * Math.sin(tip) + y0 * Math.cos(tip);
-        const sc = o.size * (0.72 + 0.28 * (depth + 1) / 2 + 0.12 * depth);
+        const sc = o.size * (0.72 + (0.28 * (depth + 1)) / 2 + 0.12 * depth);
         g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${sc.toFixed(3)})`);
-        g.style.opacity = String((0.55 + 0.45 * (depth + 1) / 2).toFixed(2));
+        g.style.opacity = String((0.55 + (0.45 * (depth + 1)) / 2).toFixed(2));
         const want = depth < 0 ? back.current : front.current;
         if (want && g.parentNode !== want) want.appendChild(g);
       });
-      // nearer items drawn last within each half
       for (const box of [back.current, front.current])
         if (box) [...box.children].sort((a, b) => Number((a as SVGGElement).dataset.d ?? 0) - Number((b as SVGGElement).dataset.d ?? 0)).forEach((c) => box.appendChild(c));
     };
@@ -473,204 +495,68 @@ export const EyeDoodle = memo(function EyeDoodle({ bare = false }: { bare?: bool
     <svg ref={svgRef} className="eyedoodle" viewBox="0 42 360 214" aria-hidden="true">
       <defs>
         <filter id="eyeink" x="-10%" y="-10%" width="120%" height="120%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves={2} seed={7} result="n" />
-          <feDisplacementMap in="SourceGraphic" in2="n" scale="3" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves={2} seed={7} result="n" />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="2" />
         </filter>
-        {/* print wear: knock random speckles out of the artwork, like a worn screen print */}
-        <filter id="distress" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} seed={11} result="n" />
-          <feColorMatrix in="n" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -9 7.4" result="holes" />
-          <feComposite in="SourceGraphic" in2="holes" operator="in" />
-        </filter>
-        <filter id="grit">
-          <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves={3} seed={5} />
-          <feColorMatrix values="0 0 0 0 0.05  0 0 0 0 0.04  0 0 0 0 0.03  0 0 0 -1.4 0.9" />
-        </filter>
-        <radialGradient id="eyefade" cx="50%" cy="60%" r="52%">
-          <stop offset="35%" stopColor="#fff" />
-          <stop offset="100%" stopColor="#000" />
-        </radialGradient>
-        <mask id="eyemask">
-          <rect width="360" height="268" fill="url(#eyefade)" />
-        </mask>
-        <linearGradient id="skyfade" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stopColor="#000" />
-          <stop offset="0.18" stopColor="#fff" />
-          <stop offset="0.82" stopColor="#fff" />
-          <stop offset="1" stopColor="#000" />
-        </linearGradient>
-        <mask id="skymask">
-          <rect x="0" y="0" width="360" height="268" fill="url(#skyfade)" />
-        </mask>
-        <clipPath id="eyeclip">
-          <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} />
+        <clipPath id="cardeyeclip">
+          <path d="M-13 -5 Q0 -14 13 -5 Q0 4 -13 -5Z" />
         </clipPath>
       </defs>
-      <g filter="url(#distress)">
 
-      {/* `bare` (phone title backdrop): no sky or mountains, so no dark block behind the eye */}
+      {/* subtle zine backdrop rays behind fan */}
       {!bare && (
-        <>
-      {/* sky: drifting clouds */}
-      <g mask="url(#skymask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
-        {/* drifting clouds */}
-        <g className="clouds" fill="#3a3330" opacity="0.6" strokeWidth="1.4">
-          <path d="M40 92 q6 -12 18 -8 q8 -12 22 -4 q14 -2 14 10 q8 4 2 10 h-58 q-8 -4 2 -8Z" />
-          <path d="M250 74 q6 -10 16 -6 q8 -10 20 -2 q12 0 12 9 q6 4 0 8 h-50 q-6 -4 2 -9Z" />
-          <path d="M150 64 q4 -8 12 -5 q6 -8 15 -2 q9 0 9 7 q5 3 0 6 h-38 q-5 -3 2 -6Z" />
+        <g opacity="0.22" stroke="#e60012" strokeWidth="1.2">
+          {Array.from({ length: 18 }, (_, i) => {
+            const a = (i / 18) * Math.PI * 2;
+            return <line key={i} x1={cx + Math.cos(a) * 42} y1={cy + Math.sin(a) * 28} x2={cx + Math.cos(a) * 145} y2={cy + Math.sin(a) * 90} />;
+          })}
         </g>
-      </g>
-
-      {/* surreal mountainscape in three ridges: far (pale lilac, soft), middle (violet), near (deep blue, bold) */}
-      <g mask="url(#eyemask)" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
-        <path d="M20 200 L70 150 L96 162 L132 112 L152 98 L172 116 L196 104 L222 92 L248 120 L276 108 L312 146 L344 170 L360 178 L360 268 L0 268 L0 208Z" fill="#2a2522" opacity="0.7" strokeWidth="1.4" />
-        <path d="M152 98 l-6 10 l7 -3 l5 6 l2 -9Z M222 92 l-7 12 l8 -4 l6 6 l1 -10Z" fill={cream} opacity="0.35" stroke="none" />
-        {/* volcano: cone, glowing crater, lava runs, smoke puffing in steps */}
-        <g>
-          <path d="M226 200 L262 128 L270 124 L280 126 L288 130 L328 200Z" fill="#2a2120" strokeWidth="2" />
-          <path d="M262 128 Q275 120 288 130 Q276 134 262 128Z" fill={orange} strokeWidth="1.6" />
-          <path d="M270 128 q-6 22 -12 34 q-4 10 -10 18 M280 130 q4 18 8 30 q4 12 2 22 M275 130 q0 20 -2 40" fill="none" stroke={red} strokeWidth="2.6" />
-          <path d="M268 140 l-10 26 M286 142 l12 30 M244 176 l-6 18 M306 172 l8 20" fill="none" stroke="#2a1a30" strokeWidth="1.2" />
-          <g className="smoke" fill="#5a524c" opacity="0.65" strokeWidth="1.4">
-            <circle className="puff p0" cx="276" cy="112" r="7" />
-            <circle className="puff p1" cx="270" cy="98" r="9" />
-            <circle className="puff p2" cx="280" cy="82" r="11" />
-          </g>
-          <path className="ember" d="M275 120 l-2 -6 l3 2 l1 -6 l2 6 l2 -3 l-1 7Z" fill={yellow} strokeWidth="1" />
-        </g>
-        <path d="M0 214 L40 182 L66 192 L104 146 L124 158 L150 136 L176 170 L206 160 L238 132 L262 146 L292 128 L330 172 L360 184 L360 268 L0 268Z" fill="#1f1a18" opacity="0.85" strokeWidth="1.8" />
-        <path d="M104 146 l-7 12 l8 -4 l6 7 l2 -11Z M292 128 l-8 13 l9 -4 l6 7 l1 -12Z" fill={cream} opacity="0.5" stroke="none" />
-        <g fill="none" stroke="#c9402a" strokeWidth="1.1" opacity="0.45">
-          <path d="M112 158 l-8 22 M122 164 l-2 20 M246 146 l-8 22 M256 150 l2 20 M300 140 l8 24" />
-        </g>
-        <path d="M0 238 L34 214 L58 222 L92 196 L118 212 L150 228 L184 206 L214 220 L250 198 L282 214 L320 200 L360 222 L360 268 L0 268Z" fill="#151110" opacity="0.95" strokeWidth="2.2" />
-        <g fill="none" stroke="#c9402a" strokeWidth="1.2" opacity="0.5">
-          <path d="M92 196 l-10 24 M100 202 l-2 22 M184 206 l-8 24 M192 210 l4 20 M250 198 l-8 26 M258 204 l6 22" />
-        </g>
-      </g>
-
-        </>
       )}
 
-      {/* poster-style white lightning bolts and spray flecks */}
-      <g className="bolts" fill={cream} stroke={ink} strokeWidth="1.6" strokeLinejoin="round">
-        <path className="bolt b0" d="M30 86 l22 -6 l-10 12 l24 -4 l-34 22 l12 -14 l-18 2Z" />
-        <path className="bolt b1" d="M300 196 l20 -8 l-8 12 l22 -4 l-30 20 l10 -12 l-16 2Z" />
-        <path className="bolt b2" d="M326 60 l14 -4 l-6 8 l14 -2 l-20 14 l6 -8 l-10 0Z" fill={red} />
-      </g>
-      <g fill={cream} opacity="0.55">
-        {[[14, 104], [40, 150], [60, 72], [88, 210], [70, 196], [292, 88], [316, 132], [340, 150], [332, 214], [276, 228], [110, 70], [250, 72], [22, 190], [354, 182], [128, 226], [230, 232]].map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={i % 3 ? 0.9 : 1.4} />
+      {/* far half of the 3D mana orbit: behind the floating cards */}
+      <g ref={back} className="orbs back" />
+
+      {/* 5-mana-color floating card fan (W U B R G) with mouse-tracking eyes */}
+      <g className="mana-fan" filter="url(#eyeink)">
+        {MANA_FAN.map((c, idx) => (
+          <g key={c.code} transform={`translate(${cx + c.dx} ${cy + c.dy}) rotate(${c.rot})`}>
+            <g className={`mana-card-bob mc${idx}`}>
+              {/* color aura glow behind card */}
+              <rect x="-25" y="-34" width="50" height="68" rx="6" fill={c.glow} opacity="0.18" />
+              {/* card outer frame */}
+              <rect x="-23" y="-32" width="46" height="64" rx="4.5" fill="#121116" stroke={c.frame} strokeWidth="2.4" />
+              <rect x="-19" y="-28" width="38" height="56" rx="2.5" fill="#1a1820" stroke={c.accent} strokeWidth="0.8" strokeOpacity="0.55" />
+              {/* top title plate + mana pip */}
+              <rect x="-15.5" y="-24.5" width="21" height="4.5" rx="1.2" fill={c.frame} opacity="0.82" />
+              <circle cx="12" cy="-22.2" r="3.4" fill={c.frame} stroke={ink} strokeWidth="0.9" />
+              {/* eye window inside the card */}
+              <rect x="-16" y="-16" width="32" height="22" rx="2" fill="#0b0a0e" stroke={c.frame} strokeWidth="1" strokeOpacity="0.65" />
+              <path d="M-13 -5 Q0 -14 13 -5 Q0 4 -13 -5Z" fill="#f7efe3" stroke={ink} strokeWidth="1.2" />
+              <g clipPath="url(#cardeyeclip)">
+                <g ref={(el) => { irisRefs.current[idx] = el; }} className="card-iris">
+                  <circle cx="0" cy="-5" r="6" fill={c.iris} stroke={ink} strokeWidth="1" />
+                  <circle cx="0" cy="-5" r="2.9" fill={ink} />
+                  <circle cx="1.9" cy="-6.8" r="1.3" fill="#ffffff" />
+                </g>
+              </g>
+              <path className="card-eye-lid" d="M-13 -5 Q0 -14 13 -5 Q0 4 -13 -5Z" fill={c.frame} />
+              {/* rules box lines */}
+              <rect x="-15" y="10" width="30" height="14" rx="1.5" fill="#111015" stroke={c.accent} strokeWidth="0.7" strokeOpacity="0.35" />
+              <line x1="-12" y1="14.5" x2="11" y2="14.5" stroke={c.accent} strokeWidth="1.3" strokeOpacity="0.65" strokeLinecap="round" />
+              <line x1="-12" y1="18.5" x2="6" y2="18.5" stroke={cream} strokeWidth="1.1" strokeOpacity="0.45" strokeLinecap="round" />
+              <line x1="8" y1="21.5" x2="12.5" y2="21.5" stroke={c.frame} strokeWidth="1.4" strokeLinecap="round" />
+            </g>
+          </g>
         ))}
       </g>
 
-      {/* scattered twinkling stars */}
-      <g stroke={ink} strokeWidth="1.2" strokeLinejoin="round">
-          <path className="spark s0" d={`M20 66 Q20.6 69.4 24 70 Q20.6 70.6 20 74 Q19.4 70.6 16 70 Q19.4 69.4 20 66Z`} fill={cream} />
-          <path className="spark s1" d={`M46 117 Q46.5 119.5 49 120 Q46.5 120.5 46 123 Q45.5 120.5 43 120 Q45.5 119.5 46 117Z`} fill={yellow} />
-          <path className="spark s2" d={`M28 166.5 Q28.5 169.5 31.5 170 Q28.5 170.5 28 173.5 Q27.5 170.5 24.5 170 Q27.5 169.5 28 166.5Z`} fill={cream} />
-          <path className="spark s0" d={`M332 66 Q332.6 69.4 336 70 Q332.6 70.6 332 74 Q331.4 70.6 328 70 Q331.4 69.4 332 66Z`} fill={yellow} />
-          <path className="spark s1" d={`M344 125 Q344.4 127.5 347 128 Q344.4 128.4 344 131 Q343.6 128.4 341 128 Q343.6 127.5 344 125Z`} fill={cream} />
-          <path className="spark s2" d={`M318 172.5 Q318.5 175.5 321.5 176 Q318.5 176.5 318 179.5 Q317.5 176.5 314.5 176 Q317.5 175.5 318 172.5Z`} fill={yellow} />
-          <path className="spark s0" d={`M96 55 Q96.5 57.5 99 58 Q96.5 58.5 96 61 Q95.5 58.5 93 58 Q95.5 57.5 96 55Z`} fill={cream} />
-          <path className="spark s1" d={`M258 52.5 Q258.5 55.5 261.5 56 Q258.5 56.5 258 59.5 Q257.5 56.5 254.5 56 Q257.5 55.5 258 52.5Z`} fill={yellow} />
-          <path className="spark s2" d={`M70 89.5 Q70.4 91.6 72.5 92 Q70.4 92.4 70 94.5 Q69.6 92.4 67.5 92 Q69.6 91.6 70 89.5Z`} fill={cream} />
-          <path className="spark s0" d={`M300 101.5 Q300.4 103.6 302.5 104 Q300.4 104.4 300 106.5 Q299.6 104.4 297.5 104 Q299.6 103.6 300 101.5Z`} fill={yellow} />
-          <path className="spark s1" d={`M12 137.5 Q12.4 139.6 14.5 140 Q12.4 140.4 12 142.5 Q11.6 140.4 9.5 140 Q11.6 139.6 12 137.5Z`} fill={cream} />
-          <path className="spark s2" d={`M350 93.5 Q350.4 95.6 352.5 96 Q350.4 96.4 350 98.5 Q349.6 96.4 347.5 96 Q349.6 95.6 350 93.5Z`} fill={yellow} />
-          <path className="spark s0" d={`M120 209.5 Q120.4 211.6 122.5 212 Q120.4 212.4 120 214.5 Q119.6 212.4 117.5 212 Q119.6 211.6 120 209.5Z`} fill={cream} />
-          <path className="spark s1" d={`M240 211 Q240.4 213.6 243 214 Q240.4 214.4 240 217 Q239.6 214.4 237 214 Q239.6 213.6 240 211Z`} fill={yellow} />
-          </g>
-
-      {/* far half of the rings: behind the fire and eye */}
-      <g ref={back} className="orbs back" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round" />
-
-      {/* red starburst spikes behind everything, like the banner reference */}
-      <g className="spikes" fill="#d92a1c" stroke={ink} strokeWidth="1.2" strokeLinejoin="round">
-        {Array.from({ length: 30 }, (_, i) => {
-          const a = ((i / 30) * 360 + 4) * (Math.PI / 180);
-          const r2 = [150, 112, 132, 98, 142, 120][i % 6];
-          const w = Math.PI / 150;
-          const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.78).toFixed(1)}`;
-          return <path key={i} d={`M${P(a - w * 4.5, 46)} L${P(a, r2)} L${P(a + w * 4.5, 46)}Z`} />;
-        })}
-      </g>
-
-      {/* sunburst rays behind the flames: yellow wedges with black ink lines */}
-      <g className="rays" stroke={ink} strokeLinecap="round">
-        {Array.from({ length: 36 }, (_, i) => {
-          const a = (i / 36) * Math.PI * 2;
-          const r1 = 44;
-          const r2 = i % 2 ? 92 : 104;
-          const w = Math.PI / 72;
-          const P = (ang: number, r: number) => `${(cx + Math.cos(ang) * r).toFixed(1)} ${(cy + Math.sin(ang) * r * 0.86).toFixed(1)}`;
-          return (
-            <g key={i}>
-              <path d={`M${P(a - w, r1)} L${P(a, r2)} L${P(a + w, r1)}Z`} fill={i % 3 ? yellow : '#f7e7a6'} strokeWidth="0.8" opacity="0.85" />
-              <line x1={cx + Math.cos(a + w * 1.5) * 50} y1={cy + Math.sin(a + w * 1.5) * 50 * 0.86} x2={cx + Math.cos(a + w * 1.5) * (r2 - 8)} y2={cy + Math.sin(a + w * 1.5) * (r2 - 8) * 0.86} strokeWidth="0.9" opacity="0.7" />
-            </g>
-          );
-        })}
-      </g>
-
-      <g className="firebeat" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
-        {[0, 1, 2].map(fire)}
-      </g>
-
-      <g className="eyeball" filter="url(#eyeink)" stroke={ink} strokeLinejoin="round" strokeLinecap="round">
-        {/* lid band: red outer, orange inner (like the reference) */}
-        <path d={`M${cx - 58} ${cy} Q${cx} ${cy - 56} ${cx + 58} ${cy} Q${cx} ${cy + 52} ${cx - 58} ${cy}Z`} fill={lid} strokeWidth="2.6" />
-        <path d={`M${cx - 52} ${cy} Q${cx} ${cy - 47} ${cx + 52} ${cy} Q${cx} ${cy + 44} ${cx - 52} ${cy}Z`} fill={orange} strokeWidth="1.6" />
-        {/* eye white, pinkish, with a pink lower lid and red veins */}
-        <path d={`M${cx - 46} ${cy} Q${cx} ${cy - 40} ${cx + 46} ${cy} Q${cx} ${cy + 40} ${cx - 46} ${cy}Z`} fill="#f6e4d8" strokeWidth="2.4" />
-        <path d={`M${cx - 40} ${cy + 6} Q${cx} ${cy + 34} ${cx + 40} ${cy + 6} Q${cx} ${cy + 26} ${cx - 40} ${cy + 6}Z`} fill="#eba0a0" stroke="none" opacity="0.8" />
-        <g fill="none" stroke="#c4402b" strokeWidth="1" opacity="0.8">
-          <path d={`M${cx - 44} ${cy} q8 -2 12 -6 m-12 6 q8 3 13 2 M${cx + 44} ${cy} q-8 -3 -12 -7 m12 7 q-9 2 -13 6 M${cx - 38} ${cy - 8} q5 1 7 4 M${cx + 36} ${cy + 9} q-5 0 -8 -3`} />
-        </g>
-        <g clipPath="url(#eyeclip)">
-          <g className="iris" ref={irisRef}>
-            <circle cx={cx} cy={cy} r="21" fill="#7f9db4" stroke="#1c2a36" strokeWidth="3" />
-            <circle cx={cx} cy={cy} r="15" fill="#5f7f99" stroke="none" />
-            {Array.from({ length: 28 }, (_, i) => {
-              const a = (i / 28) * Math.PI * 2;
-              return <line key={i} x1={cx + Math.cos(a) * 9} y1={cy + Math.sin(a) * 9} x2={cx + Math.cos(a) * 19} y2={cy + Math.sin(a) * 19} strokeWidth="1" stroke="#2c4152" />;
-            })}
-            <circle cx={cx} cy={cy} r="9.5" fill={ink} stroke={ink} strokeWidth="1" />
-            <circle cx={cx + 6} cy={cy - 7} r="4.2" fill="#fff" stroke="none" />
-            <circle cx={cx - 6} cy={cy + 6} r="1.6" fill="#fff" stroke="none" opacity="0.8" />
-          </g>
-        </g>
-        {/* upper lid shadow line and crease */}
-        <path d={`M${cx - 44} ${cy - 2} Q${cx} ${cy - 42} ${cx + 44} ${cy - 2}`} fill="none" stroke="#5a1a10" strokeWidth="2.4" />
-        <path d={`M${cx - 50} ${cy - 6} Q${cx} ${cy - 52} ${cx + 50} ${cy - 6}`} fill="none" stroke={ink} strokeWidth="1.4" />
-      </g>
-
-      {/* skull hanging under the eye, like the banner */}
-      <g className="hangskull" filter="url(#eyeink)" stroke={ink} strokeWidth="1.8" strokeLinejoin="round" transform={`translate(${cx} ${cy + 62})`}>
-        <path d="M0 -14 V-6" strokeWidth="1.4" />
-        <path d="M-10 4 C-10 -9 10 -9 10 4 C10 8 7 9 6 11 L6 15 L-6 15 L-6 11 C-7 9 -10 8 -10 4Z" fill={cream} />
-        <circle cx="-4" cy="3" r="3" fill={ink} />
-        <circle cx="4" cy="3" r="3" fill={ink} />
-        <path d="M0 7 l-1.4 2.6 h2.8Z" fill={ink} strokeWidth="0.8" />
-        <path d="M-3 12 v3 M0 12 v3 M3 12 v3" strokeWidth="1" />
-      </g>
-
-      {/* near half: in front, with a shadow */}
-      <g ref={front} className="orbs front" filter="url(#eyeink)" stroke={ink} strokeWidth="2.2" strokeLinejoin="round">
+      {/* near half of the 3D mana orbit: in front of the floating cards */}
+      <g ref={front} className="orbs front">
         {orbs.map((o, i) => (
           <g key={i} ref={(g) => void (nodes.current[i] = g)}>
             <g className={o.twinkle ? 'twinkle' : undefined}>{o.el}</g>
           </g>
         ))}
-      </g>
-      </g>
-      {/* grit and scratches over the whole piece */}
-      <rect x="0" y="0" width="360" height="268" filter="url(#grit)" opacity="0.4" style={{ mixBlendMode: 'multiply' }} pointerEvents="none" />
-      <g stroke="#0a0a0a" strokeWidth="0.7" opacity="0.35" fill="none" pointerEvents="none">
-        <path d="M30 60 L140 250 M210 40 L330 230 M90 50 L60 140 M300 60 L250 160 M150 90 L120 200" />
-      </g>
-      <g stroke="#f3e6c9" strokeWidth="0.6" opacity="0.18" fill="none" pointerEvents="none">
-        <path d="M60 70 L180 260 M240 50 L300 180 M120 60 L200 120" />
       </g>
     </svg>
   );

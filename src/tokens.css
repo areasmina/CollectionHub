@@ -275,11 +275,64 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   color: var(--mo-yellow);
 }
 
-@media (max-width: 700px) {
-  /* Discover hero: compact on phone so commander cards lead above the fold */
+/* Discover Hero: 5-mana-color floating card fan + balanced spacing/composition */
+@keyframes mana-card-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes card-eye-blink {
+  0%, 92%, 100% { opacity: 0; }
+  95%, 97% { opacity: 0.92; }
+}
+.eyedoodle .mana-card-bob {
+  animation: mana-card-float 3.8s ease-in-out infinite;
+}
+.eyedoodle .mana-card-bob.mc1 { animation-delay: -0.75s; }
+.eyedoodle .mana-card-bob.mc2 { animation-delay: -1.5s; }
+.eyedoodle .mana-card-bob.mc3 { animation-delay: -2.25s; }
+.eyedoodle .mana-card-bob.mc4 { animation-delay: -3s; }
+.eyedoodle .card-eye-lid {
+  opacity: 0;
+  animation: card-eye-blink 6.5s ease-in-out infinite;
+}
+.eyedoodle .mana-card-bob.mc1 .card-eye-lid { animation-delay: -1.3s; }
+.eyedoodle .mana-card-bob.mc2 .card-eye-lid { animation-delay: -2.7s; }
+.eyedoodle .mana-card-bob.mc3 .card-eye-lid { animation-delay: -4.1s; }
+.eyedoodle .mana-card-bob.mc4 .card-eye-lid { animation-delay: -5.4s; }
+.eyedoodle .card-iris {
+  transition: transform 0.14s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eyedoodle .mana-card-bob,
+  .eyedoodle .card-eye-lid {
+    animation: none !important;
+  }
+}
+
+@media (min-width: 701px) {
   .discohero {
-    padding: 8px 10px !important;
-    margin: 6px 0 8px !important;
+    padding: 14px 18px 12px !important;
+    margin: 4px 0 10px !important;
+  }
+  .titlewrap > .eyedoodle {
+    left: 75% !important;
+    top: 50% !important;
+    width: 48% !important;
+    max-width: 400px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Discover hero: compact, well-composed on phone so commander cards lead above the fold */
+  .discohero {
+    padding: 6px 8px 8px !important;
+    margin: 4px 0 6px !important;
+  }
+  .titlewrap > .eyedoodle {
+    left: 73% !important;
+    top: 50% !important;
+    width: 92% !important;
+    opacity: 0.92;
   }
   .discohero .ztitle {
     gap: 4px !important;
@@ -363,9 +416,8 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
     box-shadow 0.25s ease;
 }
 .pillnav.forging-island .island-membrane {
-  background: rgba(12, 7, 8, 0.94) !important;
-  border-color: rgba(255, 68, 24, 0.72) !important;
-  box-shadow: 0 0 22px rgba(230, 0, 18, 0.28), 0 10px 28px rgba(0, 0, 0, 0.75) !important;
+  background: linear-gradient(180deg, rgba(28, 9, 8, 0.96) 0%, rgba(12, 6, 7, 0.96) 100%) !important;
+  border-color: rgba(255, 88, 22, 0.86) !important;
   transition: all 0.36s cubic-bezier(0.32, 0.72, 0, 1) !important;
 }
 .pillnav.forging-island .island-content {
@@ -422,15 +474,87 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 24px;
+  width: 20px;
+  height: 26px;
   flex-shrink: 0;
+  background: transparent;
+  overflow: visible;
 }
 .forge-card-icon img {
-  width: 18px;
-  height: 24px;
+  width: 20px;
+  height: 26px;
   object-fit: contain;
-  filter: sepia(1) saturate(7) hue-rotate(-38deg) brightness(1.12) drop-shadow(0 0 4px #ff4500) drop-shadow(0 0 8px #e60012);
+  mix-blend-mode: screen;
+  filter: sepia(1) saturate(8) hue-rotate(-35deg) brightness(1.18) contrast(1.42) drop-shadow(0 0 4px #ff4500) drop-shadow(0 0 9px #e60012);
+}
+@keyframes forge-card-float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-2.5px) rotate(3deg); }
+}
+@keyframes island-flame-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(255, 69, 0, 0.55),
+      0 0 32px rgba(230, 0, 18, 0.36),
+      inset 0 0 12px rgba(255, 102, 0, 0.24),
+      0 10px 28px rgba(0, 0, 0, 0.78);
+    border-color: rgba(255, 88, 22, 0.85);
+  }
+  50% {
+    box-shadow:
+      0 0 22px rgba(255, 110, 0, 0.8),
+      0 0 44px rgba(230, 0, 18, 0.52),
+      inset 0 0 18px rgba(255, 68, 0, 0.36),
+      0 10px 28px rgba(0, 0, 0, 0.82);
+    border-color: rgba(255, 152, 42, 0.96);
+  }
+}
+/* Floating fiery card back pill in Forge Nav Mode: pure card floating without circle frame */
+.pillnav .pback.forge-back-pill {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin-left: 2px !important;
+}
+.pillnav .pback.forge-back-pill:hover,
+.pillnav .pback.forge-back-pill:focus-visible {
+  background: transparent !important;
+  transform: scale(1.08);
+}
+.pillnav .pback.forge-back-pill .forge-card-icon {
+  width: 24px;
+  height: 32px;
+  animation: forge-card-float 2.6s ease-in-out infinite;
+}
+.pillnav .pback.forge-back-pill .forge-card-icon img {
+  width: 24px;
+  height: 32px;
+}
+@media (max-width: 700px) {
+  .pillnav .pback.forge-back-pill {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+}
+/* Dynamic Island "caught on fire" whenever Forge mode is active (controls OR nav switcher) */
+html.forging .pillnav .island-membrane {
+  background: linear-gradient(180deg, rgba(28, 9, 8, 0.96) 0%, rgba(12, 6, 7, 0.96) 100%) !important;
+  border-color: rgba(255, 88, 22, 0.86) !important;
+  animation: island-flame-pulse 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav .pback.forge-back-pill .forge-card-icon,
+  html.forging .pillnav .island-membrane {
+    animation: none !important;
+  }
 }
 .pillnav .forgetop .ftitle {
   font: 400 10.5px/1 var(--mo-mono);
