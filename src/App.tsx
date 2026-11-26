@@ -12,6 +12,7 @@ import { codeFromHash } from './lib/synccode';
 import { useSyncState, useSyncCode, syncCode, type SyncStatus } from './lib/syncstate';
 import { turnOn, turnOff } from './lib/sync';
 import { PreviewLayer } from './views/shared';
+import { JumpBar } from './features/jumpbar/JumpBar';
 import { ZineDefs, Pips } from './views/zine';
 import { loadBrainData, useBrainData } from './brain/data';
 import { IslandSync } from './views/IslandSync';
@@ -499,6 +500,7 @@ export default function App() {
         </Suspense>
       )}
       <PreviewLayer />
+      <JumpBar profile={profile} mine={mine} onSwitchTab={(t) => setTab(t)} />
       {tab === 'discover' && <Discover key={home} {...shared} />}
       <Suspense fallback={<CardSpin page />}>
         {tab === 'collection' && (

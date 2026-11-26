@@ -12,7 +12,7 @@ import { db, type Card } from '../lib/db';
 import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
-import { openCollection, openDeck } from '../lib/nav';
+import { onDiscoverSub, openCollection, openDeck, takeDiscoverSub, type DiscoverSubTab } from '../lib/nav';
 import { EmptyState, OptRow, Progress, ToolBar, usd, useMenuPress, useStored, type Shared } from './shared';
 import { TileMenu, type TileToast } from './TileMenu';
 import { Pips, Ransom, Title, EyeDoodle, ManaIcon, PageDecor } from './zine';
@@ -79,7 +79,8 @@ function PressTile({ onMenu, children, ...props }: { onMenu: (x: number, y: numb
 }
 
 export function Discover(s: Shared) {
-  const [subTab, setSubTab] = useState<'commanders' | 'tags' | 'check' | 'guided'>('commanders');
+  const [subTab, setSubTab] = useState<DiscoverSubTab>(() => takeDiscoverSub() ?? 'commanders');
+  useEffect(() => onDiscoverSub(setSubTab), []);
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
   // The tile menu (right-click / press and hold) and the note it leaves behind (copied, saved + UNDO).

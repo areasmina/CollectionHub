@@ -27,6 +27,25 @@ const LIST = 'ch:opendecklist';
 export const openDeckList = () => dispatchEvent(new Event(LIST));
 export const onOpenDeckList = (f: () => void) => (addEventListener(LIST, f), () => removeEventListener(LIST, f));
 
+/** Jump straight to a Discover sub-tab ('commanders' | 'tags' | 'check' | 'guided') from anywhere (e.g. Ctrl/Cmd+K). */
+export type DiscoverSubTab = 'commanders' | 'tags' | 'check' | 'guided';
+const DISCOVER_SUB = 'ch:discoversub';
+let pendingDiscoverSub: DiscoverSubTab | null = null;
+export function openDiscoverSub(sub: DiscoverSubTab) {
+  pendingDiscoverSub = sub;
+  dispatchEvent(new CustomEvent(DISCOVER_SUB, { detail: sub }));
+}
+export function takeDiscoverSub(): DiscoverSubTab | null {
+  const s = pendingDiscoverSub;
+  pendingDiscoverSub = null;
+  return s;
+}
+export const onDiscoverSub = (f: (sub: DiscoverSubTab) => void) => {
+  const h = (e: Event) => f((e as CustomEvent<DiscoverSubTab>).detail);
+  addEventListener(DISCOVER_SUB, h);
+  return () => removeEventListener(DISCOVER_SUB, h);
+};
+
 /** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
 export async function freeDeckName(profile: number, want: string, except?: number) {
   const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));
