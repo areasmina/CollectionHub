@@ -95,6 +95,17 @@
   color: var(--mo-hazard);
 }
 
+@media (max-width: 700px) {
+  .pill,
+  .btn,
+  .addInput {
+    min-height: 44px;
+  }
+  .btn {
+    min-width: 44px;
+  }
+}
+
 /* History Drawer */
 .scrim {
   position: fixed;

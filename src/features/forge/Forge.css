@@ -429,6 +429,10 @@
   html.forging .fsugg:not(.up) .frows {
     display: none;
   }
+  .ftabs button,
+  .fpanes button {
+    min-height: 44px;
+  }
   html.forging .fsugg .fgrab {
     display: block;
     position: sticky;
@@ -450,7 +454,7 @@
     border-radius: 2px;
   }
   html.forging .fsugg .fpanes button {
-    min-height: 32px;
+    min-height: 44px;
     font-size: 15px;
   }
   html.forging .fsugg .fsorts button {

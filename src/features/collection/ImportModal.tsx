@@ -4,6 +4,7 @@ import { haptic } from '../../lib/haptics';
 import { parseImport } from '../../lib/importers';
 import { freeDeckName, openDeck } from '../../lib/nav';
 import { SAMPLE_COLLECTION } from '../../lib/sample';
+import { parseBackupJson, restoreBackupFile } from '../../lib/sync';
 import { Progress } from '../../views/shared';
 
 /** Files larger than this (about 5,000 lines) are held aside instead of being shown in the text box. */
@@ -70,14 +71,34 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
   const [big, setBig] = useState<{ name: string; text: string; lines: number } | null>(null);
   const [busy, setBusy] = useState<{ done: number; total: number; wait?: number } | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [backupNotice, setBackupNotice] = useState('');
   const [error, setError] = useState('');
 
+  const input = big?.text ?? text;
+  const backupSnap = useMemo(() => (input.trim().startsWith('{') ? parseBackupJson(input) : null), [input]);
   const deckLike = useMemo(() => {
-    if (!text.trim()) return false;
+    if (!text.trim() || backupSnap) return false;
     const p = parseImport(text);
     return p.format === 'text' && p.rows.some((r) => /^(commanders?|companion|deck|main|mainboard|maindeck|sideboard|side|maybe|maybeboard|considering)$/i.test(r.section ?? ''));
-  }, [text]);
-  const input = big?.text ?? text;
+  }, [text, backupSnap]);
+
+  async function runRestoreBackup() {
+    if (!backupSnap) return;
+    if (entriesCount && !confirm(`Restore backup (${backupSnap.entries.length} cards, ${backupSnap.decks.length} decks)? Current device data is saved to Sync Backups first.`)) return;
+    setError('');
+    setResult(null);
+    setBackupNotice('');
+    setBusy({ done: 0, total: backupSnap.entries.length });
+    try {
+      const r = await restoreBackupFile(input);
+      setBig(null);
+      setText('');
+      setBackupNotice(`Restored ${r.binders} binder${r.binders === 1 ? '' : 's'}, ${r.cards.toLocaleString()} entries, and ${r.decks} deck${r.decks === 1 ? '' : 's'}.`);
+    } catch (e) {
+      setError(`Restore failed: ${(e as Error).message}`);
+    }
+    setBusy(null);
+  }
 
   async function run(raw: string, replace: boolean) {
     if (replace && entriesCount && !confirm(`Replace all ${entriesCount} entries in ${name}?`)) return;
@@ -137,7 +158,7 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
             CHOOSE A FILE
             <input
               type="file"
-              accept=".csv,.txt,text/csv,text/plain"
+              accept=".csv,.txt,.json,text/csv,text/plain,application/json"
               disabled={!!busy}
               onChange={async (e) => {
                 const f = e.target.files?.[0];
@@ -162,6 +183,16 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
               <span>…or paste cards you own</span>
               <textarea rows={6} spellCheck={false} autoCapitalize="off" autoCorrect="off" placeholder={'1 Sol Ring\n1x Arcane Signet (CMM) 375_'} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
             </label>
+          )}
+          {backupSnap && (
+            <div className="deckwarn" role="status">
+              <span>
+                <b>CollectionHub backup detected</b> ({backupSnap.profiles.length} binder{backupSnap.profiles.length === 1 ? '' : 's'}, {backupSnap.entries.length.toLocaleString()} entries, {backupSnap.decks.length} deck{backupSnap.decks.length === 1 ? '' : 's'}). A local backup of your current data is saved first.
+              </span>
+              <button type="button" className="u-btn primary" disabled={!!busy} onClick={() => void runRestoreBackup()}>
+                RESTORE BACKUP
+              </button>
+            </div>
           )}
           {deckLike && (
             <div className="deckwarn" role="status">
@@ -195,6 +226,7 @@ export function ImportModal({ profile, name, entriesCount, onClose }: ImportModa
           )}
           {busy && <Progress {...busy} />}
           {error && <p className="error">{error}</p>}
+          {backupNotice && <p className="report" role="status">{backupNotice}</p>}
           {result && <ImportReport r={result} />}
         </section>
       </div>

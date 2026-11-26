@@ -201,6 +201,39 @@ export async function restoreBackup(path?: string) {
 /** The newest backup (the copy from before the last Pull or merge). */
 export const undoPull = () => restoreBackup();
 
+/** Parses and validates a CollectionHub JSON backup/export file; returns null if not a valid backup. */
+export function parseBackupJson(raw: string): Snapshot | null {
+  try {
+    const data = JSON.parse(raw) as Partial<Snapshot> | null;
+    if (!data || data.app !== 'collectionhub' || !Array.isArray(data.profiles) || !Array.isArray(data.entries) || !Array.isArray(data.decks)) {
+      return null;
+    }
+    return {
+      app: 'collectionhub',
+      fmt: 1,
+      at: typeof data.at === 'number' ? data.at : Date.now(),
+      profiles: data.profiles,
+      entries: data.entries,
+      decks: data.decks,
+      ...(data.history ? { history: data.history } : {}),
+      ...(data.deckFolders ? { deckFolders: data.deckFolders } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Restores a CollectionHub JSON backup file onto this device (keeps a local undo backup first). */
+export async function restoreBackupFile(raw: string) {
+  const snap = parseBackupJson(raw);
+  if (!snap) throw new Error('That file is not a valid CollectionHub backup.');
+  await keepBackup('restore');
+  await replaceLocal(snap);
+  setLastVersion(null);
+  await resolveRows(snap.entries.map((e) => ({ name: e.name, qty: 1, id: e.cardId })), () => {});
+  return { binders: snap.profiles.length, cards: snap.entries.length, decks: snap.decks.length };
+}
+
 /** Everything on this device as a file to keep: binders, decks and binder settings (no sync code inside). */
 export async function backupFile() {
   const d = await local();
