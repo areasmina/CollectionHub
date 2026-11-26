@@ -3,12 +3,14 @@ import { applyProposal, balanceDeck, bracketPath, proposalImpact } from '../../b
 import type { DeckContext } from '../../brain/score';
 import { readDeck } from '../../brain/session';
 import type { Aggression } from '../../brain/win';
+import { worthBuying } from '../../brain/worthbuying';
 import { BASICS } from '../../lib/compare';
 import { db, type Card, type Deck } from '../../lib/db';
-import { applyDeckCards } from '../../lib/deckedit';
+import { addToDeck, applyDeckCards, replaceInDeck } from '../../lib/deckedit';
 import type { BracketCall } from '../../lib/deckstats';
 import { haptic } from '../../lib/haptics';
 import { norm } from '../../lib/names';
+import { cad } from '../../lib/prices';
 import type { SubCard } from '../../lib/subs';
 import type { Toast } from '../../views/CardMenu';
 import styles from './BalanceSheet.module.css';
@@ -17,11 +19,13 @@ export function BalanceSheet({
   deck,
   ctx,
   candidates,
+  unownedCandidates = [],
   identity,
   pinned,
   never,
   recOf,
   cardOf,
+  priceOf,
   call,
   gameChangers,
   onToast,
@@ -30,20 +34,24 @@ export function BalanceSheet({
   deck: Deck;
   ctx: DeckContext;
   candidates: SubCard[];
+  unownedCandidates?: SubCard[];
   identity: string[];
   pinned: string[];
   never: Set<string>;
   recOf: (name: string) => SubCard | undefined;
   cardOf: (name: string) => Card | undefined;
+  priceOf?: (name: string) => number | undefined;
   call: BracketCall;
   aggression: Aggression;
   gameChangers?: Set<string> | null;
   onToast: (t: Toast) => void;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<'balance' | 'cutlab' | 'bracket'>('balance');
+  const [tab, setTab] = useState<'balance' | 'cutlab' | 'bracket' | 'worth'>('balance');
   const [brainOnly, setBrainOnly] = useState(false);
   const [allowSwapsAt100, setAllowSwapsAt100] = useState(true);
+  const [maxCad, setMaxCad] = useState<number | null>(null);
+  const [stagedWorth, setStagedWorth] = useState<Set<string>>(() => new Set());
   const [staleNotice, setStaleNotice] = useState('');
   const [openedUpdated, setOpenedUpdated] = useState(deck.updated);
 
@@ -178,6 +186,35 @@ export function BalanceSheet({
     onClose();
   };
 
+  // Worth Buying: unowned upgrades + picks ordered purely by Brain score (price is ceiling filter / info only)
+  const worthItems = useMemo(
+    () =>
+      worthBuying({
+        ctx: evalCtx,
+        unowned: unownedCandidates,
+        identity,
+        pinned,
+        never,
+        recOf,
+        priceOf,
+        gameChangers,
+        maxCad,
+        hideOverBudget: maxCad != null,
+        limit: 12,
+      }),
+    [evalCtx, unownedCandidates, identity, pinned, never, recOf, priceOf, gameChangers, maxCad],
+  );
+
+  const stageWorthCard = async (item: (typeof worthItems)[number]) => {
+    haptic('success');
+    const undo = item.replaces ? await replaceInDeck(deck, item.replaces, item.name) : await addToDeck(deck, item.name);
+    setStagedWorth((prev) => new Set([...prev, norm(item.name)]));
+    onToast({
+      text: item.replaces ? `Staged ${item.name} for ${item.replaces}` : `Staged ${item.name} in deck (added to TO BUY)`,
+      undo,
+    });
+  };
+
   return (
     <div className={styles.backdrop} role="presentation" onClick={onClose}>
       <div className={styles.sheet} role="dialog" aria-modal="true" aria-label={`Balance ${deck.name}`} onClick={(e) => e.stopPropagation()}>
@@ -192,6 +229,9 @@ export function BalanceSheet({
             </button>
             <button type="button" role="tab" id="bal-tab-bracket" aria-controls="bal-panel-bracket" className={styles.tabBtn} aria-selected={tab === 'bracket'} onClick={() => (haptic('select'), setTab('bracket'))}>
               BRACKET PATH
+            </button>
+            <button type="button" role="tab" id="bal-tab-worth" aria-controls="bal-panel-worth" className={styles.tabBtn} aria-selected={tab === 'worth'} onClick={() => (haptic('select'), setTab('worth'))}>
+              WORTH BUYING
             </button>
           </div>
           <button type="button" className={styles.close} aria-label="Close balance sheet" onClick={onClose}>
@@ -444,11 +484,101 @@ export function BalanceSheet({
               )}
             </div>
           )}
+
+          {tab === 'worth' && (
+            <div id="bal-panel-worth" role="tabpanel" aria-labelledby="bal-tab-worth">
+              <div className={styles.toolbar}>
+                <div className={styles.btnRow}>
+                  <button
+                    type="button"
+                    className={styles.toggleBtn}
+                    aria-pressed={brainOnly}
+                    onClick={() => (haptic('select'), setBrainOnly((v) => !v))}
+                  >
+                    {brainOnly ? 'OUR BRAIN ONLY: ON' : 'OUR BRAIN + EDHREC'}
+                  </button>
+                  {([
+                    [null, 'ANY CA$'],
+                    [2, '≤CA$2'],
+                    [5, '≤CA$5'],
+                    [15, '≤CA$15'],
+                  ] as const).map(([cap, lbl]) => (
+                    <button
+                      key={lbl}
+                      type="button"
+                      className={styles.toggleBtn}
+                      aria-pressed={maxCad === cap}
+                      onClick={() => (haptic('select'), setMaxCad(cap))}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+                <span style={{ fontFamily: 'var(--mo-mono)', fontSize: 11.5, color: 'var(--mo-muted)' }}>
+                  {worthItems.length} unowned upgrades · price never changes score
+                </span>
+              </div>
+
+              <p className={styles.note}>
+                Ranked strictly by deck fit and synergy (price is information &amp; ceiling filter only). Data: EDHREC · Scryfall · Tagger · Spellbook.
+              </p>
+
+              {!unownedCandidates.length ? (
+                <p className={styles.note}>No unowned EDHREC suggestions loaded yet — open a deck with a commander or wait for card data.</p>
+              ) : worthItems.length === 0 ? (
+                <p className={styles.note}>No unowned upgrades pass this CA${maxCad} ceiling right now.</p>
+              ) : (
+                <ul className={styles.rows}>
+                  {worthItems.map((item) => {
+                    const isStaged = stagedWorth.has(norm(item.name));
+                    return (
+                      <li key={item.name} className={styles.row} data-checked={!isStaged}>
+                        <span className={styles.kindBadge} data-kind={item.replaces ? 'swap' : 'add'}>
+                          {item.replaces ? '⇄ UPGRADE' : '+ PICK'}
+                        </span>
+                        <div className={styles.rowMain}>
+                          <span className={styles.rowName}>{item.replaces ? `${item.replaces} → ${item.name}` : item.name}</span>
+                          <span className={styles.rowWhy}>{item.why}</span>
+                          <div className={styles.btnRow} style={{ marginTop: 4 }}>
+                            <button
+                              type="button"
+                              className={styles.toggleBtn}
+                              disabled={isStaged}
+                              onClick={() => void stageWorthCard(item)}
+                            >
+                              {isStaged ? 'STAGED' : '+ STAGE IN DECK'}
+                            </button>
+                            <a
+                              className={styles.toggleBtn}
+                              href={`https://scryfall.com/search?q=${encodeURIComponent(`!"${item.name}"`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+                            >
+                              SCRYFALL ↗
+                            </a>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                          <span className={styles.refPill}>{item.cad != null ? `≈${cad(item.cad)}` : 'CA$—'}</span>
+                          {item.incl != null && (
+                            <span className={styles.refPill}>
+                              {Math.round(item.incl * 100)}% EDHREC{item.lift != null ? ` · ${item.lift.toFixed(1)}x` : ''}
+                            </span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         <div className={styles.foot}>
           <button type="button" className={styles.btn} onClick={onClose}>
-            CANCEL
+            {tab === 'worth' ? 'CLOSE' : 'CANCEL'}
           </button>
           {tab === 'balance' && (
             <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} disabled={ticked.size === 0} onClick={confirmBalance}>

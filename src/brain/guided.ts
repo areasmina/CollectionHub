@@ -1,3 +1,4 @@
+import { BASICS } from '../lib/compare';
 import { isLand, LANDS_BY_BRACKET, roleOf, TARGETS, type Role } from '../lib/deckstats';
 import { norm } from '../lib/names';
 import type { SubCard } from '../lib/subs';
@@ -106,11 +107,23 @@ export function stepPicks(step: Step, candidates: SubCard[], ctxIn: DeckContext,
     let { parts, total } = sc;
     const meta = ctx.cardOf(c.name);
     if (step === 'lands' && meta) {
-      const f = landFit(meta, colours, demand);
+      const cmdLabel = ctx.commander?.split(',')[0] ?? 'your commander';
+      const f = landFit(meta, colours, demand, needs.synergy, cmdLabel);
       const extra: Part[] = [];
       if (f.made >= 2) extra.push({ label: `makes ${f.cols.join('')} for this deck`, value: f.colour, source: 'card text' });
       else if (f.colour) extra.push({ label: `makes ${f.cols.join('')}`, value: f.colour, source: 'card text' });
       if (f.tapped) extra.push({ label: 'enters tapped', value: f.tapped, source: 'card text' });
+      if (f.restricted) extra.push({ label: 'conditional mana restriction', value: f.restricted, source: 'card text' });
+      if (!BASICS.has(norm(c.name))) {
+        let left = 0.14;
+        for (const sp of f.synParts) {
+          if (parts.some((p) => p.label === sp.label)) continue;
+          const v = Math.min(sp.value, left);
+          if (v <= 0.005) break;
+          extra.push({ label: sp.label, value: v, source: 'card text' });
+          left -= v;
+        }
+      }
       parts = [...parts, ...extra];
       total += extra.reduce((x, p) => x + p.value, 0);
     }

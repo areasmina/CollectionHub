@@ -3,6 +3,7 @@ import type { DeckCard } from '../lib/db';
 import { deckStats, isLand, roleOf, type BracketCall, type Role } from '../lib/deckstats';
 import { norm } from '../lib/names';
 import type { SubCard } from '../lib/subs';
+import { landFit } from './build';
 import { inIdentity } from './identity';
 import { deckNeeds, scoreCard, type DeckContext, type Part } from './score';
 import { readDeck } from './session';
@@ -161,8 +162,39 @@ export function balanceDeck(o: {
         return wantLand ? land : !land;
       });
 
+      const colours = ['W', 'U', 'B', 'R', 'G'].filter((x) => identity.includes(x));
+      const pips: Record<string, number> = Object.fromEntries(colours.map((x) => [x, 0]));
+      if (wantLand) {
+        for (const dc of work) {
+          for (const sym of ctx.cardOf(dc.name)?.mana?.match(/\{[^}]+\}/g) ?? []) {
+            for (const x of colours) if (sym.includes(x)) pips[x] += dc.qty;
+          }
+        }
+      }
+      const maxPips = Math.max(...colours.map((x) => pips[x]), 0);
+      const demand = (x: string) => (maxPips ? pips[x] / maxPips : 1);
+
       const scored = pool
-        .map((c) => ({ sub: c, res: scoreCard(c, workCtx, needs) }))
+        .map((c) => {
+          const res = scoreCard(c, workCtx, needs);
+          if (!wantLand) return { sub: c, res };
+          const meta = ctx.cardOf(c.name);
+          if (!meta) return { sub: c, res };
+          const f = landFit(meta, colours, demand, needs.synergy, ctx.commander?.split(',')[0]);
+          const extra = f.colour + f.tapped + f.restricted;
+          return {
+            sub: c,
+            res: {
+              ...res,
+              total: res.total + extra,
+              parts: [
+                ...res.parts,
+                ...(f.colour ? [{ label: `makes ${f.cols.join('')} for this deck`, value: f.colour, source: 'card text' as const }] : []),
+                ...(f.restricted ? [{ label: 'conditional mana restriction', value: f.restricted, source: 'card text' as const }] : []),
+              ],
+            },
+          };
+        })
         .filter((x) => !x.res.blocked)
         .sort((a, b) => b.res.total - a.res.total || a.sub.name.localeCompare(b.sub.name));
 

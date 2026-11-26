@@ -205,12 +205,43 @@ export function deckSynergy(deck: DeckCard[], cardOf: (name: string) => C | unde
 export const CMD_W = 0.22; // makes what the commander cares about, or pays off what the commander makes
 export const DECK_W = 0.06; // the same for the deck's own engines, scaled by how much of the engine the deck has
 export const TRIBE_W = 0.18;
+export const DOUBLER_W = 0.18;
 export const SYN_CAP = 0.4;
 /** A deck "has" an engine's payoffs at this many cards, its makers at this many (payoffs are rarer than makers). */
 const FULL_CARES = 6;
 const FULL_MAKES = 12;
 /** Engines almost every deck has a little of count only above this share of the deck's spells (artifacts, draw…). */
 const BROAD = new Set(['artifacts', 'enchantments', 'spells', 'evasion', 'draw', 'mana', 'tokens']);
+
+const DOUBLERS: { engines: string[]; label: string; test: (text: string) => boolean }[] = [
+  {
+    engines: ['lands'],
+    label: 'landfall',
+    test: (text) => /\bland\b[^.]{0,30}\bentering[^.]*triggers an additional time/i.test(text),
+  },
+  {
+    engines: ['blink', 'tokens', 'lands'],
+    label: 'enter-the-battlefield',
+    test: (text) =>
+      !/\bland\b[^.]{0,30}\bentering[^.]*triggers an additional time/i.test(text) &&
+      /\bentering( the battlefield)? causes a triggered ability[^.]*triggers an additional time|\benters[^.]*causes a triggered ability[^.]*triggers an additional time/i.test(text),
+  },
+  {
+    engines: ['sacrifice'],
+    label: 'death',
+    test: (text) => /\bdying causes a triggered ability[^.]*triggers an additional time|\bdies[^.]*causes a triggered ability[^.]*triggers an additional time/i.test(text),
+  },
+  {
+    engines: ['evasion'],
+    label: 'attack',
+    test: (text) => /\battacking causes a triggered ability[^.]*triggers an additional time|\battacks[^.]*causes a triggered ability[^.]*triggers an additional time/i.test(text),
+  },
+  {
+    engines: ['spells'],
+    label: 'spell-cast',
+    test: (text) => /\bcasting (an instant or sorcery|a) spell[^.]*triggers an additional time/i.test(text),
+  },
+];
 
 export interface SynPart {
   label: string;
@@ -238,6 +269,21 @@ export function synergyParts(c: C, syn: DeckSynergy, commanderLabel = 'your comm
     }
   });
   const text = c.text ?? '';
+  if (/triggers an additional time/i.test(text)) {
+    for (const d of DOUBLERS) {
+      if (!d.test(text)) continue;
+      const matches = d.engines.some((ek) => {
+        const idx = ENGINES.findIndex((e) => e.key === ek);
+        if (idx < 0) return false;
+        const b = 1 << idx;
+        return !!(cmd && ((cmd.makes & b) || (cmd.cares & b))) || syn.makes[idx] + syn.cares[idx] >= 5;
+      });
+      if (matches) out.push({ label: `doubles your ${d.label} triggers`, value: DOUBLER_W });
+    }
+    if (/\bchosen type\b[^.]*triggers an additional time/i.test(text) && (syn.commanderTribes.length > 0 || syn.tribes.size > 0)) {
+      out.push({ label: 'doubles triggers of your tribe', value: DOUBLER_W });
+    }
+  }
   const named = (s: string) => new RegExp(`\\b${s}(s|es)?\\b`).test(text);
   for (const s of syn.commanderTribes) if (p.tribes.includes(s) || named(s)) out.push({ label: `${s}: the type ${commanderLabel} rewards`, value: TRIBE_W });
   for (const [s, n] of syn.tribes) {
