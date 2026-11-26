@@ -825,7 +825,9 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   white-space: nowrap !important;
-  padding: 2px 0;
+  padding: 2px 18px 2px 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 22px), transparent 100%);
 }
 .vhero .vmeta .mydecks::-webkit-scrollbar {
   display: none;
@@ -854,7 +856,7 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   text-decoration: none !important;
   font: 400 11px/1.2 var(--mo-mono) !important;
   white-space: nowrap !important;
-  max-width: 210px;
+  max-width: 175px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -873,6 +875,15 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   white-space: nowrap !important;
 }
 @media (max-width: 700px) {
+  .vhero {
+    gap: var(--s3) 18px !important;
+  }
+  .vhero .vname {
+    padding-left: 4px;
+  }
+  .vhero .vname > .vslash {
+    left: -4px !important;
+  }
   .vhero .vmeta .mydecks-pill .decklink,
   .vhero .vmeta .mydecks-more {
     min-height: 44px !important;
@@ -956,20 +967,43 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
 }
 @media (max-width: 700px) {
   .lists > .jrail-wrap {
-    top: auto !important;
-    bottom: 68px !important;
-    transform: none !important;
+    display: block !important;
+    top: var(--jrail-top, 220px) !important;
+    bottom: auto !important;
     z-index: 6 !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none !important;
+    transform: translateX(10px) !important;
+    transition:
+      opacity 0.28s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0.28s;
+  }
+  .lists > .jrail-wrap.on {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0) !important;
+    transition:
+      opacity 0.28s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s;
   }
   .lists > .jrail-wrap > .jrail {
-    max-height: calc(100dvh - 300px) !important;
+    max-height: calc(100dvh - var(--jrail-top, 220px) - 72px) !important;
     overflow-y: auto !important;
   }
-  html.forging .lists > .jrail-wrap {
-    bottom: 76px !important;
-  }
   html.forging .lists > .jrail-wrap > .jrail {
-    max-height: calc(100dvh - 320px) !important;
+    max-height: calc(100dvh - var(--jrail-top, 220px) - 82px) !important;
+  }
+  .lists > .jrail-wrap:not(.on) > .jrail {
+    pointer-events: none !important;
+  }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .lists > .jrail-wrap {
+    transition: none !important;
+    transform: none !important;
   }
 }
 @media (min-width: 701px) {

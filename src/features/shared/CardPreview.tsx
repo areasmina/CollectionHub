@@ -53,7 +53,7 @@ export const openCard = (src: string, name?: string, back?: string) =>
   });
 
 /** Card thumbnail with flip support for two-faced cards, foil glare tracking, and offline fallback. */
-export function Thumb({ src, className = 'thumb xart', name, back, onPick }: { src?: string; className?: string; name?: string; back?: string; onPick?: () => void }) {
+export function Thumb({ src, className = 'thumb xart', name, back, onPick, eager }: { src?: string; className?: string; name?: string; back?: string; onPick?: () => void; eager?: boolean }) {
   const [flipped, setFlipped] = useState(false);
   const [failed, setFailed] = useState('');
   if (!src) return <span className={className} aria-hidden="true" />;
@@ -74,7 +74,8 @@ export function Thumb({ src, className = 'thumb xart', name, back, onPick }: { s
       <img
         src={failed === face ? smallOf(face) : face}
         alt=""
-        loading="lazy"
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
         onError={() => failed !== face && smallOf(face) && smallOf(face) !== face && setFailed(face)}
         onClick={(e) => {
           e.stopPropagation();

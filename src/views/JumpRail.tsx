@@ -154,17 +154,44 @@ export function JumpRail({ headers }: { headers: string[] }) {
       },
       { rootMargin: '-30% 0px -60% 0px' },
     );
-    els.forEach((e) => io.observe(e));
-    window.addEventListener('scroll', wake, { passive: true });
-    // On phones the rail is pinned to the screen edge, so it only shows while its list is on screen (the swipe
-    // cube can slide the list away sideways). It waits until the list reaches the top third of the screen, so it never
-    // floats over the deck's header (scores, FORGE) while the list is still further down.
-    const list = ref.current?.closest('.lists');
-    const lio = new IntersectionObserver((es) => setInView(es.some((e) => e.isIntersecting)), {
-      rootMargin: '0px 0px -70% 0px',
+    io.observe && els.forEach((e) => io.observe(e));
+    // On phones the rail is anchored safely below the toolbar and fades in smoothly only once the first section title
+    // (e.g. CREATURES) reaches the card-reading band, so it never collides with the toolbar or swap banner above it.
+    const list = ref.current?.closest('.lists') as HTMLElement | null;
+    const bar = list?.querySelector<HTMLElement>(':scope > .tbar');
+    const syncPos = () => {
+      const first = els[0];
+      const last = els[els.length - 1];
+      const wrap = ref.current?.parentElement;
+      if (!first || !last) return setInView(false);
+      const fr = first.getBoundingClientRect();
+      const lr = last.getBoundingClientRect();
+      const br = bar?.getBoundingClientRect();
+      const minTop = Math.max(56, Math.round((br?.bottom ?? 0) + 8));
+      const top = Math.max(minTop, Math.min(Math.round(fr.top), window.innerHeight - 240));
+      if (wrap) wrap.style.setProperty('--jrail-top', `${top}px`);
+      const visible = fr.top <= window.innerHeight * 0.68 && lr.bottom > minTop + 20;
+      setInView(visible);
+    };
+    syncPos();
+    const onScroll = () => {
+      wake();
+      syncPos();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', syncPos, { passive: true });
+    const lio = new IntersectionObserver(syncPos, {
+      rootMargin: '0px 0px -32% 0px',
     });
+    if (els[0]) lio.observe(els[0]);
     if (list) lio.observe(list);
-    return () => (io.disconnect(), lio.disconnect(), window.removeEventListener('scroll', wake), clearTimeout(sleep.current));
+    return () => (
+      io.disconnect(),
+      lio.disconnect(),
+      window.removeEventListener('scroll', onScroll),
+      window.removeEventListener('resize', syncPos),
+      clearTimeout(sleep.current)
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 

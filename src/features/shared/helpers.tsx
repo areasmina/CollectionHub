@@ -7,18 +7,24 @@ import { haptic } from '../../lib/haptics';
 import { archidektUrl, spellbookUrl } from '../../lib/links';
 import { openDeck } from '../../lib/nav';
 import { cad, finishUsd, toCad } from '../../lib/prices';
+import { warmMemCards } from '../../lib/scryfall';
 import { Ransom } from '../../views/zine';
+
+const binderMemo = new Map<number, Card[]>();
 
 /** Every legal card in a binder, one per name (live). */
 export function useBinder(profile: number) {
-  return (
-    useLiveQuery(async () => {
-      const es = await db.entries.where('profile').equals(profile).toArray();
-      const m = new Map<string, Card>();
-      for (const c of await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])) if (c?.legal && !m.has(c.key)) m.set(c.key, c);
-      return [...m.values()];
-    }, [profile]) ?? []
-  );
+  const rows = useLiveQuery(async () => {
+    const es = await db.entries.where('profile').equals(profile).toArray();
+    const cards = (await db.cards.bulkGet([...new Set(es.map((e) => e.cardId))])).filter((c): c is Card => !!c);
+    warmMemCards(cards);
+    const m = new Map<string, Card>();
+    for (const c of cards) if (c.legal && !m.has(c.key)) m.set(c.key, c);
+    const out = [...m.values()];
+    binderMemo.set(profile, out);
+    return out;
+  }, [profile]);
+  return rows ?? binderMemo.get(profile) ?? [];
 }
 
 /** A deck's light: on = active (its cards count as in use in your binder), off = put away. */

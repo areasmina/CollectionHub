@@ -52,8 +52,10 @@ export async function cheapest(names: string[], onProgress?: (cheap: Map<string,
     }
     await db.cheap.bulkPut([...best.values()]);
     best.forEach((v, k) => out.set(k, v));
+    warmMemCheap(best.values());
     onProgress?.(new Map(out));
   }
+  if (out.size) warmMemCheap(out.values());
   return out;
 }
 
@@ -94,6 +96,46 @@ export function toCard(c: any): Card {
 
 const WEEK = 7 * 864e5;
 const setCnCache = new Map<string, Card>();
+const memCards = new Map<string, Card>();
+const memCheap = new Map<string, Cheap>();
+
+/** Record resolved cards in the in-memory session cache so opening decks is synchronous on frame 0. */
+export function warmMemCards(cards: Iterable<Card | null | undefined>) {
+  for (const c of cards) {
+    if (!c?.key) continue;
+    const prev = memCards.get(c.key);
+    if (!prev || (c.at ?? 0) >= (prev.at ?? 0)) memCards.set(c.key, c);
+  }
+}
+
+/** Synchronously return any cards already warm in session memory for the given normalized keys. */
+export function peekMemCards(keys: string[]): Map<string, Card> {
+  const out = new Map<string, Card>();
+  for (const k of keys) {
+    const c = memCards.get(k);
+    if (c) out.set(k, c);
+  }
+  return out;
+}
+
+/** Record resolved cheap prices in the in-memory session cache. */
+export function warmMemCheap(items: Iterable<Cheap | null | undefined>) {
+  for (const c of items) {
+    if (!c?.key) continue;
+    const prev = memCheap.get(c.key);
+    if (!prev || (c.at ?? 0) >= (prev.at ?? 0)) memCheap.set(c.key, c);
+  }
+}
+
+/** Synchronously return any cheap prices already warm in session memory for the given normalized keys. */
+export function peekMemCheap(keys: string[]): Map<string, Cheap> {
+  const out = new Map<string, Cheap>();
+  for (const k of keys) {
+    const c = memCheap.get(k);
+    if (c) out.set(k, c);
+  }
+  return out;
+}
 
 /** Card data (prices, images) by Scryfall id: cache first, prices refreshed weekly. */
 export async function cardsByIds(ids: string[], maxAge = WEEK, onProgress?: (cards: Map<string, Card>) => void): Promise<Map<string, Card>> {
@@ -103,12 +145,14 @@ export async function cardsByIds(ids: string[], maxAge = WEEK, onProgress?: (car
   // pv 4 = has the foil price, the rarity and the back face: older cache entries are fetched again once
   // (card data only, nothing of yours is touched; no card is lost).
   (await db.cards.bulkGet(uniq)).forEach((c) => c && c.at && (c.pv ?? 0) >= 4 && Date.now() - c.at < maxAge && out.set(c.id, c));
+  warmMemCards(out.values());
   if (out.size) onProgress?.(new Map(out));
   const need = uniq.filter((id) => !out.has(id));
   for (let i = 0; i < need.length; i += 75) {
     const res = await post('/cards/collection', { identifiers: need.slice(i, i + 75).map((id) => ({ id })) });
     const cards = (res.data ?? []).map(toCard);
     await db.cards.bulkPut(cards);
+    warmMemCards(cards);
     for (const c of cards) out.set(c.id, c);
     onProgress?.(new Map(out));
   }
@@ -211,7 +255,10 @@ export async function resolveRows(rows: Row[], onProgress: (done: number, total:
         if (k.startsWith('s:')) setCnCache.set(k, card);
       }
     }
-    if (cards.length) await db.cards.bulkPut(cards);
+    if (cards.length) {
+      await db.cards.bulkPut(cards);
+      warmMemCards(cards);
+    }
   };
   const fetchAll = async (idents: Ident[], base: number, total: number) => {
     const missed: Ident[] = [];

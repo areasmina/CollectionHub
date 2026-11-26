@@ -14,7 +14,7 @@ import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
 import { onOpenDeck, openCollection, openDiscoverSub, setBack, takeDeck } from '../lib/nav';
 import { cad, PRICE_METHOD, toCad } from '../lib/prices';
-import { cheapest, gameChangers, withCheapest } from '../lib/scryfall';
+import { cheapest, gameChangers, warmMemCards, warmMemCheap, withCheapest } from '../lib/scryfall';
 import { DeckCompare } from './DeckCompare';
 import { Meter } from './parts';
 import { DeckLight, SearchIcon, ShortAlert, priced as atFinish, priceSum, type Shared } from './shared';
@@ -40,7 +40,11 @@ const PasteCheck = lazy(() => import('../features/check/PasteCheck').then((m) =>
 export function Decks(s: Shared) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
   const cmdrs =
-    useLiveQuery(async () => new Map((await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? '')).filter(Boolean)).toArray()).map((c) => [c.key, c])), [decks]) ?? new Map<string, Card>();
+    useLiveQuery(async () => {
+      const list = await db.cards.where('key').anyOf(decks.map((d) => norm(d.commander ?? '')).filter(Boolean)).toArray();
+      warmMemCards(list);
+      return new Map(list.map((c) => [c.key, c]));
+    }, [decks]) ?? new Map<string, Card>();
   // A deck's themes: the commander's rules text first; when that names none, EDHREC's top tags for the commander (from pages already cached here).
   const edhNames = [...new Set(decks.map((d) => d.commander ?? '').filter(Boolean))];
   const edhKey = edhNames.join('|');
@@ -82,7 +86,10 @@ export function Decks(s: Shared) {
   const priced =
     useLiveQuery(async () => {
       const [cs, ch] = await Promise.all([db.cards.where('key').anyOf(allNames).toArray(), db.cheap.bulkGet(allNames)]);
-      const cheap = new Map(ch.filter(Boolean).map((c) => [c!.key, c!]));
+      warmMemCards(cs);
+      const cheapArr = ch.filter((c): c is Cheap => !!c);
+      warmMemCheap(cheapArr);
+      const cheap = new Map(cheapArr.map((c) => [c.key, c]));
       // Same printing choice as the deck page (newest fetched wins).
       return new Map(cs.sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, withCheapest(c, cheap)!]));
     }, [decks]) ?? new Map<string, Card>();

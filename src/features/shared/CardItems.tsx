@@ -76,6 +76,7 @@ export interface CardRowProps {
   drag?: boolean;
   markText?: string;
   quiet?: boolean;
+  eager?: boolean;
   onMenu?: (x: number, y: number) => void;
   foil?: boolean;
   name: string;
@@ -157,13 +158,13 @@ export function CardLine({ name, img, card, s, note, marker, markText, quiet, on
 }
 
 /** Grid tile representation of a deck card. */
-export function CardTile({ name, img, card, s, note, marker, markText, onOpen, onMenu, foil, drag, children }: CardRowProps) {
+export function CardTile({ name, img, card, s, note, marker, markText, eager, onOpen, onMenu, foil, drag, children }: CardRowProps) {
   const st = statusOf(name, s.mine, s.other);
   const src = (card?.img ?? img)?.replace('/small/', '/normal/');
   const press = useMenuPress(onMenu);
   return (
     <li className={`ztile ${st}${onMenu ? ' hasmenu' : ''}`} data-card={name} onClick={onOpen} tabIndex={onOpen ? undefined : 0} {...press} {...dragProps(name, drag)}>
-      <Thumb src={src} back={card?.back} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
+      <Thumb src={src} back={card?.back} eager={eager} className={`timg xart${foil ? ' foil' : ''}`} name={name} onPick={st !== 'owned' ? onOpen : undefined} />
       {card?.legal === false && (
         <span className="bannedtape" title="Not legal in Commander (Scryfall)">
           BANNED

@@ -25,7 +25,7 @@ import { setBack } from '../../lib/nav';
 import { addCounts, calculateDeckOwnership } from '../../lib/ownership';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../../lib/pins';
 import { cad, fetchedNote, PRICE_METHOD, toCad } from '../../lib/prices';
-import { cardsByIds, cheapest, gameChangers, resolveRows, withCheapest } from '../../lib/scryfall';
+import { cardsByIds, cheapest, gameChangers, peekMemCards, peekMemCheap, resolveRows, warmMemCards, warmMemCheap, withCheapest } from '../../lib/scryfall';
 import { searchByText } from '../../lib/search';
 import { rankSubs, recInfoOf, type SubCard } from '../../lib/subs';
 import { CardMenu } from '../../views/CardMenu';
@@ -86,20 +86,44 @@ export function DeckView({
     setBack(onBack);
     return () => void setBack(null);
   }, [deck.id]);
+  const deckKeys = deck.cards.map((c) => norm(c.name));
+  const deckSig = `${deck.id ?? 0}:${deck.updated}:${deck.cards.length}`;
   const cardsRaw = useLiveQuery(
-    async () => new Map((await db.cards.where('key').anyOf(deck.cards.map((c) => norm(c.name))).sortBy('key')).sort((a, b) => (a.at ?? 0) - (b.at ?? 0)).map((c) => [c.key, c])),
-    [deck],
+    async () => {
+      const rows = (await db.cards.where('key').anyOf(deckKeys).toArray()).sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
+      warmMemCards(rows);
+      return new Map(rows.map((c) => [c.key, c]));
+    },
+    [deckSig],
   );
-  const byKey = cardsRaw ?? new Map<string, Card>();
-  const cheap = useLiveQuery(async () => new Map((await db.cheap.bulkGet(deck.cards.map((c) => norm(c.name)))).filter(Boolean).map((c) => [c!.key, c!])), [deck]) ?? new Map<string, Cheap>();
+  const byKey = cardsRaw ?? peekMemCards(deckKeys);
+  const cheapRaw = useLiveQuery(async () => {
+    const rows = (await db.cheap.bulkGet(deckKeys)).filter((c): c is Cheap => !!c);
+    warmMemCheap(rows);
+    return new Map(rows.map((c) => [c.key, c]));
+  }, [deckSig]);
+  const cheap = cheapRaw ?? peekMemCheap(deckKeys);
   const cardOf = (name: string) => withCheapest(byKey.get(norm(name)), cheap);
   const [gc, setGc] = useState<Set<string> | null | undefined>(undefined);
+  const checkedRef = useRef<number | string>('');
   useEffect(() => {
-    resolveRows(deck.cards.map((c) => ({ name: c.name, qty: c.qty })), () => {})
-      .then(() => cheapest(deck.cards.map((c) => c.name)))
-      .catch(() => {});
     gameChangers().then(setGc);
   }, [deck.id]);
+  useEffect(() => {
+    if (cardsRaw === undefined || cheapRaw === undefined) return;
+    const missingCards = deck.cards.filter((c) => !cardsRaw.has(norm(c.name)));
+    const staleCheap = deck.cards.filter((c) => !cheapRaw.has(norm(c.name))).map((c) => c.name);
+    const runKey = `${deck.id}:${deck.cards.length}`;
+    if (checkedRef.current === runKey && missingCards.length === 0) return;
+    checkedRef.current = runKey;
+    if (missingCards.length) {
+      resolveRows(missingCards.map((c) => ({ name: c.name, qty: c.qty })), () => {})
+        .then(() => cheapest(deck.cards.map((c) => c.name)))
+        .catch(() => {});
+    } else if (staleCheap.length) {
+      cheapest(staleCheap).catch(() => {});
+    }
+  }, [deck.id, cardsRaw, cheapRaw]); // eslint-disable-line react-hooks/exhaustive-deps
   const [view, setView] = useStored<'grid' | 'list' | 'compact'>(VIEW_KEY, 'grid', ['grid', 'list', 'compact']);
   const [zoom, setZoom] = useStored<'s' | 'm' | 'l'>('ch:cmdrzoom', 'm', ['s', 'm', 'l']);
   const [openSearch, setOpenSearch] = useState(0);
@@ -180,7 +204,7 @@ export function DeckView({
   };
   const pricesIn = byKey.size > 0;
   const st = deckStats(deck.cards, cardOf, deck.commander);
-  const hydrating = deck.cards.length > 0 && (cardsRaw === undefined || (st.total > 0 && st.unknown >= st.total));
+  const hydrating = deck.cards.length > 0 && ((cardsRaw === undefined && byKey.size === 0) || (st.total > 0 && st.unknown >= st.total));
   const call = bracketOf(deck.cards.map((c) => ({ name: c.name, card: cardOf(c.name) })), gc ?? null);
   const cmdr = deck.commander ? byKey.get(norm(deck.commander)) : undefined;
   const partner = deck.partner ? byKey.get(norm(deck.partner)) : undefined;
@@ -274,7 +298,7 @@ export function DeckView({
     const card = cardOf(name);
     return { ...recInfo.get(norm(name)), name, type: card?.type, cmc: card?.cmc };
   };
-  const others = useLiveQuery(() => db.decks.where('profile').equals(s.profile).toArray(), [s.profile]) ?? [];
+  const others = siblings;
   const alloc = allocate(others, s.mine);
   const deckCol = new Map(others.map((d) => [d.name, deckColour(d)]));
   const optionOf = (sub: SubCard): SwapOption => {
@@ -579,68 +603,72 @@ export function DeckView({
             />
             <JumpRail headers={[...sections].filter(([, cs]) => cs.length).map(([h]) => h)} />
             {swapHint === 'show' && <p className="forgehint">tap a card to swap it · drag a suggestion onto a card to swap, or onto the list to add · drag a card out to cut it</p>}
-            {[...sections]
-              .filter(([, cs]) => cs.length)
-              .map(([h, cs]) => {
-                const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
-                return (
-                  <details key={h} id={jumpId(h)} className="cat" open>
-                    <summary>
-                      <span className="pm" aria-hidden="true" />
-                      <span className="h">
-                        {h} ({cs.reduce((n, c) => n + c.qty, 0)})
-                      </span>
-                      {pricesIn && (
-                        <span className="gval" title="What this group's cards are worth (cheapest printings, foils at foil price)">
-                          ≈{cad(priceSum(cs.map((c) => ({ card: cardFor(c), qty: c.qty }))))}
+            {(() => {
+              let tileIdx = 0;
+              return [...sections]
+                .filter(([, cs]) => cs.length)
+                .map(([h, cs]) => {
+                  const ls = summarize(cs.map((c) => c.name), s.mine, s.other);
+                  return (
+                    <details key={h} id={jumpId(h)} className="cat" open>
+                      <summary>
+                        <span className="pm" aria-hidden="true" />
+                        <span className="h">
+                          {h} ({cs.reduce((n, c) => n + c.qty, 0)})
                         </span>
-                      )}
-                      <span className="dots" aria-hidden="true" />
-                      <span className="n">
-                        {ls.owned}/{ls.total} owned
-                      </span>
-                    </summary>
+                        {pricesIn && (
+                          <span className="gval" title="What this group's cards are worth (cheapest printings, foils at foil price)">
+                            ≈{cad(priceSum(cs.map((c) => ({ card: cardFor(c), qty: c.qty }))))}
+                          </span>
+                        )}
+                        <span className="dots" aria-hidden="true" />
+                        <span className="n">
+                          {ls.owned}/{ls.total} owned
+                        </span>
+                      </summary>
 
-                    <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'} data-zoom={view === 'grid' ? zoom : undefined}>
-                      {cs.map((c) => (
-                        <Item
-                          key={c.name}
-                          name={c.name}
-                          card={cardFor(c)}
-                          s={s}
-                          note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
-                          onMenu={(x, y) => setMenu({ card: c, x, y })}
-                          foil={c.foil}
-                          quiet={owned(c.name)}
-                          drag={c.name !== deck.commander}
-                          onOpen={c.name === deck.commander || (BASICS.has(norm(c.name)) && !placing) ? undefined : () => (placing ? void swapIn(c.name, placing) : setSwapFor(c.name))}
-                        >
-                          {swapFor === c.name && (
-                            <SwapNote
-                              name={c.name}
-                              missing={slotInfo(c.name)}
-                              big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
-                              ctx={swapCtx}
-                              options={rankSubs(slotInfo(c.name), candidates, 3, swapCtx).map(optionOf)}
-                              pool={forgePool()}
-                              loading={!!deck.commander && !recs}
-                              pin={pinOf(pins, c.name)}
-                              canPinIn={owned(c.name)}
-                              cmdr={(deck.commander ?? deck.name).split(' // ')[0]}
-                              onPick={(to) => swapIn(c.name, to)}
-                              onUndo={() => setSwapFor(null)}
-                              onPin={deck.commander ? (side) => (void pinCard(s.profile, deck.commander!, c.name, side), setSwapFor(null)) : undefined}
-                              deck={deck.cards.map((x) => x.name)}
-                              bracket={call.bracket}
-                              onClose={() => setSwapFor(null)}
-                            />
-                          )}
-                        </Item>
-                      ))}
-                    </ul>
-                  </details>
-                );
-              })}
+                      <ul className={view === 'grid' ? 'zgrid' : view === 'compact' ? 'zlist zcompact' : 'zlist'} data-zoom={view === 'grid' ? zoom : undefined}>
+                        {cs.map((c) => (
+                          <Item
+                            key={c.name}
+                            name={c.name}
+                            card={cardFor(c)}
+                            s={s}
+                            eager={tileIdx++ < 8}
+                            note={[c.foil ? '✦ FOIL' : '', c.qty > 1 ? `×${c.qty}` : '', call.gameChangers.includes(c.name) ? 'Game Changer' : ''].filter(Boolean).join(' · ')}
+                            onMenu={(x, y) => setMenu({ card: c, x, y })}
+                            foil={c.foil}
+                            quiet={owned(c.name)}
+                            drag={c.name !== deck.commander}
+                            onOpen={c.name === deck.commander || (BASICS.has(norm(c.name)) && !placing) ? undefined : () => (placing ? void swapIn(c.name, placing) : setSwapFor(c.name))}
+                          >
+                            {swapFor === c.name && (
+                              <SwapNote
+                                name={c.name}
+                                missing={slotInfo(c.name)}
+                                big={cardOf(c.name)?.img?.replace('/small/', '/normal/')}
+                                ctx={swapCtx}
+                                options={rankSubs(slotInfo(c.name), candidates, 3, swapCtx).map(optionOf)}
+                                pool={forgePool()}
+                                loading={!!deck.commander && !recs}
+                                pin={pinOf(pins, c.name)}
+                                canPinIn={owned(c.name)}
+                                cmdr={(deck.commander ?? deck.name).split(' // ')[0]}
+                                onPick={(to) => swapIn(c.name, to)}
+                                onUndo={() => setSwapFor(null)}
+                                onPin={deck.commander ? (side) => (void pinCard(s.profile, deck.commander!, c.name, side), setSwapFor(null)) : undefined}
+                                deck={deck.cards.map((x) => x.name)}
+                                bracket={call.bracket}
+                                onClose={() => setSwapFor(null)}
+                              />
+                            )}
+                          </Item>
+                        ))}
+                      </ul>
+                    </details>
+                  );
+                });
+            })()}
           </div>
           <div className="dside forge-buy">
             <BuyList items={buyItems} binder={s.binderName} />
