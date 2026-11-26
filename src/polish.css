@@ -522,11 +522,10 @@
     order: 1;
     margin: 0 !important;
   }
-  /* In the Forge the cost line parks behind the opaque FORGE bar (z 40) rather than pinning below the header,
-     so the bar and the deck tabs meet as one block with nothing sliding through between them. */
+  /* In the Forge the strip scrolls away cleanly instead of floating over the cards on phones. */
   html.forging .dstrip {
-    position: sticky !important;
-    top: 0 !important;
+    position: relative !important;
+    top: auto !important;
     z-index: 20 !important;
   }
   .dstrip > .dacts:empty {
@@ -1581,6 +1580,23 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   .dstrip > .dacts > :not(.tobuy, .bestfit, .forge) > button { width: 100%; justify-content: center; }
   /* one action alone (no BEST FOR MY CARDS while forging, for one) takes the whole row */
   .dstrip > .dacts > .forge:only-child, .dstrip > .dacts > .bestfit:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  /* Saved deck (.forgemain) holds 5 compact utility buttons: wrap as an inline row, never 5 full-width stacked blocks */
+  .forgemain .dstrip > .dacts {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    width: 100%;
+  }
+  .forgemain .dstrip > .dacts > * {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    grid-column: auto !important;
+  }
+  .forgemain .dstrip > .dacts > .u-btn {
+    padding: 0 10px !important;
+    font-size: 12px !important;
+    min-height: 44px !important;
+  }
 }
 
 /* Saved-deck hero (Guillermo, Nov 15): the red slash only behind the name and the ACTIVE light under it on the dark, so

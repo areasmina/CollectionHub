@@ -298,10 +298,11 @@ export function Discover(s: Shared) {
         />
       </section>
 
-      <div className="u-seg" role="tablist" aria-label="Ways to build a deck" style={{ marginBottom: 12, width: 'fit-content' }}>
+      <div className="ctabset" role="tablist" aria-label="Ways to build a deck" style={{ marginBottom: 14 }}>
         <button
           type="button"
           role="tab"
+          className={`ctab${subTab === 'commanders' ? ' on' : ''}`}
           aria-selected={subTab === 'commanders'}
           onClick={() => (haptic('select'), setSubTab('commanders'))}
         >
@@ -310,6 +311,7 @@ export function Discover(s: Shared) {
         <button
           type="button"
           role="tab"
+          className={`ctab${subTab === 'guided' ? ' on' : ''}`}
           aria-selected={subTab === 'guided'}
           onClick={() => (haptic('select'), setSubTab('guided'))}
         >
@@ -318,6 +320,7 @@ export function Discover(s: Shared) {
         <button
           type="button"
           role="tab"
+          className={`ctab${subTab === 'tags' ? ' on' : ''}`}
           aria-selected={subTab === 'tags'}
           onClick={() => (haptic('select'), setSubTab('tags'))}
         >

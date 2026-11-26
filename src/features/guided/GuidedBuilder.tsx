@@ -631,6 +631,7 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
                   ) : (
                     commanderMatches.slice(0, 40).map((m) => (
                       <div key={m.card.key} className={s.pickRow}>
+                        {m.card.img && <img src={m.card.img} alt={m.card.name} className={s.pickArt} loading="lazy" />}
                         <div className={s.pickMain}>
                           <span className={s.pickName}>{m.card.name}</span>
                           <span className={s.pickMeta}>
@@ -741,6 +742,7 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
                     const inDeck = draftCards.some((d) => norm(d.name) === norm(pick.name));
                     return (
                       <div key={pick.name} className={s.pickRow}>
+                        {meta?.img && <img src={meta.img} alt={pick.name} className={s.pickArt} loading="lazy" />}
                         <div className={s.pickMain}>
                           <span className={s.pickName}>{pick.name}</span>
                           <span className={s.pickMeta}>
