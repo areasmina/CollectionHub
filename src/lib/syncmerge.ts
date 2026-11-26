@@ -1,4 +1,5 @@
 import type { Deck, Entry, Profile } from './db';
+import { mergeSnapshotLists, type DeckSnapshot } from './deckhistory';
 
 /**
  * Card-by-card sync merge (Phase 5D). When this device and the cloud both changed since they last matched, the two
@@ -15,6 +16,7 @@ export interface SyncData {
   profiles: Profile[];
   entries: Entry[];
   decks: Deck[];
+  history?: Record<string, DeckSnapshot[]>;
 }
 export interface MergeReport {
   /** Card or deck changes taken from the other copy. */
@@ -173,13 +175,25 @@ function mergeProfiles(base: Profile[] | null, mine: Profile[], theirs: Profile[
   return out;
 }
 
+function mergeHistory(mine?: Record<string, DeckSnapshot[]>, theirs?: Record<string, DeckSnapshot[]>): Record<string, DeckSnapshot[]> | undefined {
+  if (!mine && !theirs) return undefined;
+  const out: Record<string, DeckSnapshot[]> = {};
+  for (const k of new Set([...Object.keys(mine ?? {}), ...Object.keys(theirs ?? {})])) {
+    const merged = mergeSnapshotLists(mine?.[k], theirs?.[k]);
+    if (merged.length) out[k] = merged;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 /** Merges this device's copy and the cloud's against the last copy they shared (null = none: keep both). */
 export function mergeSync(base: SyncData | null, mine: SyncData, theirs: SyncData): { data: SyncData; report: MergeReport } {
   const report: MergeReport = { taken: 0, doubled: 0 };
-  const data = {
+  const history = mergeHistory(mine.history, theirs.history);
+  const data: SyncData = {
     profiles: mergeProfiles(base?.profiles ?? null, mine.profiles, theirs.profiles),
     entries: mergeEntries(base?.entries ?? null, mine.entries, theirs.entries, report),
     decks: mergeDecks(base?.decks ?? null, mine.decks, theirs.decks, report),
+    ...(history ? { history } : {}),
   };
   return { data, report };
 }

@@ -112,3 +112,41 @@ export function pruneDeckSnapshots(deckId: number, keep = 10): DeckSnapshot[] {
     return [];
   }
 }
+
+/** Stable sync key for a deck's history across devices (independent of local auto-increment IDs). */
+export const deckHistoryKey = (d: Pick<Deck, 'profile' | 'name'>) => `${d.profile}|${norm(d.name)}`;
+
+/** Merges two snapshot lists, deduplicating by snapshot ID and keeping the newest MAX_SNAPSHOTS_PER_DECK. */
+export function mergeSnapshotLists(a: DeckSnapshot[] = [], b: DeckSnapshot[] = []): DeckSnapshot[] {
+  const seen = new Map<string, DeckSnapshot>();
+  for (const s of [...a, ...b]) {
+    if (s && s.id && !seen.has(s.id)) seen.set(s.id, s);
+  }
+  return [...seen.values()].sort((x, y) => y.at - x.at).slice(0, MAX_SNAPSHOTS_PER_DECK);
+}
+
+/** Collects local deck history snapshots keyed by `profile|norm(name)` for sync & backup. */
+export function exportAllDeckSnapshots(decks: Deck[]): Record<string, DeckSnapshot[]> {
+  const out: Record<string, DeckSnapshot[]> = {};
+  for (const d of decks) {
+    if (!d.id) continue;
+    const snaps = getDeckSnapshots(d.id);
+    if (snaps.length) out[deckHistoryKey(d)] = snaps;
+  }
+  return out;
+}
+
+/** Restores synced deck history snapshots into localStorage for the given saved decks. */
+export function importAllDeckSnapshots(decks: Deck[], history?: Record<string, DeckSnapshot[]>) {
+  if (!history || typeof localStorage === 'undefined') return;
+  for (const d of decks) {
+    if (!d.id) continue;
+    const snaps = history[deckHistoryKey(d)];
+    try {
+      if (snaps?.length) localStorage.setItem(`${STORAGE_PREFIX}${d.id}`, JSON.stringify(snaps.slice(0, MAX_SNAPSHOTS_PER_DECK)));
+      else localStorage.removeItem(`${STORAGE_PREFIX}${d.id}`);
+    } catch {
+      /* ignore quota / private mode errors */
+    }
+  }
+}
