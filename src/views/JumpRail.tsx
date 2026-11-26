@@ -130,6 +130,12 @@ export function JumpRail({ headers }: { headers: string[] }) {
   const ref = useRef<HTMLElement>(null);
   const key = headers.join('|');
 
+  const wake = () => {
+    setAwake(true);
+    clearTimeout(sleep.current);
+    sleep.current = window.setTimeout(() => setAwake(false), 950);
+  };
+
   useEffect(() => {
     if (headers.length < 3 || typeof IntersectionObserver !== 'function')
       return;
@@ -137,11 +143,6 @@ export function JumpRail({ headers }: { headers: string[] }) {
       .map((h) => document.getElementById(jumpId(h)))
       .filter((e): e is HTMLElement => !!e);
     const seen = new Map<string, boolean>();
-    const wake = () => {
-      setAwake(true);
-      clearTimeout(sleep.current);
-      sleep.current = window.setTimeout(() => setAwake(false), 950);
-    };
     // A section counts as 'here' while it crosses the band just under the sticky tool bar.
     const io = new IntersectionObserver(
       (es) => {
@@ -195,8 +196,9 @@ export function JumpRail({ headers }: { headers: string[] }) {
     setTimeout(land, 450);
     setTimeout(land, 1100);
     quietUntil.current = Date.now() + 1500;
-    setAwake(true);
+    wake();
     setNow(h);
+    (document.activeElement as HTMLElement | null)?.blur?.();
   };
 
   return (

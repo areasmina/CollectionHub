@@ -919,10 +919,58 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
   border-bottom: 0;
 }
 
-/* ── JumpRail: auto-hide cleanly when dormant & stay bounded inside list on desktop ── */
+/* ── JumpRail: auto-hide smoothly when dormant & stay bounded inside card-list lane ── */
+.jrail {
+  border-radius: 13px !important;
+  background: rgba(12, 12, 16, 0.78) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  opacity: 0 !important;
+  transform: translateX(6px);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  scrollbar-width: none;
+}
+.jrail::-webkit-scrollbar {
+  display: none;
+}
+.jrail-wrap.awake > .jrail,
+.jrail:hover,
+.jrail:focus-within {
+  opacity: 1 !important;
+  transform: translateX(0);
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
 .jrail-wrap:not(.awake) > .jrail:not(:hover):not(:focus-within) > button[aria-current='true'] {
   background: transparent;
   color: var(--mo-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jrail {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+@media (max-width: 700px) {
+  .lists > .jrail-wrap {
+    top: auto !important;
+    bottom: 68px !important;
+    transform: none !important;
+    z-index: 6 !important;
+  }
+  .lists > .jrail-wrap > .jrail {
+    max-height: calc(100dvh - 300px) !important;
+    overflow-y: auto !important;
+  }
+  html.forging .lists > .jrail-wrap {
+    bottom: 76px !important;
+  }
+  html.forging .lists > .jrail-wrap > .jrail {
+    max-height: calc(100dvh - 320px) !important;
+  }
 }
 @media (min-width: 701px) {
   .lists > .jrail-wrap {
@@ -931,13 +979,11 @@ html.forging:has(.pillnav.dock-top.forging-island:not(.away):not(.collapsed)) :i
     right: 2px !important;
   }
   .jrail {
+    position: sticky !important;
+    top: max(128px, calc(50vh - 150px)) !important;
     border-radius: 14px;
     overflow-y: auto;
-    max-height: calc(100vh - 140px);
-    scrollbar-width: none;
-  }
-  .jrail::-webkit-scrollbar {
-    display: none;
+    max-height: calc(100vh - 160px);
   }
 }
 
