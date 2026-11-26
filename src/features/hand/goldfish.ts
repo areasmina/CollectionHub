@@ -273,3 +273,76 @@ export function advanceTurn(state: GoldfishState): GoldfishState {
     log: [...state.log.slice(-11), drawn ? `T${nextTurn}: Untap & drew ${drawn}` : `T${nextTurn}: Untap (library empty)`],
   };
 }
+
+export interface GoldfishSummary {
+  runs: number;
+  keepablePct: number;
+  t4ThreeLandsPct: number;
+  t3ManaAvg: number;
+  t4ManaAvg: number;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Deterministic Monte Carlo simulation over 4 turns (1 land/turn + affordable mana rocks). */
+export function simulateGoldfish(
+  cards: DeckCard[],
+  cardOf: (name: string) => CardMeta | undefined,
+  commander?: string,
+  partner?: string,
+  runs = 400,
+): GoldfishSummary {
+  const rng = mulberry32(0x474f4c44);
+  let keepable = 0;
+  let t4ThreeLands = 0;
+  let t3ManaSum = 0;
+  let t4ManaSum = 0;
+
+  for (let r = 0; r < runs; r++) {
+    let s = dealGoldfish(cards, commander, partner, 0, rng);
+    const openLands = s.hand.filter((n) => isDeckLand(n, cardOf(n))).length;
+    if (openLands >= 2 && openLands <= 4) keepable++;
+
+    for (let turn = 1; turn <= 4; turn++) {
+      // Play 1 land (preferring untapped)
+      const landIdx = s.hand.findIndex((n) => isDeckLand(n, cardOf(n)) && !/enters (the battlefield )?tapped/i.test(cardOf(n)?.text ?? ''));
+      const anyLandIdx = landIdx >= 0 ? landIdx : s.hand.findIndex((n) => isDeckLand(n, cardOf(n)));
+      if (anyLandIdx >= 0) s = playHandCard(s, anyLandIdx, cardOf);
+
+      // Cast up to 2 affordable mana rocks per turn to model ramp curves
+      for (let k = 0; k < 2; k++) {
+        const rockIdx = s.hand.findIndex((n, i) => {
+          const c = cardOf(n);
+          return !isDeckLand(n, c) && cardManaYield(c, false) > 0 && canPlayHandCard(s, i, cardOf).ok;
+        });
+        if (rockIdx < 0) break;
+        s = playHandCard(s, rockIdx, cardOf);
+      }
+
+      if (turn === 3) t3ManaSum += maxManaPool(s);
+      if (turn === 4) {
+        t4ManaSum += maxManaPool(s);
+        if (s.battlefield.filter((p) => p.isLand).length >= 3) t4ThreeLands++;
+      } else {
+        s = advanceTurn(s);
+      }
+    }
+  }
+
+  return {
+    runs,
+    keepablePct: Math.round((keepable / runs) * 100),
+    t4ThreeLandsPct: Math.round((t4ThreeLands / runs) * 100),
+    t3ManaAvg: Math.round((t3ManaSum / runs) * 10) / 10,
+    t4ManaAvg: Math.round((t4ManaSum / runs) * 10) / 10,
+  };
+}
