@@ -43,27 +43,50 @@ const open = async (page: Page) => {
   return sheet;
 };
 
-test('A card picture opens YOUR COPIES: one card per copy, Scryfall inside, fits the screen, closes with ✕ and Escape', async ({ page }, info) => {
+test('A card picture opens YOUR COPIES: one card per copy, Scryfall in the Island, fits the screen, closes with ✕ and Escape', async ({ page }, info) => {
   const sheet = await open(page);
   // the mock binder holds two copies of Sol Ring (one row, ×2)
   await expect(sheet.getByRole('option')).toHaveCount(2);
   await expect(sheet.getByRole('option').first()).toHaveAttribute('aria-selected', 'true');
-  await expect(sheet.locator('.yc-n')).toHaveText('2');
-  await expect(sheet.getByRole('link', { name: /SCRYFALL/ })).toHaveAttribute('href', /scryfall\.com\/search/);
+  // one header only (Guillermo, Nov 26): the Dynamic Island carries the count, Scryfall and ✕; the sheet's own header hides
+  const bar = page.locator('.pillnav .island-copies-bar');
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('.icb-badge b')).toHaveText('2');
+  await expect(bar.getByRole('link', { name: /SCRYFALL/ })).toHaveAttribute('href', /scryfall\.com\/search/);
+  await expect(sheet.locator('.yc-head')).toBeHidden();
   await fits(page, ['.yourcopies', '.yourcopies .yc-acts .u-btn']);
   // every control is a full thumb target
-  for (const b of await sheet.locator('.yc-acts .u-btn, .close, .yc-scry').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  for (const b of await sheet.locator('.yc-acts .u-btn').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  // MAKE FOIL left, the − ×n + stepper in the middle, CHANGE ARTWORK right, on one row
+  const foilBox = (await sheet.getByRole('button', { name: 'MAKE FOIL' }).boundingBox())!;
+  const stepBox = (await sheet.locator('.yc-step').boundingBox())!;
+  const artBox = (await sheet.getByRole('button', { name: /CHANGE ARTWORK/ }).boundingBox())!;
+  expect(foilBox.x + foilBox.width).toBeLessThanOrEqual(stepBox.x + 1);
+  expect(stepBox.x + stepBox.width).toBeLessThanOrEqual(artBox.x + 1);
+  for (const b of [stepBox, artBox]) expect(Math.abs(b.y + b.height / 2 - (foilBox.y + foilBox.height / 2))).toBeLessThanOrEqual(4);
   // sacred card rule: the copies stand straight, not tilted
   const tilt = await sheet.locator('.yc-img').first().evaluate((el) => getComputedStyle(el).transform);
   expect(['none', 'matrix(1, 0, 0, 1, 0, 0)']).toContain(tilt);
   // every copy is a card you own: full colour, never the black-and-white of cards you don't own (Guillermo, Nov 24)
   for (const f of await sheet.locator('.yc-img').evaluateAll((els) => els.map((e) => getComputedStyle(e).filter))) expect(f).not.toContain('grayscale');
   await page.screenshot({ path: `test-results/your-copies-${info.project.name}.png` });
-  await sheet.getByRole('button', { name: 'Close your copies' }).click();
+  await bar.getByRole('button', { name: 'Close copies from island' }).click();
   await expect(sheet).toHaveCount(0);
+  await expect(bar).toHaveCount(0);
   await open(page);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Your copies of Sol Ring' })).toHaveCount(0);
+});
+
+test('YOUR COPIES with the Island docked to a side: the sheet keeps its own header, Scryfall and ✕', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:island_dock', 'left'));
+  await page.reload();
+  const sheet = await open(page);
+  await expect(sheet.locator('.yc-head')).toBeVisible();
+  await expect(sheet.locator('.yc-n')).toHaveText('2');
+  await expect(sheet.getByRole('link', { name: /SCRYFALL/ })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Close your copies' }).click();
+  await expect(sheet).toHaveCount(0);
 });
 
 test('YOUR COPIES: one copy turns foil, the other stays; UNDO puts it back; copies never change', async ({ page }) => {

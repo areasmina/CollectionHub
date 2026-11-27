@@ -20,6 +20,12 @@ test('the strip fits the screen and the Filter sheet opens inside it', async ({ 
   await expect(sheet).toHaveCount(0);
 });
 
+test('the Island’s filter button opens the same Filter sheet, not the ⋮ options menu', async ({ page }) => {
+  await page.locator('.pillnav .island-filter-btn').click();
+  await expect(page.getByRole('dialog', { name: 'Filter cards' })).toBeVisible();
+  await expect(page.locator('details.tbmore[open]')).toHaveCount(0);
+});
+
 test('picking a type narrows the list, shows a chip and a count; Clear all brings everything back', async ({ page }) => {
   const rows = page.locator('.cgrid2 > li, ul.crows > li');
   await expect(rows.first()).toBeVisible();

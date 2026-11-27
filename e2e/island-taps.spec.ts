@@ -95,3 +95,19 @@ test('Island: the sync light opens on a tap near it, and the sync panel closes w
   await page.locator('.island-drawer .id-sync-close').click();
   await expect(page.locator('.island-drawer')).toHaveCount(0);
 });
+
+test('Island copies bar: SCRYFALL and ✕ each take a 44px tap while YOUR COPIES is open', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  const tile = page.locator('.ctile', { hasText: 'Sol Ring' }).first();
+  await tile.scrollIntoViewIfNeeded();
+  await tile.locator('.timg img').click();
+  await expect(page.locator('.pillnav .island-copies-bar')).toBeVisible();
+  await page.waitForTimeout(400);
+  const all = await reach(page, '.pillnav .island-copies-bar :is(.icb-scry, .icb-close)');
+  expect(all).toHaveLength(2);
+  for (const b of all) {
+    expect.soft(b.w, `${b.name} tap width`).toBeGreaterThanOrEqual(43);
+    expect.soft(b.h, `${b.name} tap height`).toBeGreaterThanOrEqual(43);
+  }
+});

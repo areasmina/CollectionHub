@@ -432,7 +432,7 @@ export default function App() {
       )}
       <nav
         ref={navRef}
-        className={`pillnav notch dock-${dock}${navAway && !forgeState ? ' away' : ''}${(islandOpen || islandFilterOpen) ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState && !forgeNavMode ? ' forging-island' : ''}${tab === 'decks' && deckFocus ? ' has-deck-aura' : ''}`}
+        className={`pillnav notch dock-${dock}${navAway && !forgeState && !copiesState ? ' away' : ''}${(islandOpen || islandFilterOpen) ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState && !forgeNavMode ? ' forging-island' : ''}${tab === 'decks' && deckFocus ? ' has-deck-aura' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
         onPointerDown={onIslandDown()}
@@ -632,7 +632,11 @@ export default function App() {
                     setIslandFilterOpen((o) => !o);
                     return;
                   }
-                  const trg = document.querySelector<HTMLElement>('.coll button[aria-label^="Filter"], .dpage details.tbmore > summary');
+                  // The page's own Filter button first: one selector list returned whichever came first in the page, and on
+                  // Collection that was the ⋮ options menu, so the Island's filter button opened options instead of filters.
+                  const trg =
+                    document.querySelector<HTMLElement>('.coll button[aria-label^="Filter"]') ??
+                    document.querySelector<HTMLElement>('.dpage details.tbmore > summary');
                   trg?.click();
                 }}
               >
