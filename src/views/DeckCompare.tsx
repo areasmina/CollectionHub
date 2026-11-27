@@ -32,6 +32,8 @@ export function DeckCompare({ decks, priced, gc, shareById }: { decks: Deck[]; p
       missing: share?.missing ?? 0,
       // The tile's own sum (Decks list): foil lines at the foil price, the rest at the cheapest printing.
       price: priced.size ? priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(cardOf(x.name), true) : cardOf(x.name), qty: x.qty }))) : undefined,
+      wins: d.wins,
+      losses: d.losses,
     };
   };
   const both = [input(a), input(b)];
@@ -112,7 +114,7 @@ export function DeckCompare({ decks, priced, gc, shareById }: { decks: Deck[]; p
                 {r.shown[1]}
               </span>
               <span role="cell" className={`dcmp-delta${d ? '' : ' same'}`}>
-                {d == null ? '–' : d === 0 ? '=' : r.key === 'price' ? `${d > 0 ? '+' : '−'}${cad(Math.abs(d))}` : sign(d, dec)}
+                {d == null ? '–' : d === 0 ? '=' : r.key === 'price' ? `${d > 0 ? '+' : '−'}${cad(Math.abs(d))}` : r.key === 'record' ? `${sign(d)}%` : sign(d, dec)}
               </span>
               <span role="cell" className="dcmp-says">
                 {r.says[1]}

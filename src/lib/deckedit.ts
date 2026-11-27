@@ -118,7 +118,56 @@ export async function savePin(profile: number, commander: string, card: string, 
 /** Deck light on / off (active decks mark their cards as in use in the binder). */
 export const setActive = (deck: Deck, on: boolean) => db.decks.update(deck.id!, { inactive: on ? undefined : true });
 
-export const setCommander = (deck: Deck, name: string) => db.decks.update(deck.id!, { commander: name, updated: Date.now() });
+export const setCommander = (deck: Deck, name: string) =>
+  db.decks.update(deck.id!, {
+    commander: name,
+    ...(norm(deck.partner ?? '') === norm(name) ? { partner: undefined } : {}),
+    updated: Date.now(),
+  });
+
+/** Pure state transition for setting/clearing a deck's second commander. */
+export function nextPartnerState(deck: Pick<Deck, 'partner'>, name?: string) {
+  const prev = deck.partner;
+  const next = name?.trim() || undefined;
+  return { next, prev };
+}
+
+/** Sets or clears a deck's second commander (Partner, Background, Friends Forever, Doctor's Companion); returns undo. */
+export async function setPartner(deck: Deck, name?: string) {
+  const { next, prev } = nextPartnerState(deck, name);
+  await db.decks.update(deck.id!, { partner: next, updated: Date.now() });
+  return async () => void (await db.decks.update(deck.id!, { partner: prev, updated: Date.now() }));
+}
+
+/** Pure state transition for recording a pod win, loss, or reset on a deck. */
+export function nextRecordState(deck: Pick<Deck, 'wins' | 'losses'>, result: 'win' | 'loss' | 'reset') {
+  const prev = { wins: deck.wins, losses: deck.losses };
+  const wins = Math.max(0, deck.wins ?? 0);
+  const losses = Math.max(0, deck.losses ?? 0);
+  const next =
+    result === 'reset'
+      ? { wins: undefined, losses: undefined }
+      : result === 'win'
+        ? { wins: wins + 1, losses }
+        : { wins, losses: losses + 1 };
+  return { next, prev };
+}
+
+/** Records a pod win, loss, or reset on a saved deck; returns an async undo callback. */
+export async function recordDeckResult(deck: Deck, result: 'win' | 'loss' | 'reset') {
+  const { next, prev } = nextRecordState(deck, result);
+  await db.decks.update(deck.id!, { ...next, updated: Date.now() });
+  return async () => void (await db.decks.update(deck.id!, { ...prev, updated: Date.now() }));
+}
+
+/** Formats win/loss record with win rate (e.g. "3W–1L (75%)"), or empty string when unplayed. */
+export function formatRecord(wins?: number, losses?: number): string {
+  const w = Math.max(0, wins ?? 0);
+  const l = Math.max(0, losses ?? 0);
+  const total = w + l;
+  if (!total) return '';
+  return `${w}W–${l}L (${Math.round((w / total) * 100)}%)`;
+}
 
 /** Adds one copy of a card to a deck; returns an undo. */
 export async function addToDeck(deck: Deck, name: string) {

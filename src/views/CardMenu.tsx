@@ -1,8 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BASICS } from '../lib/compare';
+import { canPair } from '../lib/commander';
 import { db, type Deck } from '../lib/db';
-import { addToDeck, assignCardToList, changeQty, manageBinderLists, moveCardToBinder, removeFromDeck, removeOneFromBinder, setBinderFoil, setCommander, setFoil, setPrinting } from '../lib/deckedit';
+import { addToDeck, assignCardToList, changeQty, manageBinderLists, moveCardToBinder, removeFromDeck, removeOneFromBinder, setBinderFoil, setCommander, setFoil, setPartner, setPrinting } from '../lib/deckedit';
 import { allFolders, showPath } from '../lib/folders';
 import { printingsOf } from '../lib/scryfall';
 import { haptic } from '../lib/haptics';
@@ -77,6 +78,21 @@ export function CardMenu({
     return () => (removeEventListener('keydown', key), removeEventListener('scroll', scroll));
   }, []);
   const isCmdr = !!d && name === d.commander;
+  const isPartner = !!d && !!d.partner && norm(name) === norm(d.partner);
+  const pairCards =
+    useLiveQuery(async () => {
+      if (!d || isCmdr) return [];
+      const keys = [...new Set([norm(name), ...(d.commander ? [norm(d.commander)] : [])])];
+      return db.cards.where('key').anyOf(keys).toArray();
+    }, [d?.id, d?.commander, name, isCmdr]) ?? [];
+  const thisCard = pairCards.find((x) => x.key === norm(name));
+  const cmdrCard = d?.commander ? pairCards.find((x) => x.key === norm(d.commander!)) : undefined;
+  const canBePartner =
+    !!d?.commander &&
+    !isCmdr &&
+    !isPartner &&
+    (canPair({ name: d.commander, card: cmdrCard }, { name, card: thisCard }) ||
+      /Partner|Background|Friends forever|Doctor's companion|Choose a Background/i.test(`${thisCard?.type ?? ''} ${thisCard?.text ?? ''}`));
   // Change commander: legendary creatures in this deck first, then the rest of your binder.
   const [picking, setPicking] = useState(false);
   const [q, setQ] = useState('');
@@ -182,6 +198,34 @@ export function CardMenu({
               <button onClick={act(() => (haptic('success'), setCommander(d, name)))}>
                 <span className="cmenu-main">{d.commander ? 'MAKE COMMANDER' : 'SET AS COMMANDER'}</span>
                 {d.commander && <small className="cmenu-meta">replaces {d.commander.split(' // ')[0]}</small>}
+              </button>
+            </li>
+          )}
+          {d && isPartner && (
+            <li>
+              <button
+                onClick={act(async () => {
+                  haptic('undo');
+                  const undo = await setPartner(d, undefined);
+                  toast({ text: `${name} removed as partner`, undo });
+                })}
+              >
+                <span className="cmenu-main">REMOVE PARTNER</span>
+                <small className="cmenu-meta">2nd commander</small>
+              </button>
+            </li>
+          )}
+          {d && canBePartner && (
+            <li>
+              <button
+                onClick={act(async () => {
+                  haptic('success');
+                  const undo = await setPartner(d, name);
+                  toast({ text: `${name} is now partner commander`, undo });
+                })}
+              >
+                <span className="cmenu-main">SET AS PARTNER</span>
+                <small className="cmenu-meta">{d.partner ? `replaces ${d.partner.split(' // ')[0]}` : '2nd commander'}</small>
               </button>
             </li>
           )}

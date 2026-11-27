@@ -18,9 +18,11 @@ export interface CompareDeck {
   missing: number;
   /** Whole-deck price in CA$ (cheapest printing), when prices are loaded. */
   price?: number;
+  wins?: number;
+  losses?: number;
 }
 
-export type RowKey = 'cards' | 'lands' | 'avgMv' | Role | 'owned' | 'missing' | 'price' | 'bracket';
+export type RowKey = 'cards' | 'lands' | 'avgMv' | Role | 'owned' | 'missing' | 'price' | 'bracket' | 'record';
 
 export interface CompareRow {
   key: RowKey;
@@ -178,6 +180,32 @@ export function compareDecks(decks: CompareDeck[], money: (n: number) => string 
         if (a === b) return `Both decks are estimated at bracket ${ROMAN[a]}. An estimate from the cards only, not from how you play.`;
         const n = Math.abs(b - a);
         return `${d.name} is estimated ${n} ${plural(n, 'bracket', 'brackets')} ${b > a ? 'higher' : 'lower'} than ${base.name}. An estimate from the cards only, not from how you play.`;
+      }),
+    });
+  }
+
+  // Win rate, only when at least one compared deck has games logged.
+  if (decks.some((d) => (d.wins ?? 0) + (d.losses ?? 0) > 0)) {
+    const rate = (d: CompareDeck) => {
+      const w = Math.max(0, d.wins ?? 0);
+      const l = Math.max(0, d.losses ?? 0);
+      return w + l > 0 ? Math.round((w / (w + l)) * 100) : undefined;
+    };
+    const values = decks.map(rate);
+    rows.push({
+      key: 'record',
+      label: 'Win rate',
+      values,
+      shown: decks.map((d, i) => (values[i] == null ? '–' : `${values[i]}% (${Math.max(0, d.wins ?? 0)}–${Math.max(0, d.losses ?? 0)})`)),
+      deltas: values.map((v) => (v == null || values[0] == null ? undefined : v - values[0])),
+      says: decks.map((d, i) => {
+        if (i === 0) return '';
+        const a = values[0];
+        const b = values[i];
+        if (a == null || b == null) return 'Win rate: log games on both decks to compare records.';
+        const diff = b - a;
+        if (diff === 0) return `${d.name} has the same win rate (${b}%) as ${base.name}.`;
+        return `${d.name} has a ${Math.abs(diff)} ${plural(Math.abs(diff), 'point', 'points')} ${diff > 0 ? 'higher' : 'lower'} win rate than ${base.name}.`;
       }),
     });
   }

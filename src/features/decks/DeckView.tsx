@@ -15,7 +15,7 @@ import { notOffered } from '../../lib/collsearch';
 import { takenBy, type shortfalls } from '../../lib/copies';
 import { db, type Card, type Cheap, type Deck, type DeckCard } from '../../lib/db';
 import { deckColour } from '../../lib/deckcolor';
-import { addToDeck, removeFromDeck, replaceInDeck } from '../../lib/deckedit';
+import { addToDeck, formatRecord, recordDeckResult, removeFromDeck, replaceInDeck } from '../../lib/deckedit';
 import { deckShareOf } from '../../lib/deckshare';
 import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, type RefShape } from '../../lib/deckstats';
 import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../../lib/edhrec';
@@ -398,6 +398,50 @@ export function DeckView({
                 {!hydrating && <span>{st.lands} lands</span>}
                 {!hydrating && st.avgMv > 0 && <span>avg MV {st.avgMv.toFixed(2)}</span>}
                 <BracketStat call={call} cedh={deck.source === 'cedh'} />
+                <span className="drecord" aria-label="Deck win and loss record">
+                  <span className="drec-val">{formatRecord(deck.wins, deck.losses) || '0W–0L'}</span>
+                  <button
+                    type="button"
+                    className="drec-btn win"
+                    title="Record win"
+                    aria-label="Record win"
+                    onClick={async () => {
+                      haptic('select');
+                      const undo = await recordDeckResult(deck, 'win');
+                      setToast({ text: `Logged win for ${deck.name}`, undo });
+                    }}
+                  >
+                    +W
+                  </button>
+                  <button
+                    type="button"
+                    className="drec-btn loss"
+                    title="Record loss"
+                    aria-label="Record loss"
+                    onClick={async () => {
+                      haptic('select');
+                      const undo = await recordDeckResult(deck, 'loss');
+                      setToast({ text: `Logged loss for ${deck.name}`, undo });
+                    }}
+                  >
+                    +L
+                  </button>
+                  {(deck.wins ?? 0) + (deck.losses ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      className="drec-btn reset"
+                      title="Reset record"
+                      aria-label="Reset win loss record"
+                      onClick={async () => {
+                        haptic('undo');
+                        const undo = await recordDeckResult(deck, 'reset');
+                        setToast({ text: `Reset record for ${deck.name}`, undo });
+                      }}
+                    >
+                      ↺
+                    </button>
+                  )}
+                </span>
                 {deck.commander && <OutsideLinks commander={deck.commander} edhrecPath={`commanders/${slug(deck.commander)}`} />}
               </div>
               <div className="vmatch" aria-label={`${sum.pct}% match: you own ${sum.owned} of ${sum.total} cards in ${s.binderName}`}>

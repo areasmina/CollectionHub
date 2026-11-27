@@ -964,7 +964,9 @@ html.forging .lists.drop-over {
   .dlist .decktoolbar .u-chip,
   .dlist .decktagpills .tagpill,
   .dlist [aria-label='Deck folders'] button {
+    min-width: 44px !important;
     min-height: 44px !important;
+    justify-content: center;
   }
   .vhero {
     padding: var(--mo-s2) 10px !important;
@@ -1373,4 +1375,111 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
 .fsugg label.sbox.fq > .tab {
   font-size: 11px !important;
   padding: 0 8px !important;
+}
+
+/* ── CSS 3D Stacked-Deck Tiles (MY DECKS) & Win/Loss Record Controls ── */
+.dgrid .dtile {
+  position: relative;
+  border-color: var(--mo-line-2);
+  box-shadow:
+    0 2px 0 #1b1b22,
+    0 3px 0 #0c0c10,
+    0 5px 0 #16161d,
+    0 6px 0 #0a0a0d,
+    0 8px 0 #121218,
+    0 12px 22px rgba(0, 0, 0, 0.55);
+  transition: transform 0.24s var(--mo-ease-spring), box-shadow 0.24s ease, border-color 0.2s ease;
+}
+@media (hover: hover) {
+  .dgrid .dtile:hover {
+    transform: perspective(900px) rotateX(2.5deg) rotateY(-2deg) translateY(-4px);
+    box-shadow:
+      2px 3px 0 #23232c,
+      3px 4px 0 #0c0c10,
+      5px 7px 0 #1c1c25,
+      6px 8px 0 #0a0a0d,
+      8px 11px 0 #15151c,
+      10px 18px 30px rgba(0, 0, 0, 0.72);
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dgrid .dtile,
+  .dgrid .dtile:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+.dgrid .dtile .drec-badge {
+  flex: none;
+  white-space: nowrap;
+  font: 700 10px/1 var(--mo-mono);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--mo-line-2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mo-muted);
+}
+.dgrid .dtile .drec-badge.hot {
+  border-color: rgba(43, 214, 90, 0.45);
+  color: var(--mo-green);
+}
+
+.drecord {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  background: #101015;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+}
+.drecord .drec-val {
+  font: 700 11px/1 var(--mo-mono);
+  color: var(--mo-text);
+  margin-right: 2px;
+}
+.drecord .drec-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 7px;
+  border-radius: 3px;
+  border: 1px solid var(--mo-line-2);
+  background: #17171f;
+  color: var(--mo-muted);
+  font: 700 11px/1 var(--mo-mono);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.drecord .drec-btn.win {
+  color: var(--mo-green);
+  border-color: rgba(43, 214, 90, 0.35);
+}
+.drecord .drec-btn.win:hover {
+  background: rgba(43, 214, 90, 0.18);
+  border-color: var(--mo-green);
+}
+.drecord .drec-btn.loss {
+  color: #ff6b76;
+  border-color: rgba(230, 0, 18, 0.35);
+}
+.drecord .drec-btn.loss:hover {
+  background: rgba(230, 0, 18, 0.18);
+  border-color: var(--mo-red);
+}
+.drecord .drec-btn.reset:hover {
+  color: #ffffff;
+  background: #24242f;
+}
+@media (max-width: 700px) {
+  .drecord {
+    padding: 0 2px 0 8px;
+  }
+  .drecord .drec-btn {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 12px;
+  }
 }

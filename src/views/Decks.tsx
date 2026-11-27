@@ -7,6 +7,7 @@ import { summarize } from '../lib/compare';
 import { shortfalls } from '../lib/copies';
 import { db, type Card, type Cheap, type Deck } from '../lib/db';
 import { deckColour } from '../lib/deckcolor';
+import { formatRecord } from '../lib/deckedit';
 import { deckShares } from '../lib/deckshare';
 import { bracketOf, deckStats, isLand } from '../lib/deckstats';
 import { cachedPages, fetchPage, pagePath, type EdhPage } from '../lib/edhrec';
@@ -519,6 +520,11 @@ export function Decks(s: Shared) {
                         {d.cards.reduce((n, x) => n + x.qty, 0)} cards
                         {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
                       </span>
+                      {(d.wins ?? 0) + (d.losses ?? 0) > 0 && (
+                        <span className={`drec-badge${(d.wins ?? 0) >= (d.losses ?? 0) ? ' hot' : ''}`} title="Pod win–loss record">
+                          {formatRecord(d.wins, d.losses)}
+                        </span>
+                      )}
                       <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.missing === 0 && sum.total > 0 ? 'ALL OWNED' : `${sum.missing} MISSING`}</span>
                     </span>
                     {broken && (

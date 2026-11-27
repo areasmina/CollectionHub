@@ -67,6 +67,8 @@ export interface Deck {
   tags?: string[];
   inactive?: boolean; // light off: a deck you're not playing now; its cards don't count as in use
   color?: string; // the deck's own colour (hex); its cards glow in it across the app
+  wins?: number;
+  losses?: number;
 }
 export interface Profile {
   id: number;

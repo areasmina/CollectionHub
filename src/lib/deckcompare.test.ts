@@ -90,6 +90,18 @@ describe('compareDecks', () => {
     expect(same.every((r) => r.deltas[1] === 0)).toBe(true);
   });
 
+  it('omits win rate when unplayed and compares records when logged', () => {
+    expect(rows.find((r) => r.key === 'record')).toBeUndefined();
+    const withRec = compareDecks([
+      { ...A, wins: 3, losses: 1 },
+      { ...B, wins: 1, losses: 1 },
+    ]);
+    const rec = row(withRec, 'record');
+    expect(rec.shown).toEqual(['75% (3–1)', '50% (1–1)']);
+    expect(rec.deltas[1]).toBe(-25);
+    expect(rec.says[1]).toBe('Beta has a 25 points lower win rate than Alpha.');
+  });
+
   it('returns nothing for no decks', () => {
     expect(compareDecks([])).toEqual([]);
   });
