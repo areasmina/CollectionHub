@@ -718,12 +718,13 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
                           setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
                         }}
                       >
-                        SIZE {zoom.toUpperCase()}
+                        <span className="qz-word">SIZE </span>
+                        {zoom.toUpperCase()}
                       </button>
                     )}
                     {kind === 'average' && binder.length > 0 && (
                       <button type="button" className="u-btn ghost qadd-btn" title="Search your own cards and put them in this deck" onClick={() => (haptic('open'), setManualForge(true), setOpenSearch((n) => n + 1))}>
-                        + MY CARDS
+                        + MY<span className="qa-word"> CARDS</span>
                       </button>
                     )}
                   </>

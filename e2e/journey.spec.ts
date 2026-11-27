@@ -103,7 +103,7 @@ test('NEXT tips quote the deck’s own checks, and a tip opens EXPLORE on that t
   await page.locator('.dtile .dcard').first().click();
   const tips = page.getByRole('list', { name: 'Next steps for this deck' });
   await expect(tips).toBeVisible();
-  await expect(tips.getByRole('listitem')).toHaveCount(2); // never more than two
+  await expect(tips.getByRole('listitem')).toHaveCount(info.project.name === 'phone' ? 1 : 2); // one on a phone, never more than two
   // the mock deck is short on removal: the tip says so with the Readiness check's own numbers
   await expect(tips.getByRole('listitem').first()).toContainText('Find more removal of yours');
   await expect(tips.getByRole('listitem').first()).toContainText(/why: \d+ removal/);

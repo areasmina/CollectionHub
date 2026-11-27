@@ -816,6 +816,123 @@ html.forging .pillnav .island-membrane {
   }
 }
 
+/* Phone Forge Island, one row (Guillermo, Nov 27: "extend it, it uses a lot of space"): FORGE · CARDS / ANALYSIS /
+   TO BUY · ✕ · ☰ side by side across the top or bottom dock instead of two stacked rows. The words FORGE and LEAVE are
+   kept for screen readers only. A Forge with UNDO and SAVE too may still wrap the faces under, rather than squeeze. */
+@media (max-width: 700px) {
+  .pillnav.forging-island:is(.dock-top, .dock-bottom):not(.collapsed) {
+    width: calc(100vw - 16px) !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop {
+    display: contents !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fstamp {
+    order: 1;
+    min-width: 44px;
+    justify-content: center;
+    padding: 0 8px !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .fcube {
+    order: 2;
+    flex: 1 1 170px !important;
+    width: auto !important;
+    min-width: 0;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .fcube > button {
+    padding: 0 4px !important;
+    font-size: 12px !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fundo {
+    order: 3;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .u-btn.primary.forge {
+    order: 4;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fleave {
+    order: 5;
+    min-width: 44px;
+    padding: 0 !important;
+    justify-content: center;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .forge-nav-btn {
+    order: 6;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fword {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Saved deck (Forge) bar on phones, one row (Nov 27): ⋮ · search · view · size · + MY. ONLY (EVERY CARD) is
+   already in ⋮, so its button leaves the bar; the deck's tools (BALANCE, HAND & ODDS, RULE ZERO, HISTORY, HEADER) move
+   into ⋮ as its DECK row, and the strip above keeps just the deck's price and SHORT. Wider screens are unchanged. */
+@media (max-width: 700px) {
+  .forgemain .lists > .dtools.tbar {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+  .forgemain .lists > .dtools.tbar > .tquick {
+    display: contents !important;
+  }
+  .forgemain .lists > .dtools.tbar > .tbmore {
+    order: 1;
+    flex: none;
+  }
+  .forgemain .lists > .dtools.tbar > .tsearch {
+    order: 2;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  .forgemain .lists > .dtools.tbar .qview-btn {
+    order: 3;
+  }
+  .forgemain .lists > .dtools.tbar .qzoom-btn {
+    order: 4;
+  }
+  .forgemain .lists > .dtools.tbar .qadd-btn {
+    order: 5;
+  }
+  .forgemain .lists > .dtools.tbar :is(.qview-btn, .qzoom-btn, .qadd-btn) {
+    flex: none;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    justify-content: center;
+  }
+  .forgemain .lists > .dtools.tbar .qview-btn .qc-lbl,
+  .forgemain .lists > .dtools.tbar .qz-word,
+  .forgemain .lists > .dtools.tbar .qa-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .deck-tools-row .chiprow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .deck-tools-row .chiprow > .u-btn {
+    min-height: 44px;
+  }
+}
+
 /* Side-docked Forge Dynamic Island (dock-left / dock-right): keep inside the 46px vertical rail without clipping */
 .pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) {
   width: 46px !important;

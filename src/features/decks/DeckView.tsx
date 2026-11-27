@@ -41,6 +41,7 @@ import {
   ChipPick,
   CmdrCard,
   CycleBtn,
+  OptRow,
   DeckLight,
   OutsideLinks,
   priced as atFinish,
@@ -161,6 +162,15 @@ export function DeckView({
     });
   };
   const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches;
+  // phones keep the deck's tools in the bar's ⋮ instead of a row of their own (Nov 27)
+  const [phone, setPhone] = useState(narrow);
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return;
+    const mq = matchMedia('(max-width: 700px)');
+    const on = () => setPhone(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   const heroPress = useMenuPress((x, y) => setDeckMenu({ x, y }));
   const [toast, setToastNow] = useState<{ text: string; undo?: () => unknown } | null>(null);
   const [last, setLast] = useState<{ text: string; run: () => void } | null>(null);
@@ -372,6 +382,30 @@ export function DeckView({
   for (const c of sorted) if (c.name !== deck.commander) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
 
+  // The deck's tools: a row under the deck strip on wider screens; on phones they live in the bar's ⋮ (DECK row) so
+  // the strip stays one line (Guillermo, Nov 27: "too many buttons, clean it up").
+  const deckTools = (
+    <>
+      <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setBalanceOpen(true))}>
+        BALANCE
+      </button>
+      <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHandOpen(true))}>
+        HAND &amp; ODDS
+      </button>
+      <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setRuleZeroOpen(true))}>
+        RULE ZERO
+      </button>
+      {deck.id && (
+        <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHistoryOpen(true))}>
+          HISTORY
+        </button>
+      )}
+      <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), toggleCompactHero())}>
+        {compactHero ? 'SHOW HEADER' : 'COMPACT HEADER'}
+      </button>
+    </>
+  );
+
   return (
     <>
       <main className="dpage forgemain">
@@ -498,25 +532,7 @@ export function DeckView({
             )}
           </p>
           <ShortAlert items={shortHere} inline currentDeck={deck.name} />
-          <div className="dacts">
-            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setBalanceOpen(true))}>
-              BALANCE
-            </button>
-            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHandOpen(true))}>
-              HAND &amp; ODDS
-            </button>
-            <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setRuleZeroOpen(true))}>
-              RULE ZERO
-            </button>
-            {deck.id && (
-              <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHistoryOpen(true))}>
-                HISTORY
-              </button>
-            )}
-            <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), toggleCompactHero())}>
-              {compactHero ? 'SHOW HEADER' : 'COMPACT HEADER'}
-            </button>
-          </div>
+          {!phone && <div className="dacts">{deckTools}</div>}
         </section>
 
         {balanceOpen && (
@@ -583,7 +599,7 @@ export function DeckView({
         {/* NEXT (journey step 3): what this deck's Readiness checks say is short, as doors to EXPLORE or Balance */}
         {!hydrating && (
           <NextTips
-            tips={nextTips(ready.checks, st.total)}
+            tips={nextTips(ready.checks, st.total, phone ? 1 : 2)}
             onGo={(tip) => {
               if (tip.go.step === 'balance') return setBalanceOpen(true);
               const tag = tip.go.tag;
@@ -635,7 +651,8 @@ export function DeckView({
               }
               quick={
                 <>
-                  <CycleBtn name="Only" cls="qonly-btn" value={only} options={ONLYS} onChange={setOnly} />
+                  {/* phones: ONLY lives in ⋮ (its row is there already), so the bar stays one row */}
+                  {!phone && <CycleBtn name="Only" cls="qonly-btn" value={only} options={ONLYS} onChange={setOnly} />}
                   <CycleBtn
                     name="View"
                     cls="qview-btn"
@@ -655,17 +672,28 @@ export function DeckView({
                         setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
                       }}
                     >
-                      SIZE {zoom.toUpperCase()}
+                      <span className="qz-word">SIZE </span>
+                      {zoom.toUpperCase()}
                     </button>
                   )}
                   {binder.length > 0 && (
                     <button type="button" className="u-btn ghost qadd-btn" title="Search your own cards and put them in this deck" onClick={() => (haptic('open'), setOpenSearch((n) => n + 1))}>
-                      + MY CARDS
+                      + MY<span className="qa-word"> CARDS</span>
                     </button>
                   )}
                 </>
               }
             >
+              {phone && (
+              <div
+                className="deck-tools-row"
+                onClickCapture={(e) => (e.target as HTMLElement).closest('button') && e.currentTarget.closest('details')?.removeAttribute('open')}
+              >
+                <OptRow label="DECK">
+                  <div className="chiprow">{deckTools}</div>
+                </OptRow>
+              </div>
+              )}
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <ChipPick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <ChipPick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />
