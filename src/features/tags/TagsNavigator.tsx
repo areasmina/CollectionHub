@@ -6,6 +6,8 @@ import { db, type Card } from '../../lib/db';
 import { haptic } from '../../lib/haptics';
 import { norm } from '../../lib/names';
 import { onPendingTag, openDiscoverSub, openGuidedWithSeeds, takePendingTag } from '../../lib/nav';
+import { onPendingColours, peekPendingColours, takePendingColours } from '../../lib/journey';
+import { JourneyBar } from '../journey/JourneyBar';
 import { resolveRows } from '../../lib/scryfall';
 import { findTags } from '../../lib/tags';
 import { CardMenu, type Toast } from '../../views/CardMenu';
@@ -52,7 +54,12 @@ export function TagsNavigator({
       return 'paper';
     }
   });
-  const [colours, setColours] = useState<string[]>([]);
+  // Arriving from START or TUNE, the graph opens on the commander's colours (the journey, Nov 27).
+  const [colours, setColours] = useState<string[]>(() => peekPendingColours() ?? []);
+  useEffect(() => {
+    takePendingColours();
+    return onPendingColours((c) => setColours(c));
+  }, []);
   const [cardFilter, setCardFilter] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [menu, setMenu] = useState<{ name: string; x: number; y: number } | null>(null);
@@ -250,6 +257,11 @@ export function TagsNavigator({
 
   return (
     <div className={styles.root}>
+      <JourneyBar
+        current="explore"
+        blocked={{ tune: 'Save your deck in START first (or open one in My Decks): TUNE is its Forge' }}
+        onPick={(step) => step === 'start' && openDiscoverSub('guided')}
+      />
       <p className={styles.attrib}>
         <span>
           Read-only community tags from{' '}

@@ -21,7 +21,9 @@ import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, ty
 import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../../lib/edhrec';
 import { haptic } from '../../lib/haptics';
 import { norm, slug } from '../../lib/names';
-import { setBack } from '../../lib/nav';
+import { canLeave, openDiscoverSub, setBack } from '../../lib/nav';
+import { exploreColours, sendColoursToExplore } from '../../lib/journey';
+import { JourneyBar } from '../journey/JourneyBar';
 import { addCounts, calculateDeckOwnership } from '../../lib/ownership';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../../lib/pins';
 import { cad, fetchedNote, PRICE_METHOD, toCad } from '../../lib/prices';
@@ -563,6 +565,19 @@ export function DeckView({
 
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} onHistory={() => setHistoryOpen(true)} />}
         {historyOpen && deck.id && <HistoryDrawer deck={deck} onClose={() => setHistoryOpen(false)} />}
+
+        {/* The journey (Nov 27): this deck is at TUNE; EXPLORE opens the tag graph in its colours, START opens Guided. */}
+        <JourneyBar
+          current="tune"
+          done={['start']}
+          onPick={(step) =>
+            void canLeave().then((ok) => {
+              if (!ok) return;
+              if (step === 'explore') sendColoursToExplore(exploreColours(cmdr ? ci : undefined));
+              openDiscoverSub(step === 'explore' ? 'tags' : 'guided');
+            })
+          }
+        />
 
         <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 
