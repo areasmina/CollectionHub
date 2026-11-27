@@ -11,7 +11,7 @@ import { bracketOf, deckStats, isLand } from '../../lib/deckstats';
 import { deckText } from '../../lib/export';
 import { haptic } from '../../lib/haptics';
 import { freeDeckName, onPendingSeeds, openDeck, openDiscoverSub, takePendingSeeds } from '../../lib/nav';
-import { exploreColours, sendColoursToExplore } from '../../lib/journey';
+import { exploreColours, sendToExplore } from '../../lib/journey';
 import { JourneyBar } from '../journey/JourneyBar';
 import { norm } from '../../lib/names';
 import { cad, toCad } from '../../lib/prices';
@@ -502,7 +502,7 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
         blocked={commander ? {} : { tune: 'Pick a commander first: TUNE opens your saved deck in the Forge' }}
         onPick={(step) => {
           if (step === 'explore') {
-            sendColoursToExplore(exploreColours(commander?.ci));
+            sendToExplore({ colours: exploreColours(commander?.ci) });
             openDiscoverSub('tags');
           } else if (step === 'tune') void saveDeck();
         }}

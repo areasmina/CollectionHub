@@ -21,9 +21,10 @@ import { analysis, bracketOf, deckStats, GROUPS, groupOf, isLand, refShapeOf, ty
 import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhPage } from '../../lib/edhrec';
 import { haptic } from '../../lib/haptics';
 import { norm, slug } from '../../lib/names';
-import { canLeave, openDiscoverSub, setBack } from '../../lib/nav';
-import { exploreColours, sendColoursToExplore } from '../../lib/journey';
+import { canLeave, openDiscoverSub, openTagInNavigator, setBack } from '../../lib/nav';
+import { exploreColours, nextTips, sendToExplore } from '../../lib/journey';
 import { JourneyBar } from '../journey/JourneyBar';
+import { NextTips } from '../journey/NextTips';
 import { addCounts, calculateDeckOwnership } from '../../lib/ownership';
 import { noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins } from '../../lib/pins';
 import { cad, fetchedNote, PRICE_METHOD, toCad } from '../../lib/prices';
@@ -573,11 +574,28 @@ export function DeckView({
           onPick={(step) =>
             void canLeave().then((ok) => {
               if (!ok) return;
-              if (step === 'explore') sendColoursToExplore(exploreColours(cmdr ? ci : undefined));
+              if (step === 'explore') sendToExplore({ colours: exploreColours(cmdr ? ci : undefined), deckId: deck.id });
               openDiscoverSub(step === 'explore' ? 'tags' : 'guided');
             })
           }
         />
+
+        {/* NEXT (journey step 3): what this deck's Readiness checks say is short, as doors to EXPLORE or Balance */}
+        {!hydrating && (
+          <NextTips
+            tips={nextTips(ready.checks, st.total)}
+            onGo={(tip) => {
+              if (tip.go.step === 'balance') return setBalanceOpen(true);
+              const tag = tip.go.tag;
+              void canLeave().then((ok) => {
+                if (!ok) return;
+                sendToExplore({ colours: exploreColours(cmdr ? ci : undefined), deckId: deck.id });
+                openTagInNavigator(tag);
+                openDiscoverSub('tags');
+              });
+            }}
+          />
+        )}
 
         <ForgeTop label={deck.name} sub={`${st.total} cards${deck.commander ? ` · ${deck.commander.split(' // ')[0]}` : ''}`} undo={last ?? undefined} onLeave={onBack} reserved={deck.alloc === 'reserved'} />
 

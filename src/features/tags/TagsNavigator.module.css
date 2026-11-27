@@ -537,6 +537,50 @@
   flex: none;
 }
 
+.target {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mo-s2);
+  margin: 0 0 var(--mo-s2);
+  padding: var(--mo-s1) var(--mo-s1) var(--mo-s1) var(--mo-s2);
+  border: 1px solid var(--mo-line-2);
+  border-left: 3px solid var(--mo-yellow);
+  border-radius: var(--mo-r-sm);
+  background: var(--mo-surface-2);
+  font-family: var(--mo-mono);
+  font-size: 12px;
+}
+.targetOff {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--mo-text);
+  font-size: 16px;
+}
+.addBtn {
+  flex: none;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--mo-yellow);
+  border-radius: var(--mo-r-sm);
+  background: transparent;
+  color: var(--mo-yellow);
+  font: 400 12px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+}
+.addBtn:hover {
+  background: var(--mo-yellow);
+  color: var(--mo-ink);
+}
+.inDeck {
+  flex: none;
+  font-family: var(--mo-mono);
+  font-size: 10px;
+  color: var(--mo-muted);
+}
+
 .loadMore {
   margin-top: var(--mo-s3);
   width: 100%;
@@ -565,7 +609,8 @@
   }
   .pipBtn,
   .hudBtn,
-  .moreBtn {
+  .moreBtn,
+  .addBtn {
     min-width: 44px;
     min-height: 44px;
   }

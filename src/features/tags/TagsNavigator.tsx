@@ -5,8 +5,9 @@ import { cardFromList, cardList, smallPic, type CardList } from '../../lib/cardl
 import { db, type Card } from '../../lib/db';
 import { haptic } from '../../lib/haptics';
 import { norm } from '../../lib/names';
-import { onPendingTag, openDiscoverSub, openGuidedWithSeeds, takePendingTag } from '../../lib/nav';
-import { onPendingColours, peekPendingColours, takePendingColours } from '../../lib/journey';
+import { onPendingTag, openDeck, openDiscoverSub, openGuidedWithSeeds, takePendingTag } from '../../lib/nav';
+import { canAddFromExplore, onExplore, peekExplore, takeExplore } from '../../lib/journey';
+import { addToDeck } from '../../lib/deckedit';
 import { JourneyBar } from '../journey/JourneyBar';
 import { resolveRows } from '../../lib/scryfall';
 import { findTags } from '../../lib/tags';
@@ -55,11 +56,20 @@ export function TagsNavigator({
     }
   });
   // Arriving from START or TUNE, the graph opens on the commander's colours (the journey, Nov 27).
-  const [colours, setColours] = useState<string[]>(() => peekPendingColours() ?? []);
+  const [colours, setColours] = useState<string[]>(() => peekExplore()?.colours ?? []);
+  // From a deck's TUNE, EXPLORE adds into that deck: "+ ADD" on your cards, and TUNE goes back to it.
+  const [targetId, setTargetId] = useState<number | undefined>(() => peekExplore()?.deckId);
   useEffect(() => {
-    takePendingColours();
-    return onPendingColours((c) => setColours(c));
+    takeExplore();
+    return onExplore((t) => (setColours(t.colours), setTargetId(t.deckId)));
   }, []);
+  const target = useLiveQuery(() => (targetId ? db.decks.get(targetId) : undefined), [targetId]);
+  const inTarget = useMemo(() => new Set((target?.cards ?? []).map((c) => norm(c.name))), [target]);
+  const addCard = async (name: string) => {
+    if (!target) return;
+    haptic('success');
+    onToast({ text: `Added ${name} to ${target.name}`, undo: await addToDeck(target, name) });
+  };
   const [cardFilter, setCardFilter] = useState('');
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [menu, setMenu] = useState<{ name: string; x: number; y: number } | null>(null);
@@ -259,9 +269,20 @@ export function TagsNavigator({
     <div className={styles.root}>
       <JourneyBar
         current="explore"
-        blocked={{ tune: 'Save your deck in START first (or open one in My Decks): TUNE is its Forge' }}
-        onPick={(step) => step === 'start' && openDiscoverSub('guided')}
+        done={target ? ['start'] : []}
+        blocked={target ? {} : { tune: 'Save your deck in START first (or open one in My Decks): TUNE is its Forge' }}
+        onPick={(step) => (step === 'start' ? openDiscoverSub('guided') : target && openDeck(target.name))}
       />
+      {target && (
+        <p className={styles.target} role="status">
+          <span>
+            ADDING TO <b>{target.name}</b> · {target.cards.reduce((n, c) => n + c.qty, 0)} cards
+          </span>
+          <button type="button" className={styles.targetOff} onClick={() => (haptic('tap'), setTargetId(undefined))} aria-label={`Stop adding to ${target.name}`}>
+            ✕
+          </button>
+        </p>
+      )}
       <p className={styles.attrib}>
         <span>
           Read-only community tags from{' '}
@@ -574,6 +595,16 @@ export function TagsNavigator({
                         <span>{qty > 0 ? `${qty}× yours` : 'unowned'}</span>
                       </div>
                     </div>
+                    {target &&
+                      (inTarget.has(norm(m.name)) ? (
+                        <span className={styles.inDeck}>✓ IN DECK</span>
+                      ) : (
+                        canAddFromExplore(m.owned, false) && (
+                          <button type="button" className={styles.addBtn} aria-label={`Add ${m.name} to ${target.name}`} onClick={() => void addCard(m.name)}>
+                            + ADD
+                          </button>
+                        )
+                      ))}
                     <button
                       type="button"
                       className={styles.moreBtn}
