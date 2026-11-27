@@ -71,7 +71,16 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
   useEffect(() => {
     if (rows && !copies.length) onClose();
   }, [rows, copies.length, onClose]);
-  useEffect(() => closeRef.current?.focus(), []);
+  // The Dynamic Island carries the sheet's title, Scryfall and ✕ when it can (docked top or bottom); then this sheet's own
+  // header hides, so focus starts on the island's ✕ instead.
+  useEffect(() => {
+    // the Island draws its bar a frame after this sheet opens
+    const id = requestAnimationFrame(() => {
+      const own = closeRef.current;
+      (own && own.offsetParent ? own : document.querySelector<HTMLElement>('.island-copies-bar .icb-close'))?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     addEventListener('keydown', esc);
@@ -258,9 +267,6 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
             <button type="button" className="u-btn" disabled={busy} onClick={() => void foil()}>
               {cur.entry.foil ? 'MAKE NON-FOIL' : 'MAKE FOIL'}
             </button>
-            <button type="button" className="u-btn" aria-expanded={!!arts} disabled={busy} onClick={() => void openArts()}>
-              CHANGE ARTWORK {arts ? '▲' : '▼'}
-            </button>
             <span className="yc-step" role="group" aria-label="Copies like this one">
               <button type="button" className="u-btn" disabled={busy} aria-label={`One fewer like this (${cur.entry.qty} now)`} onClick={() => void run(() => stepCopies(profile, cur.rowId, -1), cur.entry.qty > 1 ? `${name}: one fewer like this` : `Removed this copy of ${name}`, keyOf(cur.entry), true)}>
                 −
@@ -272,6 +278,9 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
                 +
               </button>
             </span>
+            <button type="button" className="u-btn" aria-expanded={!!arts} disabled={busy} onClick={() => void openArts()}>
+              CHANGE ARTWORK {arts ? '▲' : '▼'}
+            </button>
           </div>
           {arts === 'loading' && <p className="small yc-note">Loading printings from Scryfall…</p>}
           {arts === 'failed' && <p className="small yc-note">Scryfall didn't answer. Your copy is unchanged; try again in a moment.</p>}

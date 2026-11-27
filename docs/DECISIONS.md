@@ -370,3 +370,14 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   (missing ones go to TO BUY and the EDHREC strip); default targets come from the Patient / Hungry / Lethal dial.
 - Still to ask before it is built: whether moving a card between Tabletop piles is saved with the deck (a sync change).
 - Only the idea of steps is borrowed from EDHspace; its code, text and look are not copied.
+
+## 2026-11-26: Review of the Nov 25–26 direct pushes
+- Work goes through pull requests again (no pushes straight to `main`); CI must be green before a merge.
+- Your Copies has one header, the Dynamic Island's; MAKE FOIL · stepper · CHANGE ARTWORK on one row.
+- My Decks filters get one home on the page (search, sort, FILTER sheet with status, tags, folders, size); the Island's
+  filter button leaves My Decks (approved, its own PR).
+- Deckbuilding: nothing is cut. Discover finds the commander; the Forge offers START (Guided + Auto-build), EXPLORE
+  (tag graph) and TUNE (suggestions + Balance / Cut Lab / Bracket Path) as modes, remembering the last one (approved;
+  mockup first).
+- Card tilt (3D deck stacks, fanned Your Copies) and the removed Supabase sign-in: left as they are for now, to revisit.
+

@@ -2341,6 +2341,49 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   }
 }
 
+/* ── Your Copies: one header, one row of actions ──
+   The Dynamic Island already shows COPIES n · name · SCRYFALL · ✕ while the sheet is open, so the sheet's own header
+   hides whenever the Island is docked top or bottom and showing it. Docked to a side, or held collapsed, the Island
+   cannot carry that bar, so the sheet keeps its header there. */
+html:has(.pillnav:is(.dock-top, .dock-bottom):not(.collapsed) .island-copies-bar) .yourcopies .yc-head {
+  display: none !important;
+}
+/* A side-docked Island is a 46px rail: no room for the copies bar, so it stays out and the sheet's header shows. */
+.pillnav:is(.dock-left, .dock-right) .island-copies-bar {
+  display: none;
+}
+/* MAKE FOIL left, the − ×n + stepper in the middle, CHANGE ARTWORK right; wraps only if a screen is too narrow. */
+.yourcopies .yc-acts {
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .yourcopies .yc-acts {
+    gap: 4px;
+    padding: 5px;
+  }
+  .yourcopies .yc-acts > .u-btn {
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+}
+/* The Island's SCRYFALL and ✕ stay small to the eye but each takes a full 44px thumb. */
+.island-copies-bar .icb-close,
+.island-copies-bar .icb-scry {
+  position: relative;
+}
+.island-copies-bar .icb-close::after,
+.island-copies-bar .icb-scry::after {
+  content: '';
+  position: absolute;
+}
+.island-copies-bar .icb-close::after {
+  inset: -6px;
+}
+.island-copies-bar .icb-scry::after {
+  inset: -8px 0;
+}
+
 /* ── Independent Floating Quick Jump Search Orb (.jump-orb) ── */
 .jump-orb {
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
