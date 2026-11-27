@@ -252,6 +252,246 @@ export function Collection({
     </div>
   );
 
+  // The binder's folders (ALL · UNLISTED · yours · + NEW FOLDER, rename / move / delete).
+  const folderBar = (
+    <section className="coll-listbar" aria-label="Binder lists navigation">
+      <div className="list-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected={activeList === 'all'} className={`list-tab${activeList === 'all' ? ' active' : ''}`} onClick={() => (buzz('select'), setActiveList('all'))}>
+          ALL <span className="tab-count">{copies(entries).toLocaleString()}</span>
+        </button>
+        <button type="button" role="tab" aria-selected={activeList === 'unlisted'} className={`list-tab${activeList === 'unlisted' ? ' active' : ''}`} onClick={() => (buzz('select'), setActiveList('unlisted'))}>
+          UNLISTED <span className="tab-count">{copies(entries.filter((e) => !e.list)).toLocaleString()}</span>
+        </button>
+        {folderTree.map((l) => {
+          const count = copies(rowsWithin(entries, l)).toLocaleString();
+          const isSub = depthOf(l) > 1;
+          return (
+            <span key={l} className="list-tab-wrap">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeList === l}
+                className={`list-tab${activeList === l ? ' active' : ''}`}
+                title={showPath(l)}
+                onClick={() => (buzz('select'), setActiveList(l))}
+              >
+                {isSub ? `↳ ${showPath(l).toUpperCase()}` : showPath(l).toUpperCase()} <span className="tab-count">{count}</span>
+              </button>
+              <button
+                type="button"
+                className="list-del-btn"
+                title={`Delete folder ${showPath(l)}`}
+                aria-label={`Delete folder ${showPath(l)}`}
+                onClick={async (ev) => {
+                  ev.stopPropagation();
+                  const parent = parentOf(l);
+                  if (!confirm(`Delete folder "${showPath(l)}"? Cards will move to ${parent ? showPath(parent) : 'Unlisted'}.`)) return;
+                  buzz('warn');
+                  const plan = planDeleteFolder(customLists, entries, l);
+                  if (!plan.ok) return;
+                  if (activeList === l || activeList.startsWith(`${l}/`)) setActiveList(parent ?? 'all');
+                  await applyFolderPlan(profile, plan);
+                }}
+              >
+                ✕
+              </button>
+            </span>
+          );
+        })}
+        {!addingListInline ? (
+          <>
+            {activeList !== 'all' && activeList !== 'unlisted' && depthOf(activeList) < MAX_DEPTH && (
+              <button
+                type="button"
+                className="list-tab add-btn"
+                title={`Create subfolder inside ${showPath(activeList)}`}
+                onClick={() => {
+                  buzz('open');
+                  setAddingSubTo(activeList);
+                  setAddingListInline(true);
+                }}
+              >
+                + SUBFOLDER
+              </button>
+            )}
+            <button
+              type="button"
+              className="list-tab add-btn"
+              onClick={() => {
+                buzz('open');
+                setAddingSubTo(null);
+                setAddingListInline(true);
+              }}
+            >
+              + NEW FOLDER
+            </button>
+          </>
+        ) : (
+          <span className="list-new-inline">
+            <input
+              type="text"
+              value={newListNameInline}
+              onChange={(e) => setNewListNameInline(e.target.value)}
+              placeholder={addingSubTo ? `Inside ${showPath(addingSubTo)}…` : 'New folder name…'}
+              autoFocus
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter' && newListNameInline.trim()) {
+                  e.preventDefault();
+                  const plan = planAddFolder(customLists, addingSubTo, newListNameInline.trim());
+                  if (!plan.ok) return alert(plan.why);
+                  await applyFolderPlan(profile, plan);
+                  buzz('success');
+                  setActiveList(plan.lists.at(-1) ?? 'all');
+                  setNewListNameInline('');
+                  setAddingSubTo(null);
+                  setAddingListInline(false);
+                } else if (e.key === 'Escape') {
+                  setAddingSubTo(null);
+                  setAddingListInline(false);
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="u-btn primary"
+              disabled={!newListNameInline.trim()}
+              onClick={async () => {
+                const plan = planAddFolder(customLists, addingSubTo, newListNameInline.trim());
+                if (!plan.ok) return alert(plan.why);
+                await applyFolderPlan(profile, plan);
+                buzz('success');
+                setActiveList(plan.lists.at(-1) ?? 'all');
+                setNewListNameInline('');
+                setAddingSubTo(null);
+                setAddingListInline(false);
+              }}
+            >
+              ADD
+            </button>
+            <button
+              type="button"
+              className="u-btn ghost"
+              onClick={() => {
+                setAddingSubTo(null);
+                setAddingListInline(false);
+              }}
+            >
+              ✕
+            </button>
+          </span>
+        )}
+      </div>
+      {activeFolderStats && activeList !== 'all' && activeList !== 'unlisted' && (
+        <div className="folder-meta-bar" aria-label={`Folder summary for ${showPath(activeList)}`}>
+          <span className="folder-meta-facts">
+            <strong>{showPath(activeList)}</strong> · {activeFolderStats.copies.toLocaleString()} {activeFolderStats.copies === 1 ? 'copy' : 'copies'} · {activeFolderStats.unique.toLocaleString()} unique ·{' '}
+            {activeFolderStats.usd > 0 ? `≈${cad(activeFolderStats.usd)}` : 'CA$—'} ·{' '}
+            <strong>{activeFolderStats.spare.toLocaleString()} spare</strong> (free from active decks)
+          </span>
+          <span className="folder-meta-acts">
+            {folderAction === null ? (
+              <>
+                <button
+                  type="button"
+                  className="u-btn ghost"
+                  onClick={() => (buzz('open'), setFolderAction({ mode: 'rename', value: leafOf(activeList) }))}
+                >
+                  RENAME
+                </button>
+                {moveTargets.length > 0 && (
+                  <button
+                    type="button"
+                    className="u-btn ghost"
+                    onClick={() => (buzz('open'), setFolderAction({ mode: 'move', value: moveTargets[0].value }))}
+                  >
+                    MOVE
+                  </button>
+                )}
+              </>
+            ) : folderAction.mode === 'rename' ? (
+              <span className="list-new-inline">
+                <input
+                  type="text"
+                  aria-label="Rename folder"
+                  value={folderAction.value}
+                  onChange={(e) => setFolderAction({ mode: 'rename', value: e.target.value })}
+                  autoFocus
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter' && folderAction.value.trim()) {
+                      e.preventDefault();
+                      const plan = planRenameFolder(customLists, entries, activeList, folderAction.value);
+                      if (!plan.ok) return alert(plan.why);
+                      const nextPath = childPath(parentOf(activeList), folderAction.value.replace(/\s+/g, ' ').trim());
+                      await applyFolderPlan(profile, plan);
+                      buzz('success');
+                      setFolderAction(null);
+                      setActiveList(nextPath);
+                    } else if (e.key === 'Escape') {
+                      setFolderAction(null);
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="u-btn primary"
+                  disabled={!folderAction.value.trim()}
+                  onClick={async () => {
+                    const plan = planRenameFolder(customLists, entries, activeList, folderAction.value);
+                    if (!plan.ok) return alert(plan.why);
+                    const nextPath = childPath(parentOf(activeList), folderAction.value.replace(/\s+/g, ' ').trim());
+                    await applyFolderPlan(profile, plan);
+                    buzz('success');
+                    setFolderAction(null);
+                    setActiveList(nextPath);
+                  }}
+                >
+                  SAVE
+                </button>
+                <button type="button" className="u-btn ghost" onClick={() => setFolderAction(null)}>
+                  ✕
+                </button>
+              </span>
+            ) : (
+              <span className="list-new-inline">
+                <select
+                  aria-label="Move folder destination"
+                  className="coll-sort-select"
+                  value={folderAction.value}
+                  onChange={(e) => setFolderAction({ mode: 'move', value: e.target.value })}
+                >
+                  {moveTargets.map((t) => (
+                    <option key={t.value || '__top'} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="u-btn primary"
+                  onClick={async () => {
+                    const targetParent = folderAction.value || null;
+                    const plan = planMoveFolder(customLists, entries, activeList, targetParent);
+                    if (!plan.ok) return alert(plan.why);
+                    const nextPath = childPath(targetParent, leafOf(activeList));
+                    await applyFolderPlan(profile, plan);
+                    buzz('success');
+                    setFolderAction(null);
+                    setActiveList(nextPath);
+                  }}
+                >
+                  APPLY
+                </button>
+                <button type="button" className="u-btn ghost" onClick={() => setFolderAction(null)}>
+                  ✕
+                </button>
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+    </section>
+  );
+
   return (
     <>
       <PageDecor seed={821} rays="18% 18%" sheet={{ side: 'right', top: 140, rot: 6 }} />
@@ -352,244 +592,8 @@ export function Collection({
           </p>
         )}
 
-        {ctab === 'cards' && (
-          <section className="coll-listbar" aria-label="Binder lists navigation">
-            <div className="list-tabs" role="tablist">
-              <button type="button" role="tab" aria-selected={activeList === 'all'} className={`list-tab${activeList === 'all' ? ' active' : ''}`} onClick={() => (buzz('select'), setActiveList('all'))}>
-                ALL <span className="tab-count">{copies(entries).toLocaleString()}</span>
-              </button>
-              <button type="button" role="tab" aria-selected={activeList === 'unlisted'} className={`list-tab${activeList === 'unlisted' ? ' active' : ''}`} onClick={() => (buzz('select'), setActiveList('unlisted'))}>
-                UNLISTED <span className="tab-count">{copies(entries.filter((e) => !e.list)).toLocaleString()}</span>
-              </button>
-              {folderTree.map((l) => {
-                const count = copies(rowsWithin(entries, l)).toLocaleString();
-                const isSub = depthOf(l) > 1;
-                return (
-                  <span key={l} className="list-tab-wrap">
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={activeList === l}
-                      className={`list-tab${activeList === l ? ' active' : ''}`}
-                      title={showPath(l)}
-                      onClick={() => (buzz('select'), setActiveList(l))}
-                    >
-                      {isSub ? `↳ ${showPath(l).toUpperCase()}` : showPath(l).toUpperCase()} <span className="tab-count">{count}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="list-del-btn"
-                      title={`Delete folder ${showPath(l)}`}
-                      aria-label={`Delete folder ${showPath(l)}`}
-                      onClick={async (ev) => {
-                        ev.stopPropagation();
-                        const parent = parentOf(l);
-                        if (!confirm(`Delete folder "${showPath(l)}"? Cards will move to ${parent ? showPath(parent) : 'Unlisted'}.`)) return;
-                        buzz('warn');
-                        const plan = planDeleteFolder(customLists, entries, l);
-                        if (!plan.ok) return;
-                        if (activeList === l || activeList.startsWith(`${l}/`)) setActiveList(parent ?? 'all');
-                        await applyFolderPlan(profile, plan);
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                );
-              })}
-              {!addingListInline ? (
-                <>
-                  {activeList !== 'all' && activeList !== 'unlisted' && depthOf(activeList) < MAX_DEPTH && (
-                    <button
-                      type="button"
-                      className="list-tab add-btn"
-                      title={`Create subfolder inside ${showPath(activeList)}`}
-                      onClick={() => {
-                        buzz('open');
-                        setAddingSubTo(activeList);
-                        setAddingListInline(true);
-                      }}
-                    >
-                      + SUBFOLDER
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="list-tab add-btn"
-                    onClick={() => {
-                      buzz('open');
-                      setAddingSubTo(null);
-                      setAddingListInline(true);
-                    }}
-                  >
-                    + NEW FOLDER
-                  </button>
-                </>
-              ) : (
-                <span className="list-new-inline">
-                  <input
-                    type="text"
-                    value={newListNameInline}
-                    onChange={(e) => setNewListNameInline(e.target.value)}
-                    placeholder={addingSubTo ? `Inside ${showPath(addingSubTo)}…` : 'New folder name…'}
-                    autoFocus
-                    onKeyDown={async (e) => {
-                      if (e.key === 'Enter' && newListNameInline.trim()) {
-                        e.preventDefault();
-                        const plan = planAddFolder(customLists, addingSubTo, newListNameInline.trim());
-                        if (!plan.ok) return alert(plan.why);
-                        await applyFolderPlan(profile, plan);
-                        buzz('success');
-                        setActiveList(plan.lists.at(-1) ?? 'all');
-                        setNewListNameInline('');
-                        setAddingSubTo(null);
-                        setAddingListInline(false);
-                      } else if (e.key === 'Escape') {
-                        setAddingSubTo(null);
-                        setAddingListInline(false);
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="u-btn primary"
-                    disabled={!newListNameInline.trim()}
-                    onClick={async () => {
-                      const plan = planAddFolder(customLists, addingSubTo, newListNameInline.trim());
-                      if (!plan.ok) return alert(plan.why);
-                      await applyFolderPlan(profile, plan);
-                      buzz('success');
-                      setActiveList(plan.lists.at(-1) ?? 'all');
-                      setNewListNameInline('');
-                      setAddingSubTo(null);
-                      setAddingListInline(false);
-                    }}
-                  >
-                    ADD
-                  </button>
-                  <button
-                    type="button"
-                    className="u-btn ghost"
-                    onClick={() => {
-                      setAddingSubTo(null);
-                      setAddingListInline(false);
-                    }}
-                  >
-                    ✕
-                  </button>
-                </span>
-              )}
-            </div>
-            {activeFolderStats && activeList !== 'all' && activeList !== 'unlisted' && (
-              <div className="folder-meta-bar" aria-label={`Folder summary for ${showPath(activeList)}`}>
-                <span className="folder-meta-facts">
-                  <strong>{showPath(activeList)}</strong> · {activeFolderStats.copies.toLocaleString()} {activeFolderStats.copies === 1 ? 'copy' : 'copies'} · {activeFolderStats.unique.toLocaleString()} unique ·{' '}
-                  {activeFolderStats.usd > 0 ? `≈${cad(activeFolderStats.usd)}` : 'CA$—'} ·{' '}
-                  <strong>{activeFolderStats.spare.toLocaleString()} spare</strong> (free from active decks)
-                </span>
-                <span className="folder-meta-acts">
-                  {folderAction === null ? (
-                    <>
-                      <button
-                        type="button"
-                        className="u-btn ghost"
-                        onClick={() => (buzz('open'), setFolderAction({ mode: 'rename', value: leafOf(activeList) }))}
-                      >
-                        RENAME
-                      </button>
-                      {moveTargets.length > 0 && (
-                        <button
-                          type="button"
-                          className="u-btn ghost"
-                          onClick={() => (buzz('open'), setFolderAction({ mode: 'move', value: moveTargets[0].value }))}
-                        >
-                          MOVE
-                        </button>
-                      )}
-                    </>
-                  ) : folderAction.mode === 'rename' ? (
-                    <span className="list-new-inline">
-                      <input
-                        type="text"
-                        aria-label="Rename folder"
-                        value={folderAction.value}
-                        onChange={(e) => setFolderAction({ mode: 'rename', value: e.target.value })}
-                        autoFocus
-                        onKeyDown={async (e) => {
-                          if (e.key === 'Enter' && folderAction.value.trim()) {
-                            e.preventDefault();
-                            const plan = planRenameFolder(customLists, entries, activeList, folderAction.value);
-                            if (!plan.ok) return alert(plan.why);
-                            const nextPath = childPath(parentOf(activeList), folderAction.value.replace(/\s+/g, ' ').trim());
-                            await applyFolderPlan(profile, plan);
-                            buzz('success');
-                            setFolderAction(null);
-                            setActiveList(nextPath);
-                          } else if (e.key === 'Escape') {
-                            setFolderAction(null);
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="u-btn primary"
-                        disabled={!folderAction.value.trim()}
-                        onClick={async () => {
-                          const plan = planRenameFolder(customLists, entries, activeList, folderAction.value);
-                          if (!plan.ok) return alert(plan.why);
-                          const nextPath = childPath(parentOf(activeList), folderAction.value.replace(/\s+/g, ' ').trim());
-                          await applyFolderPlan(profile, plan);
-                          buzz('success');
-                          setFolderAction(null);
-                          setActiveList(nextPath);
-                        }}
-                      >
-                        SAVE
-                      </button>
-                      <button type="button" className="u-btn ghost" onClick={() => setFolderAction(null)}>
-                        ✕
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="list-new-inline">
-                      <select
-                        aria-label="Move folder destination"
-                        className="coll-sort-select"
-                        value={folderAction.value}
-                        onChange={(e) => setFolderAction({ mode: 'move', value: e.target.value })}
-                      >
-                        {moveTargets.map((t) => (
-                          <option key={t.value || '__top'} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        className="u-btn primary"
-                        onClick={async () => {
-                          const targetParent = folderAction.value || null;
-                          const plan = planMoveFolder(customLists, entries, activeList, targetParent);
-                          if (!plan.ok) return alert(plan.why);
-                          const nextPath = childPath(targetParent, leafOf(activeList));
-                          await applyFolderPlan(profile, plan);
-                          buzz('success');
-                          setFolderAction(null);
-                          setActiveList(nextPath);
-                        }}
-                      >
-                        APPLY
-                      </button>
-                      <button type="button" className="u-btn ghost" onClick={() => setFolderAction(null)}>
-                        ✕
-                      </button>
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
-          </section>
-        )}
+        {/* Folders: a row of their own on wider screens; on phones they sit at the top of the FILTER sheet (Nov 27) */}
+        {ctab === 'cards' && !phone && folderBar}
 
         {ctab === 'cards' && (
           <section id="cpane-cards" role="tabpanel" aria-labelledby="ctab-cards">
@@ -602,7 +606,14 @@ export function Collection({
               setQ={setQ}
               strip={
                 <>
-                  <FilterButton filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />
+                  <FilterButton
+                    filter={filter}
+                    setFilter={setFilter}
+                    shown={shown.reduce((n, e) => n + e.qty, 0)}
+                    total={inTab.reduce((n, e) => n + e.qty, 0)}
+                    folders={phone ? folderBar : undefined}
+                    folderOn={phone && activeList !== 'all'}
+                  />
                   <label className="sortsel">
                     <select
                       id="coll-sort-select"
@@ -622,7 +633,19 @@ export function Collection({
                   </label>
                 </>
               }
-              chips={<ActiveChips filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />}
+              chips={
+                <>
+                  {/* phones: the folder you are in shows here, one tap back to ALL */}
+                  {phone && activeList !== 'all' && (
+                    <div className="fchips setchips" role="group" aria-label="Folder">
+                      <button type="button" className="fchip" aria-label={`Back to all cards (now in ${activeList === 'unlisted' ? 'Unlisted' : showPath(activeList)})`} onClick={() => (buzz('select'), setActiveList('all'))}>
+                        FOLDER: {activeList === 'unlisted' ? 'UNLISTED' : showPath(activeList).toUpperCase()} ✕
+                      </button>
+                    </div>
+                  )}
+                  <ActiveChips filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />
+                </>
+              }
               empty={
                 entries.length > 0 ? (
                   <EmptyState

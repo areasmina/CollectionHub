@@ -924,4 +924,27 @@
   }
 }
 
+/* Phone list rows, one line each (Guillermo, Nov 27: "the rows waste space with a stray ⋮ on its own line"):
+   − n + · picture · name and set · ⋮. Removing a whole row lives in ⋮ (REMOVE ONE) and in the stepper's bin at one
+   copy, so the ✕ that sat beside the name, easy to hit by accident, steps aside on phones. */
+@media (max-width: 560px) {
+  .coll .crows > .crow {
+    grid-template-columns: 112px 40px minmax(0, 1fr) 44px;
+    align-items: center;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .coll .crows > .crow > .xbtn {
+    display: none;
+  }
+  .coll .crows > .crow > .morebtn {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  .coll .crows > .crow .cn b {
+    font-size: 15px;
+    line-height: 1.15;
+  }
+}
+
 }
