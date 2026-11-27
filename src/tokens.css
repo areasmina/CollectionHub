@@ -1190,11 +1190,81 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 .pillnav.forging-island {
   height: auto !important;
   min-height: 44px !important;
-  padding: 5px 10px !important;
+  padding: 4px 10px !important;
   border-radius: 26px !important;
 }
 .pillnav.forging-island .syncpill {
   display: none !important;
+}
+@media (min-width: 701px) {
+  .pillnav.forging-island {
+    height: 46px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+  }
+  .pillnav.forging-island .forgetop .ftitle {
+    display: none !important;
+  }
+}
+.island-copies-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(520px, calc(100vw - 44px));
+}
+.island-copies-bar .icb-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 13px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  color: #ffffff;
+}
+.island-copies-bar .icb-badge b {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--mo-yellow);
+  color: #0a0a0a;
+  font: 700 11px/1 var(--mo-mono);
+}
+.island-copies-bar .icb-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 600 12.5px/1.2 var(--mo-body);
+  color: var(--mo-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.island-copies-bar .icb-scry {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font: 700 11px/1 var(--mo-mono);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.island-copies-bar .icb-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.island-copies-bar .icb-close:hover {
+  background: var(--mo-red);
 }
 .pillnav.forging-island .island-membrane {
   height: 100% !important;
@@ -1760,6 +1830,16 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
 }
 .dgrid .dtile .cinfo .cmatch {
   gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+  border-radius: 6px;
+}
+.dgrid .dtile .cinfo .cmatch .cmatch-chev {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--mo-muted);
+  opacity: 0.72;
+  flex: none;
 }
 .dgrid .dtile .cinfo .cmatch b {
   font: 700 12px/1 var(--mo-mono);
@@ -1785,14 +1865,21 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   transform: translateY(-4px);
   transition: max-height 0.26s ease, opacity 0.22s ease, transform 0.24s ease;
 }
-.dgrid .dtile:hover .cinfo-more,
-.dgrid .dtile:focus-within .cinfo-more,
 .dgrid .dtile[data-peek='true'] .cinfo-more {
   max-height: 96px;
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
   margin-top: 4px;
+}
+@media (hover: hover) {
+  .dgrid .dtile:hover .cinfo-more {
+    max-height: 96px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    margin-top: 4px;
+  }
 }
 .dgrid .dtile .dlegal {
   z-index: 7;
@@ -1859,10 +1946,14 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
     width: min(148px, 84%);
   }
   .dgrid .dtile .cinfo {
-    padding: 8px 10px 9px 28px !important;
+    padding: 8px 10px 4px 28px !important;
+  }
+  .dgrid .dtile .cinfo .cmatch {
+    min-height: 44px;
+    align-items: center;
   }
   .dgrid > li > .dlight {
-    bottom: 3px !important;
+    bottom: 8px !important;
     left: -2px !important;
   }
   .dgrid .dtile .dlegal {
@@ -1980,24 +2071,30 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   pointer-events: auto;
   display: inline-flex !important;
   align-items: center !important;
-  flex-wrap: nowrap !important;
-  gap: 10px !important;
-  max-width: 100%;
-  padding: 5px 6px 5px 16px;
-  background: rgba(14, 14, 20, 0.88);
+  flex-wrap: wrap !important;
+  justify-content: center;
+  gap: 6px 10px !important;
+  max-width: min(560px, calc(100vw - 20px));
+  padding: 6px 8px 6px 16px;
+  background: rgba(14, 14, 20, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
+  border-radius: 24px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
 }
 .yourcopies .yc-head h2 {
   flex: 0 0 auto;
-  font-size: 18px !important;
+  font-size: 17px !important;
   white-space: nowrap;
 }
 .yourcopies .yc-name {
-  min-width: 0;
-  color: var(--mo-muted);
+  flex: 0 1 auto;
+  max-width: min(320px, calc(100vw - 60px));
+  color: #ffffff;
   font-size: 13px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-align: center;
 }
 .yourcopies .yc-scry {
   flex: 0 0 auto;
@@ -2163,16 +2260,38 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
 }
 .yourcopies .yc-acts {
   justify-content: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 6px;
+  padding: 6px;
   border-radius: 28px;
-  background: rgba(14, 14, 20, 0.9);
+  background: rgba(14, 14, 20, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.72);
 }
 .yourcopies .yc-acts .u-btn {
   border-radius: 999px !important;
   min-height: 44px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  padding: 0 14px !important;
+  font: 400 13px/1 var(--mo-display) !important;
+  letter-spacing: 0.05em !important;
+}
+.yourcopies .yc-acts .u-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+.yourcopies .yc-step {
+  padding: 0 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.yourcopies .yc-step .u-btn {
+  border: 0 !important;
+  background: transparent !important;
+  min-width: 44px !important;
+  padding: 0 !important;
 }
 .yourcopies .yc-arts {
   width: min(560px, calc(100vw - 24px));
@@ -2258,5 +2377,21 @@ html:is(.sheet-open, :has(.swapnote, .yourcopies, .cardmenu, .fsheet2, .deckmenu
     html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
       top: auto !important;
     }
+  }
+  html:has(.yourcopies) .pillnav {
+    translate: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 1015 !important;
+  }
+  html:has(.yourcopies) .pillnav .syncpill {
+    display: none !important;
+  }
+  html:has(.yourcopies) .toast {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 1030 !important;
+  }
+  html:has(.yourcopies):has(.pillnav.dock-bottom:not(.collapsed)) .toast {
+    bottom: calc(var(--island-h, 46px) + 14px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }

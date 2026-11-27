@@ -190,3 +190,19 @@ export const setDecksIslandFilter = (next: IslandDecksFilterState | null) => {
 };
 export const getDecksIslandFilter = () => decksIslandFilter;
 export const onDecksIslandFilterChange = (f: () => void) => (addEventListener(DECKS_ISLAND_FILTER, f), () => removeEventListener(DECKS_ISLAND_FILTER, f));
+
+/** Dynamic Island morph state when inspecting a card's copies in Collection. */
+export interface IslandCopiesState {
+  name: string;
+  count: number;
+  scryfallUrl: string;
+  onClose: () => void;
+}
+let islandCopies: IslandCopiesState | null = null;
+const ISLAND_COPIES = 'ch:islandcopies';
+export const setIslandCopies = (next: IslandCopiesState | null) => {
+  islandCopies = next;
+  dispatchEvent(new Event(ISLAND_COPIES));
+};
+export const getIslandCopies = () => islandCopies;
+export const onIslandCopiesChange = (f: () => void) => (addEventListener(ISLAND_COPIES, f), () => removeEventListener(ISLAND_COPIES, f));

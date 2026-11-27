@@ -45,12 +45,10 @@ const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(pre
 function DeckStack3D({ img, totalCards }: { img?: string; totalCards: number }) {
   const stageRef = useRef<HTMLSpanElement>(null);
   const touch0 = useRef<{ x: number; y: number } | null>(null);
-  const peekTimer = useRef(0);
   const raf = useRef(0);
 
   useEffect(() => () => {
     if (raf.current) cancelAnimationFrame(raf.current);
-    if (peekTimer.current) clearTimeout(peekTimer.current);
   }, []);
 
   const setTilt = (rx: number | null, ry: number | null, gx = 35, gy = 25, active = false) => {
@@ -71,14 +69,6 @@ function DeckStack3D({ img, totalCards }: { img?: string; totalCards: number }) 
         pile.style.setProperty('--gy', `${gy.toFixed(1)}%`);
       }
     });
-  };
-
-  const triggerPeek = () => {
-    const tile = stageRef.current?.closest<HTMLElement>('.dtile');
-    if (!tile) return;
-    tile.setAttribute('data-peek', 'true');
-    if (peekTimer.current) clearTimeout(peekTimer.current);
-    peekTimer.current = window.setTimeout(() => tile.removeAttribute('data-peek'), 2200);
   };
 
   return (
@@ -111,7 +101,6 @@ function DeckStack3D({ img, totalCards }: { img?: string; totalCards: number }) 
           clampDeg(35 - dy * 0.3, 80),
           true,
         );
-        triggerPeek();
       }}
       onTouchEnd={() => {
         touch0.current = null;
@@ -275,6 +264,7 @@ export function Decks(s: Shared) {
     } catch {}
   };
   const [importing, setImporting] = useState(false);
+  const [peekId, setPeekId] = useState<number | null>(null);
   const gridRef = useRef<HTMLUListElement>(null);
   const gyroPermAsked = useRef(false);
 
@@ -616,6 +606,7 @@ export function Decks(s: Shared) {
               <li
                 key={d.id}
                 className={`dtile${d.inactive ? ' off' : ''}`}
+                data-peek={peekId === d.id ? 'true' : undefined}
                 style={{ '--dc': deckColour(d), '--deck-cards': totalCards } as React.CSSProperties}
                 onMouseEnter={() => {
                   if (!d.id) return;
@@ -669,9 +660,29 @@ export function Decks(s: Shared) {
                     <span className="nm">
                       <b>{d.name}</b>
                     </span>
-                    <span className="cmatch">
+                    <span
+                      className="cmatch"
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={peekId === d.id}
+                      title="Tap to show or hide deck tags and stats"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        haptic('tap');
+                        setPeekId((cur) => (cur === d.id ? null : (d.id ?? null)));
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          haptic('tap');
+                          setPeekId((cur) => (cur === d.id ? null : (d.id ?? null)));
+                        }
+                      }}
+                    >
                       <b>{sum.pct}%</b>
                       <Meter pct={sum.pct} label={`${sum.pct}% owned`} tone="deck" />
+                      <i className="cmatch-chev" aria-hidden="true">{peekId === d.id ? '▴' : '▾'}</i>
                     </span>
                     <span className="cinfo-more">
                       {(d.tags?.length || autoThemes.length > 0) ? (

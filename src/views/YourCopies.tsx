@@ -4,6 +4,7 @@ import { db, type Card, type Entry } from '../lib/db';
 import { changeOneCopy, copiesOf, stepCopies, type Copy } from '../lib/handcopies';
 import { haptic } from '../lib/haptics';
 import { norm } from '../lib/names';
+import { setIslandCopies } from '../lib/nav';
 import { printingsOf } from '../lib/scryfall';
 import type { Toast } from './CardMenu';
 import { priced, scryfallUrl, Thumb, usd } from './shared';
@@ -76,6 +77,14 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
     addEventListener('keydown', esc);
     return () => removeEventListener('keydown', esc);
   }, [onClose]);
+  useEffect(() => {
+    if (!copies.length) {
+      setIslandCopies(null);
+      return;
+    }
+    setIslandCopies({ name, count: copies.length, scryfallUrl: scryfallUrl(name), onClose });
+    return () => setIslandCopies(null);
+  }, [name, copies.length, onClose]);
 
   const at = Math.min(pick, Math.max(0, copies.length - 1));
   const cur: Copy | undefined = copies[at];

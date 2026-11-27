@@ -14,6 +14,7 @@ import {
   getForgeCube,
   getForgeIsland,
   getIslandActivity,
+  getIslandCopies,
   getIslandDeckFocus,
   onBackChange,
   onDecksIslandFilterChange,
@@ -21,6 +22,7 @@ import {
   onForgeCubeChange,
   onForgeIslandChange,
   onIslandActivityChange,
+  onIslandCopiesChange,
   onIslandDeckFocusChange,
   onOpenCollection,
   onOpenDeck,
@@ -298,6 +300,7 @@ export default function App() {
   const [islandActivity, setIslandActivityState] = useState(() => getIslandActivity());
   const [deckFocus, setDeckFocus] = useState(() => getIslandDeckFocus());
   const [decksFilter, setDecksFilter] = useState(() => getDecksIslandFilter());
+  const [copiesState, setCopiesState] = useState(() => getIslandCopies());
   const [syncFlash, setSyncFlash] = useState<'synced' | null>(null);
   const prevSyncRef = useRef<SyncStatus>(syncSt.status);
   const [forgeNavMode, setForgeNavMode] = useState(false);
@@ -313,6 +316,7 @@ export default function App() {
   useEffect(() => onForgeCubeChange(() => setForgeCube(getForgeCube())), []);
   useEffect(() => onIslandActivityChange(() => setIslandActivityState(getIslandActivity())), []);
   useEffect(() => onIslandDeckFocusChange(() => setDeckFocus(getIslandDeckFocus())), []);
+  useEffect(() => onIslandCopiesChange(() => setCopiesState(getIslandCopies())), []);
   useEffect(() => onDecksIslandFilterChange(() => {
     const next = getDecksIslandFilter();
     setDecksFilter(next);
@@ -497,7 +501,20 @@ export default function App() {
 
         {/* Crisp text content container (never distorted) */}
         <div className="island-content">
-          {forgeState && !forgeNavMode ? (
+          {copiesState ? (
+            <div className="island-copies-bar">
+              <span className="icb-badge">
+                COPIES <b>{copiesState.count}</b>
+              </span>
+              <span className="icb-name">{copiesState.name}</span>
+              <a className="icb-scry" href={copiesState.scryfallUrl} target="_blank" rel="noreferrer" onClick={() => haptic('tap')}>
+                SCRYFALL ↗
+              </a>
+              <button type="button" className="icb-close" onClick={copiesState.onClose} aria-label="Close copies from island">
+                ✕
+              </button>
+            </div>
+          ) : forgeState && !forgeNavMode ? (
             <div className="forge-island-wrap">
               <div className="forgetop" role="toolbar" aria-label={`Forge: ${forgeState.label}`}>
                 <button
