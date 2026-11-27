@@ -1,0 +1,78 @@
+/* START · EXPLORE · TUNE: one segmented bar, the same on Guided, the tag graph and the deck's Forge. Square-ish
+   architectural segments (functional layer); the stop you are on wears the red the Guided stepper already uses. */
+.bar {
+  margin: 0 0 var(--mo-s2);
+}
+.steps {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+  overflow: hidden;
+}
+.item {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.item + .item {
+  border-left: 1px solid var(--mo-line-2);
+}
+.step {
+  width: 100%;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 var(--mo-s2);
+  border: 0;
+  background: var(--mo-surface-2);
+  color: var(--mo-muted);
+  font: 400 14px/1 var(--mo-display);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.step:hover:not([aria-disabled='true']):not(.on) {
+  color: var(--mo-text);
+  background: var(--mo-line);
+}
+.step:focus-visible {
+  outline: 2px solid var(--mo-yellow);
+  outline-offset: -2px;
+}
+.step.on {
+  background: var(--mo-red);
+  color: #ffffff;
+  cursor: default;
+}
+.step.done {
+  color: var(--mo-text);
+}
+.step[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.num {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--mo-bg);
+  color: var(--mo-text);
+  font: 700 10px/1 var(--mo-mono);
+}
+.done .num {
+  color: var(--mo-ink);
+  background: var(--mo-yellow);
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

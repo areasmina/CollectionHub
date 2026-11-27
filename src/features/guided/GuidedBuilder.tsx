@@ -10,7 +10,9 @@ import { db, type Card, type Deck, type DeckCard } from '../../lib/db';
 import { bracketOf, deckStats, isLand } from '../../lib/deckstats';
 import { deckText } from '../../lib/export';
 import { haptic } from '../../lib/haptics';
-import { freeDeckName, onPendingSeeds, openDeck, takePendingSeeds } from '../../lib/nav';
+import { freeDeckName, onPendingSeeds, openDeck, openDiscoverSub, takePendingSeeds } from '../../lib/nav';
+import { exploreColours, sendColoursToExplore } from '../../lib/journey';
+import { JourneyBar } from '../journey/JourneyBar';
 import { norm } from '../../lib/names';
 import { cad, toCad } from '../../lib/prices';
 import { useBinder } from '../../views/shared';
@@ -492,6 +494,19 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
           </div>
         </div>
       </header>
+
+      {/* The journey (Nov 27): EXPLORE takes the commander's colours to the tag graph; TUNE saves this build as a deck
+          and opens it in the Forge (the same save as REVIEW & SAVE). */}
+      <JourneyBar
+        current="start"
+        blocked={commander ? {} : { tune: 'Pick a commander first: TUNE opens your saved deck in the Forge' }}
+        onPick={(step) => {
+          if (step === 'explore') {
+            sendColoursToExplore(exploreColours(commander?.ci));
+            openDiscoverSub('tags');
+          } else if (step === 'tune') void saveDeck();
+        }}
+      />
 
       {/* 9-Step Stepper */}
       <nav className={s.stepper} aria-label="Guided build steps">
