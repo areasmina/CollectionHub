@@ -23,8 +23,10 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
   const cards = useLiveQuery(async () => new Map((await db.cards.bulkGet([...new Set((rows ?? []).map((e) => e.cardId))])).filter((c): c is Card => !!c).map((c) => [c.id, c])), [rows]) ?? new Map<string, Card>();
   const copies = useMemo(() => copiesOf(rows ?? [], name), [rows, name]);
   const [pick, setPick] = useState(0);
-  // after a change the copy may sit in another row: follow it there
+  // after a change the copy may sit in another row: follow it there, or center-balance +/- additions
   const follow = useRef<string | null>(null);
+  const rebalanceKey = useRef<string | null>(null);
+  const didInit = useRef(false);
   const [arts, setArts] = useState<Awaited<ReturnType<typeof printingsOf>> | null | 'loading' | 'failed'>(null);
   const [busy, setBusy] = useState(false);
   const rowRef = useRef<HTMLUListElement>(null);
@@ -33,11 +35,37 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
   const wheelLock = useRef(0);
 
   useEffect(() => {
+    if (!rows || !copies.length) return;
+    if (!didInit.current) {
+      didInit.current = true;
+      rebalanceKey.current = null;
+      follow.current = null;
+      setPick(Math.floor((Math.min(copies.length, SHOW) - 1) / 2));
+      return;
+    }
+    if (rebalanceKey.current) {
+      const k = rebalanceKey.current;
+      rebalanceKey.current = null;
+      follow.current = null;
+      const limit = Math.min(copies.length, SHOW);
+      const mid = Math.floor((limit - 1) / 2);
+      const matches: number[] = [];
+      for (let i = 0; i < limit; i++) {
+        if (keyOf(copies[i].entry) === k) matches.push(i);
+      }
+      if (matches.length) {
+        const best = matches.reduce((b, idx) => (Math.abs(idx - mid) < Math.abs(b - mid) ? idx : b), matches[0]);
+        setPick(best);
+      } else {
+        setPick(mid);
+      }
+      return;
+    }
     if (!follow.current) return;
     const at = copies.findIndex((c) => keyOf(c.entry) === follow.current);
     follow.current = null;
     if (at >= 0) setPick(at);
-  }, [copies]);
+  }, [rows, copies]);
   // the last copy went: nothing left to show
   useEffect(() => {
     if (rows && !copies.length) onClose();
@@ -66,11 +94,12 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
       setArts(null);
     }
   };
-  const run = async (what: () => Promise<() => Promise<void>>, text: string, next?: string) => {
+  const run = async (what: () => Promise<() => Promise<void>>, text: string, next?: string, rebalance?: boolean) => {
     if (busy) return;
     setBusy(true);
     try {
-      follow.current = next ?? null;
+      rebalanceKey.current = rebalance ? (next ?? null) : null;
+      follow.current = rebalance ? null : (next ?? null);
       const undo = await what();
       haptic('success');
       onToast({ text, undo });
@@ -118,6 +147,9 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
 
         <div
           className="yc-stage"
+          onClick={(e) => {
+            if (e.target === e.currentTarget || e.target === rowRef.current) onClose();
+          }}
           onTouchStart={(e) => {
             touchX.current = e.touches[0]?.clientX ?? null;
           }}
@@ -221,13 +253,13 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
               CHANGE ARTWORK {arts ? '▲' : '▼'}
             </button>
             <span className="yc-step" role="group" aria-label="Copies like this one">
-              <button type="button" className="u-btn" disabled={busy} aria-label={`One fewer like this (${cur.entry.qty} now)`} onClick={() => void run(() => stepCopies(profile, cur.rowId, -1), cur.entry.qty > 1 ? `${name}: one fewer like this` : `Removed this copy of ${name}`, keyOf(cur.entry))}>
+              <button type="button" className="u-btn" disabled={busy} aria-label={`One fewer like this (${cur.entry.qty} now)`} onClick={() => void run(() => stepCopies(profile, cur.rowId, -1), cur.entry.qty > 1 ? `${name}: one fewer like this` : `Removed this copy of ${name}`, keyOf(cur.entry), true)}>
                 −
               </button>
               <span className="yc-qty" aria-hidden="true">
                 ×{cur.entry.qty}
               </span>
-              <button type="button" className="u-btn" disabled={busy || cur.entry.qty >= 999} aria-label={`One more like this (${cur.entry.qty} now)`} onClick={() => void run(() => stepCopies(profile, cur.rowId, 1), `${name}: one more like this`, keyOf(cur.entry))}>
+              <button type="button" className="u-btn" disabled={busy || cur.entry.qty >= 999} aria-label={`One more like this (${cur.entry.qty} now)`} onClick={() => void run(() => stepCopies(profile, cur.rowId, 1), `${name}: one more like this`, keyOf(cur.entry), true)}>
                 +
               </button>
             </span>

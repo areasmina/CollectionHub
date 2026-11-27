@@ -86,10 +86,15 @@ test('YOUR COPIES: one more and one fewer like this copy, with UNDO', async ({ p
   await sheet.getByRole('button', { name: /One more like this/ }).click();
   await expect.poll(() => solRows(page)).toEqual([['tst', false, 3]]);
   await expect(sheet.getByRole('option')).toHaveCount(3);
+  await expect(sheet.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await sheet.getByRole('button', { name: /One more like this/ }).click();
+  await expect.poll(() => solRows(page)).toEqual([['tst', false, 4]]);
+  await expect(sheet.getByRole('option')).toHaveCount(4);
+  await expect(sheet.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
   await sheet.getByRole('button', { name: /One fewer like this/ }).click();
-  await expect.poll(() => solRows(page)).toEqual([['tst', false, 2]]);
-  await page.locator('.toast').getByRole('button', { name: 'UNDO' }).click();
   await expect.poll(() => solRows(page)).toEqual([['tst', false, 3]]);
+  await page.locator('.toast').getByRole('button', { name: 'UNDO' }).click();
+  await expect.poll(() => solRows(page)).toEqual([['tst', false, 4]]);
 });
 
 test('YOUR COPIES: CHANGE ARTWORK moves only the chosen copy to the new printing', async ({ page }) => {

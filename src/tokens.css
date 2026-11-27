@@ -1377,103 +1377,158 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   padding: 0 8px !important;
 }
 
-/* ── Physical 3D 100-Card Commander Deck Stacks (MY DECKS) & Win/Loss Record Controls ── */
+/* ── Clean Interactive 3D 100-Card Commander Deck Stacks (MY DECKS) & Win/Loss Record Controls ── */
 .dgrid .dtile {
   position: relative;
-  background: #101015;
-  border: 1px solid var(--mo-line-2);
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
   border-radius: var(--mo-r-md);
   overflow: visible;
-  transition: border-color 0.2s ease, box-shadow 0.24s ease;
 }
 .dgrid .dtile .dcard {
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
   border-radius: inherit;
-  overflow: hidden;
-  background: transparent;
+  overflow: visible;
 }
 .dgrid .dtile .cart.dstack-stage {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 14px 32px;
+  padding: 14px 16px 22px;
   height: auto !important;
   aspect-ratio: auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  perspective: 850px;
   overflow: visible;
-  background: radial-gradient(ellipse 85% 75% at 50% 45%, color-mix(in srgb, var(--dc, #e60012) 22%, #171722) 0%, #0a0a0e 78%);
-  border-bottom: 1px solid var(--mo-line);
 }
 .dgrid .dtile .dstack-pile {
   position: relative;
-  width: min(172px, 76%);
+  width: min(192px, 84%);
   aspect-ratio: 488 / 680;
-  --stack-h: clamp(8px, calc(var(--deck-cards, 100) * 0.2px), 22px);
+  --stack-z: clamp(8px, calc(var(--deck-cards, 100) * 0.18px), 20px);
   transform-style: preserve-3d;
-  transition: transform 0.28s var(--mo-ease-spring);
+  transform: rotateX(var(--rx, calc(9deg + var(--gyro-rx, 0deg)))) rotateY(var(--ry, calc(-11deg + var(--gyro-ry, 0deg))));
+  transition: transform 0.42s var(--mo-ease-spring);
+  will-change: transform;
 }
-.dgrid .dtile .dstack-pile::before,
-.dgrid .dtile .dstack-pile::after {
-  content: '';
+.dgrid .dtile .dstack-pile.interacting {
+  transition: transform 0.08s linear;
+}
+.dgrid .dtile .dstack-base {
   position: absolute;
   inset: 0;
   border-radius: 5% / 3.6%;
-  background: #23232e;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  z-index: 1;
+  background: #0c0c12;
+  transform: translateZ(0px);
+  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.86);
   pointer-events: none;
 }
-.dgrid .dtile .dstack-pile::before {
-  transform: translate(-5px, 5px) rotate(-3deg);
-}
-.dgrid .dtile .dstack-pile::after {
-  transform: translate(5px, 8px) rotate(2.4deg);
-}
-.dgrid .dtile .dstack-slab {
+.dgrid .dtile .dstack-mid {
   position: absolute;
-  left: 3px;
-  right: 3px;
-  top: calc(100% - 8px);
-  height: calc(var(--stack-h) + 8px);
-  z-index: 2;
-  border-radius: 0 0 9px 9px;
+  inset: 0;
+  border-radius: 5% / 3.6%;
+  background: #1b1b24;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+.dgrid .dtile .dstack-mid-1 {
+  transform: translateZ(calc(var(--stack-z) * 0.35)) rotate(-1.8deg);
+}
+.dgrid .dtile .dstack-mid-2 {
+  transform: translateZ(calc(var(--stack-z) * 0.68)) rotate(1.4deg);
+}
+.dgrid .dtile .dstack-edge {
+  position: absolute;
+  pointer-events: none;
+  backface-visibility: hidden;
+}
+.dgrid .dtile .dstack-edge-right {
+  top: 3%;
+  bottom: 3%;
+  right: 0;
+  width: var(--stack-z);
+  transform-origin: right center;
+  transform: translateZ(var(--stack-z)) rotateY(90deg);
+  background: repeating-linear-gradient(
+    90deg,
+    #a6a39e 0px,
+    #a6a39e 1px,
+    #262630 1px,
+    #262630 2.2px,
+    #73706b 2.2px,
+    #73706b 3px
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+}
+.dgrid .dtile .dstack-edge-left {
+  top: 3%;
+  bottom: 3%;
+  left: 0;
+  width: var(--stack-z);
+  transform-origin: left center;
+  transform: translateZ(var(--stack-z)) rotateY(-90deg);
+  background: repeating-linear-gradient(
+    90deg,
+    #686662 0px,
+    #686662 1px,
+    #191921 1px,
+    #191921 2.2px,
+    #4c4a47 2.2px,
+    #4c4a47 3px
+  );
+}
+.dgrid .dtile .dstack-edge-bottom {
+  left: 3%;
+  right: 3%;
+  bottom: 0;
+  height: var(--stack-z);
+  transform-origin: center bottom;
+  transform: translateZ(var(--stack-z)) rotateX(-90deg);
   background: repeating-linear-gradient(
     180deg,
-    #9f9d99 0px,
-    #9f9d99 1px,
-    #25252e 1px,
-    #25252e 2.2px,
-    #6c6a66 2.2px,
-    #6c6a66 3px
+    #b0ada8 0px,
+    #b0ada8 1px,
+    #282832 1px,
+    #282832 2.2px,
+    #787570 2.2px,
+    #787570 3px
   );
-  box-shadow:
-    inset 7px 0 10px rgba(0, 0, 0, 0.52),
-    inset -7px 0 10px rgba(0, 0, 0, 0.52),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.48),
-    0 12px 24px rgba(0, 0, 0, 0.85);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
-  pointer-events: none;
-  transition: box-shadow 0.28s ease;
+  border-radius: 0 0 4px 4px;
 }
 .dgrid .dtile .dstack-top {
   position: relative;
-  z-index: 3;
   display: block;
   width: 100%;
   height: 100%;
+  transform: translateZ(var(--stack-z));
   border-radius: 5% / 3.6%;
   overflow: hidden;
   background: #0f0f15;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.72);
 }
 .dgrid .dtile .dstack-top img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.dgrid .dtile .dstack-glare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--gx, 35%) var(--gy, 25%), rgba(255, 255, 255, 0.22), transparent 60%);
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 .dgrid .dtile .dstack-blank {
   width: 100%;
@@ -1484,47 +1539,111 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   color: var(--mo-muted);
   background: radial-gradient(circle at 50% 45%, #1d1d28, #0d0d12);
 }
-.dgrid .dtile .dlegal,
-.dgrid > li > .dlight {
-  z-index: 5;
+.dgrid .dtile .cinfo {
+  padding: 4px 8px 6px !important;
+  gap: 4px !important;
+  background: transparent !important;
 }
-@media (hover: hover) {
-  .dgrid .dtile:hover {
-    border-color: rgba(255, 255, 255, 0.28);
-  }
-  .dgrid .dtile:hover .dstack-pile {
-    transform: perspective(750px) rotateX(6deg) rotateY(-5deg) translateY(-6px);
-  }
-  .dgrid .dtile:hover .dstack-slab {
-    box-shadow:
-      inset 6px 0 10px rgba(0, 0, 0, 0.45),
-      inset -6px 0 10px rgba(0, 0, 0, 0.45),
-      0 18px 30px rgba(0, 0, 0, 0.88);
-  }
+.dgrid .dtile .cinfo .nm b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dgrid .dtile .cinfo-more {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: max-height 0.26s ease, opacity 0.22s ease, transform 0.24s ease;
+}
+.dgrid .dtile:hover .cinfo-more,
+.dgrid .dtile:focus-within .cinfo-more,
+.dgrid .dtile[data-peek='true'] .cinfo-more {
+  max-height: 96px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  margin-top: 4px;
+}
+.dgrid .dtile .dlegal {
+  z-index: 5;
+  top: 10px;
+  left: 4px;
+  max-width: calc(100% - 56px);
+}
+.dgrid > li > .dlight {
+  position: absolute !important;
+  top: 10px !important;
+  right: 12px !important;
+  z-index: 6 !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.dgrid > li > .dlight > .dlight-txt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dgrid > li > .dlight > i {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(10, 10, 14, 0.72) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75) !important;
+  transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.dgrid > li > .dlight.on > i {
+  background: radial-gradient(
+    circle at 32% 32%,
+    #ffffff 0%,
+    var(--dc, #2bd65a) 44%,
+    color-mix(in srgb, var(--dc, #2bd65a) 55%, #000000) 100%
+  ) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.88) !important;
+  box-shadow: 0 0 12px var(--dc, #2bd65a), 0 2px 6px rgba(0, 0, 0, 0.9) !important;
+}
+.dgrid > li > .dlight:hover > i {
+  transform: scale(1.16);
 }
 @media (max-width: 700px) {
   .dgrid .dtile .cart.dstack-stage {
-    padding: 50px 10px 28px;
+    padding: 10px 10px 18px;
   }
   .dgrid .dtile .dstack-pile {
-    width: min(132px, 78%);
+    width: min(148px, 84%);
   }
   .dgrid > li > .dlight {
-    top: 4px;
-    right: 4px;
-    padding: 0 8px;
-    font-size: 11px;
+    top: 4px !important;
+    right: 6px !important;
   }
   .dgrid .dtile .dlegal {
-    top: 14px;
-    left: -2px;
-    max-width: calc(100% - 96px);
+    top: 10px;
+    left: 2px;
+    max-width: calc(100% - 54px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .dgrid .dtile,
   .dgrid .dtile .dstack-pile,
-  .dgrid .dtile:hover .dstack-pile {
+  .dgrid .dtile .cinfo-more {
     transform: none !important;
     transition: none !important;
   }
@@ -1603,29 +1722,83 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   }
 }
 
-/* ── Animated Fanned "Hand of Cards" (YOUR COPIES) ── */
+/* ── Animated Frameless Floating "Hand of Cards" (YOUR COPIES) ── */
+.backdrop.handback {
+  background: radial-gradient(ellipse 75% 60% at 50% 46%, rgba(16, 16, 24, 0.8) 0%, rgba(4, 4, 8, 0.88) 100%) !important;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
 .yourcopies {
-  background: #0d0d12 !important;
-  border: 1px solid var(--mo-line-2) !important;
-  border-top: 3px solid var(--mo-red) !important;
-  border-radius: var(--mo-r-md) !important;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85) !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(940px, calc(100vw - 16px)) !important;
+  max-height: calc(100dvh - 16px) !important;
+  padding: 8px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow-x: clip !important;
+  overflow-y: auto !important;
+  pointer-events: none;
+}
+.yourcopies .yc-head {
+  pointer-events: auto;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  max-width: 100%;
+  padding: 5px 6px 5px 16px;
+  background: rgba(14, 14, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+}
+.yourcopies .yc-head h2 {
+  flex: 0 0 auto;
+  font-size: 18px !important;
+  white-space: nowrap;
+}
+.yourcopies .yc-name {
+  min-width: 0;
+  color: var(--mo-muted);
+  font-size: 13px;
+}
+.yourcopies .yc-scry {
+  flex: 0 0 auto;
+  border-radius: 999px !important;
+  min-height: 44px;
+  padding: 0 12px !important;
+}
+.yourcopies .close {
+  flex: 0 0 auto;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+.yourcopies .close:hover {
+  background: var(--mo-red) !important;
 }
 .yourcopies .yc-stage {
+  pointer-events: auto;
   position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 12px 0 4px;
-  min-height: 295px;
-  overflow: hidden;
+  margin: 0;
+  min-height: 320px;
+  overflow: visible;
   user-select: none;
   touch-action: pan-y;
 }
 .yourcopies .yc-row.yc-hand {
   position: relative;
   width: 100%;
-  height: 295px;
+  height: 320px;
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
@@ -1638,7 +1811,7 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   top: 50%;
   margin: 0;
   transform-origin: 50% 115%;
-  --fan-step: 74px;
+  --fan-step: 78px;
   z-index: calc(20 - var(--fan-abs, 0));
   transform:
     translate(-50%, -50%)
@@ -1663,16 +1836,28 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
     scale(0.76);
 }
 .yourcopies .yc-copy {
-  width: 162px;
+  width: 176px;
+  padding: 4px;
   translate: none !important;
   border-radius: 10px;
-  background: rgba(14, 14, 20, 0.86);
+  background: transparent;
+  border: 2px solid transparent;
   transition: border-color 0.2s ease, box-shadow 0.24s ease;
+}
+.yourcopies .yc-copy .yc-img img {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.78);
+}
+.yourcopies .yc-copy .yc-tag {
+  align-self: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(12, 12, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .yourcopies .yc-copy.on {
   border-color: var(--mo-yellow);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 248, 36, 0.35);
-  background: rgba(16, 16, 22, 0.94);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 248, 36, 0.35);
+  background: rgba(16, 16, 22, 0.72);
 }
 .yourcopies .yc-nav {
   position: absolute;
@@ -1683,7 +1868,7 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   min-height: 44px;
   border-radius: 999px;
   background: rgba(14, 14, 20, 0.88);
-  border: 1px solid var(--mo-line-2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #ffffff;
   font-size: 20px;
   display: inline-flex;
@@ -1724,17 +1909,79 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
 .yourcopies .yc-edge-count.next {
   right: 8px;
 }
+.yourcopies .yc-tools {
+  pointer-events: auto;
+  border-top: 0 !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.yourcopies .yc-which {
+  margin: 0 !important;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(14, 14, 20, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  text-align: center;
+}
+.yourcopies .yc-acts {
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 28px;
+  background: rgba(14, 14, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.72);
+}
+.yourcopies .yc-acts .u-btn {
+  border-radius: 999px !important;
+  min-height: 44px;
+}
+.yourcopies .yc-arts {
+  width: min(560px, calc(100vw - 24px));
+  max-height: 180px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(14, 14, 20, 0.95);
+  border: 1px solid var(--mo-line-2);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.82);
+}
+.yourcopies .yc-note {
+  margin: 0 !important;
+  font-size: 11px;
+  text-align: center;
+  text-shadow: 0 1px 4px #000000;
+}
 @media (max-width: 700px) {
+  .yourcopies {
+    inset: 0 !important;
+    translate: none !important;
+    width: 100vw !important;
+    max-height: 100dvh !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 10px calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-shadow: none !important;
+  }
+  .yourcopies .yc-head h2 {
+    font-size: 15px !important;
+  }
   .yourcopies .yc-stage,
   .yourcopies .yc-row.yc-hand {
-    min-height: 255px;
-    height: 255px;
+    min-height: 265px;
+    height: 265px;
   }
   .yourcopies .yc-hand > li.yc-li {
-    --fan-step: 54px;
+    --fan-step: 56px;
   }
   .yourcopies .yc-copy {
-    width: 136px;
+    width: 142px;
+  }
+  .yourcopies .yc-acts {
+    border-radius: 20px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { commanderThemes, themeOf, type Theme } from '../brain/themes';
 import { deckRules, rulesLabel } from '../brain/validate';
 import { pairIdentity } from '../lib/commander';
@@ -19,7 +19,7 @@ import { cheapest, gameChangers, warmMemCards, warmMemCheap, withCheapest } from
 import { DeckCompare } from './DeckCompare';
 import { Meter } from './parts';
 import { DeckLight, SearchIcon, ShortAlert, priced as atFinish, priceSum, type Shared } from './shared';
-import { PageDecor, Pips, Title } from './zine';
+import { PageDecor, Title } from './zine';
 import { DeckFolderBar } from '../features/decks/DeckFolderBar';
 import { DeckMenu, type MenuAt } from '../features/decks/DeckMenu';
 import { DeckView } from '../features/decks/DeckView';
@@ -37,6 +37,106 @@ import {
 import '../features/decks/Decks.css';
 
 const PasteCheck = lazy(() => import('../features/check/PasteCheck').then((m) => ({ default: m.PasteCheck })));
+
+const clampDeg = (v: number, lim: number) => Math.max(-lim, Math.min(lim, v));
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Interactive CSS 3D extruded 100-card deck pile: responds to mouse, finger drag-tilt, and phone gyroscope. */
+function DeckStack3D({ img, totalCards }: { img?: string; totalCards: number }) {
+  const stageRef = useRef<HTMLSpanElement>(null);
+  const touch0 = useRef<{ x: number; y: number } | null>(null);
+  const peekTimer = useRef(0);
+  const raf = useRef(0);
+
+  useEffect(() => () => {
+    if (raf.current) cancelAnimationFrame(raf.current);
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+  }, []);
+
+  const setTilt = (rx: number | null, ry: number | null, gx = 35, gy = 25, active = false) => {
+    if (raf.current) cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(() => {
+      const pile = stageRef.current?.querySelector<HTMLElement>('.dstack-pile');
+      if (!pile) return;
+      pile.classList.toggle('interacting', active);
+      if (rx === null || ry === null) {
+        pile.style.removeProperty('--rx');
+        pile.style.removeProperty('--ry');
+        pile.style.removeProperty('--gx');
+        pile.style.removeProperty('--gy');
+      } else {
+        pile.style.setProperty('--rx', `${rx.toFixed(2)}deg`);
+        pile.style.setProperty('--ry', `${ry.toFixed(2)}deg`);
+        pile.style.setProperty('--gx', `${gx.toFixed(1)}%`);
+        pile.style.setProperty('--gy', `${gy.toFixed(1)}%`);
+      }
+    });
+  };
+
+  const triggerPeek = () => {
+    const tile = stageRef.current?.closest<HTMLElement>('.dtile');
+    if (!tile) return;
+    tile.setAttribute('data-peek', 'true');
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+    peekTimer.current = window.setTimeout(() => tile.removeAttribute('data-peek'), 2200);
+  };
+
+  return (
+    <span
+      ref={stageRef}
+      className="cart dstack-stage"
+      aria-hidden="true"
+      onPointerMove={(e) => {
+        if (e.pointerType !== 'mouse' || reducedMotion() || !stageRef.current) return;
+        const r = stageRef.current.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        setTilt(clampDeg(-ny * 32, 16), clampDeg(nx * 40, 20), (nx + 0.5) * 100, (ny + 0.5) * 100, true);
+      }}
+      onPointerLeave={() => setTilt(null, null)}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        if (t) touch0.current = { x: t.clientX, y: t.clientY };
+      }}
+      onTouchMove={(e) => {
+        if (reducedMotion() || !touch0.current || !e.touches[0]) return;
+        const dx = e.touches[0].clientX - touch0.current.x;
+        const dy = e.touches[0].clientY - touch0.current.y;
+        if (Math.abs(dx) <= 8) return;
+        setTilt(
+          clampDeg(8 - dy * 0.22, 18),
+          clampDeg(-10 + dx * 0.28, 22),
+          clampDeg(50 + dx * 0.4, 90),
+          clampDeg(35 - dy * 0.3, 80),
+          true,
+        );
+        triggerPeek();
+      }}
+      onTouchEnd={() => {
+        touch0.current = null;
+        setTilt(null, null);
+      }}
+      onTouchCancel={() => {
+        touch0.current = null;
+        setTilt(null, null);
+      }}
+    >
+      <span className="dstack-pile">
+        <span className="dstack-base" />
+        <span className="dstack-mid dstack-mid-1" />
+        <span className="dstack-mid dstack-mid-2" />
+        <span className="dstack-edge dstack-edge-right" />
+        <span className="dstack-edge dstack-edge-left" />
+        <span className="dstack-edge dstack-edge-bottom" />
+        <span className="dstack-top">
+          {img ? <img src={img.replace('/small/', '/normal/')} alt="" loading="lazy" /> : <span className="dstack-blank">{totalCards || 100}</span>}
+          <span className="dstack-glare" />
+        </span>
+      </span>
+    </span>
+  );
+}
 
 export function Decks(s: Shared) {
   const decks = useLiveQuery(() => db.decks.where('profile').equals(s.profile).reverse().sortBy('updated'), [s.profile]) ?? [];
@@ -175,6 +275,37 @@ export function Decks(s: Shared) {
     } catch {}
   };
   const [importing, setImporting] = useState(false);
+  const gridRef = useRef<HTMLUListElement>(null);
+  const gyroPermAsked = useRef(false);
+
+  useEffect(() => {
+    if (reducedMotion() || typeof window === 'undefined' || !('DeviceOrientationEvent' in window)) return;
+    let base: { b: number; g: number } | null = null;
+    let raf = 0;
+    const onOrient = (e: DeviceOrientationEvent) => {
+      if (e.beta === null || e.gamma === null) return;
+      if (!base) base = { b: e.beta, g: e.gamma };
+      const rx = clampDeg(-(e.beta - base.b) * 0.35, 14);
+      const ry = clampDeg((e.gamma - base.g) * 0.45, 14);
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        gridRef.current?.style.setProperty('--gyro-rx', `${rx.toFixed(2)}deg`);
+        gridRef.current?.style.setProperty('--gyro-ry', `${ry.toFixed(2)}deg`);
+      });
+    };
+    window.addEventListener('deviceorientation', onOrient, { passive: true });
+    return () => {
+      window.removeEventListener('deviceorientation', onOrient);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const askGyroOnce = () => {
+    if (gyroPermAsked.current || typeof window === 'undefined') return;
+    gyroPermAsked.current = true;
+    const DOE = (window as unknown as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
+    DOE?.requestPermission?.().catch(() => {});
+  };
 
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
@@ -436,7 +567,15 @@ export function Decks(s: Shared) {
           />
         )}
         {historyDeck && historyDeck.id && <HistoryDrawer deck={historyDeck} onClose={() => setHistoryDeck(null)} />}
-        <ul className="dgrid cgrid" data-zoom={dzoom} id="dpane-decks" role="tabpanel" aria-labelledby="dtab-decks">
+        <ul
+          ref={gridRef}
+          className="dgrid cgrid"
+          data-zoom={dzoom}
+          id="dpane-decks"
+          role="tabpanel"
+          aria-labelledby="dtab-decks"
+          onTouchStart={askGyroOnce}
+        >
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
             const totalCards = d.cards.reduce((n, x) => n + x.qty, 0);
@@ -453,89 +592,79 @@ export function Decks(s: Shared) {
             return (
               <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d), '--deck-cards': totalCards } as React.CSSProperties}>
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
-                  <span className="cart dstack-stage" aria-hidden="true">
-                    <span className="dstack-pile">
-                      <span className="dstack-slab" />
-                      <span className="dstack-top">
-                        {c?.img ? (
-                          <img src={c.img.replace('/small/', '/normal/')} alt="" loading="lazy" />
-                        ) : (
-                          <span className="dstack-blank">100</span>
-                        )}
-                      </span>
-                    </span>
-                  </span>
+                  <DeckStack3D img={c?.img} totalCards={totalCards} />
                   <span className="cinfo">
                     <span className="nm">
                       <b>{d.name}</b>
-                      {lead && <Pips ci={lead.ci} size={16} />}
                     </span>
                     <span className="cmatch">
                       <b>{sum.pct}%</b>
                       <Meter pct={sum.pct} label={`${sum.pct}% owned`} tone="deck" />
                     </span>
-                    {(d.tags?.length || autoThemes.length > 0) ? (
-                      <span className={`dtags${phone ? ' plain' : ''}`} onClick={phone ? undefined : (e) => e.stopPropagation()}>
-                        {phone && autoThemes.map((th) => <span key={th.label} className="themebadge">{th.label}</span>)}
-                        {phone && d.tags?.map((t) => <span key={t} className="tagbadge">#{t}</span>)}
-                        {!phone && autoThemes.map((th) => (
-                          <span
-                            key={th.label}
-                            role="button"
-                            tabIndex={0}
-                            className={`themebadge ${dtag === th.label ? 'active' : ''}`}
-                            title={`Theme: ${th.label}. Tap to filter`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDtag(dtag === th.label ? 'all' : th.label);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
+                    <span className="cinfo-more">
+                      {(d.tags?.length || autoThemes.length > 0) ? (
+                        <span className={`dtags${phone ? ' plain' : ''}`} onClick={phone ? undefined : (e) => e.stopPropagation()}>
+                          {phone && autoThemes.map((th) => <span key={th.label} className="themebadge">{th.label}</span>)}
+                          {phone && d.tags?.map((t) => <span key={t} className="tagbadge">#{t}</span>)}
+                          {!phone && autoThemes.map((th) => (
+                            <span
+                              key={th.label}
+                              role="button"
+                              tabIndex={0}
+                              className={`themebadge ${dtag === th.label ? 'active' : ''}`}
+                              title={`Theme: ${th.label}. Tap to filter`}
+                              onClick={(e) => {
                                 e.stopPropagation();
                                 setDtag(dtag === th.label ? 'all' : th.label);
-                              }
-                            }}
-                          >
-                            {th.label}
-                          </span>
-                        ))}
-                        {!phone && d.tags?.map((t) => (
-                          <span
-                            key={t}
-                            role="button"
-                            tabIndex={0}
-                            className={`tagbadge ${dtag === t ? 'active' : ''}`}
-                            title={`Filter by #${t}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDtag(dtag === t ? 'all' : t);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setDtag(dtag === th.label ? 'all' : th.label);
+                                }
+                              }}
+                            >
+                              {th.label}
+                            </span>
+                          ))}
+                          {!phone && d.tags?.map((t) => (
+                            <span
+                              key={t}
+                              role="button"
+                              tabIndex={0}
+                              className={`tagbadge ${dtag === t ? 'active' : ''}`}
+                              title={`Filter by #${t}`}
+                              onClick={(e) => {
                                 e.stopPropagation();
                                 setDtag(dtag === t ? 'all' : t);
-                              }
-                            }}
-                          >
-                            #{t}
-                          </span>
-                        ))}
-                      </span>
-                    ) : null}
-                    {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
-                    <span className="cfoot">
-                      <span>
-                        {totalCards} cards
-                        {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
-                      </span>
-                      {(d.wins ?? 0) + (d.losses ?? 0) > 0 && (
-                        <span className={`drec-badge${(d.wins ?? 0) >= (d.losses ?? 0) ? ' hot' : ''}`} title="Pod win–loss record">
-                          {formatRecord(d.wins, d.losses)}
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setDtag(dtag === t ? 'all' : t);
+                                }
+                              }}
+                            >
+                              #{t}
+                            </span>
+                          ))}
                         </span>
-                      )}
-                      <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.missing === 0 && sum.total > 0 ? 'ALL OWNED' : `${sum.missing} MISSING`}</span>
+                      ) : null}
+                      {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
+                      <span className="cfoot">
+                        <span>
+                          {totalCards} cards
+                          {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
+                        </span>
+                        {(d.wins ?? 0) + (d.losses ?? 0) > 0 && (
+                          <span className={`drec-badge${(d.wins ?? 0) >= (d.losses ?? 0) ? ' hot' : ''}`} title="Pod win–loss record">
+                            {formatRecord(d.wins, d.losses)}
+                          </span>
+                        )}
+                        <span className={`cstate${sum.pct === 100 ? ' ready' : ''}`}>{sum.missing === 0 && sum.total > 0 ? 'ALL OWNED' : `${sum.missing} MISSING`}</span>
+                      </span>
                     </span>
                     {broken && (
                       <span className="dlegal" title={broken.says}>

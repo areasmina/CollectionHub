@@ -40,7 +40,7 @@ export function DeckLight({ deck }: { deck: Deck }) {
       onClick={(e) => (e.stopPropagation(), haptic(on ? 'tap' : 'success'), db.decks.update(deck.id!, { inactive: on ? true : undefined }))}
     >
       <i aria-hidden="true" />
-      {on ? 'ACTIVE' : 'OFF'}
+      <span className="dlight-txt">{on ? 'ACTIVE' : 'OFF'}</span>
     </button>
   );
 }
