@@ -1016,28 +1016,193 @@ html.forging .lists.drop-over {
   }
 }
 
-/* ── Forge Dynamic Island height/clearance + Cohesive Filter Menus + Commander Hero Polish ── */
+/* ── Floating Liquid-Glass Dynamic Island + Forge Capsule + Morph Filter Drawer ── */
+.pillnav:is(.dock-top, .dock-bottom)::before,
+.pillnav:is(.dock-top, .dock-bottom)::after {
+  display: none !important;
+}
+.pillnav.dock-top:not(.floating):not(.collapsed) {
+  top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+  height: 46px;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+.pillnav.dock-bottom:not(.floating):not(.collapsed) {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  height: 46px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+.pillnav.dock-top.away {
+  transform: translate(-50%, calc(-100% - 16px)) !important;
+}
+.pillnav.dock-bottom.away {
+  transform: translate(-50%, calc(100% + 18px)) !important;
+}
+.pillnav:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed) .island-membrane {
+  border-radius: 999px !important;
+}
+.pillnav:not(.collapsed) .island-membrane {
+  background-color: rgba(14, 13, 18, 0.84) !important;
+  background-image:
+    radial-gradient(ellipse 68% 60% at 50% 114%, color-mix(in srgb, var(--island-accent, #e60012) 48%, transparent) 0%, transparent 74%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.22)) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.38);
+  backdrop-filter: blur(20px) saturate(1.38);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  transition: background-image 0.32s ease, background-color 0.24s ease, box-shadow 0.28s ease !important;
+}
+.pillnav.open:not(.collapsed) .island-membrane {
+  background-color: rgba(12, 12, 16, 0.9) !important;
+}
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) .island-membrane {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+.pillnav .island-filter-btn {
+  position: relative;
+}
+.pillnav .island-filter-btn.on {
+  background: var(--mo-red) !important;
+  color: #ffffff !important;
+}
+.pillnav .island-filter-btn .pjump-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mo-yellow);
+  box-shadow: 0 0 6px var(--mo-yellow);
+  pointer-events: none;
+}
+
+/* Morphing Island Drawer (Filter & Tags on MY DECKS) */
+.island-drawer.island-filter-drawer {
+  width: min(560px, calc(100vw - 24px)) !important;
+  padding: 12px 14px !important;
+  background: rgba(13, 13, 18, 0.94) !important;
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.84) !important;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.island-filter-drawer .idf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.island-filter-drawer .idf-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.island-filter-drawer .idf-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 8px currentColor;
+}
+.island-filter-drawer .idf-name {
+  font: 700 13px/1.2 var(--mo-body);
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.island-filter-drawer .idf-active-btn {
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--mo-muted);
+  font: 700 10px/1 var(--mo-mono);
+  cursor: pointer;
+}
+.island-filter-drawer .idf-active-btn.on {
+  border-color: rgba(43, 214, 90, 0.55);
+  background: rgba(43, 214, 90, 0.16);
+  color: var(--mo-green);
+}
+.island-filter-drawer .idf-title {
+  font: 400 13px/1 var(--mo-display);
+  letter-spacing: 0.08em;
+  color: var(--mo-muted);
+}
+.island-filter-drawer .idf-close {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.island-filter-drawer .idf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.island-filter-drawer .idf-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.island-filter-drawer .idf-lbl {
+  font: 700 10px/1 var(--mo-mono);
+  color: var(--mo-muted);
+  letter-spacing: 0.06em;
+}
+.island-filter-drawer .idf-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.island-filter-drawer .idf-chips::-webkit-scrollbar {
+  display: none;
+}
+.island-filter-drawer .idf-chips > * {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .pillnav.forging-island {
   height: auto !important;
   min-height: 44px !important;
   padding: 5px 10px !important;
-  border-radius: 24px !important;
+  border-radius: 26px !important;
+}
+.pillnav.forging-island .syncpill {
+  display: none !important;
 }
 .pillnav.forging-island .island-membrane {
   height: 100% !important;
-  border-radius: 24px !important;
+  border-radius: 26px !important;
 }
-.pillnav.forging-island.dock-top {
-  top: 0 !important;
-  padding-top: calc(env(safe-area-inset-top, 0px) + 5px) !important;
-}
-.pillnav.forging-island.dock-top,
-.pillnav.forging-island.dock-top .island-membrane {
-  border-radius: 0 0 24px 24px !important;
-}
-.pillnav.forging-island.dock-bottom,
-.pillnav.forging-island.dock-bottom .island-membrane {
-  border-radius: 24px 24px 0 0 !important;
+.pillnav.forging-island:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed),
+.pillnav.forging-island:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed) .island-membrane {
+  border-radius: 26px !important;
 }
 .pillnav.forging-island.dock-left,
 .pillnav.forging-island.dock-left .island-membrane {
@@ -1051,24 +1216,42 @@ html.forging .lists.drop-over {
 html.forging .dpage {
   padding-top: 0 !important;
 }
+.stage:has(> .pillnav.dock-top:not(.collapsed)) {
+  padding-top: calc(var(--island-h, 46px) + 16px) !important;
+}
 html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
-  padding-top: calc(var(--island-h, 54px) + 8px) !important;
+  padding-top: calc(var(--island-h, 54px) + 16px) !important;
+}
+.stage:has(> .pillnav.dock-bottom:not(.collapsed)) {
+  padding-bottom: calc(var(--island-h, 46px) + 22px + env(safe-area-inset-bottom, 0px)) !important;
+}
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage:not(.forgemain) .lists > .dtools.tbar {
+  top: calc(var(--island-h, 46px) + 12px) !important;
 }
 html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   padding-top: 10px !important;
 }
 @media (max-width: 700px) {
   .pillnav.forging-island {
-    padding: 5px 8px !important;
-  }
-  .pillnav.forging-island.dock-top {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 4px) !important;
+    padding: 4px 8px !important;
   }
   html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
-    padding-top: calc(var(--island-h, 96px) + 6px) !important;
+    padding-top: calc(var(--island-h, 96px) + 16px) !important;
+  }
+  html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) {
+    bottom: calc(var(--island-h, 46px) + 16px + env(safe-area-inset-bottom, 0px)) !important;
   }
   html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) {
-    bottom: calc(var(--island-h, 96px) + 10px + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(var(--island-h, 96px) + 16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .island-filter-drawer .idf-chips > *,
+  .island-filter-drawer .u-btn,
+  .island-filter-drawer .idf-close,
+  .island-filter-drawer .idf-active-btn {
+    min-height: 44px;
   }
 }
 
@@ -1429,16 +1612,30 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   border-radius: 5% / 3.6%;
   background: #0c0c12;
   transform: translateZ(0px);
-  box-shadow: 0 20px 34px rgba(0, 0, 0, 0.86);
+  box-shadow:
+    0 18px 32px rgba(0, 0, 0, 0.86),
+    0 6px 24px color-mix(in srgb, var(--dc, #e60012) 34%, transparent);
   pointer-events: none;
+  transition: box-shadow 0.25s ease;
+}
+.dgrid .dtile.off .dstack-base {
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.78);
+}
+.dgrid .dtile.off .dstack-pile {
+  opacity: 0.62;
+  filter: saturate(0.72);
 }
 .dgrid .dtile .dstack-mid {
   position: absolute;
   inset: 0;
   border-radius: 5% / 3.6%;
-  background: #1b1b24;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: color-mix(in srgb, var(--dc, #e60012) 38%, #181822);
+  border: 1px solid color-mix(in srgb, var(--dc, #e60012) 66%, rgba(255, 255, 255, 0.22));
   pointer-events: none;
+}
+.dgrid .dtile.off .dstack-mid {
+  background: #1b1b24;
+  border-color: rgba(255, 255, 255, 0.14);
 }
 .dgrid .dtile .dstack-mid-1 {
   transform: translateZ(calc(var(--stack-z) * 0.35)) rotate(-1.8deg);
@@ -1540,15 +1737,42 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   background: radial-gradient(circle at 50% 45%, #1d1d28, #0d0d12);
 }
 .dgrid .dtile .cinfo {
-  padding: 4px 8px 6px !important;
-  gap: 4px !important;
-  background: transparent !important;
+  position: relative;
+  margin-top: -4px;
+  padding: 9px 12px 10px 34px !important;
+  gap: 5px !important;
+  background: rgba(13, 13, 18, 0.9) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-color: color-mix(in srgb, var(--dc, #e60012) 52%, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.62);
+}
+.dgrid .dtile.off .cinfo {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 .dgrid .dtile .cinfo .nm b {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.dgrid .dtile .cinfo .cmatch {
+  gap: 8px;
+}
+.dgrid .dtile .cinfo .cmatch b {
+  font: 700 12px/1 var(--mo-mono);
+  color: var(--mo-muted);
+}
+.dgrid .dtile .cinfo .u-meter {
+  flex: 1 1 auto;
+  height: 5px;
+  gap: 2px;
+}
+.dgrid .dtile .cinfo .u-meter i {
+  border-radius: 2px;
+  transform: none;
 }
 .dgrid .dtile .cinfo-more {
   display: flex;
@@ -1571,15 +1795,18 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   margin-top: 4px;
 }
 .dgrid .dtile .dlegal {
-  z-index: 5;
-  top: 10px;
-  left: 4px;
-  max-width: calc(100% - 56px);
+  z-index: 7;
+  top: -11px;
+  right: 10px;
+  left: auto;
+  max-width: calc(100% - 20px);
 }
 .dgrid > li > .dlight {
   position: absolute !important;
-  top: 10px !important;
-  right: 12px !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: 4px !important;
+  left: 0 !important;
   z-index: 6 !important;
   width: 44px !important;
   height: 44px !important;
@@ -1601,27 +1828,28 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   white-space: nowrap;
 }
 .dgrid > li > .dlight > i {
-  width: 16px !important;
-  height: 16px !important;
+  width: 6px !important;
+  height: 24px !important;
   margin: 0 !important;
-  border-radius: 50% !important;
-  background: rgba(10, 10, 14, 0.72) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.75) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow: none !important;
   transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .dgrid > li > .dlight.on > i {
-  background: radial-gradient(
-    circle at 32% 32%,
-    #ffffff 0%,
-    var(--dc, #2bd65a) 44%,
-    color-mix(in srgb, var(--dc, #2bd65a) 55%, #000000) 100%
-  ) !important;
-  border: 1.5px solid rgba(255, 255, 255, 0.88) !important;
-  box-shadow: 0 0 12px var(--dc, #2bd65a), 0 2px 6px rgba(0, 0, 0, 0.9) !important;
+  background: var(--dc, #2bd65a) !important;
+  border: 0 !important;
+  box-shadow: 0 0 11px var(--dc, #2bd65a) !important;
 }
 .dgrid > li > .dlight:hover > i {
-  transform: scale(1.16);
+  transform: scaleY(1.16);
+}
+.dactive-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 2px;
 }
 @media (max-width: 700px) {
   .dgrid .dtile .cart.dstack-stage {
@@ -1630,14 +1858,18 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   .dgrid .dtile .dstack-pile {
     width: min(148px, 84%);
   }
+  .dgrid .dtile .cinfo {
+    padding: 8px 10px 9px 28px !important;
+  }
   .dgrid > li > .dlight {
-    top: 4px !important;
-    right: 6px !important;
+    bottom: 3px !important;
+    left: -2px !important;
   }
   .dgrid .dtile .dlegal {
-    top: 10px;
-    left: 2px;
-    max-width: calc(100% - 54px);
+    top: -10px;
+    right: 6px;
+    left: auto;
+    max-width: calc(100% - 14px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1987,5 +2219,44 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
 @media (prefers-reduced-motion: reduce) {
   .yourcopies .yc-hand > li.yc-li {
     transition: none !important;
+  }
+}
+
+/* ── Independent Floating Quick Jump Search Orb (.jump-orb) ── */
+.jump-orb {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+}
+html:has(.pillnav.dock-bottom:not(.collapsed)) .jump-orb {
+  bottom: calc(var(--island-h, 46px) + 22px + env(safe-area-inset-bottom, 0px));
+  right: 12px;
+}
+html:has(.pillnav.dock-right:not(.collapsed)) .jump-orb {
+  right: calc(var(--island-w, 46px) + 14px);
+}
+html.scrolling .jump-orb {
+  opacity: 0.24;
+  pointer-events: none;
+}
+html:is(.sheet-open, :has(.swapnote, .yourcopies, .cardmenu, .fsheet2, .deckmenu)) .jump-orb {
+  display: none !important;
+}
+@media (max-width: 700px) {
+  html.forging .jump-orb {
+    display: none !important;
+  }
+}
+
+@layer legacy {
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
+    top: calc(var(--island-h, 46px) + 12px) !important;
+  }
+  @media (max-width: 700px) {
+    html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
+      top: auto !important;
+    }
   }
 }

@@ -151,3 +151,42 @@ export const setIslandActivity = (next: IslandActivity | null) => {
 };
 export const getIslandActivity = () => islandActivity;
 export const onIslandActivityChange = (f: () => void) => (addEventListener(ISLAND_ACTIVITY, f), () => removeEventListener(ISLAND_ACTIVITY, f));
+
+/** Focused/hovered deck aura & quick toggle inside the Dynamic Island on MY DECKS. */
+export interface IslandDeckFocus {
+  id: number;
+  name: string;
+  color: string;
+  active: boolean;
+  tags: string[];
+  onToggleActive: () => void;
+}
+let islandDeckFocus: IslandDeckFocus | null = null;
+const ISLAND_DECK_FOCUS = 'ch:islanddeckfocus';
+export const setIslandDeckFocus = (next: IslandDeckFocus | null) => {
+  islandDeckFocus = next;
+  dispatchEvent(new Event(ISLAND_DECK_FOCUS));
+};
+export const getIslandDeckFocus = () => islandDeckFocus;
+export const onIslandDeckFocusChange = (f: () => void) => (addEventListener(ISLAND_DECK_FOCUS, f), () => removeEventListener(ISLAND_DECK_FOCUS, f));
+
+/** Dynamic Island Filter & Tags bridge for MY DECKS so bulky filter rows collapse into the Island. */
+export interface IslandDecksFilterState {
+  status: 'all' | 'ready' | 'in-progress' | 'active';
+  setStatus: (s: 'all' | 'ready' | 'in-progress' | 'active') => void;
+  tag: string;
+  setTag: (t: string) => void;
+  allTags: string[];
+  zoom: 's' | 'm' | 'l';
+  cycleZoom: () => void;
+  activeCount: number;
+  renderFolders: () => unknown;
+}
+let decksIslandFilter: IslandDecksFilterState | null = null;
+const DECKS_ISLAND_FILTER = 'ch:decksislandfilter';
+export const setDecksIslandFilter = (next: IslandDecksFilterState | null) => {
+  decksIslandFilter = next;
+  dispatchEvent(new Event(DECKS_ISLAND_FILTER));
+};
+export const getDecksIslandFilter = () => decksIslandFilter;
+export const onDecksIslandFilterChange = (f: () => void) => (addEventListener(DECKS_ISLAND_FILTER, f), () => removeEventListener(DECKS_ISLAND_FILTER, f));

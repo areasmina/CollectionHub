@@ -127,7 +127,22 @@ export function JumpBar({ profile, mine, onSwitchTab, openSignal = 0 }: JumpBarP
     }
   };
 
-  if (!open) return null;
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className={`${s.orb} jump-orb`}
+        aria-label="Quick Jump search (Ctrl+K)"
+        title="Quick Jump: search cards, decks, and tags (Ctrl+K)"
+        onClick={() => (haptic('open'), setQuery(''), setOpen(true))}
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+          <circle cx="7.5" cy="7.5" r="5" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M11.5 11.5 L15.5 15.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
     <div

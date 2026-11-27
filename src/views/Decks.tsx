@@ -13,7 +13,7 @@ import { bracketOf, deckStats, isLand } from '../lib/deckstats';
 import { cachedPages, fetchPage, pagePath, type EdhPage } from '../lib/edhrec';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
-import { onOpenDeck, openCollection, openDiscoverSub, setBack, takeDeck } from '../lib/nav';
+import { onOpenDeck, openCollection, openDiscoverSub, setBack, setDecksIslandFilter, setIslandDeckFocus, takeDeck } from '../lib/nav';
 import { cad, PRICE_METHOD, toCad } from '../lib/prices';
 import { cheapest, gameChangers, warmMemCards, warmMemCheap, withCheapest } from '../lib/scryfall';
 import { DeckCompare } from './DeckCompare';
@@ -309,14 +309,45 @@ export function Decks(s: Shared) {
 
   const short = shortfalls(decks, s.mine);
   const deck = decks.find((d) => d.id === open);
+  const deckThemeNames = (d: Deck) => themesOf(d).map((t) => t.label);
+  const allTags = [...new Set(decks.flatMap((d) => [...(d.tags ?? []), ...deckThemeNames(d)]))].filter(Boolean);
   // The list page sits under Collection: the pill's back arrow goes there (the deck page sets its own).
   useEffect(() => {
     if (!deck) setBack(openCollection);
     return () => void setBack(null);
   }, [!!deck]);
+  useEffect(() => {
+    if (deck || dtab !== 'decks') {
+      setDecksIslandFilter(null);
+      setIslandDeckFocus(null);
+      return;
+    }
+    const activeCount = (dstatus !== 'all' ? 1 : 0) + (dtag !== 'all' ? 1 : 0) + (folderFilter !== 'all' ? 1 : 0);
+    setDecksIslandFilter({
+      status: dstatus,
+      setStatus: setDstatus,
+      tag: dtag,
+      setTag: setDtag,
+      allTags,
+      zoom: dzoom,
+      cycleZoom: () => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's')),
+      activeCount,
+      renderFolders: () => (
+        <DeckFolderBar
+          decks={decks}
+          store={folderStore}
+          active={folderFilter}
+          onChangeStore={updateFolderStore}
+          onSelect={setFolderFilter}
+        />
+      ),
+    });
+  }, [deck, dtab, dstatus, dtag, folderFilter, dzoom, allTags.join('|'), decks, folderStore]);
+  useEffect(() => () => {
+    setDecksIslandFilter(null);
+    setIslandDeckFocus(null);
+  }, []);
   if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
-  const deckThemeNames = (d: Deck) => themesOf(d).map((t) => t.label);
-  const allTags = [...new Set(decks.flatMap((d) => [...(d.tags ?? []), ...deckThemeNames(d)]))].filter(Boolean);
 
   const filteredDecks = filterDecksByFolder(decks, folderStore, folderFilter)
     .filter((d) => {
@@ -531,29 +562,21 @@ export function Decks(s: Shared) {
               </button>
             )}
           </div>
-          {allTags.length > 0 && (
-            <div className="decktagpills" role="group" aria-label="Filter by tag">
-              <span className="tlabel">TAGS:</span>
-              <button type="button" className={`tagpill ${dtag === 'all' ? 'active' : ''}`} aria-pressed={dtag === 'all'} onClick={() => setDtag('all')}>
-                ALL
-              </button>
-              {allTags.map((t) => (
-                <button key={t} type="button" className={`tagpill ${dtag === t ? 'active' : ''}`} aria-pressed={dtag === t} onClick={() => setDtag(dtag === t ? 'all' : t)}>
-                  #{t}
+          {(dtag !== 'all' || folderFilter !== 'all') && (
+            <div className="dactive-chips" role="group" aria-label="Active deck filters">
+              {dtag !== 'all' && (
+                <button type="button" className="u-chip active" onClick={() => (haptic('select'), setDtag('all'))} title={`Clear #${dtag} filter`}>
+                  #{dtag} ×
                 </button>
-              ))}
+              )}
+              {folderFilter !== 'all' && (
+                <button type="button" className="u-chip active" onClick={() => (haptic('select'), setFolderFilter('all'))} title="Clear folder filter">
+                  Folder: {folderFilter === 'unfiled' ? 'Unfiled' : folderFilter} ×
+                </button>
+              )}
             </div>
           )}
         </div>
-        {decks.length > 0 && (
-          <DeckFolderBar
-            decks={decks}
-            store={folderStore}
-            active={folderFilter}
-            onChangeStore={updateFolderStore}
-            onSelect={setFolderFilter}
-          />
-        )}
         {menuDeck && listMenu && (
           <DeckMenu
             deck={menuDeck}
@@ -590,7 +613,56 @@ export function Decks(s: Shared) {
               ? rulesLabel(deckRules({ deck: d.cards, cardOf: (n) => priced.get(norm(n)), commander: d.commander, partner: d.partner, identity: lead ? pairIdentity(lead.ci, partnerCard?.ci) : [], skipIdentity: !lead }))
               : undefined;
             return (
-              <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d), '--deck-cards': totalCards } as React.CSSProperties}>
+              <li
+                key={d.id}
+                className={`dtile${d.inactive ? ' off' : ''}`}
+                style={{ '--dc': deckColour(d), '--deck-cards': totalCards } as React.CSSProperties}
+                onMouseEnter={() => {
+                  if (!d.id) return;
+                  setIslandDeckFocus({
+                    id: d.id,
+                    name: d.name,
+                    color: deckColour(d),
+                    active: !d.inactive,
+                    tags: [...(d.tags ?? []), ...autoThemes.map((t) => t.label)].slice(0, 3),
+                    onToggleActive: () => {
+                      const nextInactive = !d.inactive;
+                      haptic(nextInactive ? 'tap' : 'success');
+                      void db.decks.update(d.id!, { inactive: nextInactive ? true : undefined });
+                    },
+                  });
+                }}
+                onFocus={() => {
+                  if (!d.id) return;
+                  setIslandDeckFocus({
+                    id: d.id,
+                    name: d.name,
+                    color: deckColour(d),
+                    active: !d.inactive,
+                    tags: [...(d.tags ?? []), ...autoThemes.map((t) => t.label)].slice(0, 3),
+                    onToggleActive: () => {
+                      const nextInactive = !d.inactive;
+                      haptic(nextInactive ? 'tap' : 'success');
+                      void db.decks.update(d.id!, { inactive: nextInactive ? true : undefined });
+                    },
+                  });
+                }}
+                onTouchStart={() => {
+                  if (!d.id) return;
+                  setIslandDeckFocus({
+                    id: d.id,
+                    name: d.name,
+                    color: deckColour(d),
+                    active: !d.inactive,
+                    tags: [...(d.tags ?? []), ...autoThemes.map((t) => t.label)].slice(0, 3),
+                    onToggleActive: () => {
+                      const nextInactive = !d.inactive;
+                      haptic(nextInactive ? 'tap' : 'success');
+                      void db.decks.update(d.id!, { inactive: nextInactive ? true : undefined });
+                    },
+                  });
+                }}
+              >
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
                   <DeckStack3D img={c?.img} totalCards={totalCards} />
                   <span className="cinfo">
