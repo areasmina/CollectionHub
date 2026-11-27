@@ -10,14 +10,12 @@ import { Discover } from './views/Discover';
 import {
   canLeave,
   getBack,
-  getDecksIslandFilter,
   getForgeCube,
   getForgeIsland,
   getIslandActivity,
   getIslandCopies,
   getIslandDeckFocus,
   onBackChange,
-  onDecksIslandFilterChange,
   onDiscoverSub,
   onForgeCubeChange,
   onForgeIslandChange,
@@ -99,7 +97,6 @@ export default function App() {
   });
 
   const [islandOpen, setIslandOpen] = useState(false);
-  const [islandFilterOpen, setIslandFilterOpen] = useState(false);
   const [pullDist, setPullDist] = useState(0); // rubber-band stretch in pixels
   const [isRepositioning, setIsRepositioning] = useState(false); // dragging across screen
   const [dragX, setDragX] = useState(0);
@@ -299,7 +296,6 @@ export default function App() {
   const [forgeCube, setForgeCube] = useState(() => getForgeCube());
   const [islandActivity, setIslandActivityState] = useState(() => getIslandActivity());
   const [deckFocus, setDeckFocus] = useState(() => getIslandDeckFocus());
-  const [decksFilter, setDecksFilter] = useState(() => getDecksIslandFilter());
   const [copiesState, setCopiesState] = useState(() => getIslandCopies());
   const [syncFlash, setSyncFlash] = useState<'synced' | null>(null);
   const prevSyncRef = useRef<SyncStatus>(syncSt.status);
@@ -317,20 +313,6 @@ export default function App() {
   useEffect(() => onIslandActivityChange(() => setIslandActivityState(getIslandActivity())), []);
   useEffect(() => onIslandDeckFocusChange(() => setDeckFocus(getIslandDeckFocus())), []);
   useEffect(() => onIslandCopiesChange(() => setCopiesState(getIslandCopies())), []);
-  useEffect(() => onDecksIslandFilterChange(() => {
-    const next = getDecksIslandFilter();
-    setDecksFilter(next);
-    if (!next) setIslandFilterOpen(false);
-  }), []);
-  useEffect(() => {
-    if (!islandFilterOpen) return;
-    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setIslandFilterOpen(false);
-    addEventListener('keydown', onEsc);
-    return () => removeEventListener('keydown', onEsc);
-  }, [islandFilterOpen]);
-  useEffect(() => {
-    setIslandFilterOpen(false);
-  }, [tab]);
   useEffect(() => {
     const prev = prevSyncRef.current;
     prevSyncRef.current = syncSt.status;
@@ -427,12 +409,12 @@ export default function App() {
       {/* One nav (THE OVERHAUL, part 1): a 48px top bar on tablets and desktop (logo · DISCOVER DECKS COLLECTION · ⚙),
           a compact floating pill on phones (back + the three sections). Sync, haptics and binders also sit in Collection's
           binder menu; ⚙ opens sync from anywhere on wide screens. */}
-      {(islandOpen || islandFilterOpen) && (
-        <div className="island-scrim" onClick={() => (setIslandOpen(false), setIslandFilterOpen(false))} aria-hidden="true" />
+      {islandOpen && (
+        <div className="island-scrim" onClick={() => setIslandOpen(false)} aria-hidden="true" />
       )}
       <nav
         ref={navRef}
-        className={`pillnav notch dock-${dock}${navAway && !forgeState && !copiesState ? ' away' : ''}${(islandOpen || islandFilterOpen) ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState && !forgeNavMode ? ' forging-island' : ''}${tab === 'decks' && deckFocus ? ' has-deck-aura' : ''}`}
+        className={`pillnav notch dock-${dock}${navAway && !forgeState && !copiesState ? ' away' : ''}${islandOpen ? ' open' : ''}${pullDist > 0 ? ' stretching' : ''}${isRepositioning ? ' floating' : ''}${islandCollapsed ? ' collapsed' : ''}${forgeState && !forgeNavMode ? ' forging-island' : ''}${tab === 'decks' && deckFocus ? ' has-deck-aura' : ''}`}
         aria-label="Sections"
         onFocus={() => setNavAway(false)}
         onPointerDown={onIslandDown()}
@@ -617,34 +599,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <button
-                type="button"
-                className={`pjump island-filter-btn${decksFilter && decksFilter.activeCount > 0 ? ' lit' : ''}${islandFilterOpen ? ' on' : ''}`}
-                aria-label="Customize view, tags, and filters"
-                aria-expanded={tab === 'decks' && decksFilter ? islandFilterOpen : undefined}
-                title="Filters, tags, and options"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (dragRef.current.didDrag) return;
-                  haptic('open');
-                  if (tab === 'decks' && decksFilter) {
-                    setIslandOpen(false);
-                    setIslandFilterOpen((o) => !o);
-                    return;
-                  }
-                  // The page's own Filter button first: one selector list returned whichever came first in the page, and on
-                  // Collection that was the ⋮ options menu, so the Island's filter button opened options instead of filters.
-                  const trg =
-                    document.querySelector<HTMLElement>('.coll button[aria-label^="Filter"]') ??
-                    document.querySelector<HTMLElement>('.dpage details.tbmore > summary');
-                  trg?.click();
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                  <path d="M2 4h12M4 8h8M6 12h4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-                {decksFilter && decksFilter.activeCount > 0 && <i className="pjump-dot" aria-hidden="true" />}
-              </button>
             </>
           )}
           {/* Sync indicator + Dynamic Island live activity: only tapping the light opens sync; holding 2s collapses */}
@@ -679,7 +633,6 @@ export default function App() {
                 onClick={(e) => {
                   if ((e.target as HTMLElement).classList.contains('sdot')) return;
                   haptic('open');
-                  setIslandFilterOpen(false);
                   setIslandOpen((prev) => !prev);
                 }}
               >
@@ -719,75 +672,6 @@ export default function App() {
         {islandOpen && (
           <div className="island-drawer" role="dialog" aria-label="Dynamic Island Sync">
             <IslandSync onDone={() => setIslandOpen(false)} />
-          </div>
-        )}
-        {islandFilterOpen && tab === 'decks' && decksFilter && (
-          <div className="island-drawer island-filter-drawer" role="dialog" aria-label="Decks filters and tags">
-            <div className="idf-head">
-              {deckFocus ? (
-                <div className="idf-focus">
-                  <span className="idf-dot" style={{ background: deckFocus.color }} aria-hidden="true" />
-                  <span className="idf-name">{deckFocus.name}</span>
-                  <button
-                    type="button"
-                    className={`idf-active-btn${deckFocus.active ? ' on' : ''}`}
-                    onClick={deckFocus.onToggleActive}
-                  >
-                    {deckFocus.active ? 'ACTIVE' : 'OFF'}
-                  </button>
-                </div>
-              ) : (
-                <span className="idf-title">DECKS · FILTERS &amp; TAGS</span>
-              )}
-              <button type="button" className="idf-close" onClick={() => setIslandFilterOpen(false)} aria-label="Close filters">
-                ✕
-              </button>
-            </div>
-            {decksFilter.allTags.length > 0 && (
-              <div className="idf-section">
-                <span className="idf-lbl">TAGS</span>
-                <div className="idf-chips" role="group" aria-label="Filter by tag">
-                  <button
-                    type="button"
-                    className={`tagpill${decksFilter.tag === 'all' ? ' active' : ''}`}
-                    aria-pressed={decksFilter.tag === 'all'}
-                    onClick={() => (haptic('select'), decksFilter.setTag('all'))}
-                  >
-                    ALL
-                  </button>
-                  {decksFilter.allTags.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      className={`tagpill${decksFilter.tag === t ? ' active' : ''}`}
-                      aria-pressed={decksFilter.tag === t}
-                      onClick={() => (haptic('select'), decksFilter.setTag(decksFilter.tag === t ? 'all' : t))}
-                    >
-                      #{t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="idf-section">{decksFilter.renderFolders() as React.ReactNode}</div>
-            <div className="idf-section idf-row">
-              <div className="idf-chips" role="group" aria-label="Show decks">
-                {(['all', 'ready', 'in-progress', 'active'] as const).map((st) => (
-                  <button
-                    key={st}
-                    type="button"
-                    className={`u-chip${decksFilter.status === st ? ' active' : ''}`}
-                    aria-pressed={decksFilter.status === st}
-                    onClick={() => (haptic('select'), decksFilter.setStatus(st))}
-                  >
-                    {st === 'all' ? 'ALL' : st === 'ready' ? 'ALL OWNED' : st === 'in-progress' ? 'IN PROGRESS' : 'ACTIVE'}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="u-btn ghost" onClick={decksFilter.cycleZoom}>
-                SIZE {decksFilter.zoom.toUpperCase()}
-              </button>
-            </div>
           </div>
         )}
       </nav>
