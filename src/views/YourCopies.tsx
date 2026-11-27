@@ -29,6 +29,8 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
   const [busy, setBusy] = useState(false);
   const rowRef = useRef<HTMLUListElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const touchX = useRef<number | null>(null);
+  const wheelLock = useRef(0);
 
   useEffect(() => {
     if (!follow.current) return;
@@ -49,15 +51,21 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
 
   const at = Math.min(pick, Math.max(0, copies.length - 1));
   const cur: Copy | undefined = copies[at];
-  // keep the chosen copy in view as it changes
-  useEffect(() => {
-    rowRef.current?.querySelector<HTMLElement>(`[data-copy="${at}"]`)?.scrollIntoView?.({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-  }, [at]);
   if (!rows || !cur) return null;
 
   const card = cards.get(cur.entry.cardId);
   const line = (e: Entry) => [e.set?.toUpperCase(), e.cn && `#${e.cn}`].filter(Boolean).join(' ') || 'printing unknown';
   const shown = copies.slice(0, SHOW);
+  const hiddenLeft = Math.max(0, at - 3);
+  const hiddenRight = Math.max(0, shown.length - 1 - (at + 3)) + Math.max(0, copies.length - SHOW);
+  const stepPick = (delta: number) => {
+    const next = Math.max(0, Math.min(shown.length - 1, at + delta));
+    if (next !== at) {
+      haptic('tick');
+      setPick(next);
+      setArts(null);
+    }
+  };
   const run = async (what: () => Promise<() => Promise<void>>, text: string, next?: string) => {
     if (busy) return;
     setBusy(true);
@@ -108,39 +116,97 @@ export function YourCopies({ profile, name, onClose, onToast }: { profile: numbe
           </button>
         </header>
 
-        <ul className="yc-row" ref={rowRef} role="listbox" aria-label={`Copies of ${name}`} aria-orientation="horizontal" onKeyDown={keys}>
-          {shown.map((c, i) => {
-            const cd = cards.get(c.entry.cardId);
-            const finishTag = c.entry.finish === 'etched' ? 'ETCHED' : c.entry.foil ? 'FOIL' : '';
-            const details = [c.entry.condition, c.entry.lang?.toUpperCase()].filter(Boolean).join(' · ');
-            return (
-              <li key={`${c.rowId}-${c.nth}`} role="presentation">
-                <div
-                  role="option"
-                  data-copy={i}
-                  aria-selected={i === at}
-                  tabIndex={i === at ? 0 : -1}
-                  aria-label={`Copy ${i + 1}: ${line(c.entry)}${finishTag ? `, ${finishTag.toLowerCase()}` : ''}${details ? `, ${details}` : ''}${c.entry.list ? `, in ${c.entry.list}` : ''}`}
-                  className={`yc-copy${i === at ? ' on' : ''}`}
-                  onClick={() => (haptic('select'), setPick(i), setArts(null))}
-                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setPick(i), setArts(null))}
-                >
-                  <Thumb src={cd?.img?.replace('/small/', '/normal/')} back={cd?.back} className={`yc-img xart owned${c.entry.foil ? ' foil' : ''}`} name={name} onPick={() => (haptic('select'), setPick(i), setArts(null))} />
-                  <span className="yc-tag">
-                    {line(c.entry)}
-                    {finishTag && <b> {finishTag}</b>}
-                    {details ? ` · ${details}` : ''}
-                  </span>
-                </div>
-              </li>
-            );
-          })}
-          {copies.length > SHOW && (
-            <li className="yc-more" role="presentation">
-              +{copies.length - SHOW} more
-            </li>
+        <div
+          className="yc-stage"
+          onTouchStart={(e) => {
+            touchX.current = e.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(e) => {
+            if (touchX.current === null || shown.length <= 1) return;
+            const dx = (e.changedTouches[0]?.clientX ?? touchX.current) - touchX.current;
+            touchX.current = null;
+            if (Math.abs(dx) >= 36) stepPick(dx < 0 ? 1 : -1);
+          }}
+          onWheel={(e) => {
+            if (shown.length <= 1) return;
+            const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+            if (Math.abs(delta) < 12) return;
+            const now = Date.now();
+            if (now - wheelLock.current < 160) return;
+            wheelLock.current = now;
+            stepPick(delta > 0 ? 1 : -1);
+          }}
+        >
+          {shown.length > 1 && (
+            <button
+              type="button"
+              className="yc-nav prev"
+              disabled={at === 0}
+              onClick={() => stepPick(-1)}
+              aria-label="Previous copy"
+            >
+              ‹
+            </button>
           )}
-        </ul>
+          {hiddenLeft > 0 && (
+            <span className="yc-edge-count prev" aria-hidden="true">
+              +{hiddenLeft}
+            </span>
+          )}
+          <ul className="yc-row yc-hand" ref={rowRef} role="listbox" aria-label={`Copies of ${name}`} aria-orientation="horizontal" onKeyDown={keys}>
+            {shown.map((c, i) => {
+              const cd = cards.get(c.entry.cardId);
+              const finishTag = c.entry.finish === 'etched' ? 'ETCHED' : c.entry.foil ? 'FOIL' : '';
+              const details = [c.entry.condition, c.entry.lang?.toUpperCase()].filter(Boolean).join(' · ');
+              const d = i - at;
+              const abs = Math.abs(d);
+              const far = abs > 3;
+              return (
+                <li
+                  key={`${c.rowId}-${c.nth}`}
+                  role="presentation"
+                  className={d === 0 ? 'yc-li on' : 'yc-li'}
+                  data-far={far ? 'true' : undefined}
+                  style={{ '--fan-d': d, '--fan-abs': abs, '--fan-sign': d < 0 ? -1 : d > 0 ? 1 : 0 } as React.CSSProperties}
+                >
+                  <div
+                    role="option"
+                    data-copy={i}
+                    aria-selected={i === at}
+                    tabIndex={i === at ? 0 : -1}
+                    aria-label={`Copy ${i + 1}: ${line(c.entry)}${finishTag ? `, ${finishTag.toLowerCase()}` : ''}${details ? `, ${details}` : ''}${c.entry.list ? `, in ${c.entry.list}` : ''}`}
+                    className={`yc-copy${i === at ? ' on' : ''}`}
+                    onClick={() => (haptic('select'), setPick(i), setArts(null))}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setPick(i), setArts(null))}
+                  >
+                    <Thumb src={cd?.img?.replace('/small/', '/normal/')} back={cd?.back} className={`yc-img xart owned${c.entry.foil ? ' foil' : ''}`} name={name} onPick={() => (haptic('select'), setPick(i), setArts(null))} />
+                    <span className="yc-tag">
+                      {line(c.entry)}
+                      {finishTag && <b> {finishTag}</b>}
+                      {details ? ` · ${details}` : ''}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {hiddenRight > 0 && (
+            <span className="yc-edge-count next" aria-hidden="true">
+              +{hiddenRight}
+            </span>
+          )}
+          {shown.length > 1 && (
+            <button
+              type="button"
+              className="yc-nav next"
+              disabled={at === shown.length - 1}
+              onClick={() => stepPick(1)}
+              aria-label="Next copy"
+            >
+              ›
+            </button>
+          )}
+        </div>
 
         <section className="yc-tools" aria-label="This copy">
           <p className="yc-which">

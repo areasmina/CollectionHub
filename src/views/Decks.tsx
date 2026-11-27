@@ -439,6 +439,7 @@ export function Decks(s: Shared) {
         <ul className="dgrid cgrid" data-zoom={dzoom} id="dpane-decks" role="tabpanel" aria-labelledby="dtab-decks">
           {filteredDecks.map((d) => {
             const sum = { ...summarize(d.cards.map((c) => c.name), s.mine, s.other), ...shareById.get(d.id) };
+            const totalCards = d.cards.reduce((n, x) => n + x.qty, 0);
             // No commander set: show the deck's most expensive card instead of a blank tile.
             const lead = d.commander ? cmdrs.get(norm(d.commander)) : undefined;
             const autoThemes = themesOf(d);
@@ -450,10 +451,19 @@ export function Decks(s: Shared) {
               ? rulesLabel(deckRules({ deck: d.cards, cardOf: (n) => priced.get(norm(n)), commander: d.commander, partner: d.partner, identity: lead ? pairIdentity(lead.ci, partnerCard?.ci) : [], skipIdentity: !lead }))
               : undefined;
             return (
-              <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d) } as React.CSSProperties}>
+              <li key={d.id} className={`dtile${d.inactive ? ' off' : ''}`} style={{ '--dc': deckColour(d), '--deck-cards': totalCards } as React.CSSProperties}>
                 <DeckTile onClick={() => setOpen(d.id!)} onMenu={(x, y) => setListMenu({ id: d.id!, at: { x, y } })} label={d.name}>
-                  <span className="cart" aria-hidden="true">
-                    {c?.img && <img src={c.img.replace('/small/', '/art_crop/')} alt="" loading="lazy" />}
+                  <span className="cart dstack-stage" aria-hidden="true">
+                    <span className="dstack-pile">
+                      <span className="dstack-slab" />
+                      <span className="dstack-top">
+                        {c?.img ? (
+                          <img src={c.img.replace('/small/', '/normal/')} alt="" loading="lazy" />
+                        ) : (
+                          <span className="dstack-blank">100</span>
+                        )}
+                      </span>
+                    </span>
                   </span>
                   <span className="cinfo">
                     <span className="nm">
@@ -517,7 +527,7 @@ export function Decks(s: Shared) {
                     {!d.commander && <span className="nocmdr">no commander set: open the deck to pick one</span>}
                     <span className="cfoot">
                       <span>
-                        {d.cards.reduce((n, x) => n + x.qty, 0)} cards
+                        {totalCards} cards
                         {priced.size > 0 && <> · ≈{cad(priceSum(d.cards.map((x) => ({ card: x.foil ? atFinish(priced.get(norm(x.name)), true) : priced.get(norm(x.name)), qty: x.qty }))))}</>}
                       </span>
                       {(d.wins ?? 0) + (d.losses ?? 0) > 0 && (

@@ -1377,35 +1377,154 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   padding: 0 8px !important;
 }
 
-/* ── CSS 3D Stacked-Deck Tiles (MY DECKS) & Win/Loss Record Controls ── */
+/* ── Physical 3D 100-Card Commander Deck Stacks (MY DECKS) & Win/Loss Record Controls ── */
 .dgrid .dtile {
   position: relative;
-  border-color: var(--mo-line-2);
+  background: #101015;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-md);
+  overflow: visible;
+  transition: border-color 0.2s ease, box-shadow 0.24s ease;
+}
+.dgrid .dtile .dcard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  background: transparent;
+}
+.dgrid .dtile .cart.dstack-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px 32px;
+  height: auto !important;
+  aspect-ratio: auto !important;
+  overflow: visible;
+  background: radial-gradient(ellipse 85% 75% at 50% 45%, color-mix(in srgb, var(--dc, #e60012) 22%, #171722) 0%, #0a0a0e 78%);
+  border-bottom: 1px solid var(--mo-line);
+}
+.dgrid .dtile .dstack-pile {
+  position: relative;
+  width: min(172px, 76%);
+  aspect-ratio: 488 / 680;
+  --stack-h: clamp(8px, calc(var(--deck-cards, 100) * 0.2px), 22px);
+  transform-style: preserve-3d;
+  transition: transform 0.28s var(--mo-ease-spring);
+}
+.dgrid .dtile .dstack-pile::before,
+.dgrid .dtile .dstack-pile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 5% / 3.6%;
+  background: #23232e;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  z-index: 1;
+  pointer-events: none;
+}
+.dgrid .dtile .dstack-pile::before {
+  transform: translate(-5px, 5px) rotate(-3deg);
+}
+.dgrid .dtile .dstack-pile::after {
+  transform: translate(5px, 8px) rotate(2.4deg);
+}
+.dgrid .dtile .dstack-slab {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: calc(100% - 8px);
+  height: calc(var(--stack-h) + 8px);
+  z-index: 2;
+  border-radius: 0 0 9px 9px;
+  background: repeating-linear-gradient(
+    180deg,
+    #9f9d99 0px,
+    #9f9d99 1px,
+    #25252e 1px,
+    #25252e 2.2px,
+    #6c6a66 2.2px,
+    #6c6a66 3px
+  );
   box-shadow:
-    0 2px 0 #1b1b22,
-    0 3px 0 #0c0c10,
-    0 5px 0 #16161d,
-    0 6px 0 #0a0a0d,
-    0 8px 0 #121218,
-    0 12px 22px rgba(0, 0, 0, 0.55);
-  transition: transform 0.24s var(--mo-ease-spring), box-shadow 0.24s ease, border-color 0.2s ease;
+    inset 7px 0 10px rgba(0, 0, 0, 0.52),
+    inset -7px 0 10px rgba(0, 0, 0, 0.52),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.48),
+    0 12px 24px rgba(0, 0, 0, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+  pointer-events: none;
+  transition: box-shadow 0.28s ease;
+}
+.dgrid .dtile .dstack-top {
+  position: relative;
+  z-index: 3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 5% / 3.6%;
+  overflow: hidden;
+  background: #0f0f15;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+.dgrid .dtile .dstack-top img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.dgrid .dtile .dstack-blank {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font: 400 28px/1 var(--an, "Anton", sans-serif);
+  color: var(--mo-muted);
+  background: radial-gradient(circle at 50% 45%, #1d1d28, #0d0d12);
+}
+.dgrid .dtile .dlegal,
+.dgrid > li > .dlight {
+  z-index: 5;
 }
 @media (hover: hover) {
   .dgrid .dtile:hover {
-    transform: perspective(900px) rotateX(2.5deg) rotateY(-2deg) translateY(-4px);
-    box-shadow:
-      2px 3px 0 #23232c,
-      3px 4px 0 #0c0c10,
-      5px 7px 0 #1c1c25,
-      6px 8px 0 #0a0a0d,
-      8px 11px 0 #15151c,
-      10px 18px 30px rgba(0, 0, 0, 0.72);
     border-color: rgba(255, 255, 255, 0.28);
+  }
+  .dgrid .dtile:hover .dstack-pile {
+    transform: perspective(750px) rotateX(6deg) rotateY(-5deg) translateY(-6px);
+  }
+  .dgrid .dtile:hover .dstack-slab {
+    box-shadow:
+      inset 6px 0 10px rgba(0, 0, 0, 0.45),
+      inset -6px 0 10px rgba(0, 0, 0, 0.45),
+      0 18px 30px rgba(0, 0, 0, 0.88);
+  }
+}
+@media (max-width: 700px) {
+  .dgrid .dtile .cart.dstack-stage {
+    padding: 50px 10px 28px;
+  }
+  .dgrid .dtile .dstack-pile {
+    width: min(132px, 78%);
+  }
+  .dgrid > li > .dlight {
+    top: 4px;
+    right: 4px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+  .dgrid .dtile .dlegal {
+    top: 14px;
+    left: -2px;
+    max-width: calc(100% - 96px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .dgrid .dtile,
-  .dgrid .dtile:hover {
+  .dgrid .dtile .dstack-pile,
+  .dgrid .dtile:hover .dstack-pile {
     transform: none !important;
     transition: none !important;
   }
@@ -1481,5 +1600,145 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
     min-width: 44px;
     min-height: 44px;
     font-size: 12px;
+  }
+}
+
+/* ── Animated Fanned "Hand of Cards" (YOUR COPIES) ── */
+.yourcopies {
+  background: #0d0d12 !important;
+  border: 1px solid var(--mo-line-2) !important;
+  border-top: 3px solid var(--mo-red) !important;
+  border-radius: var(--mo-r-md) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85) !important;
+}
+.yourcopies .yc-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 12px 0 4px;
+  min-height: 295px;
+  overflow: hidden;
+  user-select: none;
+  touch-action: pan-y;
+}
+.yourcopies .yc-row.yc-hand {
+  position: relative;
+  width: 100%;
+  height: 295px;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  display: block !important;
+  list-style: none;
+}
+.yourcopies .yc-hand > li.yc-li {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform-origin: 50% 115%;
+  --fan-step: 74px;
+  z-index: calc(20 - var(--fan-abs, 0));
+  transform:
+    translate(-50%, -50%)
+    translateX(calc(var(--fan-d, 0) * var(--fan-step)))
+    translateY(calc(var(--fan-abs, 0) * var(--fan-abs, 0) * 6px))
+    rotate(calc(var(--fan-d, 0) * 7.5deg))
+    scale(calc(1 - var(--fan-abs, 0) * 0.06));
+  transition: transform 0.34s var(--mo-ease-spring), opacity 0.24s ease, filter 0.24s ease;
+}
+.yourcopies .yc-hand > li.yc-li.on {
+  z-index: 30;
+  transform: translate(-50%, -54%) scale(1.03);
+}
+.yourcopies .yc-hand > li.yc-li[data-far='true'] {
+  opacity: 0;
+  pointer-events: none;
+  transform:
+    translate(-50%, -50%)
+    translateX(calc(var(--fan-sign, 1) * var(--fan-step) * 3.3))
+    translateY(56px)
+    rotate(calc(var(--fan-sign, 1) * 24deg))
+    scale(0.76);
+}
+.yourcopies .yc-copy {
+  width: 162px;
+  translate: none !important;
+  border-radius: 10px;
+  background: rgba(14, 14, 20, 0.86);
+  transition: border-color 0.2s ease, box-shadow 0.24s ease;
+}
+.yourcopies .yc-copy.on {
+  border-color: var(--mo-yellow);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(255, 248, 36, 0.35);
+  background: rgba(16, 16, 22, 0.94);
+}
+.yourcopies .yc-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 35;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 999px;
+  background: rgba(14, 14, 20, 0.88);
+  border: 1px solid var(--mo-line-2);
+  color: #ffffff;
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+}
+.yourcopies .yc-nav:hover:not(:disabled) {
+  background: var(--mo-red);
+  border-color: var(--mo-red);
+}
+.yourcopies .yc-nav.prev {
+  left: 6px;
+}
+.yourcopies .yc-nav.next {
+  right: 6px;
+}
+.yourcopies .yc-nav:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+.yourcopies .yc-edge-count {
+  position: absolute;
+  top: calc(50% + 28px);
+  z-index: 34;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #16161f;
+  border: 1px solid var(--mo-line-2);
+  color: var(--mo-yellow);
+  font: 700 10px/1.2 var(--mo-mono);
+  pointer-events: none;
+}
+.yourcopies .yc-edge-count.prev {
+  left: 8px;
+}
+.yourcopies .yc-edge-count.next {
+  right: 8px;
+}
+@media (max-width: 700px) {
+  .yourcopies .yc-stage,
+  .yourcopies .yc-row.yc-hand {
+    min-height: 255px;
+    height: 255px;
+  }
+  .yourcopies .yc-hand > li.yc-li {
+    --fan-step: 54px;
+  }
+  .yourcopies .yc-copy {
+    width: 136px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yourcopies .yc-hand > li.yc-li {
+    transition: none !important;
   }
 }
