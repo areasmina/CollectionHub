@@ -13,14 +13,14 @@ import { bracketOf, deckStats, isLand } from '../lib/deckstats';
 import { cachedPages, fetchPage, pagePath, type EdhPage } from '../lib/edhrec';
 import { haptic } from '../lib/haptics';
 import { norm, slug } from '../lib/names';
-import { onOpenDeck, openCollection, openDiscoverSub, setBack, setDecksIslandFilter, setIslandDeckFocus, takeDeck } from '../lib/nav';
+import { onOpenDeck, openCollection, openDiscoverSub, setBack, setIslandDeckFocus, takeDeck } from '../lib/nav';
 import { cad, PRICE_METHOD, toCad } from '../lib/prices';
 import { cheapest, gameChangers, warmMemCards, warmMemCheap, withCheapest } from '../lib/scryfall';
 import { DeckCompare } from './DeckCompare';
 import { Meter } from './parts';
 import { DeckLight, SearchIcon, ShortAlert, priced as atFinish, priceSum, type Shared } from './shared';
 import { PageDecor, Title } from './zine';
-import { DeckFolderBar } from '../features/decks/DeckFolderBar';
+import { DeckFilterButton } from '../features/decks/DeckFilterSheet';
 import { DeckMenu, type MenuAt } from '../features/decks/DeckMenu';
 import { DeckView } from '../features/decks/DeckView';
 import { HistoryDrawer } from '../features/decks/HistoryDrawer';
@@ -307,36 +307,9 @@ export function Decks(s: Shared) {
     return () => void setBack(null);
   }, [!!deck]);
   useEffect(() => {
-    if (deck || dtab !== 'decks') {
-      setDecksIslandFilter(null);
-      setIslandDeckFocus(null);
-      return;
-    }
-    const activeCount = (dstatus !== 'all' ? 1 : 0) + (dtag !== 'all' ? 1 : 0) + (folderFilter !== 'all' ? 1 : 0);
-    setDecksIslandFilter({
-      status: dstatus,
-      setStatus: setDstatus,
-      tag: dtag,
-      setTag: setDtag,
-      allTags,
-      zoom: dzoom,
-      cycleZoom: () => (haptic('select'), setDzoom(dzoom === 's' ? 'm' : dzoom === 'm' ? 'l' : 's')),
-      activeCount,
-      renderFolders: () => (
-        <DeckFolderBar
-          decks={decks}
-          store={folderStore}
-          active={folderFilter}
-          onChangeStore={updateFolderStore}
-          onSelect={setFolderFilter}
-        />
-      ),
-    });
-  }, [deck, dtab, dstatus, dtag, folderFilter, dzoom, allTags.join('|'), decks, folderStore]);
-  useEffect(() => () => {
-    setDecksIslandFilter(null);
-    setIslandDeckFocus(null);
-  }, []);
+    if (deck || dtab !== 'decks') setIslandDeckFocus(null);
+  }, [deck, dtab]);
+  useEffect(() => () => setIslandDeckFocus(null), []);
   if (deck) return <DeckView deck={deck} s={s} short={short} onBack={() => setOpen(null)} onOpen={setOpen} />;
 
   const filteredDecks = filterDecksByFolder(decks, folderStore, folderFilter)
@@ -524,6 +497,16 @@ export function Decks(s: Shared) {
                 <option value="cards-desc">CARD COUNT</option>
               </select>
             </label>
+            <DeckFilterButton
+              tags={allTags}
+              tag={dtag}
+              setTag={setDtag}
+              decks={decks}
+              folderStore={folderStore}
+              folder={folderFilter}
+              setFolder={setFolderFilter}
+              onChangeFolders={updateFolderStore}
+            />
           </div>
           <div className="dfilters">
             <div className="dstatuspick" role="group" aria-label="Show decks">

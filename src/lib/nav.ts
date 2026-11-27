@@ -170,27 +170,6 @@ export const setIslandDeckFocus = (next: IslandDeckFocus | null) => {
 export const getIslandDeckFocus = () => islandDeckFocus;
 export const onIslandDeckFocusChange = (f: () => void) => (addEventListener(ISLAND_DECK_FOCUS, f), () => removeEventListener(ISLAND_DECK_FOCUS, f));
 
-/** Dynamic Island Filter & Tags bridge for MY DECKS so bulky filter rows collapse into the Island. */
-export interface IslandDecksFilterState {
-  status: 'all' | 'ready' | 'in-progress' | 'active';
-  setStatus: (s: 'all' | 'ready' | 'in-progress' | 'active') => void;
-  tag: string;
-  setTag: (t: string) => void;
-  allTags: string[];
-  zoom: 's' | 'm' | 'l';
-  cycleZoom: () => void;
-  activeCount: number;
-  renderFolders: () => unknown;
-}
-let decksIslandFilter: IslandDecksFilterState | null = null;
-const DECKS_ISLAND_FILTER = 'ch:decksislandfilter';
-export const setDecksIslandFilter = (next: IslandDecksFilterState | null) => {
-  decksIslandFilter = next;
-  dispatchEvent(new Event(DECKS_ISLAND_FILTER));
-};
-export const getDecksIslandFilter = () => decksIslandFilter;
-export const onDecksIslandFilterChange = (f: () => void) => (addEventListener(DECKS_ISLAND_FILTER, f), () => removeEventListener(DECKS_ISLAND_FILTER, f));
-
 /** Dynamic Island morph state when inspecting a card's copies in Collection. */
 export interface IslandCopiesState {
   name: string;
