@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockWorld, seed } from './mock';
+import { addSignet, mockWorld, seed } from './mock';
 
 /**
  * Guillermo, Nov 15: "Suggestion tab and forge bar are too thick… but can people tell that we have a card suggestion
@@ -43,3 +43,31 @@ test('The suggestions name themselves as your own cards', async ({ page }) => {
   await expect(sugg.locator('.fsugg-header')).toContainText(/SUGGESTIONS/);
   await expect(sugg.locator('.ftabs')).toHaveCount(0); // no ALL / OWNED / NOT OWNED any more
 });
+
+/** Guillermo, Nov 28: with unsaved swaps the Island also holds UNDO and SAVE; it still keeps to one row on phones
+ *  (the faces read CARDS · STATS · BUY there, UNDO is ↺, the FORGE stamp steps aside). */
+for (const w of [360, 412])
+  test(`Phone ${w}px: a Forge with UNDO and SAVE keeps the Island to one row`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'phone', 'the phone layout');
+    await page.setViewportSize({ width: w, height: 800 });
+    await mockWorld(page);
+    await seed(page);
+    await addSignet(page);
+    await page.evaluate(() => localStorage.setItem('ch:island_dock', 'top'));
+    await page.reload();
+    await page.locator('.ccard').first().click();
+    await page.getByRole('button', { name: 'Swap Sol Ring', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Swap Sol Ring' }).locator('.picks button', { hasText: 'Arcane Signet' }).click();
+    const row = page.locator('.pillnav .forge-island-wrap');
+    await expect(row.locator('.fundo')).toBeVisible();
+    await expect(row.locator('.u-btn.primary.forge')).toBeVisible();
+    await expect.poll(async () => (await row.boundingBox())!.height).toBeLessThanOrEqual(52);
+    // every control still a 44px tap, inside the screen, and the faces keep their full spoken names
+    for (const b of await row.locator('button:visible').all()) {
+      const r = (await b.boundingBox())!;
+      expect(r.height).toBeGreaterThanOrEqual(43.5);
+      expect(r.x + r.width).toBeLessThanOrEqual(w + 1);
+    }
+    await expect(row.getByRole('tab', { name: 'ANALYSIS' })).toBeVisible();
+    await expect(row.getByRole('tab', { name: 'TO BUY' })).toBeVisible();
+  });

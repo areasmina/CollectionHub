@@ -49,7 +49,8 @@ test('Forge bar: one clean line with no deck name, buttons together, no tab diam
   const bar = page.locator('.forgetop');
   await expect(bar).toBeVisible();
   await expect(bar).not.toContainText('Tatyova'); // the page already says which deck (Guillermo, Nov 15)
-  const parts = await box(page, '.forgetop .fstamp, .forgetop > button');
+  // the shown parts only (Nov 28: on a phone with UNDO and SAVE the FORGE stamp steps aside to keep one row)
+  const parts = (await box(page, '.forgetop .fstamp, .forgetop > button')).filter((p) => p.height > 0);
   for (const p of parts) expect(Math.abs(p.top + p.height / 2 - (parts[0].top + parts[0].height / 2))).toBeLessThanOrEqual(4); // one line
   await expect(page.locator('.fcube-dots')).toHaveCount(0);
 });

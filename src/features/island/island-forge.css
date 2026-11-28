@@ -387,3 +387,38 @@ html.forging .pillnav .island-membrane {
     white-space: nowrap;
   }
 }
+
+/* One row with UNDO and SAVE too (Nov 28, Guillermo's screenshot: a Forge with unsaved swaps wrapped ✕ and ☰ onto a
+   second row). When UNDO or SAVE is on the Island: the FORGE stamp steps aside (the faces already say where you are),
+   UNDO shows as ↺, and the faces read CARDS · STATS · BUY so the row holds at 360px. Their spoken names stay full. */
+.pillnav .fcube .fc-short {
+  display: none;
+}
+@media (max-width: 700px) {
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) {
+    flex-wrap: nowrap;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) .fstamp {
+    display: none !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) .fcube {
+    flex: 1 1 auto !important;
+    min-width: 0;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) .fcube > button {
+    padding: 0 3px !important;
+    min-width: 0;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) .fcube .fc-long {
+    display: none;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) .fcube .fc-short {
+    display: inline;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap:has(.fundo, .u-btn.primary.forge) :is(.fundo, .u-btn.primary.forge, .fleave, .forge-nav-btn) {
+    flex: none;
+    min-width: 44px;
+    padding: 0 10px !important;
+  }
+}
+
