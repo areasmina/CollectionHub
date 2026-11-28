@@ -661,24 +661,7 @@ html.forging .vhero {
 }
 
 /* ---------- 11. Collection: the lists + order panel sits snug, every row lined up ---------- */
-.coll .stats {
-  margin-bottom: var(--s3) !important;
-}
-.coll-listbar {
-  margin: 0 0 var(--s2) !important;
-  padding: var(--s2) var(--s3) !important;
-  gap: var(--s2) !important;
-}
 @media (max-width: 700px) {
-  .coll-listbar {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .coll-listbar .list-tabs {
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
   .coll-listbar .list-tabs > * {
     flex: 0 0 auto;
   }
@@ -1059,7 +1042,6 @@ html.forging .vhero {
   .dtools.tbar .tbmore[open] .fbody label.sbox.pick select { min-height: 44px !important; font-size: 13px !important; }
   .cardmenu li.using .deck-chip { height: 44px !important; min-height: 44px !important; padding: 0 12px !important; }
   .swapnote .close, .note-pop .close, .importbox-pop .close { min-width: 44px !important; min-height: 44px !important; }
-  .bindermenu button { min-height: 44px !important; }
   .deckmenu .cwheel { width: 44px !important; height: 44px !important; }
 }
 /* My Decks keeps its SHOW / HIDE STATS fold; Collection's became the CARDS | ANALYTICS tab (Nov 15). */
@@ -1168,13 +1150,6 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   .forgemain .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) { display: contents !important; }
   .forgemain .lists > .dtools.tbar > .tquick > .qonly-btn { display: none !important; }
   .forgemain .lists > .dtools.tbar > .tbmore > summary .fnow { display: none !important; }
-  .dpage .lists > .dtools.tbar > .tquick > .qsegs:not(.qviews),
-  .coll .dtools.tbar > .tquick > .qsegs:not(.qviews) { display: none !important; }
-  .dpage .lists > .dtools.tbar > .tquick > .qsegs.qviews,
-  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews,
-  .coll .dtools.tbar > .tquick > .qsegs.qviews,
-  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews { display: inline-flex !important; height: 48px !important; box-sizing: border-box !important; }
-  .coll .dtools.tbar > .tquick { display: inline-flex !important; }
   :is(.dpage .lists, .coll) > .dtools.tbar > .tquick > .qsegs.qviews > button,
   .coll .dtools.tbar > .tquick > .qsegs.qviews > button { min-width: 44px !important; min-height: 44px !important; padding: 0 !important; }
   :is(.dpage .lists, .coll) .dtools.tbar > .tquick > .qzoom-btn { min-height: 44px !important; }
@@ -1182,11 +1157,7 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   html.forging .deckgrid.forge-split .dpage .lists > .dtools.tbar > .tquick,
   html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick { max-width: none !important; overflow: visible !important; }
   /* Collection's second row also holds ⋮, FILTER and the sort: tighter gaps so the sort's name still reads */
-  .coll .dtools.tbar > .tquick > .qzoom-btn { padding: 0 8px !important; }
   /* Collection grid, ManaBox sizing: S = 4 across, M = 3 across (the start), L = 2 across — the same steps as a deck's grid */
-  .collbar[data-zoom='s'] ~ * .cgrid2, .collbar[data-zoom='s'] ~ .cgrid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; }
-  .collbar[data-zoom='m'] ~ * .cgrid2, .collbar[data-zoom='m'] ~ .cgrid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
-  .collbar[data-zoom='l'] ~ * .cgrid2, .collbar[data-zoom='l'] ~ .cgrid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ── Card sections, every screen (owner's call, Nov 13: "as clean as Moxfield") ── Each section (Creatures, Instants,
@@ -1378,7 +1349,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   vertical-align: -1px;
   fill: currentColor;
 }
-.ctile .cart > .price .pcrown { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25)); }
 
 /* ── Search that stays in reach (ManaBox benchmark, Nov 14) ──
    1. Collection and Discover: the bar was sticky only inside its own wrapper (.collbar / form.dfind), which is exactly
@@ -1621,17 +1591,11 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 /* ---------- Collection stats on phones (Guillermo, Nov 15): cards · unique · commanders as one even row of three,
    no full-width red banner, no dead space ---------- */
 @media (max-width: 700px) {
-  .coll .stats {
-    gap: 10px !important;
-  }
   .coll .stats > .stat {
     flex: 1 1 0 !important;
     min-width: 0 !important;
     min-height: 0 !important;
     padding: 10px 10px 8px !important;
-  }
-  .coll .stats > .stat b {
-    font-size: clamp(26px, 8vw, 34px) !important;
   }
   .coll .stats > .stat span:not(.worn, .spray) {
     font-size: 12px !important;
@@ -1683,38 +1647,10 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 
 /* ---------- Collection analytics (roadmap P2.5): same zine frame as the rest — torn cards, Anton numbers,
    typewriter labels. Quiet content, loud frame ---------- */
-.apanel {
-  margin: 0 0 var(--s4, 16px);
-  padding: 0;
-  background: none;
-  border: 0;
-  box-shadow: none;
-}
 .apanel .agrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-}
-.apanel .acard {
-  position: relative;
-  padding: 14px 16px 12px;
-  min-width: 0;
-  /* the same ink box, halftone dots and hard shadow as the stat tiles above (Guillermo, Nov 15) */
-  background: var(--ink, #0a0a0a);
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px);
-  background-size: 5px 5px;
-  border: 2px solid var(--u-text, #fff);
-  box-shadow: 4px 4px 0 #000;
-  transform: rotate(-0.5deg);
-}
-.apanel .acard:nth-child(even) {
-  transform: rotate(0.55deg);
-}
-.apanel .acard.awide {
-  transform: rotate(-0.25deg);
-}
-.apanel .acard.awide {
-  grid-column: 1 / -1;
 }
 .apanel .acard h3 {
   display: flex;
@@ -1727,12 +1663,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   font: 400 16px/1 var(--an, Anton, sans-serif);
   letter-spacing: 0.08em;
   color: #fff;
-}
-.apanel .acard h3 small {
-  font: 400 11px var(--se, monospace);
-  letter-spacing: 0;
-  color: #8a8a9a;
-  text-transform: none;
 }
 .apanel .abars {
   list-style: none;
@@ -1749,43 +1679,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   gap: 8px;
   min-height: 26px;
 }
-.apanel .alabel {
-  font: 400 12px var(--se, monospace);
-  color: #cfcfe0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.apanel .atrack {
-  height: 12px;
-  background: #1e1e26;
-  border: 1px solid #2c2c3a;
-}
-.apanel .afill {
-  display: block;
-  height: 100%;
-  width: var(--w, 0%);
-  min-width: 2px;
-  background: repeating-linear-gradient(135deg, #e60012 0 6px, #b3000e 6px 12px);
-}
-.apanel .abar.good .afill {
-  background: repeating-linear-gradient(135deg, #39ff88 0 6px, #22cc66 6px 12px);
-}
-.apanel .abar.col .afill {
-  background: repeating-linear-gradient(135deg, #ffcc00 0 6px, #e0a800 6px 12px);
-}
-.apanel .acount {
-  font: 400 13px var(--an, Anton, sans-serif);
-  color: #fff;
-  min-width: 3ch;
-  text-align: right;
-}
-.apanel .avalue {
-  font: 400 11px var(--u-mono, monospace);
-  color: #8a8a9a;
-  min-width: 7ch;
-  text-align: right;
-}
 .apanel .atrend {
   display: flex;
   align-items: baseline;
@@ -1797,38 +1690,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   font: 400 clamp(30px, 4vw, 42px)/1 var(--an, Anton, sans-serif);
   color: #fff;
 }
-.apanel .atrend span {
-  font: 400 12px var(--se, monospace);
-  color: #b5b5b5;
-}
-.apanel .atrend.up span {
-  color: #39ff88;
-}
-.apanel .atrend.down span {
-  color: #ff7777;
-}
-.apanel .aline {
-  display: block;
-  width: 100%;
-  background: #0c0c0e;
-  border: 1px solid #2c2c3a;
-}
-.apanel .apath {
-  fill: none;
-  stroke: #39ff88;
-  stroke-width: 1.6;
-  vector-effect: non-scaling-stroke;
-}
-.apanel .aarea {
-  fill: rgba(57, 255, 136, 0.12);
-  stroke: none;
-}
-.apanel .afoot,
-.apanel .anone {
-  margin: 8px 0 0;
-  font: 400 11px/1.5 var(--se, monospace);
-  color: #8a8a9a;
-}
 /* Readings (Phase 2, Nov 23): a row of label + number pairs, the number loud, the label quiet; used by AT A GLANCE
    and beside the WORTH OVER TIME line. Money stays plain white here: the yellow tape belongs to price stickers. */
 .apanel .areads {
@@ -1836,41 +1697,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 8px 24px;
   margin: 0 0 12px;
-}
-.apanel .areads > div {
-  min-width: 0;
-}
-.apanel .areads dt {
-  font: 400 11px/1.2 var(--se, monospace);
-  color: #8a8a9a;
-}
-.apanel .areads dd {
-  margin: 4px 0 0;
-  font: 400 clamp(22px, 3vw, 30px)/1.05 var(--an, Anton, sans-serif);
-  color: #fff;
-}
-.apanel .areads dd small {
-  display: block;
-  margin-top: 4px;
-  overflow: hidden;
-  font: 400 12px/1.3 var(--se, monospace);
-  color: #b5b5b5;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.apanel .areads .up dd {
-  color: #39ff88;
-}
-.apanel .areads .down dd {
-  color: #ff7777;
-}
-@media (max-width: 700px) {
-  .apanel .agrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .apanel .abar {
-    grid-template-columns: minmax(58px, auto) minmax(0, 1fr) auto auto;
-  }
 }
 
 /* ---------- Collection: CARDS | ANALYTICS tabs (Guillermo, Nov 15) ----------
@@ -2017,24 +1843,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
    The ALL / UNLISTED / + NEW LIST ribbon used to float on its own, with a gap before the search bar and another before
    the view row: three separate things doing one job. They now share a frame, divided by hairlines, so the eye reads
    one control panel and the cards start higher up the screen. */
-.coll .coll-listbar {
-  margin: 0 0 -2px !important;
-  padding: 8px 10px !important;
-  background: #0c0c0e;
-  border: 2px solid var(--text, #fff);
-  border-radius: 0;
-  box-shadow: none;
-}
-.coll #cpane-cards {
-  margin-top: 0;
-}
-.dpage.coll .collbar {
-  margin-top: 0 !important;
-}
-.coll #cpane-cards > * > .dtools.tbar,
-.coll #cpane-cards .dtools.tbar {
-  margin-top: 0;
-}
 
 /* ── Deck colour: one rainbow wheel (Guillermo, Nov 15) ──
    The block of swatches and the separate CUSTOM SHADE box are gone. The circle is the whole control: hue round the
@@ -2312,11 +2120,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   border-bottom: 0;
   box-shadow: none;
 }
-.dpage.coll .ctabs:has(+ .coll-listbar) ~ #cpane-cards .collbar {
-  border: 2px solid var(--u-text, #fff);
-  border-top: 1px solid #2a2a33;
-  box-shadow: 5px 5px 0 #000;
-}
 @media (max-width: 700px) {
   /* The title keeps its ransom letters, at the size a phone can spare, and the binder tag moves up beside them
      instead of taking a line of its own. */
@@ -2328,31 +2131,8 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
     max-width: 100%;
     overflow: visible;
   }
-  .coll .chead2 .titlewrap > .ztitle {
-    min-width: 0;
-  }
-  .coll .chead2 .titlewrap > .bindermenu {
-    margin: 0 !important;
-  }
-  .coll .chead2 .titlewrap > .bindermenu .bmbtn {
-    max-width: 38vw;
-    min-width: 0;
-    font-size: 13px;
-    padding-left: 8px;
-    padding-right: 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   /* The tag names the binder; the word BINDER above it only said the same thing twice. */
-  .coll .chead2 .titlewrap > .bindermenu .bmbtn .lbl {
-    display: none;
-  }
   /* The tag now sits at the right end of the title, so its menu hangs from that end and stays on the screen. */
-  .coll .chead2 .titlewrap > .bindermenu .bmenu {
-    left: auto !important;
-    right: 12px !important;
-  }
 }
 
 /* ── Collection: swipe between CARDS and ANALYTICS (Guillermo, Nov 15) ──
@@ -2382,9 +2162,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
     transform: rotate(-1.5deg) translateX(-6px);
   }
 }
-.coll.swipehint .ctabset {
-  animation: collnudge 1.5s 0.1s ease-in-out 2 both;
-}
 @keyframes collnudge {
   0%,
   62%,
@@ -2396,12 +2173,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   }
   44% {
     transform: translateX(4px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .coll.swipehint .ctabset,
-  :is(.coll, .dlist) .ctab-hint {
-    animation: none;
   }
 }
 
@@ -2637,28 +2408,15 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
    inside the one frame, divided by hairlines instead of gaps, and the lane that was empty on the right of
    the tools (the sort) takes that space so its words read in full. Nothing moved out of reach. */
 @media (max-width: 700px) {
-  .coll .chead2 { margin-bottom: 0 !important; padding: 2px 0 4px !important; }
-  .coll .chead2 .titlewrap { padding-top: 6px !important; padding-bottom: 4px !important; }
   :is(.coll, .dlist) .ctabs { margin: 4px 0 0 !important; padding: 3px 4px !important; gap: 4px !important; }
-  .coll .ctabs { flex-wrap: nowrap !important; }
-  .coll .ctabset { gap: 4px !important; }
   :is(.coll, .dlist) .ctab { min-height: 44px !important; padding: 0 8px !important; font-size: 13px !important; }
   :is(.coll, .dlist) .ctab-acts { gap: 4px !important; }
   :is(.coll, .dlist) .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 8px !important; font-size: 12.5px !important; }
-  .coll .coll-listbar { padding: 3px 6px !important; }
-  .coll .coll-listbar .list-tab { min-height: 44px !important; padding: 0 10px !important; }
-  .dpage.coll .collbar { padding-top: 2px !important; padding-bottom: 2px !important; }
-  .dpage.coll .collbar > .dtools.tbar { gap: 2px !important; }
-  .coll .dtools.tbar > .tsearch { min-height: 44px !important; }
   /* the tool lane: view, size, ⋮, filter, then the sort taking the rest of the line */
-  .coll .dtools.tbar > .tquick { padding: 0 2px !important; gap: 6px !important; }
-  .coll .dtools.tbar > .sortsel { flex: 1 1 0 !important; min-width: 88px !important; }
   .coll .dtools.tbar > .sortsel select { width: 100% !important; font-size: 13px !important; }
 }
 /* The lanes are flush now, so the first-run tag can't hang on a seam without covering a control: while it shows,
    the tabs lane opens a strip of its own for it, at every width, and that strip goes away with the tag. */
-.coll.swipehint .ctabs { padding-bottom: 24px !important; }
-:is(.coll, .dlist) .ctab-hint { left: 10px; right: auto; bottom: 4px; }
 
 /* The GEAR and BUY UNDER tiles kept the full-size segmented control's 58px frame while their buttons were shrunk to
    28px inside the sheet, which left an empty white band under each one. The frame now takes the height of the tiles. */
@@ -2671,10 +2429,7 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 
 /* Tablet and desktop keep the same four flush lanes; only the air inside them is larger than a phone's. */
 @media (min-width: 701px) {
-  .coll .chead2 { margin-bottom: 0 !important; }
   :is(.coll, .dlist) .ctabs { margin: 8px 0 0 !important; padding: 5px 6px !important; }
-  .coll .coll-listbar { padding: 5px 8px !important; }
-  .dpage.coll .collbar { padding-top: 4px !important; padding-bottom: 4px !important; }
 }
 
 /* A panel longer than the screen scrolls inside itself, with its footer riding the bottom edge, rather than running
@@ -2718,12 +2473,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   gap: 6px 10px;
 }
 @media (min-width: 701px) {
-  .coll .chead2 .titlewrap {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px 10px;
-  }
   .coll .chead2 .titlewrap > .ztitle { flex: 0 0 auto; }
 }
 .dlist .decksbar .titlewrap > .ztitle { flex: 0 0 auto; }
@@ -2785,8 +2534,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
     box-shadow: none !important;
     background: #0d0d10 !important;
   }
-  .coll .coll-listbar { border-top: 0 !important; border-radius: 6px 6px 0 0 !important; }
-  .dpage.coll #cpane-cards .collbar { border-radius: 0 0 6px 6px !important; }
 }
 
 /* ── ROUND 6 · THE SYNC BUBBLE READS LIKE THE ISLAND (Guillermo, Nov 15: "the font here is hard to read") ──
@@ -3047,9 +2794,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* The chart cards lose their white outline too (same note): a chart is read, not framed. They keep the ink, the
    halftone dots, the hard shadow and the tilt that tie them to the stat tiles — only the white line goes. */
-.apanel .acard {
-  border-color: #2c2c34 !important;
-}
 
 /* An island that has gone away is see-through and slid off its edge, but a sliver of it stays inside the screen (it
    rests a few px in from the edge). Invisible, it must not eat the tap meant for the button underneath it. */
@@ -3076,9 +2820,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* The chosen tab stays a white paper slab (a cut-out tab, not a frame round the content); only the list tabs lose
    their white outline. */
-.list-tab.active {
-  border-color: var(--accent, #e60012) !important;
-}
 
 /* The one tool bar: search, view, filter and sort are divided by hairlines, not white rules. */
 :is(.dtools, .collbar, .tbar) :is(.fbtn, .sortsel, .tquick, .vpill, .tsearch),
@@ -3133,25 +2874,11 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 }
 
 /* TOP 3: the same carbon paper as the tiles, its pen frame drawn in the hairline colour, its title on yellow tape. */
-.topwidget {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.2px, transparent 1.6px) !important;
-  background-size: 5px 5px !important;
-}
-.topwidget > .pen {
-  border-color: var(--edge2) !important;
-}
 
 /* The analytics cards sit in the same family. */
-.apanel .acard,
-.acard {
-  border-color: var(--edge2) !important;
-}
 
 /* The last white edges on the furniture: the chosen tab, the view segment, the first stat tile's left edge, and the
    colour pips on a deck tile. */
-.qsegs.qviews > button {
-  border-color: var(--edge) !important;
-}
 :is(.coll, .dlist) .stats .stat:first-child,
 .dlist .dstats > .stat:first-child {
   border-left-color: var(--edge2) !important;
@@ -3217,25 +2944,10 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* Collection: the appraised slip is a receipt, not a banner — it stops at a readable width so the row keeps its
    rhythm, and TOP 3 takes the space that is left. */
-@media (min-width: 701px) {
-  .coll .slip {
-    flex: 0 1 460px !important;
-    max-width: 460px !important;
-  }
-}
 
 /* The worth line keeps a readable height instead of a tall empty box. (The analytics grid itself, spans and
    alignment, lives in the dashboard block at the end of this file: Phase 2 revision, Nov 23.) */
-.apanel .aline {
-  height: 132px !important;
-}
 /* TOP 3 holds three cards, so its frame stops after them instead of leaving an empty fourth slot. */
-@media (min-width: 701px) {
-  .coll .topwidget {
-    flex: 0 1 420px !important;
-    max-width: 420px !important;
-  }
-}
 
 /* The search box itself: a hairline, like the bar it sits in (it still had a white outline on phones). */
 .sbox {
@@ -3667,10 +3379,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* Phones: the cards start right under the tools (the one-block rule, Nov 15). With the ⋮ and the search sharing the
    top row the block is one row shorter; this keeps the breathing space under it in proportion. */
-@media (max-width: 700px) {
-  .coll .collbar { margin-bottom: 8px !important; }
-  .coll .cgrid2 { padding-top: 8px !important; }
-}
 
 /* ── Big binders stay quick (Phase 5A, Nov 20). The phone used to draw every card in the grid, even thousands of
    cards off screen, and a foil card's shine animated whether you could see it or not: past ~1,000 cards each
@@ -3679,14 +3387,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
      holds its exact place and the page never jumps; `auto` then remembers each card's real size once drawn.
    - the price tape, the copy counter and the ⋮ button reach a little past the card's edge: overflow-clip-margin
      keeps that room. A browser that can't keep the room (older Safari) draws every card as before. */
-@supports (content-visibility: auto) and (overflow-clip-margin: 1px) {
-  .cgrid2 > .ctile {
-    content-visibility: auto;
-    contain-intrinsic-size: auto none;
-    aspect-ratio: 63 / 88;
-    overflow-clip-margin: 32px;
-  }
-}
 
 /* ── My Decks wears Collection's top (Guillermo, Nov 19: "make the two sections look cohesive") ───────────
    DECKS | STATS are the same two stamps as CARDS | ANALYTICS, and + NEW DECK / IMPORT the same ink and red labels
@@ -3714,26 +3414,9 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* Collection's first-run "swipe ⇄" tag sat on top of the CARDS stamp when the tabs ride the title band (desktop and
    tablet): there it hangs just under the band instead, clear of every button. */
-.titlewrap > .titleacts .ctab-hint {
-  top: calc(100% + 6px);
-  bottom: auto;
-  left: 0;
-}
 
 /* Top 3 lies flat (Guillermo, Nov 19): no fan tilt on the cards or their price tags, so each card reads straight.
    The hover lift stays, without the turn. */
-.topwidget li,
-.topwidget .tw.price {
-  transform: none;
-}
-.topwidget li:hover {
-  transform: translateY(-4px) scale(1.05);
-}
-@media (prefers-reduced-motion: reduce) {
-  .topwidget li:hover {
-    transform: none;
-  }
-}
 
 /* Phones (Nov 19): deck theme and tag badges are read-only labels, a size you can read. A tap goes to the tile. */
 .dcard .dtags.plain .themebadge,
@@ -3795,158 +3478,13 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
    3. Wide screens: a 12-column grid with one gap everywhere. Worth over time takes 8 columns and AT A GLANCE the
       4 beside it; the six charts sit three to a row, every card in a row the same height, nothing tilted, so the
       edges line up like a dashboard. Phones keep one column and the slight tilt of the stat tiles. */
-.apanel .acard {
-  --ac: #e60012;
-}
-.apanel .ak-worth {
-  --ac: #39ff88;
-}
-.apanel .ak-glance {
-  --ac: #fff824;
-}
-.apanel .ak-decks {
-  --ac: #2bd65a;
-}
-.apanel .ak-colours {
-  --ac: #e8c35a;
-}
-.apanel .ak-curve {
-  --ac: #3b6cff;
-}
-.apanel .ak-types {
-  --ac: #b38cff;
-}
-.apanel .ak-rarity {
-  --ac: #ff8a3d;
-}
-.apanel .ak-sets {
-  --ac: #e60012;
-}
-.apanel .acard h3 {
-  border-bottom-color: var(--ac) !important;
-}
-.apanel .acard::before {
-  /* a strip of coloured tape on the top-left corner, the chart's colour */
-  content: '';
-  position: absolute;
-  top: -5px;
-  left: 14px;
-  width: 38px;
-  height: 9px;
-  background: var(--ac);
-  opacity: 0.9;
-  transform: rotate(-3deg);
-  clip-path: polygon(0 12%, 100% 0, 97% 100%, 3% 88%);
-  pointer-events: none;
-}
-.apanel .afig {
-  align-self: center;
-  padding: 2px 5px 1px;
-  border: 1px solid var(--ac);
-  font: 400 10px/1 var(--u-mono, monospace);
-  letter-spacing: 0.06em;
-  color: var(--ac);
-}
 /* bars: the chart's colour by default, in the same zine stripe as before */
-.apanel .abar {
-  --bar: var(--ac);
-}
-.apanel .afill,
-.apanel .abar.good .afill {
-  background: repeating-linear-gradient(135deg, var(--bar) 0 6px, color-mix(in srgb, var(--bar) 72%, #000) 6px 12px) !important;
-}
 /* COLOURS: each bar in its mana colour (readable on black; black mana as a violet-grey) */
-.apanel .ak-colours .k-W { --bar: #f3ecd2; }
-.apanel .ak-colours .k-U { --bar: #3b8bff; }
-.apanel .ak-colours .k-B { --bar: #9a86b8; }
-.apanel .ak-colours .k-R { --bar: #ff4a3d; }
-.apanel .ak-colours .k-G { --bar: #3fbf6a; }
-.apanel .ak-colours .k-C { --bar: #a9a9b4; }
-.apanel .ak-colours .k-M { --bar: #e8c35a; }
 /* RARITY: the set-symbol colours */
-.apanel .ak-rarity .k-common { --bar: #8f8f9c; }
-.apanel .ak-rarity .k-uncommon { --bar: #c4d2df; }
-.apanel .ak-rarity .k-rare { --bar: #e6c15a; }
-.apanel .ak-rarity .k-mythic { --bar: #ff6a2b; }
-.apanel .ak-rarity .k-other { --bar: #6b6b78; }
 /* IN YOUR DECKS: idle is grey, in a deck is ownership green */
-.apanel .ak-decks .k-idle { --bar: #6b6b78; }
-.apanel .abar .alabel::before {
-  /* a colour key beside every label, so a bar can be read by its colour too */
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 6px;
-  background: var(--bar);
-  vertical-align: 0;
-}
-
-@media (min-width: 701px) {
-  .apanel .agrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 24px 16px !important;
-    align-items: stretch !important;
-  }
-  .apanel .acard,
-  .apanel .acard:nth-child(even),
-  .apanel .acard.awide {
-    transform: none !important;
-  }
-  .apanel .acard.awide {
-    grid-column: 1 / -1 !important;
-  }
-}
-@media (min-width: 1100px) {
-  .apanel .agrid {
-    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
-    gap: 24px !important;
-  }
-  .apanel .acard {
-    grid-column: span 4 !important;
-  }
-  .apanel .acard.ahistory {
-    grid-column: span 8 !important;
-  }
-  .apanel .acard.aglance {
-    grid-column: span 4 !important;
-    display: flex;
-    flex-direction: column;
-  }
-  /* beside the line, AT A GLANCE reads top to bottom: three ruled rows */
-  .apanel .aglance .areads {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    margin: 0;
-    flex: 1;
-    align-content: space-between;
-  }
-  .apanel .aglance .areads > div {
-    padding: 10px 0;
-    border-bottom: 1px dashed #2c2c3a;
-  }
-  .apanel .aglance .areads > div:last-child {
-    border-bottom: 0;
-  }
-  .apanel .ahistory .aline {
-    height: 168px !important;
-  }
-}
 
 /* Every bar in a chart starts and ends on the same line: the rows share one set of columns (label, track, count,
    worth), so a long label no longer pushes its own track out of line with the others. */
-@supports (grid-template-columns: subgrid) {
-  .apanel .abars {
-    display: grid;
-    grid-template-columns: fit-content(40%) minmax(0, 1fr) auto auto;
-    column-gap: 8px;
-    row-gap: 6px;
-  }
-  .apanel .abars > .abar {
-    grid-column: 1 / -1;
-    grid-template-columns: subgrid !important;
-  }
-}
 
 /* ---------- My Decks: COMPARE (Nov 24, deck-analysis plan step 1) ----------
    Level 2 frame, Level 1 numbers: the same ink strip and hard shadow as the tab bar around the picks; inside, a plain

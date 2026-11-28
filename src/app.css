@@ -1,6 +1,7 @@
 /* App styles that used to live in src/tokens.css (cleanup Phase A step 1, Nov 28). Each file is one contiguous part of the
    old file, imported here in the old order and unlayered as before, so the cascade is unchanged. src/tokens.css keeps
    only the design tokens. Later Phase A steps fold these into each feature's own stylesheet. */
+@import './features/collection/collection.legacy.css';
 @import './features/brand/BrandMark.css';
 @import './features/discover/discover-tabs.css';
 @import './features/decks/deck-strip.css';

@@ -1651,17 +1651,6 @@ main.dpage {
 .dpage .tquick .qsegs:not(.qviews) button + button {
   border-left: 0;
 }
-.dpage .tquick .qsegs:not(.qviews) button:first-child {
-  border-radius: 6px 0 0 6px;
-}
-.dpage .tquick .qsegs:not(.qviews) button:last-child {
-  border-radius: 0 6px 6px 0;
-}
-.dpage .tquick .qsegs:not(.qviews) button[aria-pressed='true'] {
-  background: var(--u-text);
-  color: var(--u-ink);
-  border-color: var(--u-text);
-}
 .dpage .tquick .qsegs.qviews button {
   min-height: 36px;
   height: 36px;
@@ -1680,17 +1669,6 @@ main.dpage {
 }
 .dpage .tquick .qsegs.qviews button + button {
   border-left: 0;
-}
-.dpage .tquick .qsegs.qviews button:first-child {
-  border-radius: 6px 0 0 6px;
-}
-.dpage .tquick .qsegs.qviews button:last-child {
-  border-radius: 0 6px 6px 0;
-}
-.dpage .tquick .qsegs.qviews button[aria-pressed='true'] {
-  background: var(--u-text);
-  color: var(--u-ink);
-  border-color: var(--u-text);
 }
 
 /* Options menu (⋮) overhaul: clean scrolling, no overlapping theme chips, tamed select dropdowns */
@@ -3501,19 +3479,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   }
 }
 
-.coll .slip-top {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 16px !important;
-  flex-wrap: wrap !important;
-}
-
-.coll .slip-val {
-  flex: 1 1 auto !important;
-  min-width: 180px !important;
-}
-
 :is(.coll, .dlist) .slip-btn {
   display: inline-flex !important;
   align-items: center !important;
@@ -3616,14 +3581,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   right: 0 !important;
   height: 4px !important;
   background: repeating-linear-gradient(-45deg, var(--ink, #0a0a0a) 0 4px, transparent 4px 8px) !important;
-}
-
-.coll .slip .warn:before {
-  top: 1px !important;
-}
-
-.coll .slip .warn:after {
-  bottom: 1px !important;
 }
 
 /* APPRAISED red ink stamp */
@@ -5830,22 +5787,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   .coll .slip {
     transform: none !important;
   }
-  .coll .slip {
-    max-width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-  .coll .slip .se.small {
-    display: block;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-  .coll .slip .stamp {
-    max-width: 42%;
-    right: 8px;
-    top: 8px;
-    white-space: nowrap;
-  }
 }
 
 /* Sort row (Discover) and tag row (Decks): one line that scrolls side to side. */
@@ -5989,14 +5930,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 
 
 /* Collection on phones: the SIZE button stays on the bar (the view pills still go to the ⋮ menu). */
-@media (max-width: 700px) {
-  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) {
-    display: inline-flex !important;
-  }
-  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs {
-    display: none !important;
-  }
-}
 
 /* Jump rail (ManaBox idea, Interface precision): a slim column of section tags beside a long card list. Content, not
    frame: flat carbon, hairline outline, condensed mono tags, no tape or tilt. The lit tag is inverse (not red: red is
