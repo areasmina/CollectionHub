@@ -1,0 +1,67 @@
+/* THE ONE BAR (Nov 28): FILTER · search · DISPLAY on one row at every width, and the sheet both buttons open.
+   Built on the old bar's classes (.dtools.tbar, .fbtn, .tsearch, .fsheet2), so pinning, the island lane, hairlines and
+   the sheet's look carry over; these rules only place the three parts and add DISPLAY and the swipe handle. */
+.dtools.tbar.onebar {
+  display: flex;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+}
+.dtools.tbar.onebar > .tsearch {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  border-bottom: 0 !important;
+}
+/* FILTER sits first, where ⋮ used to: its rule is on the right, against the search */
+.dtools.tbar.onebar > .ob-filter {
+  order: 0;
+  border-left: 0;
+  border-right: 1px solid var(--edge, #23232a);
+}
+.dtools.tbar.onebar > .ob-display {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid var(--edge, #23232a);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ob-display .ob-caret { color: var(--accent); font-size: 12px; }
+/* sort or group changed from the page's usual one: a small highlighter dot beside the label */
+.ob-display .ob-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mo-yellow, #fff824); flex: none; }
+.ob-display:hover,
+.dtools.tbar.onebar > .ob-filter:hover { background: var(--mo-surface-hover, #212129); }
+.dtools.tbar.onebar > .ob-filter.on:hover { background: var(--text); }
+@media (max-width: 360px) {
+  .dtools.tbar.onebar > .ob-display { padding: 0 8px; gap: 4px; }
+}
+
+/* a setting's current value beside its name, in the highlighter yellow */
+.ob-choice .lbl { display: flex; align-items: baseline; gap: 8px; }
+.ob-val { font: 700 12px var(--mo-mono, ui-monospace, monospace); font-style: normal; color: var(--mo-yellow, #fff824); letter-spacing: 0.04em; }
+
+/* the sheet: drag its top edge down on a phone to close it */
+.ob-sheet { transition: transform 0.22s var(--mo-ease-out, ease-out); }
+.ob-sheet.ob-dragging { transition: none; }
+.ob-sheet > .nh { position: relative; }
+.ob-handle { display: none; }
+@media (max-width: 700px) {
+  .ob-sheet > .ob-grab { touch-action: none; cursor: grab; padding-top: 18px; }
+  .ob-handle { display: block; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: var(--mo-line-2, #3a3a46); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-sheet { transition: none; }
+}
+
+/* a tick box inside a sheet (e.g. "Hide sets with no cards"): a 44px row and a 24px box, the old ⋮ sheet's touch rule */
+.ob-sheet label.check { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.ob-sheet label.check input[type='checkbox'] { width: 24px; height: 24px; flex: none; margin: 0; accent-color: var(--accent); }

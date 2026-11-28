@@ -1,8 +1,8 @@
 import { haptic } from '../lib/haptics';
-import { GridIcon, ListIcon } from './zine';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { db, type Card, type Entry } from '../lib/db';
-import { EmptyState, OptRow, PriceLink, priced, Thumb, ToolBar, useMenuPress } from './shared';
+import { EmptyState, PriceLink, priced, SearchBox, Thumb, useMenuPress } from './shared';
+import { Choice, DisplayBtn, OneBar, Sheet } from '../features/shared/OneBar';
 import { CardMenu, type Toast } from './CardMenu';
 import { YourCopies } from './YourCopies';
 import { norm } from '../lib/names';
@@ -275,8 +275,14 @@ function Items({ list, cards, view, onMenu, onPick, used, tints, freeOf }: { lis
 }
 
 /** The binder's cards: list or grid, optionally grouped by Magic set. */
-/** `search` sits first on the tools row; `more` adds items (e.g. exports) to its ⋯ menu. */
-export function CardsView({ entries, cards, profile, binderName, q = '', setQ, more, title, strip, chips, empty }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; more?: ReactNode; title?: ReactNode; strip?: ReactNode; chips?: ReactNode; empty?: ReactNode }) {
+/** `filter` is the page's FILTER button (first on the one bar); `sort` joins view, size and group in DISPLAY. */
+export type SortSpec = { value: string; options: readonly (readonly [string, string])[]; onChange: (v: string) => void };
+const VIEWS = [['grid', '▦ GRID'], ['list', '☰ LIST']] as const;
+const SIZES = [['s', 'S'], ['m', 'M'], ['l', 'L']] as const;
+const GROUPS = [['off', 'NONE'], ['on', 'BY SET']] as const;
+export function CardsView({ entries, cards, profile, binderName, q = '', setQ, title, filter, sort, chips, empty }: { entries: Entry[]; cards: Map<string, Card>; profile?: number; binderName?: string; q?: string; setQ?: (v: string) => void; title?: ReactNode; filter?: ReactNode; sort?: SortSpec; chips?: ReactNode; empty?: ReactNode }) {
+  const [disp, setDisp] = useState(false);
+  const closeDisp = useCallback(() => setDisp(false), []);
   const [menu, setMenu] = useState<{ e: Entry; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   useEffect(() => {
@@ -337,55 +343,29 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
           )}
         </div>
       )}
-      {/* One row: search, quick List/Grid + S/M/L pills, and a ⋯ menu for the rarely used options (grouping, exports). */}
-      {/* Title and the tools bar share one line */}
+      {/* The one bar (Nov 28): FILTER · search · DISPLAY. DISPLAY holds the view, card size, sort and group-by-set. */}
       <div className="collbar" data-zoom={zoom}>
         {title}
-        {/* One slim row (owner's rule): search, quick view/size pills, then ⋮ with card size, list / grid, group by set and the exports */}
-        <ToolBar
-          q={q}
-          setQ={setQ ?? (() => {})}
-          extra={strip}
-          now={[view === 'list' ? 'LIST' : '', group === 'on' ? 'BY SET' : ''].filter(Boolean).join(' · ')}
-          quick={
-            <>
-              <div className="qsegs qviews" role="group" aria-label="Quick view">
-                <button type="button" aria-pressed={view === 'list'} aria-label="List view" title="List view" onClick={() => (haptic('select'), setView('list'))}>
-                  <ListIcon />
-                </button>
-                <button type="button" aria-pressed={view === 'grid'} aria-label="Grid view" title="Grid view" onClick={() => (haptic('select'), setView('grid'))}>
-                  <GridIcon />
-                </button>
-              </div>
-              {view === 'grid' && (
-                <button
-                  type="button"
-                  className="u-btn ghost qzoom-btn"
-                  title={{ s: 'Size: Small. Tap for Medium', m: 'Size: Medium. Tap for Large', l: 'Size: Large. Tap for Small' }[zoom]}
-                  aria-label={`Card size ${zoom.toUpperCase()}: tap to cycle size`}
-                  onClick={() => {
-                    haptic('select');
-                    setZoom(zoom === 's' ? 'm' : zoom === 'm' ? 'l' : 's');
-                  }}
-                >
-                  SIZE {zoom.toUpperCase()}
-                </button>
-              )}
-            </>
-          }
-        >
-
-          <label className="check">
-            <input type="checkbox" checked={group === 'on'} onChange={(e) => (haptic('select'), setGroup(e.target.checked ? 'on' : 'off'))} /> Group by set
-          </label>
+        <OneBar
+          label="Cards: filter, search and display"
+          filter={filter}
+          search={<SearchBox q={q} setQ={setQ ?? (() => {})} />}
+          display={<DisplayBtn now={view === 'grid' ? `GRID · ${zoom.toUpperCase()}` : 'LIST'} open={disp} onClick={() => setDisp(true)} changed={[sort && sort.value !== sort.options[0][0] ? `sorted ${sort.options.find(([v]) => v === sort.value)?.[1].toLowerCase()}` : '', group === 'on' ? 'grouped by set' : ''].filter(Boolean).join(', ')} />}
+        />
+      </div>
+      {disp && (
+        <Sheet title="DISPLAY" seed={47} label="Display" onClose={closeDisp} foot={<button type="button" className="u-btn primary" onClick={closeDisp}>DONE</button>}>
+          <Choice label="View" now={view === 'grid' ? 'GRID' : 'LIST'} value={view} options={VIEWS} onChange={setView} />
+          {view === 'grid' && <Choice label="Card size" now={zoom.toUpperCase()} value={zoom} options={SIZES} onChange={setZoom} />}
+          {sort && <Choice label="Sort" now={sort.options.find(([v]) => v === sort.value)?.[1]} value={sort.value} options={sort.options} onChange={sort.onChange} />}
+          <Choice label="Group" value={group} options={GROUPS} onChange={setGroup} />
           {group === 'on' && (
             <label className="check">
               <input type="checkbox" checked={hideEmpty === 'on'} onChange={(e) => (haptic('select'), setHideEmpty(e.target.checked ? 'on' : 'off'))} /> Hide sets with no cards
             </label>
           )}
-          {more && <div className="optmore">{more}</div>}
-        </ToolBar>
-      </div>
+        </Sheet>
+      )}
       {chips}
 
       {group === 'on' ? (
@@ -400,7 +380,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, m
                   </button>
                 }
               >
-                Scryfall didn't answer, so the cards can't be grouped by set right now. Your cards are safe; turn off "Group by set" in ⋮ to see them.
+                Scryfall didn't answer, so the cards can't be grouped by set right now. Your cards are safe; set Group to NONE in DISPLAY to see them.
               </EmptyState>
             ) : (
               <p className="count">Loading Magic sets from Scryfall…</p>

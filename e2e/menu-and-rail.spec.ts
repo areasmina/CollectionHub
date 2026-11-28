@@ -60,8 +60,15 @@ test('A card\'s ⋮ is faint until you point at it', async ({ page }) => {
   expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(24);
 });
 
-test('The ⋮ options button is the first thing on a tool bar', async ({ page }) => {
-  for (const tab of ['discover', 'collection'] as const) {
+// Nov 16 rule ("⋮ first on every tool bar"), updated by the one bar (Nov 28): the first thing on a bar is the button
+// that opens its settings, FILTER on a screen that has moved onto the one bar (Collection so far), ⋮ on the others.
+test('The settings button is the first thing on a tool bar: FILTER on the one bar, ⋮ on the older bars', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
+  await page.reload();
+  const one = page.locator('.coll .onebar');
+  await expect(one).toBeVisible();
+  expect(await one.evaluate((b) => b.firstElementChild?.classList.contains('ob-filter'))).toBe(true);
+  for (const tab of ['discover'] as const) {
     await page.evaluate((t) => localStorage.setItem('ch:tab', t), tab);
     await page.reload();
     const bar = page.locator('.dtools.tbar').first();

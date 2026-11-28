@@ -69,8 +69,9 @@ test('Collection opens as one block: four lanes, no gaps between them, cards nea
   // Since Nov 15 the tabs ride the ransom title band above 700px, so there the block is the list ribbon and the tools
   const phone = info.project.name === 'phone';
   if (!phone) await expect(page.locator('.coll .titleacts .ctab').first()).toBeVisible();
-  // phones (Nov 27): the folders moved into the FILTER sheet, so the tabs lane touches the tools lane
-  const lanes = phone ? ['.coll .ctabs', '.coll .collbar'] : ['.coll .coll-listbar', '.coll .collbar'];
+  // the folders live in the FILTER sheet (phones Nov 27, every width Nov 28): on phones the tabs lane touches the bar;
+  // wider, the tabs ride the title band and the bar is the whole block
+  const lanes = phone ? ['.coll .ctabs', '.coll .collbar'] : ['.coll .collbar'];
   for (const sel of lanes) await expect(page.locator(sel), `${sel} is missing`).toBeVisible();
   // the lanes touch: no empty band between the tabs, the list ribbon and the tools
   // (neighbouring lanes share their 2px rule, so a 2px overlap is that rule, not a gap). Measured once the page has
@@ -78,7 +79,7 @@ test('Collection opens as one block: four lanes, no gaps between them, cards nea
   const gaps = async () => {
     const boxes = [];
     for (const sel of lanes) boxes.push((await page.locator(sel).boundingBox())!);
-    return Math.max(...boxes.slice(1).map((b, i) => Math.abs(b.y - (boxes[i].y + boxes[i].height))));
+    return Math.max(0, ...boxes.slice(1).map((b, i) => Math.abs(b.y - (boxes[i].y + boxes[i].height))));
   };
   await expect.poll(gaps, { message: 'a gap opened between the lanes' }).toBeLessThanOrEqual(3);
   // the binder starts near the top, not a third of the way down

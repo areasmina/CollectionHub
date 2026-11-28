@@ -381,3 +381,24 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   mockup first).
 - Card tilt (3D deck stacks, fanned Your Copies) and the removed Supabase sign-in: left as they are for now, to revisit.
 
+
+## 2026-11-28: The one bar, Search · FILTER · DISPLAY (Guillermo)
+- Every list screen (Collection, My Decks, Discover, the commander page, a saved deck and the Forge, the tag graph) gets
+  one slim row: **FILTER** first (where ⋮ used to be), the **search**, then **DISPLAY**. Shared parts in
+  `features/shared/OneBar.tsx`; screens move onto it one pull request at a time, Collection first.
+- FILTER decides which cards show and counts what is on. DISPLAY decides how they look and in what order: view
+  (grid / list / compact), card size, sort and group. Its button names what is on ("GRID · M", "LIST"), so the view and
+  size are one tap away and never read as lost. This replaces the Nov 13 rule that view and SIZE sit on the bar, and the
+  Nov 16 rule that ⋮ is first on every tool bar (Guillermo's explicit override, Nov 28).
+- Chips show under the bar only while a filter is on, with Clear all and "N of M shown". At rest nothing else sits
+  between the bar and the cards: no folder, tag or status rows. Folders are in FILTER at every width.
+- Page actions (export, share, import, deck tools) never sit on the bar: they live in the page's own menu (the binder
+  menu on Collection, TOOLS on a saved deck). Collection's EXPORT CSV / TEXT left the bar; the binder menu's EXPORT THIS
+  BINDER (CSV · TXT · CollectionHub) already did the same job.
+- Both sheets are the one sheet: a bottom sheet on phones that closes with a swipe down (our own code, no new library:
+  vaul and shadcn were considered and declined), a panel wider; ✕, Escape and the dimmed page close it too, and focus
+  goes back to the button. FILTER ends with RESET · SHOW N; DISPLAY with DONE. Sort and group always live in DISPLAY, never in FILTER;
+  DISPLAY shows a small dot when either is not the page's usual one (Guillermo, Nov 28).
+- Still to move onto it: My Decks (status chips into FILTER), Discover (colour and sort out of ⋮), the commander page,
+  saved deck and Forge (⋮ OPTIONS into FILTER with an EDHREC section; + MY CARDS becomes a DECK | MINE switch in the
+  search), the tag graph. Proposal and mockups: https://claude.ai/artifact/6u8UKmLXHcATCtZhCmZ9mm

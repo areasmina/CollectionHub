@@ -14,14 +14,17 @@ for (const [w, h] of [[320, 568], [360, 640]] as const) {
       expect(box!.x, `${sel} left edge`).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width, `${sel} right edge`).toBeLessThanOrEqual(w);
     };
-    // the options (⋮) menu of the binder's tool bar
+    // the binder's DISPLAY and FILTER sheets (the one bar, Nov 28; they replaced its ⋮ options menu)
     await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
     await page.reload();
-    const more = page.locator('details.tbmore').first();
-    await more.locator('summary').click();
-    await expect(more.locator('.fbody')).toBeVisible();
-    await page.waitForTimeout(200);
-    await inside('details.tbmore[open] > .fbody');
+    for (const name of [/^Display:/, /^Filter/]) {
+      await page.getByRole('button', { name }).first().click();
+      await expect(page.locator('.fsheet2')).toBeVisible();
+      await page.waitForTimeout(200);
+      await inside('.fsheet2');
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.fsheet2')).toHaveCount(0);
+    }
     // the notes on a deck page (bracket, salt, readiness): every one that opens
     await page.evaluate(() => localStorage.setItem('ch:tab', 'decks'));
     await page.reload();

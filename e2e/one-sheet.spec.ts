@@ -39,7 +39,7 @@ test('Options: a bottom sheet on phones, a popover under ⋮ on wider screens, o
   const pages: [string, () => Promise<unknown>][] = [
     ['discover', async () => {}],
     ['commander', () => page.locator('.ccard').first().click()],
-    ['collection', () => go(page, 'collection')],
+    // Collection left this list on Nov 28: it is on the one bar (FILTER and DISPLAY sheets, e2e/one-bar.spec.ts)
     ['deck', async () => (await go(page, 'decks'), await page.locator('.dcard').first().click())],
   ];
   for (const [name, open] of pages) {

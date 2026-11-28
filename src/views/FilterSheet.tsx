@@ -1,11 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, type ReactNode } from 'react';
 import { haptic } from '../lib/haptics';
-import { ManaIcon, Ransom } from './zine';
+import { ManaIcon } from './zine';
+import { FilterBtn, Sheet } from '../features/shared/OneBar';
 import { COLOURS, COLOUR_NAME, FINISH_LABEL, MVS, PRICES, PRICE_LABEL, RARITIES, RARITY_LABEL, SHOW_LABEL, TYPES, filterChips, filterCount, noFilter, toggled, type CollFilter, type Finish, type Show } from '../lib/collfilter';
 
-/** The Filter button of the control strip: a count when something narrows the list, and a sheet with the choices.
- *  The sheet sits at the bottom of the screen on a phone (thumb reach) and as a panel on wider screens. */
+/** Collection's FILTER: first on the one bar, with a count when something narrows the list, and the sheet with the
+ *  choices (a bottom sheet on a phone, swipe it down to close; a panel on wider screens). */
 export function FilterButton({
   filter,
   setFilter,
@@ -13,137 +13,122 @@ export function FilterButton({
   total,
   folders,
   folderOn = false,
+  onReset,
 }: {
   filter: CollFilter;
   setFilter: (f: CollFilter) => void;
   shown: number;
   total: number;
-  /** Phones (Nov 27): the binder's folders open here, at the top of the sheet, instead of a row on the page. */
+  /** The binder's folders open at the top of the sheet (Nov 27 on phones; every width since the one bar, Nov 28). */
   folders?: ReactNode;
   /** A folder other than ALL is picked: it counts on the button like a filter. */
   folderOn?: boolean;
+  /** RESET also goes back to ALL folders. */
+  onReset?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const n = filterCount(filter) + (folderOn ? 1 : 0);
-  useEffect(() => {
-    if (!open) return;
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    addEventListener('keydown', esc);
-    return () => removeEventListener('keydown', esc);
-  }, [open]);
   const pick = (kind: Parameters<typeof toggled>[1], v: string) => (haptic('select'), setFilter(toggled(filter, kind, v)));
+  const close = () => setOpen(false);
   return (
     <>
-      <button type="button" className={`fbtn${n ? ' on' : ''}`} aria-haspopup="dialog" aria-expanded={open} aria-label={n ? `Filter, ${n} active` : 'Filter'} onClick={() => (haptic('open'), setOpen(true))}>
-        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-          <path d="M2 4h14M5 9h8M7.5 14h3" fill="none" stroke="currentColor" strokeWidth="2" />
-        </svg>
-        <span className="flabel">FILTER</span>
-        {n > 0 && <b className="fcount">{n}</b>}
-      </button>
-      {open &&
-        // in the page body, not inside the sticky bar: the bar's own layer would put the sheet under the bottom nav
-        createPortal(
-        <>
-          <div className="backdrop fbackdrop" onClick={() => setOpen(false)} />
-          <div className="fsheet2" role="dialog" aria-modal="true" aria-label="Filter cards">
-            <div className="nh">
-              <span aria-hidden="true">
-                <Ransom text="FILTER CARDS" size={24} seed={41} />
-              </span>
-              <button type="button" className="close" onClick={() => setOpen(false)} aria-label="Close filter">✕</button>
-            </div>
-            <div className="fs-body">
-              {folders && (
-                <div className="fs-group fs-folders">
-                  <span className="lbl">Folder</span>
-                  {folders}
-                </div>
-              )}
-              <div className="fs-group">
-                <span className="lbl">Colours</span>
-                {/* the same mana buttons as Discover's colour filter (one part, one look) */}
-                <div className="fs-row colours">
-                  {COLOURS.map((c) => (
-                    <button key={c} type="button" data-c={c} className="u-chip mana-filter-btn" aria-pressed={filter.colours.includes(c)} aria-label={COLOUR_NAME[c]} title={COLOUR_NAME[c]} onClick={() => pick('colours', c)}>
-                      {c === 'C' ? <b className="cless">◇</b> : <ManaIcon c={c} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="fs-group">
-                <span className="lbl">Type</span>
-                <div className="fs-row">
-                  {TYPES.map((t) => (
-                    <button key={t} type="button" className="u-chip" aria-pressed={filter.types.includes(t)} onClick={() => pick('types', t)}>
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="fs-group">
-                <span className="lbl">Show</span>
-                <div className="fs-row">
-                  {(Object.keys(SHOW_LABEL) as Show[]).filter((s) => s !== 'all').map((s) => (
-                    <button key={s} type="button" className="u-chip" aria-pressed={filter.show === s} onClick={() => pick('show', s)}>
-                      {SHOW_LABEL[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="fs-group">
-                <span className="lbl">Mana value</span>
-                <div className="fs-row mvs">
-                  {MVS.map((v) => (
-                    <button key={v} type="button" className="u-chip" aria-pressed={filter.mv.includes(v)} aria-label={`Mana value ${v}`} onClick={() => pick('mv', v)}>
-                      {v}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="fs-group">
-                <span className="lbl">Price per copy</span>
-                <div className="fs-row">
-                  {PRICES.map((v) => (
-                    <button key={v} type="button" className="u-chip" aria-pressed={filter.prices.includes(v)} onClick={() => pick('prices', v)}>
-                      {PRICE_LABEL[v]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="fs-group">
-                <span className="lbl">Rarity</span>
-                <div className="fs-row rarities">
-                  {RARITIES.map((v) => (
-                    <button key={v} type="button" className={`u-chip r-${v}`} aria-pressed={filter.rarities.includes(v)} onClick={() => pick('rarities', v)}>
-                      {RARITY_LABEL[v]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="fs-group">
-                <span className="lbl">Finish</span>
-                <div className="fs-row">
-                  {(Object.keys(FINISH_LABEL) as Finish[]).filter((v) => v !== 'all').map((v) => (
-                    <button key={v} type="button" className="u-chip" aria-pressed={filter.finish === v} onClick={() => pick('finish', v)}>
-                      {FINISH_LABEL[v]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="fs-foot">
-              <button type="button" className="u-btn ghost" disabled={!n} onClick={() => (haptic('select'), setFilter(noFilter()))}>
+      <FilterBtn count={n} open={open} onClick={() => setOpen(true)} />
+      {open && (
+        <Sheet
+          title="FILTER CARDS"
+          seed={41}
+          label="Filter cards"
+          onClose={close}
+          foot={
+            <>
+              <button type="button" className="u-btn ghost" disabled={!n} onClick={() => (haptic('select'), setFilter(noFilter()), onReset?.())}>
                 RESET
               </button>
-              <button type="button" className="u-btn primary" onClick={() => setOpen(false)}>
+              <button type="button" className="u-btn primary" onClick={close}>
                 SHOW {shown.toLocaleString()} {shown === 1 ? 'CARD' : 'CARDS'}
                 {n > 0 && total !== shown ? ` OF ${total.toLocaleString()}` : ''}
               </button>
+            </>
+          }
+        >
+          {folders && (
+            <div className="fs-group fs-folders">
+              <span className="lbl">Folder</span>
+              {folders}
+            </div>
+          )}
+          <div className="fs-group">
+            <span className="lbl">Colours</span>
+            {/* the same mana buttons as Discover's colour filter (one part, one look) */}
+            <div className="fs-row colours">
+              {COLOURS.map((c) => (
+                <button key={c} type="button" data-c={c} className="u-chip mana-filter-btn" aria-pressed={filter.colours.includes(c)} aria-label={COLOUR_NAME[c]} title={COLOUR_NAME[c]} onClick={() => pick('colours', c)}>
+                  {c === 'C' ? <b className="cless">◇</b> : <ManaIcon c={c} />}
+                </button>
+              ))}
             </div>
           </div>
-        </>,
-        document.body,
+          <div className="fs-group">
+            <span className="lbl">Type</span>
+            <div className="fs-row">
+              {TYPES.map((t) => (
+                <button key={t} type="button" className="u-chip" aria-pressed={filter.types.includes(t)} onClick={() => pick('types', t)}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fs-group">
+            <span className="lbl">Show</span>
+            <div className="fs-row">
+              {(Object.keys(SHOW_LABEL) as Show[]).filter((s) => s !== 'all').map((s) => (
+                <button key={s} type="button" className="u-chip" aria-pressed={filter.show === s} onClick={() => pick('show', s)}>
+                  {SHOW_LABEL[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fs-group">
+            <span className="lbl">Mana value</span>
+            <div className="fs-row mvs">
+              {MVS.map((v) => (
+                <button key={v} type="button" className="u-chip" aria-pressed={filter.mv.includes(v)} aria-label={`Mana value ${v}`} onClick={() => pick('mv', v)}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fs-group">
+            <span className="lbl">Price per copy</span>
+            <div className="fs-row">
+              {PRICES.map((v) => (
+                <button key={v} type="button" className="u-chip" aria-pressed={filter.prices.includes(v)} onClick={() => pick('prices', v)}>
+                  {PRICE_LABEL[v]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fs-group">
+            <span className="lbl">Rarity</span>
+            <div className="fs-row rarities">
+              {RARITIES.map((v) => (
+                <button key={v} type="button" className={`u-chip r-${v}`} aria-pressed={filter.rarities.includes(v)} onClick={() => pick('rarities', v)}>
+                  {RARITY_LABEL[v]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fs-group">
+            <span className="lbl">Finish</span>
+            <div className="fs-row">
+              {(Object.keys(FINISH_LABEL) as Finish[]).filter((v) => v !== 'all').map((v) => (
+                <button key={v} type="button" className="u-chip" aria-pressed={filter.finish === v} onClick={() => pick('finish', v)}>
+                  {FINISH_LABEL[v]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Sheet>
       )}
     </>
   );

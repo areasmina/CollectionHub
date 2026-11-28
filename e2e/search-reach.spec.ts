@@ -63,9 +63,9 @@ for (const [tab, sel] of [
       expect(bar.y).toBeGreaterThanOrEqual(island.y + island.height - 1);
     }
     if (tab === 'collection') {
-      // the filter and sort ride along with the search
+      // FILTER and DISPLAY ride along with the search (the one bar, Nov 28)
       await expect(page.locator('.coll .fbtn')).toBeInViewport();
-      await expect(page.locator('.coll select[aria-label="Sort cards"]')).toBeInViewport();
+      await expect(page.locator('.coll .ob-display')).toBeInViewport();
       // 13 of the 300 cards are a Dragon Tyrant; each one shown is one of them
       await page.locator(sel).fill('dragon tyrant');
       await expect(page.locator('.coll .ctile')).toHaveCount(13);
