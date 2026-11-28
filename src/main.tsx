@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
+import { hasLeaveGuard } from './lib/nav';
 import { loadRate } from './lib/prices';
 // Registers the change tracker before anything writes, so automatic sync sees every edit.
 import './lib/syncstate';
@@ -22,7 +23,23 @@ import './legacy.css';
 import './tokens.css';
 import './app.css';
 
-registerSW({ immediate: true });
+// Updates (Nov 28): an installed app left open in the background kept showing an old version. It now also looks for a new
+// version whenever it comes back to the screen (and hourly while open), but never while something unsaved is open, since
+// an update reloads the page.
+registerSW({
+  immediate: true,
+  onRegisteredSW(_url, reg) {
+    if (!reg) return;
+    let lastCheck = Date.now();
+    const check = () => {
+      if (hasLeaveGuard() || Date.now() - lastCheck < 60_000) return;
+      lastCheck = Date.now();
+      reg.update().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
+    setInterval(check, 60 * 60_000);
+  },
+});
 // Ask the browser not to clear this site's storage under space pressure (keeps binders and sync).
 navigator.storage?.persist?.().catch(() => {});
 // Show the app right away (the last saved USD→CAD rate, else a fallback), then render again once today's rate is in.
