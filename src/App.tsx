@@ -706,6 +706,7 @@ export default function App() {
       <footer className="credits">
         card data and images from <a href="https://scryfall.com">Scryfall</a> · deck data from <a href="https://edhrec.com">EDHREC</a> · not affiliated with Wizards of
         the Coast, Scryfall or EDHREC · ≈CA$ estimates
+        <span className="build" title="The version this device is running"> · build {__BUILD__}</span>
       </footer>
     </div>
   );

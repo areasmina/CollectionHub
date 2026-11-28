@@ -114,6 +114,8 @@ export async function freeDeckName(profile: number, want: string, except?: numbe
 let guard: (() => Promise<boolean>) | null = null;
 export const setLeaveGuard = (g: (() => Promise<boolean>) | null) => void (guard = g);
 export const canLeave = () => (guard ? guard() : Promise.resolve(true));
+/** Something unsaved is open (a Forge with swaps not saved yet): an app update must not reload the page now. */
+export const hasLeaveGuard = () => guard !== null;
 
 /** The pill menu's back arrow: the screen that has somewhere to go back to sets it (null = no arrow). */
 let back: (() => void) | null = null;

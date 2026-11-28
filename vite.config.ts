@@ -26,7 +26,13 @@ const ownedFirst = {
     cachedResponse ?? (await (await caches.open('ch-pics-owned')).match(request.url)) ?? null,
 };
 
+// The build stamp shown at the foot of the app (Nov 28): the commit Vercel built, and when. It lets anyone see at a glance
+// whether a phone runs the latest version.
+const sha = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.VERCEL_GIT_COMMIT_SHA;
+const BUILD = `${(sha || 'local').slice(0, 7)} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(BUILD) },
   plugins: [
     react(),
     VitePWA({
