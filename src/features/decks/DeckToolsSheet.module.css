@@ -1,0 +1,66 @@
+/* TOOLS button and its sheet: labelled rows, a technical line under each (functional layer, Level 1 clarity). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.sheet {
+  max-height: min(80dvh, 560px);
+  overflow-y: auto;
+}
+.list {
+  margin: 0;
+  padding: 0 0 var(--mo-s2);
+  list-style: none;
+}
+.list > li + li {
+  border-top: 1px solid var(--mo-line-2);
+}
+.row {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--mo-s2);
+  padding: var(--mo-s2) 14px;
+  border: 0;
+  background: transparent;
+  color: var(--mo-text);
+  text-align: left;
+  cursor: pointer;
+}
+.row:hover {
+  background: var(--mo-surface-2);
+}
+.row:focus-visible {
+  outline: 2px solid var(--mo-yellow);
+  outline-offset: -2px;
+}
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.text > b {
+  font: 400 16px/1.1 var(--mo-display);
+  letter-spacing: 0.05em;
+}
+.desc {
+  font: 400 11px/1.35 var(--mo-mono);
+  color: var(--mo-muted);
+}
+.arrow {
+  flex: none;
+  color: var(--mo-yellow);
+}
+.toggle {
+  flex: none;
+  min-width: 84px;
+  padding: 6px 8px;
+  border: 1px solid var(--mo-line-strong);
+  border-radius: var(--mo-r-sm);
+  font: 700 11px/1 var(--mo-mono);
+  text-align: center;
+}

@@ -12,7 +12,9 @@ import { ownShare } from '../../lib/deckshare';
 import { bracketOf, deckStats, groupOf } from '../../lib/deckstats';
 import { BRACKETS, GEARS, cachedPage, fetchFiltered, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../../lib/edhrec';
 import { haptic } from '../../lib/haptics';
-import { canLeave, freeDeckName, openDeck, setBack, setLeaveGuard } from '../../lib/nav';
+import { canLeave, freeDeckName, openDeck, openDiscoverSub, setBack, setLeaveGuard } from '../../lib/nav';
+import { exploreColours, sendToExplore } from '../../lib/journey';
+import { JourneyBar } from '../journey/JourneyBar';
 import { norm, slug as toSlug } from '../../lib/names';
 import { arrange, noPins, pinOf, PIN_FILTER_MIN_DECKS, withPins, type PinSide } from '../../lib/pins';
 import { cad, toCad } from '../../lib/prices';
@@ -632,6 +634,19 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
       {page && (
         <>
+          {/* The journey (Nov 28): a deck started from Discover is being built, so the Forge shows START · EXPLORE · TUNE */}
+          {forging && (
+            <JourneyBar
+              current="tune"
+              onPick={(step) =>
+                void canLeave().then((ok) => {
+                  if (!ok) return;
+                  if (step === 'explore') sendToExplore({ colours: exploreColours(ciKnown) });
+                  openDiscoverSub(step === 'explore' ? 'tags' : 'guided');
+                })
+              }
+            />
+          )}
           {forging && (
             <ForgeTop
               label={label}

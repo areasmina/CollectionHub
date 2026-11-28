@@ -22,7 +22,7 @@ import { BRACKETS, fetchFiltered, pagePath, showPage, type CardFilter, type EdhP
 import { haptic } from '../../lib/haptics';
 import { norm, slug } from '../../lib/names';
 import { canLeave, openDiscoverSub, openTagInNavigator, setBack } from '../../lib/nav';
-import { exploreColours, nextTips, sendToExplore } from '../../lib/journey';
+import { exploreColours, journeyOn, nextTips, sendToExplore } from '../../lib/journey';
 import { JourneyBar } from '../journey/JourneyBar';
 import { NextTips } from '../journey/NextTips';
 import { addCounts, calculateDeckOwnership } from '../../lib/ownership';
@@ -41,7 +41,6 @@ import {
   ChipPick,
   CmdrCard,
   CycleBtn,
-  OptRow,
   DeckLight,
   OutsideLinks,
   priced as atFinish,
@@ -59,6 +58,7 @@ import { SwapNote, type SwapOption } from '../../views/SwapNote';
 import { ReadyTiles } from '../../views/Verdict';
 import { CompactIcon, GridIcon, heroRoom, ListIcon, Pips, Ransom } from '../../views/zine';
 import { DeckMenu, type MenuAt } from './DeckMenu';
+import { DeckToolsButton, type DeckTool } from './DeckToolsSheet';
 import { BracketStat, GROUPINGS, GroupPick, PickCommander, type Grouping } from './DeckMetaParts';
 import { DeckPanel } from './DeckPanel';
 import { HistoryDrawer } from './HistoryDrawer';
@@ -330,6 +330,7 @@ export function DeckView({
     setSwapFor(null);
     setPlacing(null);
     setToast({ text: `Swapped ${from} for ${to}`, undo: await replaceInDeck(deck, from, to) });
+    setEditedHere(true);
   }
   const [placing, setPlacing] = useState<string | null>(null);
   const forgeCands = [...recInfo.values()].filter((c) => !never.has(norm(c.name))).concat(binderCandidates([], binder, ci, never));
@@ -341,11 +342,13 @@ export function DeckView({
     void recordTaste(s.profile, n, 'add', deck.commander ?? deck.name);
     setPlacing(null);
     setToast({ text: `Added ${n}`, undo: await addToDeck(deck, n) });
+    setEditedHere(true);
   }
   async function cutCard(n: string) {
     if (n === deck.commander || n === deck.partner) return;
     void recordTaste(s.profile, n, 'cut', deck.commander ?? deck.name);
     setToast({ text: `Cut ${n}`, undo: await removeFromDeck(deck, n) });
+    setEditedHere(true);
   }
   const drop = useDeckDrop((onto, card) => onto !== deck.commander && void swapIn(onto, card), (card) => void addCard(card));
 
@@ -382,29 +385,17 @@ export function DeckView({
   for (const c of sorted) if (c.name !== deck.commander) sections.get(keyOf(c))?.push(c);
   const Item = view === 'grid' ? CardTile : CardLine;
 
-  // The deck's tools: a row under the deck strip on wider screens; on phones they live in the bar's ⋮ (DECK row) so
-  // the strip stays one line (Guillermo, Nov 27: "too many buttons, clean it up").
-  const deckTools = (
-    <>
-      <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setBalanceOpen(true))}>
-        BALANCE
-      </button>
-      <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHandOpen(true))}>
-        HAND &amp; ODDS
-      </button>
-      <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setRuleZeroOpen(true))}>
-        RULE ZERO
-      </button>
-      {deck.id && (
-        <button type="button" className="u-btn ghost" onClick={() => (haptic('open'), setHistoryOpen(true))}>
-          HISTORY
-        </button>
-      )}
-      <button type="button" className="u-btn ghost" onClick={() => (haptic('select'), toggleCompactHero())}>
-        {compactHero ? 'SHOW HEADER' : 'COMPACT HEADER'}
-      </button>
-    </>
-  );
+  // TOOLS (Nov 28): the deck's analysis and playtest tools behind one button on the strip, each with a line on what it does
+  const deckTools: DeckTool[] = [
+    { key: 'balance', label: 'BALANCE', desc: 'Fill to 100, Cut Lab, Bracket Path and Worth Buying', onOpen: () => setBalanceOpen(true) },
+    { key: 'hand', label: 'HAND & ODDS', desc: 'Draw a test hand, goldfish a few turns, see the draw odds', onOpen: () => setHandOpen(true) },
+    { key: 'rulezero', label: 'RULE ZERO', desc: 'A card to show the table before you play', onOpen: () => setRuleZeroOpen(true) },
+    ...(deck.id ? [{ key: 'history', label: 'HISTORY', desc: 'Earlier versions of this deck; put one back', onOpen: () => setHistoryOpen(true) }] : []),
+  ];
+  // The journey bar and NEXT tips show while a deck is being built: under 100 cards or not legal yet, or changed in the
+  // Forge during this visit. A finished deck you are only looking at stays clean (Guillermo, Nov 28).
+  const [editedHere, setEditedHere] = useState(false);
+  const showJourney = !hydrating && journeyOn({ total: st.total, legal: failedRules.length === 0 && !invalidPair, editedHere });
 
   return (
     <>
@@ -532,7 +523,9 @@ export function DeckView({
             )}
           </p>
           <ShortAlert items={shortHere} inline currentDeck={deck.name} />
-          {!phone && <div className="dacts">{deckTools}</div>}
+          <div className="dacts">
+            <DeckToolsButton tools={deckTools} compact={compactHero} onToggleHeader={toggleCompactHero} />
+          </div>
         </section>
 
         {balanceOpen && (
@@ -583,7 +576,9 @@ export function DeckView({
         {deckMenu && <DeckMenu deck={deck} at={deckMenu} onClose={() => setDeckMenu(null)} onDeleted={onBack} onOpen={onOpen} onHistory={() => setHistoryOpen(true)} />}
         {historyOpen && deck.id && <HistoryDrawer deck={deck} onClose={() => setHistoryOpen(false)} />}
 
-        {/* The journey (Nov 27): this deck is at TUNE; EXPLORE opens the tag graph in its colours, START opens Guided. */}
+        {/* The journey (Nov 27): this deck is at TUNE; EXPLORE opens the tag graph in its colours, START opens Guided.
+            Only while the deck is being built (journeyOn); a finished deck you are viewing stays clean (Nov 28). */}
+        {showJourney && (
         <JourneyBar
           current="tune"
           done={['start']}
@@ -595,9 +590,10 @@ export function DeckView({
             })
           }
         />
+        )}
 
         {/* NEXT (journey step 3): what this deck's Readiness checks say is short, as doors to EXPLORE or Balance */}
-        {!hydrating && (
+        {showJourney && (
           <NextTips
             tips={nextTips(ready.checks, st.total, phone ? 1 : 2)}
             onGo={(tip) => {
@@ -684,16 +680,6 @@ export function DeckView({
                 </>
               }
             >
-              {phone && (
-              <div
-                className="deck-tools-row"
-                onClickCapture={(e) => (e.target as HTMLElement).closest('button') && e.currentTarget.closest('details')?.removeAttribute('open')}
-              >
-                <OptRow label="DECK">
-                  <div className="chiprow">{deckTools}</div>
-                </OptRow>
-              </div>
-              )}
               <GroupPick grouping={grouping} show={show} onGroup={setGrouping} onShow={setShow} />
               <ChipPick label="SORT" value={sort} options={SORTS} onChange={setSort} />
               <ChipPick label="ONLY" value={only} options={ONLYS} onChange={setOnly} />

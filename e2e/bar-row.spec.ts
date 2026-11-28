@@ -16,8 +16,8 @@ test('Phone tool bar: ⋮ and search on one row, view controls under them', asyn
 });
 
 /** A saved deck (the Forge) on phones (Guillermo, Nov 27: "clean, concise"): ⋮ · search · view · SIZE · + MY on one row,
- *  nothing past the screen's edge; ONLY lives in ⋮, and so do the deck's tools (its DECK row). */
-test('Phone, saved deck: ⋮, search and the view controls on one row; the deck tools are in ⋮', async ({ page }, info) => {
+ *  nothing past the screen's edge; ONLY lives in ⋮; the deck's tools are behind TOOLS on the strip. */
+test('Phone, saved deck: ⋮, search and the view controls on one row', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'the one-row bar is the phone shape');
   await mockWorld(page);
   await seed(page);
@@ -36,7 +36,4 @@ test('Phone, saved deck: ⋮, search and the view controls on one row; the deck 
     expect(r.x + r.width).toBeLessThanOrEqual(vw + 1);
   }
   await expect(bar.locator('.qonly-btn')).toBeHidden();
-  await expect(page.locator('.forgemain > .dstrip > .dacts')).toHaveCount(0);
-  await bar.locator('.tbmore > summary').click();
-  await expect(page.locator('.deck-tools-row').getByRole('button', { name: 'BALANCE' })).toBeVisible();
 });

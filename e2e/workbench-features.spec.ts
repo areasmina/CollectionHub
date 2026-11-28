@@ -196,38 +196,21 @@ test.describe('Collection & Decks Workbench Features', () => {
     await page.locator('.dcard').first().click();
     await expect(page.locator('.forgemain > .dstrip')).toBeVisible();
 
-    // Nov 27: on phones the deck's tools (BALANCE … COMPACT HEADER) live in the bar's ⋮, as its DECK row
-    const phone = info.project.name === 'phone';
-    const openTools = async () => {
-      if (!phone) return;
-      await page.locator('.lists > .tbar .tbmore > summary').click();
-      await expect(page.locator('.deck-tools-row')).toBeVisible();
-    };
-    await openTools();
-    await page.getByRole('button', { name: 'COMPACT HEADER' }).click();
-    await openTools();
-    await expect(page.getByRole('button', { name: 'SHOW HEADER' })).toBeVisible();
-    if (phone) {
-      for (const b of await page.locator('.deck-tools-row .u-btn').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-      await expect(page.locator('.forgemain > .dstrip > .dacts')).toHaveCount(0);
-      await page.keyboard.press('Escape');
-      return;
-    }
+    // Nov 28: the deck's tools (BALANCE, HAND & ODDS, RULE ZERO, HISTORY, HEADER) sit behind one TOOLS button
+    await page.locator('.forgemain > .dstrip > .dacts').getByRole('button', { name: 'TOOLS' }).click();
+    const tools = page.getByRole('dialog', { name: 'Deck tools' });
+    await expect(tools).toBeVisible();
+    const header = tools.getByRole('button', { name: /^HEADER/ });
+    await expect(header).toHaveAttribute('aria-pressed', 'false');
+    await header.click();
+    await expect(header).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Escape');
+    await expect(tools).toHaveCount(0);
 
     const navBox = (await page.locator('.pillnav.dock-top').boundingBox())!;
     const stripBox = (await page.locator('.forgemain > .dstrip').boundingBox())!;
     expect(stripBox.y).toBeGreaterThanOrEqual(navBox.y + navBox.height - 2);
-
-    const actButtons = page.locator('.forgemain > .dstrip > .dacts > .u-btn');
-    const actMetrics = await actButtons.evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { top: Math.round(r.top), h: Math.round(r.height) };
-      })
-    );
-    expect(new Set(actMetrics.map((b) => b.top)).size).toBe(1);
-    if (info.project.name === 'phone') {
-      for (const b of actMetrics) expect(b.h).toBeGreaterThanOrEqual(44);
-    }
+    const toolsBtn = (await page.locator('.forgemain > .dstrip > .dacts .u-btn').boundingBox())!;
+    if (info.project.name === 'phone') expect(toolsBtn.height).toBeGreaterThanOrEqual(44);
   });
 });

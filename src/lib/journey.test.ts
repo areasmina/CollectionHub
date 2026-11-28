@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { JOURNEY_STEPS, canAddFromExplore, exploreColours, nextTips } from './journey';
+import { JOURNEY_STEPS, canAddFromExplore, exploreColours, journeyOn, nextTips } from './journey';
 
 describe('deckbuilding journey', () => {
   it('runs START → EXPLORE → TUNE, in that order', () => {
@@ -47,5 +47,12 @@ describe('deckbuilding journey', () => {
 
   it('board wipes open the graph on the sweeper tag', () => {
     expect(nextTips([{ key: 'wipes', kind: 'build', ok: false, says: '0 board wipes' }], 100)[0].go).toEqual({ step: 'explore', tag: 'sweeper' });
+  });
+
+  it('a finished deck you only look at hides the journey; building, short, not legal or edited here shows it', () => {
+    expect(journeyOn({ total: 100, legal: true, editedHere: false })).toBe(false);
+    expect(journeyOn({ total: 100, legal: true, editedHere: true })).toBe(true);
+    expect(journeyOn({ total: 96, legal: true, editedHere: false })).toBe(true);
+    expect(journeyOn({ total: 100, legal: false, editedHere: false })).toBe(true);
   });
 });
