@@ -1,0 +1,579 @@
+/* Moved out of the legacy files (styles.css, ui.css, polish.css) in cleanup Phase A, Nov 28: every rule here styles only
+   this feature. Wrapped in the legacy layer so its place in the cascade stays the same. */
+@layer legacy {
+
+  .deckmenu .danger {
+    font-weight: 700;
+  }
+  .deckmenu li > button small {
+    flex-basis: 100%;
+    padding-left: 20px;
+    line-height: 1.2;
+  }
+  .dcard .themebadge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2px 6px !important;
+    background: rgba(255, 248, 36, 0.12) !important;
+    border: 1px solid rgba(255, 248, 36, 0.4) !important;
+    border-radius: 2px !important;
+    color: #fff824 !important;
+    font: 700 10px/1.2 var(--u-mono) !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+  }
+  .dcard .tagbadge {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2px 6px !important;
+    background: rgba(0, 230, 118, 0.1) !important;
+    border: 1px solid rgba(0, 230, 118, 0.35) !important;
+    border-radius: 2px !important;
+    color: #00e676 !important;
+    font: 700 10px/1.2 var(--u-mono) !important;
+    letter-spacing: 0.04em !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+  }
+  .dcard .nocmdr {
+    font: 400 12px/1.3 var(--u-mono);
+    color: var(--u-yellow);
+  }
+  .dempty {
+    grid-column: 1 / -1;
+    padding: var(--s5) 0;
+    font: 400 13px var(--u-mono);
+    color: var(--u-muted);
+  }
+  .dgrid .dtile .cfoot .cstate {
+    display: inline-block;
+    background: #0a0a0a;
+    border: 1px solid #ffcc00;
+    color: #ffcc00;
+    transform: rotate(-1.5deg);
+    font: 400 11px var(--u-display);
+  }
+  .dgrid .dtile .cfoot .cstate.ready {
+    background: #ffcc00;
+    border-color: #ffcc00;
+    color: #0a0a0a;
+    transform: rotate(1deg);
+  }
+  .dgrid .dtile .cfoot {
+    align-items: center;
+  }
+  .dribbonwrap {
+    display: block;
+  }
+  .dimport {
+    width: min(94vw, 520px);
+    display: grid;
+    gap: var(--s3);
+    padding: var(--s4);
+    box-sizing: border-box;
+  }
+  .dimport-field {
+    display: grid;
+    gap: var(--s1);
+    font: 400 12px var(--u-mono);
+    color: var(--u-muted);
+  }
+  .dimport-field input,
+  .dimport textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: #0f0f13;
+    color: var(--u-text);
+    border: 1px solid var(--u-line2);
+    padding: var(--s2);
+    font: 400 14px var(--u-mono);
+  }
+  .dimport textarea {
+    resize: vertical;
+    min-height: 160px;
+  }
+  .dimport-file {
+    justify-self: start;
+    cursor: pointer;
+  }
+  .dimport-err {
+    color: #ff6b6b;
+    font: 400 13px var(--u-mono);
+    margin: 0;
+  }
+  .dimport-note {
+    color: var(--u-text);
+    font: 400 13px var(--u-mono);
+    margin: 0;
+  }
+  .dimport-acts {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s2);
+  }
+
+  @media (max-width: 700px) {
+    .dgrid.cgrid[data-zoom='s'] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--s2);
+    }
+    .dgrid.cgrid[data-zoom='s'] .dtile .cinfo {
+      padding: var(--s1) var(--s2);
+    }
+    .dgrid.cgrid[data-zoom='s'] .dtile .nm b {
+      font-size: 12px;
+    }
+    .dgrid.cgrid[data-zoom='s'] .dtags,
+    .dgrid.cgrid[data-zoom='s'] .nocmdr {
+      display: none;
+    }
+  }
+  .dlist .dribbon .dfold:hover,
+  .dlist .dribbon .dfold:focus-visible {
+    color: #fff;
+    border-color: #e60012;
+  }
+  .dlist .dstats[hidden] {
+    display: none !important;
+  }
+  .dlist .dstats > .stat:nth-child(even) {
+    transform: rotate(0.6deg) !important;
+  }
+  .dlist .dstats > .stat > span:not(.spray) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dlist .dstats > .stat.dcols {
+    grid-column: 1 / -1;
+    min-height: 0 !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: baseline !important;
+    flex-wrap: wrap;
+    gap: 6px 18px !important;
+    padding: 8px 14px !important;
+    transform: rotate(0.3deg) !important;
+  }
+  .dlist .dstats > .stat.dcols > .ov-pip {
+    display: inline-flex !important;
+    align-items: baseline;
+    gap: 4px;
+    margin: 0 !important;
+    font: 700 13px var(--se, 'Special Elite', monospace) !important;
+  }
+  @media (max-width: 700px) {
+    .dlist .dstats {
+      grid-template-columns: 1fr 1fr;
+      gap: 10px !important;
+    }
+  }
+  .dlist .decktoolbar .dfilters {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--s2) !important;
+  }
+  .dlist .decktoolbar .dsortpick {
+    display: flex !important;
+    align-items: center;
+    gap: var(--s2);
+    margin: 0 !important;
+  }
+  .dlist .decktoolbar .dstatuspick > .u-chip {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 0 12px;
+  }
+  .dlist .decktoolbar .decktagpills {
+    margin: 0 !important;
+    padding: var(--s2) 0 0 !important;
+    border-top: 1px solid #262626;
+  }
+  @media (max-width: 700px) {
+    .dlist .decktoolbar .dfilters {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (min-width: 701px) {
+    .dlist .dstats {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    }
+    .dlist .dstats > .stat.dcols {
+      grid-column: auto;
+      flex-direction: row !important;
+      justify-content: center !important;
+      align-items: center !important;
+      gap: 4px 12px !important;
+      padding: 8px 14px !important;
+    }
+    .dlist .decktoolbar {
+      grid-template-columns: minmax(220px, 1fr) auto;
+      align-items: center;
+    }
+    .dlist .decktoolbar .dsearchbox input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .dlist .decktoolbar .decktagpills {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 699px) {
+    .dcard .nm, .dcard .nm b { font-size: 14px !important; line-height: 1.15 !important; }
+    .dlist select { min-height: 44px !important; }
+    .deckmenu .cwheel { width: 44px !important; height: 44px !important; }
+  }
+  .decktoolbar .dsearchbox input { min-width: 0; }
+  .dpage.dlist > .decktoolbar > .dfilters {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    gap: 6px !important;
+    overflow: visible !important;
+    width: 100%;
+    min-width: 0;
+  }
+  .dpage.dlist > .decktoolbar > .dfilters > .dstatuspick {
+    display: flex !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    gap: 6px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+  .dpage.dlist > .decktoolbar > .dfilters > .dstatuspick::-webkit-scrollbar { display: none; }
+  .dpage.dlist > .decktoolbar > .dfilters > .decktagpills {
+    display: flex !important;
+    flex: 0 0 auto;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    gap: 6px !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    padding-left: 8px !important;
+    border: 0 !important;
+    border-left: 1px solid #33333e !important;
+  }
+  .dpage.dlist > .decktoolbar .dstatuspick > .u-chip,
+  .dpage.dlist > .decktoolbar .decktagpills > .tagpill {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+  @media (max-width: 700px) {
+    .decktoolbar .dsearchrow > .dsortpick > span { display: none; }
+    .decktoolbar .dsearchrow > .dsortpick > select { width: 100%; }
+  }
+  .dgrid .dtile .dlegal {
+    align-self: flex-start;
+    display: inline-block;
+    margin-top: 6px;
+    background: var(--accent, #e60012);
+    color: #fff;
+    transform: rotate(1deg);
+    font: 400 11px var(--u-display, 'Anton', sans-serif);
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+  }
+  .dgrid .dtile .dlegal i { font-style: normal; display: inline-block; white-space: nowrap; }
+  .deckmenu .colourrow .cwheel-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .deckmenu .cwheel {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 4px;
+    cursor: pointer;
+    overflow: hidden;
+    border: 2px solid var(--ink, #0a0a0a);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45), 2px 2px 0 rgba(0, 0, 0, 0.45);
+    background: linear-gradient(
+      135deg,
+      #ff2a55 0%,
+      #ffcc00 28%,
+      #22dd66 56%,
+      #00ccff 78%,
+      #aa44ff 100%
+    );
+  }
+  .deckmenu .cwheel-input {
+    position: absolute;
+    inset: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    opacity: 0;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .deckmenu .cwheel:focus-visible {
+    outline: 3px solid var(--u-yellow, #ffcc00);
+    outline-offset: 3px;
+  }
+  .deckmenu .cwheel-now {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1.5px solid #0a0a0a;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+  }
+  .deckmenu .cwheel-val {
+    font: 400 12px var(--u-mono, monospace);
+    letter-spacing: 0.04em;
+    color: #cfcfe0;
+  }
+  .dlist .dfilters {
+    align-items: center;
+  }
+  .dgrid .dtile .cfoot > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  .dgrid .dtile .cfoot .cstate {
+    flex: none;
+    font-size: 10px;
+    padding: 2px 5px;
+    letter-spacing: 0.04em;
+  }
+  .dgrid .dtile .cfoot {
+    gap: 6px;
+  }
+  .dgrid .dtile .dlegal {
+    position: absolute;
+    margin: 0;
+    font-size: 10px;
+    padding: 2px 7px;
+    box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 700px) {
+    .dgrid .dtile .cfoot {
+      flex-wrap: wrap;
+    }
+    .dgrid .dtile .cfoot > span:first-child {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
+  }
+  .dlist .dfilters > .dsize {
+    position: static !important;
+    flex: 0 0 auto !important;
+    margin-left: 6px !important;
+    background: #0c0c0e;
+    box-shadow: none !important;
+  }
+  .dlist .decksbar .titlewrap {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+  }
+  .dlist .decksbar .titlewrap > .ztitle { flex: 0 0 auto; }
+  .dlist .decksbar .titlewrap > .titleacts { margin-left: 18px; }
+  @media (max-width: 700px) {
+    .dlist .decksbar .titlewrap > .titleacts { margin-left: 0; flex: 1 1 100%; }
+  }
+  @media (min-width: 701px) {
+    .dlist .dstats {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 12px !important;
+      align-items: stretch !important;
+    }
+    .dlist .dstats > .stat {
+      flex: 0 1 auto !important;
+      min-width: 150px !important;
+      max-width: 260px !important;
+      padding: 10px 16px !important;
+    }
+    .dlist .dstats > .stat.dcols {
+      margin-left: auto !important;
+      min-width: 190px !important;
+      max-width: none !important;
+    }
+  }
+  .dlist .ctab-acts { flex-wrap: nowrap; }
+  .dlist .dribbonwrap { margin-top: 10px; }
+  .dpage.dlist > .decktoolbar {
+    border: 0 !important;
+    border-top: 1px solid #23232a !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    background: #0d0d10 !important;
+  }
+  @media (max-width: 700px) {
+    .dlist .ctabs { margin: 4px 0 0 !important; padding: 3px 4px !important; gap: 4px !important; }
+    .dlist .ctabs + .decktoolbar { border-radius: 0 0 6px 6px !important; }
+    .dlist .ctab { min-height: 44px !important; padding: 0 9px !important; font-size: 13.5px !important; }
+    .dlist .ctab-acts { gap: 4px !important; }
+    .dlist .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 9px !important; font-size: 13px !important; }
+  }
+  .dcard .dtags.plain .themebadge,
+  .dcard .dtags.plain .tagbadge {
+    cursor: default !important;
+    font-size: 11px !important;
+    padding: 3px 6px !important;
+  }
+  .dlist .dcompare {
+    --dc-accent: #3b6cff;
+    max-width: 960px; /* two columns of numbers read across, not from one screen edge to the other */
+    margin: 0 0 var(--s6);
+  }
+  .dlist .dcmp-picks {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--tap) minmax(0, 1fr);
+    align-items: end;
+    gap: var(--s2);
+    padding: var(--s3);
+    background: var(--u-ink);
+    border: 2px solid var(--u-text);
+    box-shadow: 5px 5px 0 #000;
+  }
+  .dlist .dcmp-pick {
+    display: grid;
+    gap: var(--s1);
+    min-width: 0;
+  }
+  .dlist .dcmp-role {
+    font: 400 11px var(--u-mono);
+    letter-spacing: 0.08em;
+    color: var(--u-muted);
+  }
+  .dlist .dcmp-pick select {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--tap);
+    padding: 0 var(--s2);
+    background: var(--u-carbon);
+    color: var(--u-text);
+    border: 1px solid var(--u-line2);
+    font: 600 14px var(--u-body);
+    text-overflow: ellipsis;
+  }
+  .dlist .dcmp-swap {
+    width: var(--tap);
+    height: var(--tap);
+    background: transparent;
+    color: var(--u-text);
+    border: 1px solid var(--u-line2);
+    font: 400 20px var(--u-mono);
+    cursor: pointer;
+  }
+  .dlist .dcmp-swap:hover,
+  .dlist .dcmp-swap:focus-visible,
+  .dlist .dcmp-pick select:focus-visible {
+    border-color: var(--dc-accent);
+    outline: none;
+  }
+  .dlist .dcmp-note {
+    margin: var(--s3) 0;
+    padding: var(--s2) var(--s3);
+    background: var(--u-ink);
+    border-left: 2px solid var(--dc-accent);
+    font: 400 12px var(--u-mono);
+    color: var(--u-muted);
+  }
+  .dlist .dcmp-table {
+    background: var(--u-carbon);
+    border: 1px solid var(--u-line);
+  }
+  .dlist .dcmp-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 104px;
+    column-gap: var(--s3);
+    row-gap: var(--s1);
+    align-items: baseline;
+    padding: var(--s2) var(--s3);
+    border-top: 1px solid var(--u-line);
+  }
+  .dlist .dcmp-row:first-child {
+    border-top: 0;
+  }
+  .dlist .dcmp-head {
+    position: sticky;
+    top: var(--navh);
+    z-index: 1;
+    background: var(--u-ink);
+    border-bottom: 2px solid var(--dc-accent);
+  }
+  .dlist .dcmp-head .dcmp-val {
+    font: 400 14px var(--u-display);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--u-text);
+  }
+  .dlist .dcmp-label {
+    font: 600 14px var(--u-body);
+    color: var(--u-text);
+  }
+  .dlist .dcmp-val,
+  .dlist .dcmp-delta {
+    font: 400 14px var(--u-mono);
+    text-align: right;
+    color: var(--u-text);
+    font-variant-numeric: tabular-nums;
+  }
+  .dlist .dcmp-delta {
+    color: var(--dc-accent);
+    font-weight: 700;
+  }
+  .dlist .dcmp-delta.same {
+    color: var(--u-muted);
+    font-weight: 400;
+  }
+  .dlist .dcmp-says {
+    grid-column: 1 / -1;
+    font: 400 12px var(--u-mono);
+    line-height: 1.45;
+    color: var(--u-muted);
+  }
+  .dlist .dcmp-says:empty {
+    display: none;
+  }
+  .dlist .dcmp-row.est {
+    border-top: 1px dashed var(--u-line2);
+  }
+  @media (max-width: 420px) {
+    .dlist .dcmp-row {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 80px;
+      column-gap: var(--s2);
+      padding: var(--s2);
+    }
+    .dlist .dcmp-label,
+    .dlist .dcmp-val,
+    .dlist .dcmp-delta {
+      font-size: 12px;
+    }
+  }
+}
