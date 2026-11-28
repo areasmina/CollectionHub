@@ -82,6 +82,27 @@ export const onPendingSeeds = (f: (names: string[]) => void) => {
   return () => removeEventListener(OPEN_SEEDS, h);
 };
 
+/** Journey step 4 (Nov 28): a commander's page hands its commander to Guided (START), already picked. */
+const OPEN_GUIDED_CMDR = 'ch:openguidedcmdr';
+let pendingGuidedCommander: string | null = null;
+export function openGuidedWithCommander(name: string) {
+  pendingGuidedCommander = name;
+  dispatchEvent(new CustomEvent(OPEN_GUIDED_CMDR, { detail: name }));
+  openDiscoverSub('guided');
+}
+/** Read without clearing (a first render may run twice in development); `takeGuidedCommander` clears it. */
+export const peekGuidedCommander = () => pendingGuidedCommander;
+export function takeGuidedCommander(): string | null {
+  const n = pendingGuidedCommander;
+  pendingGuidedCommander = null;
+  return n;
+}
+export const onGuidedCommander = (f: (name: string) => void) => {
+  const h = (e: Event) => f((e as CustomEvent<string>).detail);
+  addEventListener(OPEN_GUIDED_CMDR, h);
+  return () => removeEventListener(OPEN_GUIDED_CMDR, h);
+};
+
 /** A name not already used by another deck in this binder ("Name (copy)", "Name (copy 2)"…). */
 export async function freeDeckName(profile: number, want: string, except?: number) {
   const taken = new Set((await db.decks.where('profile').equals(profile).toArray()).filter((d) => d.id !== except).map((d) => d.name.toLowerCase()));

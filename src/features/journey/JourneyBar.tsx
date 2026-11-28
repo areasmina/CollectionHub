@@ -13,7 +13,8 @@ export function JourneyBar({
   blocked = {},
   onPick,
 }: {
-  current: JourneyStep;
+  /** The stop you are on; none on a commander's page, before the deck starts. */
+  current?: JourneyStep;
   done?: readonly JourneyStep[];
   /** A stop that can't be reached yet, with the reason in plain words. */
   blocked?: Partial<Record<JourneyStep, string>>;

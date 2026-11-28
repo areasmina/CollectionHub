@@ -12,7 +12,7 @@ import { ownShare } from '../../lib/deckshare';
 import { bracketOf, deckStats, groupOf } from '../../lib/deckstats';
 import { BRACKETS, GEARS, cachedPage, fetchFiltered, imgOf, NoPage, pagePath, showPage, type CardFilter, type EdhCard, type EdhPage } from '../../lib/edhrec';
 import { haptic } from '../../lib/haptics';
-import { canLeave, freeDeckName, openDeck, openDiscoverSub, setBack, setLeaveGuard } from '../../lib/nav';
+import { canLeave, freeDeckName, openDeck, openDiscoverSub, openGuidedWithCommander, setBack, setLeaveGuard } from '../../lib/nav';
 import { exploreColours, sendToExplore } from '../../lib/journey';
 import { JourneyBar } from '../journey/JourneyBar';
 import { norm, slug as toSlug } from '../../lib/names';
@@ -634,17 +634,21 @@ export function CommanderView({ name, s, onBack: back, no }: { name: string; s: 
 
       {page && (
         <>
-          {/* The journey (Nov 28): a deck started from Discover is being built, so the Forge shows START · EXPLORE · TUNE */}
-          {forging && (
+          {/* The journey starts here (step 4, Nov 28): Discover found the commander. START opens Guided with it picked,
+              EXPLORE the tag graph in its colours, TUNE the Forge on EDHREC's deck (where the bar stays, at TUNE). */}
+          {kind === 'average' && (
             <JourneyBar
-              current="tune"
-              onPick={(step) =>
+              current={forging ? 'tune' : undefined}
+              onPick={(step) => {
+                if (step === 'tune') return void (setManualForge(true), haptic('open'));
                 void canLeave().then((ok) => {
                   if (!ok) return;
-                  if (step === 'explore') sendToExplore({ colours: exploreColours(ciKnown) });
-                  openDiscoverSub(step === 'explore' ? 'tags' : 'guided');
-                })
-              }
+                  if (step === 'explore') {
+                    sendToExplore({ colours: exploreColours(ciKnown) });
+                    openDiscoverSub('tags');
+                  } else openGuidedWithCommander(name);
+                });
+              }}
             />
           )}
           {forging && (

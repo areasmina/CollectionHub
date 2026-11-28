@@ -165,30 +165,13 @@ test.describe('Collection & Decks Workbench Features', () => {
     await expect(drawer).toHaveCount(0);
   });
 
-  test('Sleek punk zine cohesion: Discover tabs flush single-row and Saved Deck top clearance + single-row strip', async ({ page }, info) => {
+  test('Sleek punk zine cohesion: Discover is commanders only, and Saved Deck top clearance + single-row strip', async ({ page }, info) => {
     await go(page, 'discover');
 
-    const tabs = page.locator('.disc-tabs .ctab');
-    await expect(tabs).toHaveCount(3);
-    await expect(tabs).toHaveText(['COMMANDERS', 'GUIDED BUILDER', 'TAG BUILDER']);
-
-    const tabMetrics = await tabs.evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        const cs = getComputedStyle(el);
-        return { top: Math.round(r.top), h: Math.round(r.height), bg: cs.backgroundColor, transform: cs.transform };
-      })
-    );
-    expect(new Set(tabMetrics.map((t) => t.top)).size).toBe(1);
-    expect(tabMetrics[0].bg).toBe('rgb(230, 0, 18)');
-    expect(tabMetrics[0].transform).toBe('none');
-    if (info.project.name === 'phone') {
-      for (const m of tabMetrics) expect(m.h).toBeGreaterThanOrEqual(44);
-    }
-
-    const tabsBox = (await page.locator('.disc-tabs').boundingBox())!;
-    const barBox = (await page.locator('.dfind > .dtools.tbar').boundingBox())!;
-    expect(Math.abs(barBox.y - (tabsBox.y + tabsBox.height))).toBeLessThanOrEqual(2);
+    // Nov 28 (journey step 4): Discover only finds the commander; Guided and the tag graph are stops on the journey bar,
+    // so the three-tab row is gone and the commander search bar is the first thing under the hero
+    await expect(page.locator('.disc-tabs')).toHaveCount(0);
+    await expect(page.locator('.dfind > .dtools.tbar')).toBeVisible();
 
     // Saved Deck: dock island on top + COMPACT HEADER -> SHOW HEADER, verify .dstrip clears island and stays inline
     await page.evaluate(() => localStorage.setItem('ch:island_dock', 'top'));

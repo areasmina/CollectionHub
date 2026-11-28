@@ -11,7 +11,7 @@ import { db, type Card } from '../lib/db';
 import { cachedPage, cachedPages, fetchPage, NoPage, pagePath } from '../lib/edhrec';
 import { binderSig, loadStats, plan, saveStats, statOf, type SavedStat } from '../lib/cmdrstats';
 import { slug } from '../lib/names';
-import { onDiscoverSub, openCollection, openDeck, takeDiscoverSub, type DiscoverSubTab } from '../lib/nav';
+import { onDiscoverSub, openCollection, openDeck, setBack, takeDiscoverSub, type DiscoverSubTab } from '../lib/nav';
 import { EmptyState, OptRow, Progress, ToolBar, usd, useMenuPress, useStored, type Shared } from './shared';
 import { TileMenu, type TileToast } from './TileMenu';
 import { Pips, Ransom, Title, EyeDoodle, ManaIcon, PageDecor } from './zine';
@@ -79,9 +79,16 @@ function PressTile({ onMenu, children, ...props }: { onMenu: (x: number, y: numb
 
 export function Discover(s: Shared) {
   const [subTab, setSubTab] = useState<DiscoverSubTab>(() => takeDiscoverSub() ?? 'commanders');
-  useEffect(() => onDiscoverSub(setSubTab), []);
   const [open, setOpen] = useState<string | null>(null);
   const [openNo, setOpenNo] = useState<number>();
+  // a stop on the journey opened from anywhere (a commander's page included) replaces what Discover shows
+  useEffect(() => onDiscoverSub((sub) => (setOpen(null), setSubTab(sub))), []);
+  // the Island's back arrow goes from Guided or the tag graph back to the commanders
+  useEffect(() => {
+    if (subTab === 'commanders' || open) return;
+    setBack(() => setSubTab('commanders'));
+    return () => void setBack(null);
+  }, [subTab, open]);
   // The tile menu (right-click / press and hold) and the note it leaves behind (copied, saved + UNDO).
   const [menu, setMenu] = useState<{ c: Cmdr; no: number; x: number; y: number } | null>(null);
   const [toast, setToast] = useState<TileToast | null>(null);
@@ -302,37 +309,15 @@ export function Discover(s: Shared) {
         />
       </section>
 
-      <div className="ctabs disc-tabs">
-        <div className="ctabset" role="tablist" aria-label="Ways to build a deck">
-          <button
-            type="button"
-            role="tab"
-            className={`ctab${subTab === 'commanders' ? ' on' : ''}`}
-            aria-selected={subTab === 'commanders'}
-            onClick={() => (haptic('select'), setSubTab('commanders'))}
-          >
-            COMMANDERS
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={`ctab${subTab === 'guided' ? ' on' : ''}`}
-            aria-selected={subTab === 'guided'}
-            onClick={() => (haptic('select'), setSubTab('guided'))}
-          >
-            GUIDED BUILDER
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className={`ctab${subTab === 'tags' ? ' on' : ''}`}
-            aria-selected={subTab === 'tags'}
-            onClick={() => (haptic('select'), setSubTab('tags'))}
-          >
-            TAG BUILDER
+      {/* Discover finds the commander (journey step 4, Nov 28). Guided and the tag graph are stops on the deck's journey
+          (START · EXPLORE · TUNE), reached from that bar, + GUIDED and Ctrl/Cmd+K; from either, this goes back. */}
+      {subTab !== 'commanders' && (
+        <div className="ctabs disc-tabs disc-back">
+          <button type="button" className="ctab" onClick={() => (haptic('tap'), setSubTab('commanders'))}>
+            ← COMMANDERS
           </button>
         </div>
-      </div>
+      )}
 
       {subTab === 'tags' ? (
         <Suspense fallback={<CardSpin page />}>

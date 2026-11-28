@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { binderCandidates } from '../../brain/candidates';
 import { stepPicks } from '../../brain/guided';
 import { inIdentity } from '../../brain/identity';
@@ -10,7 +10,7 @@ import { db, type Card, type Deck, type DeckCard } from '../../lib/db';
 import { bracketOf, deckStats, isLand } from '../../lib/deckstats';
 import { deckText } from '../../lib/export';
 import { haptic } from '../../lib/haptics';
-import { freeDeckName, onPendingSeeds, openDeck, openDiscoverSub, takePendingSeeds } from '../../lib/nav';
+import { freeDeckName, onGuidedCommander, onPendingSeeds, openDeck, openDiscoverSub, takeGuidedCommander, takePendingSeeds } from '../../lib/nav';
 import { exploreColours, sendToExplore } from '../../lib/journey';
 import { JourneyBar } from '../journey/JourneyBar';
 import { norm } from '../../lib/names';
@@ -134,6 +134,30 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
     }
   }, [cardByKey, commander, savedCommanderKey]);
 
+  // Journey step 4: a commander's page (Discover) opens START with that commander already picked. A draft built for
+  // another commander is only replaced after you say so.
+  const draftRef = useRef({ commanderKey: savedCommanderKey, cards: draftCards.length });
+  draftRef.current = { commanderKey: commander?.key ?? savedCommanderKey, cards: draftCards.length };
+  const selectRef = useRef<(c: Card) => void>(() => {});
+  useEffect(() => {
+    const apply = async (name: string) => {
+      const key = norm(name);
+      const card = cardByKey.get(key) ?? (await db.cards.where('key').equals(key).first());
+      if (!card) return;
+      const d = draftRef.current;
+      if (d.commanderKey === key) return;
+      if (d.commanderKey && d.cards > 1 && !confirm(`Start a new Guided build with ${card.name}? Your current draft (${d.cards} cards) will be replaced.`)) return;
+      setStartMode('commander');
+      setSeedCards([]);
+      setDeckName('');
+      selectRef.current(card);
+    };
+    const first = takeGuidedCommander();
+    if (first) void apply(first);
+    return onGuidedCommander((n) => void apply(n));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Receive seed cards handed off from Tag Builder ("BUILD WITH THESE TAGS →")
   useEffect(() => {
     const applySeeds = async (names: string[]) => {
@@ -233,6 +257,7 @@ export function GuidedBuilder({ profile, binderName, mine, onToast }: GuidedBuil
     setDraftCards(nextCards);
     setStep('lands');
   };
+  selectRef.current = selectCommander;
 
   const toggleSeedCard = (card: Card) => {
     setSeedCards((prev) => {
