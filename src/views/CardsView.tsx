@@ -350,7 +350,7 @@ export function CardsView({ entries, cards, profile, binderName, q = '', setQ, t
           label="Cards: filter, search and display"
           filter={filter}
           search={<SearchBox q={q} setQ={setQ ?? (() => {})} />}
-          display={<DisplayBtn now={view === 'grid' ? `GRID · ${zoom.toUpperCase()}` : 'LIST'} open={disp} onClick={() => setDisp(true)} />}
+          display={<DisplayBtn now={view === 'grid' ? `GRID · ${zoom.toUpperCase()}` : 'LIST'} open={disp} onClick={() => setDisp(true)} changed={[sort && sort.value !== sort.options[0][0] ? `sorted ${sort.options.find(([v]) => v === sort.value)?.[1].toLowerCase()}` : '', group === 'on' ? 'grouped by set' : ''].filter(Boolean).join(', ')} />}
         />
       </div>
       {disp && (

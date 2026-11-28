@@ -51,19 +51,21 @@ export function FilterBtn({ count, onClick, what, open }: { count: number; onCli
   );
 }
 
-/** DISPLAY: last on the bar; it names the view and size that are on ("GRID · M", "LIST"). */
-export function DisplayBtn({ now, onClick, open }: { now: string; onClick: () => void; open?: boolean }) {
+/** DISPLAY: last on the bar; it names the view and size that are on ("GRID · M", "LIST"). A small dot says the sort
+ *  or grouping is not the page's usual one (Guillermo, Nov 28: "so I can tell at a glance"); `changed` names it. */
+export function DisplayBtn({ now, onClick, open, changed }: { now: string; onClick: () => void; open?: boolean; changed?: string }) {
   return (
     <button
       type="button"
       className="ob-display"
       aria-haspopup="dialog"
       aria-expanded={!!open}
-      aria-label={`Display: ${now}. View, size and sort`}
-      title="Display: view, size, sort"
+      aria-label={`Display: ${now}${changed ? `, ${changed}` : ''}. View, size and sort`}
+      title={changed ? `Display: ${changed}` : 'Display: view, size, sort'}
       onClick={() => (haptic('open'), onClick())}
     >
       <span className="ob-now">{now}</span>
+      {changed && <i className="ob-dot" aria-hidden="true" />}
       <span className="ob-caret" aria-hidden="true">
         ▾
       </span>

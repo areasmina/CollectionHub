@@ -39,6 +39,7 @@ test('Collection: one row, FILTER · search · DISPLAY in that order, nothing el
 test('DISPLAY names the view and size, and its sheet changes view, size, sort and group', async ({ page }) => {
   const disp = page.getByRole('button', { name: /^Display:/ });
   await expect(disp).toHaveText(/GRID · M/);
+  await expect(disp.locator('.ob-dot')).toHaveCount(0); // usual sort, no grouping: no dot
   await disp.click();
   const sheet = page.getByRole('dialog', { name: 'Display' });
   await expect(sheet).toBeVisible();
@@ -52,6 +53,9 @@ test('DISPLAY names the view and size, and its sheet changes view, size, sort an
   await expect(sheet).toHaveCount(0);
   await expect(disp).toHaveText(/GRID · L/);
   await expect(firstName(page)).toContainText('Rhystic Study');
+  // a sort that is not the usual one shows as a dot on DISPLAY, and is named for screen readers
+  await expect(disp.locator('.ob-dot')).toBeVisible();
+  await expect(disp).toHaveAttribute('aria-label', /sorted price, high first/);
   // list view: the button says LIST, and card size leaves the sheet (it is a grid setting)
   await disp.click();
   await sheet.getByRole('group', { name: 'View' }).getByRole('button', { name: /LIST/ }).click();

@@ -397,7 +397,8 @@ Status: **decided** · **rejected** · **parked**. Deck-building engine decision
   BINDER (CSV · TXT · CollectionHub) already did the same job.
 - Both sheets are the one sheet: a bottom sheet on phones that closes with a swipe down (our own code, no new library:
   vaul and shadcn were considered and declined), a panel wider; ✕, Escape and the dimmed page close it too, and focus
-  goes back to the button. FILTER ends with RESET · SHOW N; DISPLAY with DONE.
+  goes back to the button. FILTER ends with RESET · SHOW N; DISPLAY with DONE. Sort and group always live in DISPLAY, never in FILTER;
+  DISPLAY shows a small dot when either is not the page's usual one (Guillermo, Nov 28).
 - Still to move onto it: My Decks (status chips into FILTER), Discover (colour and sort out of ⋮), the commander page,
   saved deck and Forge (⋮ OPTIONS into FILTER with an EDHREC section; + MY CARDS becomes a DECK | MINE switch in the
   search), the tag graph. Proposal and mockups: https://claude.ai/artifact/6u8UKmLXHcATCtZhCmZ9mm
