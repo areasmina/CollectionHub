@@ -142,8 +142,6 @@
 .dlist .dstats .pip-r b { color: #ff5240 !important; }
 .dlist .dstats .pip-g,
 .dlist .dstats .pip-g b { color: #40d478 !important; }
-@media (min-width: 701px) {
-    }
 @media (max-width: 700px) {
   .dlist .dstats {
     grid-template-columns: 1fr 1fr;
@@ -514,12 +512,10 @@
   }
   .dstrip > .dstatus {
     flex-basis: 100%;
-    order: 2;
     font-size: 12px;
     line-height: 1.4;
   }
   .dstrip > .dacts {
-    order: 1;
     margin: 0 !important;
   }
   /* In the Forge the strip scrolls away cleanly instead of floating over the cards on phones. */
@@ -633,18 +629,12 @@ html.forging .vhero {
   /* sacred card rule: a card picture is never tilted (the tilt lives on the tape and stamps, not on the card) */
   transform: none;
 }
-.dpage .wildcard .wacts {
-  flex-wrap: wrap;
-  gap: 10px !important;
-}
 .dpage .wildcard .wacts .btn {
-  min-height: 40px;
   border-radius: 0 !important;
 }
 .dpage .wildcard .wacts .btn-swap-in {
   border-radius: 0 !important;
   border: 2px solid #e60012 !important;
-  box-shadow: 3px 3px 0 #f4efe4 !important;
 }
 .dpage .wildcard .wacts .wreroll {
   background: #2bd65a !important;
@@ -729,7 +719,6 @@ html.forging .vhero {
     justify-content: center !important;
     align-items: center !important;
     gap: 4px 12px !important;
-    max-width: 220px;
     padding: 8px 14px !important;
   }
   .dlist .decktoolbar {
@@ -797,7 +786,7 @@ html.forging .vhero {
 /* Small phones: search gets its own full row (it was squeezed to two letters at 320px); view, options, filter and sort share the row under it */
 @media (max-width: 430px) {
   .dtools.tbar:not(.lists > *):has(> .sortsel) { flex-wrap: wrap; }
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100% !important; border-bottom: 2px solid var(--text) !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { border-bottom: 2px solid var(--text) !important; }
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tquick { flex: 0 0 auto; border-left: 0; }
   .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { border-left: 2px solid var(--text); }
   .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
@@ -1075,9 +1064,6 @@ html.forging .vhero {
   .deckmenu .cwheel { width: 44px !important; height: 44px !important; }
 }
 /* My Decks keeps its SHOW / HIDE STATS fold; Collection's became the CARDS | ANALYTICS tab (Nov 15). */
-@media (max-width: 700px) {
-  /* phones: the two deck buttons share the row's width, the fold button keeps its own size at the end */
-    }
 
 /* ── Phase 2 follow-up (found with the real collection): nothing in the options sheet or the chip strip reads cut off ── */
 @media (max-width: 699px) {
@@ -1198,14 +1184,12 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   html.forging .deckgrid.forge-split .dpage .lists > .dtools.tbar > .tquick,
   html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick { max-width: none !important; overflow: visible !important; }
   /* Collection's second row also holds ⋮, FILTER and the sort: tighter gaps so the sort's name still reads */
-  .coll .dtools.tbar > .tquick { gap: 6px !important; padding: 0 6px !important; }
   .coll .dtools.tbar > .tquick > .qzoom-btn { padding: 0 8px !important; }
   /* Collection grid, ManaBox sizing: S = 4 across, M = 3 across (the start), L = 2 across — the same steps as a deck's grid */
   .collbar[data-zoom='s'] ~ * .cgrid2, .collbar[data-zoom='s'] ~ .cgrid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; }
   .collbar[data-zoom='m'] ~ * .cgrid2, .collbar[data-zoom='m'] ~ .cgrid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
   .collbar[data-zoom='l'] ~ * .cgrid2, .collbar[data-zoom='l'] ~ .cgrid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 700px) { .coll .dtools.tbar > .sortsel select { font-size: 14px !important; } }
 
 /* ── Card sections, every screen (owner's call, Nov 13: "as clean as Moxfield") ── Each section (Creatures, Instants,
    Lands …) is its own full-width block: a header row, then its cards in rows that fill the width and wrap as needed.
@@ -1456,7 +1440,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   align-items: stretch;
   gap: 8px !important;
   padding: 8px !important;
-  box-shadow: 4px 4px 0 var(--accent, #e60012);
 }
 .decktoolbar .dsearchrow {
   display: flex;
@@ -1570,13 +1553,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   align-self: flex-start;
   display: inline-block;
   margin-top: 6px;
-  padding: 2px 8px;
   background: var(--accent, #e60012);
   color: #fff;
   transform: rotate(1deg);
   font: 400 11px var(--u-display, 'Anton', sans-serif);
   letter-spacing: 0.08em;
-  max-width: 100%;
   line-height: 1.35;
 }
 /* on a narrow tile the reason drops under NOT LEGAL instead of being cut off */
@@ -1840,7 +1821,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .apanel .aline {
   display: block;
   width: 100%;
-  height: 110px;
   background: #0c0c0e;
   border: 1px solid #2c2c3a;
 }
@@ -2216,10 +2196,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .dlist .dfilters {
   align-items: center;
 }
-.dlist .dfilters > .dsize {
-  margin-left: auto;
-  flex: none;
-}
 .dgrid .dtile .cfoot {
   flex-wrap: nowrap;
   min-width: 0;
@@ -2302,7 +2278,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .ztile .tacts > .morebtn,
 .ztile:not(.ctile) .tacts > .morebtn,
 .ztile.ctile > .morebtn {
-  opacity: 0.72;
   right: 0;
   background: none;
   text-shadow: none;
@@ -2383,8 +2358,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     gap: 6px;
     max-width: 100%;
     overflow: visible;
-    padding-top: 8px !important;
-    padding-bottom: 6px !important;
   }
   .coll .chead2 .titlewrap > .ztitle {
     flex: 0 1 auto;
@@ -2414,25 +2387,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     left: auto !important;
     right: 12px !important;
   }
-  :is(.coll, .dlist) .ctabs {
-    margin: 6px 0 0;
-    padding: 5px;
-    gap: 6px;
-  }
-  :is(.coll, .dlist) .ctab {
-    min-height: 44px;
-    padding: 0 11px;
-  }
-  .coll .coll-listbar {
-    padding: 5px 8px !important;
-  }
-  .dpage.coll .collbar {
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-  }
-  .dpage.coll .collbar > .dtools.tbar {
-    gap: 6px !important;
-  }
 }
 
 /* ── Collection: swipe between CARDS and ANALYTICS (Guillermo, Nov 15) ──
@@ -2444,8 +2398,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 :is(.coll, .dlist) .ctab-hint {
   position: absolute;
-  right: 8px;
-  bottom: -14px;
   z-index: 6;
   display: inline-flex;
   align-items: center;
@@ -2533,11 +2485,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     rgba(12, 12, 14, 0.74) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.3);
   backdrop-filter: blur(22px) saturate(1.3);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 18px 44px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .island-drawer::after {
   content: '';
@@ -2708,7 +2655,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   .tbar .fbody .chiprow > .u-chip { height: 44px !important; min-height: 44px !important; padding: 0 14px !important; font-size: 12.5px !important; }
 }
 /* SHOW is the bar's ALL / OWNED / MISSING buttons wherever the bar has room for them: there it is not repeated here */
-@media (min-width: 701px) {  }
 
 /* The footer: always on the bottom edge of the sheet, APPLY taking the width it deserves */
 .tbar .fbody .sheetfoot {
@@ -3034,17 +2980,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 }
 
 /* the closed rail: wide enough for words, and quiet */
-@media (min-width: 1100px) {
-  html.forging .deckgrid.forge-split.an-contracted {
-    grid-template-columns: 168px minmax(0, 1fr) 350px !important;
-  }
-  html.forging .deckgrid.forge-split.sug-contracted {
-    grid-template-columns: 320px minmax(0, 1fr) 168px !important;
-  }
-  html.forging .deckgrid.forge-split.an-contracted.sug-contracted {
-    grid-template-columns: 168px minmax(0, 1fr) 168px !important;
-  }
-}
 .fmeters.contracted .fmeters-header h3,
 .fsugg.contracted .fsugg-header h3 {
   display: flex !important;
@@ -3339,10 +3274,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
   .coll .slip {
     flex: 0 1 460px !important;
     max-width: 460px !important;
-  }
-  .coll .topwidget {
-    flex: 1 1 320px !important;
-    max-width: 560px !important;
   }
 }
 

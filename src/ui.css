@@ -334,13 +334,11 @@
   align-items: center;
   justify-content: center;
   font-family: var(--u-display);
-  background: #000000 !important;
   user-select: none;
   touch-action: none;
   width: fit-content;
   max-width: min(720px, calc(100vw - 20px));
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.12);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
 }
 
 /* Floating during reposition drag */
@@ -348,14 +346,7 @@
   transition: none !important;
   cursor: grabbing !important;
   border: none !important;
-  border-radius: 42% 58% 60% 40% / 45% 55% 45% 55% !important;
-  animation: venom-goo-morph 1.8s infinite ease-in-out alternate, venom-simmer 0.4s infinite alternate !important;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.98), 0 0 50px rgba(230, 0, 18, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.15) !important;
-}
-
-.pillnav.floating .island-membrane {
-  border-radius: inherit !important;
-  animation: venom-goo-membrane 2.2s infinite ease-in-out alternate !important;
 }
 
 @keyframes venom-goo-morph {
@@ -463,14 +454,11 @@
 }
 .pillnav.dock-top::before {
   left: -16px;
-  background: radial-gradient(circle at 0 16px, transparent 16px, #000000 16px);
 }
 .pillnav.dock-top::after {
   right: -16px;
-  background: radial-gradient(circle at 16px 16px, transparent 16px, #000000 16px);
 }
 .pillnav.dock-top.away {
-  transform: translate(-50%, -100%);
   opacity: 0;
 }
 .pillnav.dock-top .island-membrane {
@@ -488,7 +476,6 @@
   top: auto;
 }
 .pillnav.dock-top .island-drawer {
-  top: calc(100% + 10px);
   bottom: auto;
   animation: islandDrop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -528,14 +515,11 @@
 }
 .pillnav.dock-bottom::before {
   left: -16px;
-  background: radial-gradient(circle at 0 0, transparent 16px, #000000 16px);
 }
 .pillnav.dock-bottom::after {
   right: -16px;
-  background: radial-gradient(circle at 16px 0, transparent 16px, #000000 16px);
 }
 .pillnav.dock-bottom.away {
-  transform: translate(-50%, 100%);
   opacity: 0;
 }
 .pillnav.dock-bottom .island-membrane {
@@ -553,7 +537,6 @@
   bottom: auto;
 }
 .pillnav.dock-bottom .island-drawer {
-  bottom: calc(100% + 10px);
   top: auto;
   animation: islandRise 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -763,23 +746,6 @@
 }
 
 /* Dynamic Island Decks Drawer (Clean, focused, only decks) */
-.island-drawer {
-  position: absolute;
-  left: 50%;
-  width: min(440px, calc(100vw - 20px));
-  background: rgba(10, 10, 10, 0.98);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 100;
-  max-height: min(380px, calc(80vh - 80px));
-}
 
 
 
@@ -813,7 +779,6 @@ main.dpage {
 
 /* Hero: the loud frame. One red slash behind the name, ransom letters; the card flat. */
 .vhero {
-  position: relative;
   isolation: isolate;
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
@@ -830,8 +795,6 @@ main.dpage {
   z-index: -1;
   left: -20px;
   right: calc(-1 * var(--gutter));
-  top: 22%;
-  bottom: 4%;
   background: var(--u-red);
   clip-path: polygon(0 30%, 100% 0, 99% 64%, 1% 100%);
   pointer-events: none;
@@ -1045,7 +1008,6 @@ main.dpage {
   .vhero .vname {
     grid-column: 2;
     grid-row: 1;
-    align-self: center;
   }
   .vhero .vcard {
     grid-column: 1;
@@ -1071,7 +1033,6 @@ main.dpage {
   z-index: 32;
   display: flex;
   align-items: center;
-  gap: var(--s3);
   height: 56px;
   padding: 0;
   background: var(--u-ink);
@@ -1608,8 +1569,6 @@ main.dpage {
     position: relative;
     top: auto;
     flex-wrap: wrap;
-    height: auto;
-    padding: var(--s2) 0;
     gap: var(--s2);
   }
   .dstatus {
@@ -1749,53 +1708,20 @@ main.dpage {
 .dtools.tbar {
 position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar stays in reach while scrolling */
 }
-.dtools.tbar > .tbmore {
-  position: relative !important;
-}
 /* Dropdown popup anchors directly underneath the clicked button */
 @media (min-width: 701px) {
   .dtools.tbar > .tbmore > .fbody {
-    left: 0 !important;
-    right: auto !important;
     top: calc(100% + 4px) !important;
-    max-width: min(440px, calc(100vw - 24px)) !important;
   }
 }
 @media (max-width: 700px) {
   .dtools.tbar > .tbmore > .fbody {
-    left: 0 !important;
-    right: auto !important;
     top: calc(100% + 4px) !important;
-    max-width: min(440px, calc(100vw - 24px)) !important;
   }
-}
-.dtools.tbar > .tbmore .optrow {
-  padding-top: 10px;
-  border-top: 1px solid #242424;
-  gap: 8px;
 }
 .dtools.tbar > .tbmore .optrow:first-child {
   padding-top: 0;
   border-top: 0;
-}
-.dtools.tbar > .tbmore .optrow > .lbl {
-  color: var(--u-muted, #888);
-  font: 600 12px/1 var(--u-display, sans-serif);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.dtools .fbody .themes,
-.dpage .themes {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-  -webkit-overflow-scrolling: touch !important;
-  scrollbar-width: thin !important;
-  gap: 6px !important;
-  border: 0 !important;
-  background: transparent !important;
 }
 .dtools .fbody .themes button,
 .dpage .themes button,
@@ -1817,44 +1743,21 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   box-shadow: none !important;
   transform: none !important;
 }
-.dtools .fbody .themes button:hover,
-.dpage .themes button:hover {
-  background: #2a2a2a !important;
-  border-color: #555 !important;
-  color: #fff !important;
-}
-.dtools .fbody .themes button[aria-pressed='true'],
-.dpage .themes button[aria-pressed='true'] {
-  background: var(--u-red, #e60012) !important;
-  color: #fff !important;
-  border-color: var(--u-red, #e60012) !important;
-}
 .dtools .fbody .themes small,
 .dpage .themes small {
   opacity: 0.65;
   font-size: 11px;
 }
 .tbar .fbody .sbox.pick {
-  background: #181818 !important;
-  border: 1px solid #333333 !important;
-  border-radius: 6px !important;
-  height: 38px !important;
-  min-height: 38px !important;
   overflow: hidden;
 }
 .tbar .fbody .sbox.pick .tab {
-  background: #222222 !important;
-  color: #999999 !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  padding: 0 10px !important;
   border-right: 1px solid #333333 !important;
   letter-spacing: 0.06em;
 }
 .tbar .fbody .sbox.pick select {
   background: transparent !important;
   color: #ffffff !important;
-  font-size: 13px !important;
   font-family: var(--u-mono, monospace) !important;
 }
 .tbar .fbody .cfilter {
@@ -2158,13 +2061,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* 2. Opaque dropdown popovers - no bleedthrough (Item 1 & 3) */
-.u-menubody,
-.dstrip .power .u-menubody {
-  background: #0d0d0d !important;
-  opacity: 1 !important;
-  z-index: 1000 !important;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.98), 0 0 0 1px #2a2a2a !important;
-}
 
 /* 3. JUST BUILD IT! Banner Button (Item 2) */
 .just-build-banner {
@@ -2176,11 +2072,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(230, 0, 18, 0.16) 0%, rgba(20, 20, 20, 0.98) 100%);
-  border: 1px solid var(--u-red, #e60012);
-  border-left: 5px solid var(--u-red, #e60012);
-  border-radius: 8px;
   color: #ffffff;
   cursor: pointer;
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
@@ -2199,13 +2090,9 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   flex: 1;
 }
 .btn-just-build .build-text strong {
-  font: 700 15px/1.1 var(--u-display, Impact, sans-serif);
-  letter-spacing: 0.06em;
   color: #ffffff;
 }
 .btn-just-build .build-text small {
-  font: 400 11px/1.2 var(--u-mono, monospace);
-  color: var(--u-muted, #888888);
   margin-top: 2px;
 }
 .btn-just-build .build-arrow {
@@ -2216,10 +2103,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 
 /* 4. Compact SORT/SHOW/ONLY grid inside ⋮ options menu (Item 3) */
 .tbar .fbody .pickgrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  width: 100%;
   margin: 4px 0;
 }
 @media (max-width: 680px) {
@@ -2231,29 +2114,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 
 
 /* 8. Desktop Split View for Forge: Analysis Left, Deck Middle, Suggestions Right (Item 5) */
-@media (min-width: 1100px) {
-  html.forging .deckgrid.forge-split {
-    display: grid !important;
-    grid-template-columns: 320px minmax(0, 1fr) 350px !important;
-    gap: 24px !important;
-    align-items: start !important;
-  }
-  html.forging .forge-analysis {
-    position: sticky;
-    top: 64px;
-    max-height: calc(100dvh - 80px);
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  html.forging .forge-suggestions {
-    position: sticky;
-    top: 64px;
-    max-height: calc(100dvh - 80px);
-    overflow-y: auto;
-  }
-}
 
 /* ==========================================================================
    DISCOVER EYE INTEGRATION ON DESKTOP (IMAGE 5)
@@ -2737,8 +2597,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
     max-width: min(520px, calc(100vw - 24px)) !important;
     padding: 10px 12px !important;
     gap: 7px !important;
-    max-height: calc(100vh - 100px) !important;
-    overflow-y: auto !important;
     border: 1px solid #32323e !important;
     border-radius: 8px !important;
     background: #0f0f12 !important;
@@ -2900,8 +2758,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   display: flex !important;
   flex: 1 1 auto !important;
   flex-wrap: wrap !important;
-  gap: 6px !important;
-  background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
   padding: 0 !important;
@@ -2909,13 +2765,9 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 .tbar .fbody .segs button {
   flex: 0 1 auto !important;
   min-width: 0 !important;
-  height: 36px !important;
-  min-height: 36px !important;
   padding: 0 14px !important;
   background: #141419 !important;
   background-image: none !important;
-  border: 1px solid #2c2c36 !important;
-  border-radius: 999px !important;
   color: #d4d4de !important;
   font: 700 12px/1 var(--u-mono, monospace) !important;
   letter-spacing: 0.04em !important;
@@ -3160,12 +3012,10 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 .pillnav.dock-left.away {
-  transform: translate(-100%, -50%) !important;
   opacity: 0 !important;
 }
 
 .pillnav.dock-right.away {
-  transform: translate(100%, -50%) !important;
   opacity: 0 !important;
 }
 
@@ -3435,10 +3285,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Options dropdown anchors to the left underneath the options button */
-@media (min-width: 701px) {
-  }
-@media (max-width: 700px) {
-  }
 
 /* Keep quick buttons visible and horizontally scrollable */
 .dtools.tbar > .tquick,
@@ -4325,19 +4171,14 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 
 .swapnote .pin-btn {
   flex: 1 1 50% !important;
-  height: 38px !important;
-  min-height: 38px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
-  font: 800 12px/1 var(--u-display, 'Archivo Black', sans-serif) !important;
-  letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
   background: #191920 !important;
   color: #cccccc !important;
   border: 1.5px solid #333342 !important;
-  border-radius: 6px !important;
   cursor: pointer !important;
   transition: all 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
@@ -4366,7 +4207,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 
 .swapnote .pin-btn:active:not(:disabled) {
   transform: translateY(1px) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
 .swapnote .pin-btn:disabled {
@@ -4521,8 +4361,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 }
 
 /* Hide redundant SHOW pick from filter menu on desktop/tablet where it is in the search bar */
-@media (min-width: 701px) {
-  }
 
 /* Quick pills visible on desktop & tablet (> 700px); on phones (<= 700px), hide so toolbar stays <= 52px */
 @media (max-width: 700px) {
@@ -4540,7 +4378,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
   position: absolute;
   left: 50%;
   width: min(480px, calc(100vw - 24px));
-  background: #111114 !important;
   border: 2px solid #2e2e38 !important;
   border-radius: 14px !important;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.96), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
@@ -4616,13 +4453,11 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 .id-sync-code-label {
   font: 700 10.5px/1 var(--u-mono, monospace) !important;
   letter-spacing: 0.08em !important;
-  color: #9999aa !important;
   text-transform: uppercase !important;
 }
 
 .id-sync-privacy {
   font: 400 10px/1 var(--u-mono, monospace) !important;
-  color: #666677 !important;
 }
 
 .id-sync-code-chip {
@@ -4770,15 +4605,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
     gap: 20px !important;
     align-items: start !important;
     transition: grid-template-columns 0.25s cubic-bezier(0.2, 0.9, 0.2, 1) !important;
-  }
-  html.forging .deckgrid.forge-split.an-contracted {
-    grid-template-columns: 110px minmax(0, 1fr) 350px !important;
-  }
-  html.forging .deckgrid.forge-split.sug-contracted {
-    grid-template-columns: 320px minmax(0, 1fr) 110px !important;
-  }
-  html.forging .deckgrid.forge-split.an-contracted.sug-contracted {
-    grid-template-columns: 110px minmax(0, 1fr) 110px !important;
   }
 
   html.forging .forge-analysis {
@@ -6003,8 +5829,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
     position: static !important;
   }
   .lists > .dtools.tbar > .tbmore > .fbody {
-    left: auto !important;
-    right: 0 !important;
     top: calc(100% + 4px) !important;
   }
 }
@@ -6072,13 +5896,11 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 }
 .dgrid .dtile .cfoot .cstate {
   display: inline-block;
-  padding: 2px 8px;
   background: #0a0a0a;
   border: 1px solid #ffcc00;
   color: #ffcc00;
   transform: rotate(-1.5deg);
   font: 400 11px var(--u-display);
-  letter-spacing: 0.08em;
 }
 .dgrid .dtile .cfoot .cstate.ready {
   background: #ffcc00;
@@ -6088,7 +5910,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 }
 .dgrid .dtile .cfoot {
   align-items: center;
-  gap: var(--s2);
 }
 
 /* ==========================================================================
@@ -6165,9 +5986,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   }
 
   /* The deck page starts right under the header: no big gap above the card and title. */
-  main.dpage .vhero {
-    padding-top: var(--s2);
-  }
   /* The status row wraps instead of running off the screen. */
   .dstrip,
   .dstrip > * {
@@ -6205,14 +6023,12 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
    the one primary action). It rides beside the list (sticky) so it never covers a card row. */
 .lists:has(> .jrail-wrap) {
   position: relative;
-  padding-right: 40px;
 }
 .lists > .jrail-wrap {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 32px;
   pointer-events: none;
 }
 .jrail {
@@ -6222,7 +6038,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   flex-direction: column;
   gap: 0;
   pointer-events: auto;
-  background: var(--u-carbon);
   border: 1px solid var(--u-line2);
 }
 .jrail > button {
@@ -6257,10 +6072,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 /* Phones: the deck list lives in the swipe cube, which is its own scroller, so sticky can't hold the rail there. It is
    pinned to the screen's right edge instead and shows only while the CARDS face is on screen. */
 @media (max-width: 700px) {
-  .deckgrid > .lists:has(> .jrail-wrap),
-  html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) {
-    padding-right: 44px !important; /* the cube's own phone padding is !important (polish.css); the rail needs its lane */
-  }
   .lists > .jrail-wrap {
     position: fixed;
     top: 50%;
