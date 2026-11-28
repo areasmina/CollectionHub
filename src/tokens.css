@@ -1366,7 +1366,8 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   background: rgba(12, 12, 16, 0.78) !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   opacity: 0 !important;
-  transform: translateX(6px);
+  /* a short slide, small enough that the resting (faded) rail never pokes past a phone's edge */
+  transform: translateX(3px);
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   transition:
@@ -1404,7 +1405,8 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
     opacity: 0;
     visibility: hidden;
     pointer-events: none !important;
-    transform: translateX(10px) !important;
+    /* a 2px slide in, not 10px: mid-slide the rail must never sit past a phone's right edge */
+    transform: translateX(2px) !important;
     transition:
       opacity 0.28s ease,
       transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),

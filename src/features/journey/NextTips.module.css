@@ -1,0 +1,61 @@
+/* NEXT tips: an annotated margin note under the journey bar (yellow rule = a discovery), technical type for the why. */
+.list {
+  display: grid;
+  gap: var(--mo-s2);
+  margin: 0 0 var(--mo-s2);
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 701px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.tip {
+  min-width: 0;
+  border-left: 3px solid var(--mo-yellow);
+  background: var(--mo-surface-2);
+  border-radius: 0 var(--mo-r-sm) var(--mo-r-sm) 0;
+}
+.go {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--mo-s2);
+  padding: 0 var(--mo-s2);
+  border: 0;
+  background: transparent;
+  color: var(--mo-text);
+  text-align: left;
+  cursor: pointer;
+}
+.go:hover .text {
+  text-decoration: underline;
+}
+.go:focus-visible {
+  outline: 2px solid var(--mo-yellow);
+  outline-offset: -2px;
+}
+.tag {
+  flex: none;
+  font: 400 12px/1 var(--mo-display);
+  letter-spacing: 0.08em;
+  color: var(--mo-yellow);
+}
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.arrow {
+  flex: none;
+  color: var(--mo-yellow);
+}
+.why {
+  margin: 0;
+  padding: 0 var(--mo-s2) var(--mo-s2);
+  font: 400 11px/1.4 var(--mo-mono);
+  color: var(--mo-muted);
+}
