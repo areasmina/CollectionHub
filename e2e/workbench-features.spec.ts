@@ -128,7 +128,8 @@ test.describe('Collection & Decks Workbench Features', () => {
     // cube tablist should be present
     const cube = page.locator('.fcube[role="tablist"]');
     await expect(cube).toBeVisible();
-    await expect(cube.getByRole('tab')).toHaveText(['CARDS', 'ANALYSIS', 'TO BUY']);
+    // the faces keep their full names (Nov 28: a phone with UNDO and SAVE reads the short words CARDS · STATS · BUY)
+    expect(await cube.getByRole('tab').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))).toEqual(['CARDS', 'ANALYSIS', 'TO BUY']);
     await expect(cube.getByRole('tab', { name: 'CARDS' })).toHaveAttribute('aria-selected', 'true');
 
     // switch to ANALYSIS: fmeters should scroll into view

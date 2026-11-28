@@ -46,7 +46,7 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
   const forgeRow = island.locator('.forge-island-wrap');
 
   await expect(island).toBeVisible();
-  await expect(forgetop.locator('.fstamp')).toBeVisible();
+  await expect(forgetop.locator('.fleave')).toBeVisible(); // (the FORGE stamp steps aside on a phone with UNDO and SAVE)
   await expect(vhero).toBeVisible();
 
   await page.evaluate(() => window.scrollTo(0, 0));
