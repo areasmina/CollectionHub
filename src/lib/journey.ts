@@ -99,3 +99,12 @@ export function nextTips(
   }
   return out.slice(0, max);
 }
+
+/**
+ * Whether a saved deck shows the journey bar and NEXT tips (Guillermo, Nov 28): while it is still being built (under
+ * 100 cards, or not legal yet) or was changed in the Forge during this visit. A finished deck you only look at stays
+ * clean; its tools are behind TOOLS.
+ */
+export function journeyOn(o: { total: number; legal: boolean; editedHere: boolean }): boolean {
+  return o.editedHere || o.total < 100 || !o.legal;
+}

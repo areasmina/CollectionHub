@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { haptic } from '../lib/haptics';
 import { ManaIcon, Ransom } from './zine';
@@ -6,9 +6,25 @@ import { COLOURS, COLOUR_NAME, FINISH_LABEL, MVS, PRICES, PRICE_LABEL, RARITIES,
 
 /** The Filter button of the control strip: a count when something narrows the list, and a sheet with the choices.
  *  The sheet sits at the bottom of the screen on a phone (thumb reach) and as a panel on wider screens. */
-export function FilterButton({ filter, setFilter, shown, total }: { filter: CollFilter; setFilter: (f: CollFilter) => void; shown: number; total: number }) {
+export function FilterButton({
+  filter,
+  setFilter,
+  shown,
+  total,
+  folders,
+  folderOn = false,
+}: {
+  filter: CollFilter;
+  setFilter: (f: CollFilter) => void;
+  shown: number;
+  total: number;
+  /** Phones (Nov 27): the binder's folders open here, at the top of the sheet, instead of a row on the page. */
+  folders?: ReactNode;
+  /** A folder other than ALL is picked: it counts on the button like a filter. */
+  folderOn?: boolean;
+}) {
   const [open, setOpen] = useState(false);
-  const n = filterCount(filter);
+  const n = filterCount(filter) + (folderOn ? 1 : 0);
   useEffect(() => {
     if (!open) return;
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
@@ -38,6 +54,12 @@ export function FilterButton({ filter, setFilter, shown, total }: { filter: Coll
               <button type="button" className="close" onClick={() => setOpen(false)} aria-label="Close filter">✕</button>
             </div>
             <div className="fs-body">
+              {folders && (
+                <div className="fs-group fs-folders">
+                  <span className="lbl">Folder</span>
+                  {folders}
+                </div>
+              )}
               <div className="fs-group">
                 <span className="lbl">Colours</span>
                 {/* the same mana buttons as Discover's colour filter (one part, one look) */}

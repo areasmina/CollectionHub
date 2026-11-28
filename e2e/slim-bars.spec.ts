@@ -12,9 +12,11 @@ test('Phone: the Forge bar and the suggestions tab are one row each, and the tab
   await page.evaluate(() => localStorage.setItem('ch:tab', 'decks'));
   await page.reload();
   await page.locator('.dcard').first().click();
-  const bar = page.locator('.forgetop');
+  // Nov 27: FORGE, the CARDS · ANALYSIS · TO BUY faces, ✕ and ☰ share one Island row
+  const bar = page.locator('.pillnav .forge-island-wrap');
   await expect(bar).toBeVisible();
-  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(48);
+  expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(52);
+  await expect(bar.locator('.fcube')).toBeVisible();
   // every control on it is still a full tap target
   for (const b of await bar.locator('button').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
 

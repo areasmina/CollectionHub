@@ -509,7 +509,7 @@ export default function App() {
                   <span className="forge-card-icon" aria-hidden="true">
                     <BrandMark fire size={22} />
                   </span>
-                  FORGE
+                  <span className="fword">FORGE</span>
                 </button>
                 {forgeActionsOpen && (
                   <>
@@ -529,7 +529,7 @@ export default function App() {
                       </button>
                     )}
                     <button className="u-btn ghost fleave" onClick={() => (haptic('tap'), forgeState.onLeave())} title="Leave the Forge (Esc)">
-                      ✕ LEAVE
+                      ✕ <span className="fword">LEAVE</span>
                     </button>
                   </>
                 )}

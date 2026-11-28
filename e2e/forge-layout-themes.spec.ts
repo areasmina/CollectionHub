@@ -42,16 +42,18 @@ test('Forge bar below commander hero, JUST BUILD IT on suggestions panel, and ho
   const vhero = page.locator('.vhero');
   const island = page.locator('.pillnav.forging-island');
   const forgetop = island.locator('.forgetop');
+  // on phones the bar's parts sit straight in the Island's one row (Nov 27), so measure that row
+  const forgeRow = island.locator('.forge-island-wrap');
 
   await expect(island).toBeVisible();
-  await expect(forgetop).toBeVisible();
+  await expect(forgetop.locator('.fstamp')).toBeVisible();
   await expect(vhero).toBeVisible();
 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(200);
 
   const heroBox = await vhero.boundingBox();
-  const forgeBox = await forgetop.boundingBox();
+  const forgeBox = await forgeRow.boundingBox();
 
   expect(heroBox).not.toBeNull();
   expect(forgeBox).not.toBeNull();

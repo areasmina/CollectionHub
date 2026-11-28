@@ -82,3 +82,23 @@ test('mana value, price and foil filters narrow the binder, each with a removabl
   await expect(chips).toHaveCount(0);
   await expect.poll(async () => (await names(page)).length).toBe(8);
 });
+
+test('Phone (Nov 27): folders live in FILTER, the folder you pick shows as a chip, and each list row is one line', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone', 'the phone layout');
+  await expect(page.locator('.coll .coll-listbar')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Filter', exact: true }).click();
+  const sheet = page.getByRole('dialog', { name: 'Filter cards' });
+  await expect(sheet.locator('.fs-folders')).toBeVisible();
+  await sheet.getByRole('tab', { name: /^UNLISTED/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Back to all cards/ })).toContainText('FOLDER: UNLISTED');
+  await expect(page.getByRole('button', { name: 'Filter, 1 active' })).toBeVisible();
+  await page.getByRole('button', { name: /^Back to all cards/ }).click();
+  await expect(page.getByRole('button', { name: 'Filter', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'List view' }).click();
+  const row = page.locator('ul.crows > li').first();
+  const mid = (sel: string) => row.locator(sel).evaluate((e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; });
+  expect(Math.abs((await mid('.morebtn')) - (await mid('.qtyedit')))).toBeLessThanOrEqual(4);
+  await expect(row.locator('.xbtn')).toBeHidden();
+});
