@@ -26,8 +26,14 @@ test('Phone, saved deck: ⋮, search and the view controls on one row', async ({
   await page.locator('.dcard').first().click();
   const bar = page.locator('.forgemain .lists > .tbar');
   await bar.scrollIntoViewIfNeeded();
-  const mid = (sel: string) => bar.locator(sel).first().evaluate((e) => { const r = e.getBoundingClientRect(); return Math.round(r.top + r.height / 2); });
-  for (const sel of ['.tbmore > summary', '.qview-btn', '.qzoom-btn', '.qadd-btn']) expect(Math.abs((await mid(sel)) - (await mid('.tsearch')))).toBeLessThanOrEqual(6);
+  // read every part in the same frame, once the page has stopped scrolling (the bar pins while it scrolls)
+  const offsets = () =>
+    bar.evaluate((b) => {
+      const mid = (sel: string) => { const r = b.querySelector(sel)!.getBoundingClientRect(); return r.top + r.height / 2; };
+      const s = mid('.tsearch');
+      return Math.round(Math.max(...['.tbmore > summary', '.qview-btn', '.qzoom-btn', '.qadd-btn'].map((sel) => Math.abs(mid(sel) - s))));
+    });
+  await expect.poll(offsets, { message: 'a bar control sits off the search row' }).toBeLessThanOrEqual(6);
   expect(Math.round((await bar.boundingBox())!.height)).toBeLessThanOrEqual(60);
   expect((await bar.locator('.tsearch').boundingBox())!.width).toBeGreaterThanOrEqual(100);
   const vw = page.viewportSize()!.width;
