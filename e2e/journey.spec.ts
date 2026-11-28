@@ -36,9 +36,9 @@ test('Deck page sits at TUNE; EXPLORE opens the tag graph in the deck’s colour
 });
 
 test('Guided: TUNE waits for a commander, then saves the build as a deck and opens it at TUNE', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('ch:tab', 'discover'));
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'decks'));
   await page.reload();
-  await page.getByRole('tab', { name: 'GUIDED BUILDER' }).click();
+  await page.getByRole('button', { name: '+ GUIDED' }).click();
   await expect(bar(page).locator('[aria-current="step"]')).toHaveText(/START/);
   // no commander yet: TUNE says why and does nothing
   const tune = bar(page).getByRole('button', { name: /^TUNE/ });
@@ -115,3 +115,26 @@ test('NEXT tips quote the deck’s own checks, and a tip opens EXPLORE on that t
   await expect(page.getByRole('status').filter({ hasText: 'ADDING TO' })).toContainText('Tatyova Lands');
   await expect(page.getByRole('button', { name: 'removal', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
+
+test('Step 4: Discover finds the commander; its page starts the journey, and START opens Guided with it picked', async ({ page }) => {
+  await expect(page.locator('.disc-tabs')).toHaveCount(0); // no GUIDED / TAG BUILDER tabs on Discover
+  await page.locator('.ccard').first().click();
+  await expect(bar(page)).toBeVisible();
+  await expect(bar(page).locator('[aria-current="step"]')).toHaveCount(0); // nothing started yet
+  await stepBtn(page, 'START').click();
+  await expect(bar(page).locator('[aria-current="step"]')).toHaveText(/START/);
+  // Tatyova is already the commander: past step 1, and TUNE (save) is open
+  await expect(stepBtn(page, 'TUNE')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByText('Step 2 of 9', { exact: false })).toBeVisible();
+  // ← COMMANDERS (or the Island's back arrow) goes back to the commander list
+  await page.getByRole('button', { name: '← COMMANDERS' }).click();
+  await expect(page.locator('.ccard').first()).toBeVisible();
+});
+
+test('Step 4: TUNE on a commander’s page opens its Forge, where the bar sits at TUNE', async ({ page }) => {
+  await page.locator('.ccard').first().click();
+  await stepBtn(page, 'TUNE').click();
+  await expect(bar(page).locator('[aria-current="step"]')).toHaveText(/TUNE/);
+  await expect(page.locator('.pillnav.forging-island')).toHaveCount(1);
+});
+

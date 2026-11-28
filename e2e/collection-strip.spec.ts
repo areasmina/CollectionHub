@@ -98,7 +98,9 @@ test('Phone (Nov 27): folders live in FILTER, the folder you pick shows as a chi
 
   await page.getByRole('button', { name: 'List view' }).click();
   const row = page.locator('ul.crows > li').first();
-  const mid = (sel: string) => row.locator(sel).evaluate((e) => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; });
-  expect(Math.abs((await mid('.morebtn')) - (await mid('.qtyedit')))).toBeLessThanOrEqual(4);
+  // ⋮ shares the row with the − n + stepper (it used to drop onto a line of its own, under it)
+  const [more, qty] = await Promise.all([row.locator('.morebtn').boundingBox(), row.locator('.qtyedit').boundingBox()]);
+  expect(more!.y).toBeLessThan(qty!.y + qty!.height);
+  expect(more!.x).toBeGreaterThan(qty!.x + qty!.width);
   await expect(row.locator('.xbtn')).toBeHidden();
 });
