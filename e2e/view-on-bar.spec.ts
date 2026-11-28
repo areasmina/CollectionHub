@@ -75,29 +75,34 @@ test('A phone that had picked a view under the old setting still starts on the g
   await expect(page.locator('ul.zgrid').first()).toBeVisible();
 });
 
-test('Collection: opens as a grid; list / grid and SIZE are on the bar; phones show 3 across like ManaBox', async ({ page }, info) => {
+// Nov 28 (the one bar, Guillermo's call): on Collection the view and SIZE moved into DISPLAY, whose button on the bar
+// names them ("GRID · M"), so they are one tap away and never read as lost.
+test('Collection: opens as a grid; DISPLAY on the bar names the view and size; phones show 3 across like ManaBox', async ({ page }, info) => {
   const phone = info.project.name === 'phone';
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
   await expect(page.locator('.cgrid2').first()).toBeVisible();
-  await reachable(page, '.coll .tbar .qviews button', phone);
-  await reachable(page, '.coll .tbar .qzoom-btn', phone);
-  await fits(page, ['.coll .tbar', '.coll .tbar .sortsel']);
-  const size = page.locator('.coll .tbar .qzoom-btn');
+  await reachable(page, '.coll .tbar .ob-display', phone);
+  const disp = page.locator('.coll .tbar .ob-display');
+  await expect(disp).toContainText('GRID · M');
+  const sheet = page.getByRole('dialog', { name: 'Display' });
+  const pickSize = async (s: string) => (await disp.click(), await sheet.getByRole('group', { name: 'Card size' }).getByRole('button', { name: s, exact: true }).click(), await page.keyboard.press('Escape'));
   if (phone) {
     expect(await cols(page, '.cgrid2')).toBe(3);
-    await size.click(); // L
+    await pickSize('L');
     expect(await cols(page, '.cgrid2')).toBe(2);
-    await size.click(); // S
+    await pickSize('S');
     expect(await cols(page, '.cgrid2')).toBe(4);
-    await size.click(); // back to M
+    await pickSize('M')
     // a card picture keeps its shape at every size (never squeezed or cropped)
     const img = (await page.locator('.cgrid2 li').first().boundingBox())!;
     expect(img.width).toBeGreaterThan(100);
   }
-  await page.getByRole('button', { name: 'List view' }).click();
+  await disp.click();
+  await sheet.getByRole('group', { name: 'View' }).getByRole('button', { name: /LIST/ }).click();
   await expect(page.locator('.cgrid2')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Grid view' }).click();
+  await sheet.getByRole('group', { name: 'View' }).getByRole('button', { name: /GRID/ }).click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('.cgrid2').first()).toBeVisible();
   await page.screenshot({ path: `test-results/view-on-bar-coll-${info.project.name}.png` });
 });
@@ -125,7 +130,7 @@ test('Card sections: each one is its own full-width block, and cards wrap to the
 });
 
 for (const w of [320, 360]) {
-  test(`Small phones (${w}px): the view pills, SIZE, ⋮ and the search all stay on screen`, async ({ page }, info) => {
+  test(`Small phones (${w}px): the deck bar and Collection's one bar (FILTER · search · DISPLAY) stay on screen`, async ({ page }, info) => {
     test.skip(info.project.name !== 'phone', 'small phone widths');
     await page.setViewportSize({ width: w, height: 640 });
     await page.locator('.ccard').first().click();
@@ -136,9 +141,9 @@ for (const w of [320, 360]) {
     await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
     await page.reload();
     await expect(page.locator('.cgrid2').first()).toBeVisible();
-    await reachable(page, '.coll .tbar .qviews button', true);
-    await reachable(page, '.coll .tbar .qzoom-btn', true);
-    await fits(page, ['.coll .tbar', '.coll .tbar .sortsel', '.coll .tbar .tbmore > summary', '.cgrid2 > li']);
+    await reachable(page, '.coll .tbar .ob-filter', true);
+    await reachable(page, '.coll .tbar .ob-display', true);
+    await fits(page, ['.coll .tbar', '.coll .tbar input', '.cgrid2 > li']);
     await page.screenshot({ path: `test-results/view-on-bar-coll-${w}.png` });
   });
 }

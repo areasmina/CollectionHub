@@ -2,12 +2,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { worthOf } from '../../lib/analytics';
 import { saveCardListSoon } from '../../lib/cardlist';
-import { applyFilter, filterCount, noFilter, type CollFilter } from '../../lib/collfilter';
+import { applyFilter, filterChips, filterCount, noFilter, toggled, type CollFilter } from '../../lib/collfilter';
 import { ownedMap } from '../../lib/compare';
 import { inUse } from '../../lib/copies';
 import { db, type Card } from '../../lib/db';
 import { deckPicUrls } from '../../lib/deckpics';
-import { collectionCsv, collectionText, download } from '../../lib/export';
 import { activeNeed, allFolders, applyFolderPlan, childPath, depthOf, folderStats, leafOf, MAX_DEPTH, parentOf, planAddFolder, planDeleteFolder, planMoveFolder, planRenameFolder, rowsWithin, showPath } from '../../lib/folders';
 import { haptic, haptic as buzz } from '../../lib/haptics';
 import { norm } from '../../lib/names';
@@ -20,7 +19,8 @@ import { searchByText } from '../../lib/search';
 import { logWorth } from '../../lib/worthlog';
 import { CardsView } from '../../views/CardsView';
 import { isCommander } from '../../views/Discover';
-import { ActiveChips, FilterButton } from '../../views/FilterSheet';
+import { FilterButton } from '../../views/FilterSheet';
+import { BarChips } from '../shared/OneBar';
 import { EmptyState, priced, priceSum, type Shared } from '../../views/shared';
 import { Doodles, PageDecor, Title } from '../../views/zine';
 import { BinderMenu, type SyncItem } from './BinderMenu';
@@ -28,6 +28,15 @@ import { ImportModal } from './ImportModal';
 import { TopWidget } from './TopWidget';
 
 const Analytics = lazy(() => import('../../views/Analytics'));
+
+/** Collection's sort choices, in DISPLAY (one bar, Nov 28). */
+const SORTS = [
+  ['name-asc', 'NAME A–Z'],
+  ['name-desc', 'NAME Z–A'],
+  ['price-desc', 'PRICE, HIGH FIRST'],
+  ['mv-asc', 'MANA VALUE, LOW FIRST'],
+  ['added-desc', 'RECENTLY ADDED'],
+] as const;
 
 export function Collection({
   profile,
@@ -197,6 +206,9 @@ export function Collection({
     const shown = searchByText(sorted, dq, (e) => ({ name: e.name, type: cards.get(e.cardId)?.type, text: cards.get(e.cardId)?.text }));
     return { inTab, shown };
   }, [entries, activeList, filter, cards, usedIn, ownedCounts, need, sortOrder, dq]);
+  // "N of M shown": the folder is one of the filters now (one bar, Nov 28), so M is the whole binder
+  const shownCopies = useMemo(() => shown.reduce((n, e) => n + e.qty, 0), [shown]);
+  const tabCopies = useMemo(() => entries.reduce((n, e) => n + e.qty, 0), [entries]);
 
   const activeFolderStats = useMemo(
     () => (activeList !== 'all' && activeList !== 'unlisted' ? folderStats(inTab, entries, need, cards) : null),
@@ -217,7 +229,6 @@ export function Collection({
     return opts;
   }, [activeList, folderTree, hasChildren]);
 
-  const file = (ext: string) => `${name.replace(/[^\w-]+/g, '_')}.${ext}`;
   const unique = new Set(entries.map((e) => cards.get(e.cardId)?.key ?? e.name.toLowerCase())).size;
   const illegal = entries.reduce((n, e) => n + (cards.get(e.cardId)?.legal === false ? e.qty : 0), 0);
   const commanders = new Set([...cards.values()].filter((c) => c.legal && isCommander(c.type, c.text)).map((c) => c.key)).size;
@@ -592,8 +603,7 @@ export function Collection({
           </p>
         )}
 
-        {/* Folders: a row of their own on wider screens; on phones they sit at the top of the FILTER sheet (Nov 27) */}
-        {ctab === 'cards' && !phone && folderBar}
+        {/* Folders sit at the top of the FILTER sheet at every width (one bar, Nov 28; phones since Nov 27) */}
 
         {ctab === 'cards' && (
           <section id="cpane-cards" role="tabpanel" aria-labelledby="ctab-cards">
@@ -604,47 +614,29 @@ export function Collection({
               binderName={name}
               q={q}
               setQ={setQ}
-              strip={
-                <>
-                  <FilterButton
-                    filter={filter}
-                    setFilter={setFilter}
-                    shown={shown.reduce((n, e) => n + e.qty, 0)}
-                    total={inTab.reduce((n, e) => n + e.qty, 0)}
-                    folders={phone ? folderBar : undefined}
-                    folderOn={phone && activeList !== 'all'}
-                  />
-                  <label className="sortsel">
-                    <select
-                      id="coll-sort-select"
-                      aria-label="Sort cards"
-                      value={sortOrder}
-                      onChange={(e) => {
-                        buzz('select');
-                        setSortOrder(e.target.value as typeof sortOrder);
-                      }}
-                    >
-                      <option value="name-asc">Name A–Z</option>
-                      <option value="name-desc">Name Z–A</option>
-                      <option value="price-desc">Price, high first</option>
-                      <option value="mv-asc">Mana value, low first</option>
-                      <option value="added-desc">Recently added</option>
-                    </select>
-                  </label>
-                </>
+              filter={
+                <FilterButton
+                  filter={filter}
+                  setFilter={setFilter}
+                  shown={shownCopies}
+                  total={tabCopies}
+                  folders={folderBar}
+                  folderOn={activeList !== 'all'}
+                  onReset={() => setActiveList('all')}
+                />
               }
+              sort={{ value: sortOrder, options: SORTS, onChange: (v) => setSortOrder(v as typeof sortOrder) }}
               chips={
-                <>
-                  {/* phones: the folder you are in shows here, one tap back to ALL */}
-                  {phone && activeList !== 'all' && (
-                    <div className="fchips setchips" role="group" aria-label="Folder">
-                      <button type="button" className="fchip" aria-label={`Back to all cards (now in ${activeList === 'unlisted' ? 'Unlisted' : showPath(activeList)})`} onClick={() => (buzz('select'), setActiveList('all'))}>
-                        FOLDER: {activeList === 'unlisted' ? 'UNLISTED' : showPath(activeList).toUpperCase()} ✕
-                      </button>
-                    </div>
-                  )}
-                  <ActiveChips filter={filter} setFilter={setFilter} shown={shown.reduce((n, e) => n + e.qty, 0)} total={inTab.reduce((n, e) => n + e.qty, 0)} />
-                </>
+                <BarChips
+                  chips={[
+                    // the folder you are in, one tap back to ALL
+                    ...(activeList !== 'all' ? [{ key: 'folder', label: `FOLDER: ${activeList === 'unlisted' ? 'UNLISTED' : showPath(activeList).toUpperCase()}`, off: () => setActiveList('all') }] : []),
+                    ...filterChips(filter).map((c) => ({ key: c.kind + c.value, label: c.label, off: () => setFilter(toggled(filter, c.kind, c.value)) })),
+                  ]}
+                  clear={() => (setFilter(noFilter()), setActiveList('all'))}
+                  shown={shownCopies}
+                  total={tabCopies}
+                />
               }
               empty={
                 entries.length > 0 ? (
@@ -667,16 +659,6 @@ export function Collection({
                     {q.trim() ? `Nothing in ${activeList === 'all' ? name : 'this list'} matches “${q.trim()}”${filterCount(filter) ? ' with these filters' : ''}.` : filterCount(filter) ? 'No card passes these filters.' : 'This list has no cards yet.'}
                   </EmptyState>
                 ) : undefined
-              }
-              more={
-                <>
-                  <button className="u-chip" disabled={!entries.length} onClick={() => download(file('csv'), collectionCsv(entries), 'text/csv')}>
-                    EXPORT CSV
-                  </button>
-                  <button className="u-chip" disabled={!entries.length} onClick={() => download(file('txt'), collectionText(entries))}>
-                    EXPORT TEXT
-                  </button>
-                </>
               }
             />
           </section>

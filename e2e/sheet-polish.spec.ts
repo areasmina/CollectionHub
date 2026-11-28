@@ -72,18 +72,23 @@ test('Commander page: hints read in full, ⋮ is not cut, chips are one 44px row
   await expect(chips).toHaveCount(0);
 });
 
-test('Collection: the "Group by set" tick box is a full size on a 44px row on phones', async ({ page }, info) => {
+test('Collection: group by set and its "Hide sets with no cards" tick box are full size, 44px, on phones', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'touch rule; mouse screens keep the compact box');
   await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
   await page.waitForSelector('.timg');
-  const d = await opts(page);
-  const row = d.locator('label.check', { hasText: 'Group by set' });
+  // group by set lives in DISPLAY since the one bar (Nov 28)
+  await page.getByRole('button', { name: /^Display:/ }).click();
+  const d = page.getByRole('dialog', { name: 'Display' });
+  const by = d.getByRole('group', { name: 'Group' }).getByRole('button', { name: 'BY SET' });
+  expect((await by.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await by.click();
+  const row = d.locator('label.check', { hasText: 'Hide sets with no cards' });
   await expect(row).toBeVisible();
   expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const tick = (await row.locator('input').boundingBox())!;
   expect(tick.width).toBeGreaterThanOrEqual(24);
   expect(tick.height).toBeGreaterThanOrEqual(24);
-  await row.locator('input').check();
-  await expect(row.locator('input')).toBeChecked();
+  await row.locator('input').uncheck();
+  await expect(row.locator('input')).not.toBeChecked();
 });

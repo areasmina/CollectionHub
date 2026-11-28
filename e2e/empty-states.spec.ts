@@ -41,15 +41,12 @@ test('Discover: a colour no commander has shows a note and a reset', async ({ pa
 test('Collection: when the set list cannot be loaded, group by set says so and offers TRY AGAIN (never "loading" forever)', async ({ page }) => {
   let down = true;
   await page.route('https://api.scryfall.com/sets', (r) => (down ? r.abort() : r.fallback()));
-  await page.evaluate(() => (localStorage.setItem('ch:tab', 'collection'), localStorage.setItem('ch:group', 'on')));
+  await page.evaluate(() => localStorage.setItem('ch:tab', 'collection'));
   await page.reload();
-  const bar = page.locator('.collbar .tbar');
-  await expect(bar).toBeVisible();
-  if (!(await page.locator('.setgroups').count())) {
-    await bar.locator('summary').click();
-    await bar.getByLabel('Group by set').check();
-    await page.keyboard.press('Escape');
-  }
+  // group by set lives in DISPLAY (the one bar, Nov 28)
+  await page.getByRole('button', { name: /^Display:/ }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Group' }).getByRole('button', { name: 'BY SET' }).click();
+  await page.keyboard.press('Escape');
   const note = page.locator('.setgroups .estate');
   await expect(note).toHaveAttribute('aria-label', "Couldn't load the set list");
   await fits(page, ['.setgroups .estate']);

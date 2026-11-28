@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { fits, mockWorld, seed } from './mock';
 
-/** Collection control strip: Search | Filter | Sort in one bar, active filters as chips with an easy reset. */
+/** Collection control strip (the one bar since Nov 28): FILTER · search · DISPLAY, active filters as chips with an easy reset. */
 test.beforeEach(async ({ page }) => {
   await mockWorld(page);
   await seed(page);
@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('the strip fits the screen and the Filter sheet opens inside it', async ({ page }) => {
-  await fits(page, ['.tbar', '.tbar .fbtn', '.tbar .sortsel']);
+  await fits(page, ['.tbar', '.tbar .fbtn', '.tbar .ob-display']);
   await page.getByRole('button', { name: 'Filter', exact: true }).click();
   const sheet = page.getByRole('dialog', { name: 'Filter cards' });
   await expect(sheet).toBeVisible();
@@ -38,7 +38,9 @@ test('picking a type narrows the list, shows a chip and a count; Clear all bring
 });
 
 test('sorting by price puts the dearest card first', async ({ page }) => {
-  await page.getByLabel('Sort cards').selectOption('price-desc');
+  await page.getByRole('button', { name: /^Display:/ }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Sort' }).getByRole('button', { name: 'PRICE, HIGH FIRST' }).click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('.cgrid2 > li, ul.crows > li').first()).toContainText('Rhystic Study');
 });
 
@@ -83,20 +85,23 @@ test('mana value, price and foil filters narrow the binder, each with a removabl
   await expect.poll(async () => (await names(page)).length).toBe(8);
 });
 
-test('Phone (Nov 27): folders live in FILTER, the folder you pick shows as a chip, and each list row is one line', async ({ page }, info) => {
-  test.skip(info.project.name !== 'phone', 'the phone layout');
+test('Folders live in FILTER (phones Nov 27, every width Nov 28), the folder you pick shows as a chip; on phones each list row is one line', async ({ page }, info) => {
   await expect(page.locator('.coll .coll-listbar')).toHaveCount(0);
   await page.getByRole('button', { name: 'Filter', exact: true }).click();
   const sheet = page.getByRole('dialog', { name: 'Filter cards' });
   await expect(sheet.locator('.fs-folders')).toBeVisible();
   await sheet.getByRole('tab', { name: /^UNLISTED/ }).click();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: /^Back to all cards/ })).toContainText('FOLDER: UNLISTED');
+  const folderChip = page.getByRole('button', { name: 'Remove filter FOLDER: UNLISTED' });
+  await expect(folderChip).toBeVisible();
   await expect(page.getByRole('button', { name: 'Filter, 1 active' })).toBeVisible();
-  await page.getByRole('button', { name: /^Back to all cards/ }).click();
+  await folderChip.click();
   await expect(page.getByRole('button', { name: 'Filter', exact: true })).toBeVisible();
 
-  await page.getByRole('button', { name: 'List view' }).click();
+  if (info.project.name !== 'phone') return;
+  await page.getByRole('button', { name: /^Display:/ }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: /LIST/ }).click();
+  await page.keyboard.press('Escape');
   const row = page.locator('ul.crows > li').first();
   // ⋮ shares the row with the − n + stepper (it used to drop onto a line of its own, under it)
   const [more, qty] = await Promise.all([row.locator('.morebtn').boundingBox(), row.locator('.qtyedit').boundingBox()]);
