@@ -1,0 +1,15 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Calm Options Sheet surfaces across Commander, Collection & Decks */
+.dtools.tbar > .tbmore > .fbody {
+  background: #101014 !important;
+  border: 1px solid #262630 !important;
+  border-radius: 8px !important;
+}
+.dtools.tbar > .tbmore > .fbody .optrow {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1c1c24;
+}
+.dtools.tbar > .tbmore > .fbody .optrow:last-of-type {
+  border-bottom: 0;
+}

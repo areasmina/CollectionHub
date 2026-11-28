@@ -1,0 +1,23 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Mobile UI density & cohesion (Nov 26) ── */
+/* Copies Shortfall modal: crisp dark deck tags without default blue underline */
+.shortitem-deck-tags {
+  gap: 6px;
+}
+.shortitem-deck-tag {
+  padding: 4px 8px;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  border-radius: 3px;
+}
+.shortitem-deck-tag button.decklink {
+  color: #f2f2f2;
+  text-decoration: none;
+  text-align: left;
+  line-height: 1.3;
+  word-break: break-word;
+}
+.shortitem-deck-tag button.decklink:hover {
+  color: var(--mo-yellow);
+}

@@ -2,16 +2,7 @@
 @layer features {
 /* WILDCARD: one flat row, yellow tag (wildcards are yellow) */
 .dpage .wildcard {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s2) var(--s3);
-  margin: 0;
-  padding: var(--s2) 0;
-  background: none;
-  border: 0;
   border-bottom: 1px solid var(--u-line);
-  box-shadow: none;
   transform: none;
   color: var(--u-text);
 }
@@ -20,16 +11,10 @@
   display: none;
 }
 .dpage .wildcard .wtag {
-  padding: 2px 6px;
-  background: var(--u-yellow);
-  color: var(--u-ink);
-  font: 400 13px var(--u-display);
-  letter-spacing: 0.06em;
   transform: none;
 }
 .dpage .wildcard .wtxt {
   flex: 1;
-  min-width: 180px;
   font: 400 13px/1.4 var(--u-mono);
 }
 .dpage .wildcard .wtxt b {
@@ -61,12 +46,9 @@
 /* 5. Standout Wildcard ("Hidden Gem") Card (Item 4) */
 .dpage .wildcard {
   display: flex;
-  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
   margin: 10px 0 14px;
-  padding: 10px 14px;
   background: #101014;
   border: 1px solid #282832;
   border-left: 3px solid #fff824;
@@ -88,23 +70,14 @@
 }
 .dpage .wildcard .wbody {
   display: flex;
-  align-items: center;
-  gap: 12px;
   flex: 1;
   min-width: 240px;
 }
 .dpage .wildcard .wthumb {
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
   object-fit: cover;
-  border: 1px solid rgba(255, 248, 36, 0.4);
   flex-shrink: 0;
 }
 .dpage .wildcard .wtxt {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   color: #eeeeee;
   font-size: 13px;
   text-align: left;
@@ -132,20 +105,15 @@
 }
 .dpage .wildcard .wacts {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
 }
 .dpage .wildcard .wacts .btn-swap-in {
   background: var(--u-red, #e60012);
   color: #ffffff;
-  border: 1px solid #ff2a3a;
-  border-radius: 6px;
   padding: 8px 16px;
   font: 700 13px/1 var(--u-display, Impact, sans-serif);
   letter-spacing: 0.06em;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(230, 0, 18, 0.4);
   transition: transform 0.1s ease, background 0.15s ease;
 }
 .dpage .wildcard .wacts .btn-swap-in:hover {

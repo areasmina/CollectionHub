@@ -1,0 +1,73 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Side-docked Forge Dynamic Island (dock-left / dock-right): keep inside the 46px vertical rail without clipping */
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  padding: 8px 0 !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .island-content {
+  align-items: center !important;
+  gap: 4px !important;
+  width: 34px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forge-island-wrap {
+  width: 34px !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop {
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 34px !important;
+  height: auto !important;
+  gap: 4px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .ftitle {
+  display: none !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop :is(.fstamp, .u-btn, .forge-nav-btn) {
+  writing-mode: vertical-rl;
+  width: 34px !important;
+  min-width: 34px !important;
+  max-width: 34px !important;
+  height: auto !important;
+  min-height: 34px !important;
+  padding: 8px 0 !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .fstamp .forge-card-icon {
+  writing-mode: horizontal-tb;
+  width: auto;
+  height: auto;
+  display: inline-flex;
+  justify-content: center;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .forgetop .fstamp .brandmark2 {
+  width: 15px;
+  height: 18px;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .fcube {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 34px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .fcube > button {
+  writing-mode: vertical-rl;
+  width: 30px !important;
+  min-width: 30px !important;
+  min-height: 44px !important;
+  padding: 8px 0 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+}
+.pillnav.forging-island:is(.dock-left, .dock-right):not(.collapsed) .fcube > button > small {
+  writing-mode: horizontal-tb;
+  padding: 1px 4px;
+  font-size: 9px;
+}

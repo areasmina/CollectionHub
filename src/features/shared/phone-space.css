@@ -1,0 +1,101 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Mobile Space Reclamation & Composition Pass (<= 700px) ── */
+@media (max-width: 700px) {
+  /* 1. Micro-telemetry status strip + single slim action bar */
+  .forgemain > .dstrip > .dstatus {
+    font-size: 10.5px !important;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+  .dlist .dribbon {
+    padding: var(--mo-s1) var(--mo-s2) !important;
+    gap: var(--mo-s1) 10px !important;
+    font-size: 11px !important;
+    border-radius: var(--mo-r-sm) !important;
+  }
+  .dlist .dribbon > span {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  .dlist .dribbon b {
+    font-size: 15px !important;
+  }
+
+  /* 2. Compact masthead, hero, & My Decks bands */
+  .dlist .decksbar {
+    padding: var(--mo-s1) 0 !important;
+    margin: 0 !important;
+  }
+  .dlist .decktoolbar {
+    margin: var(--mo-s1) 0 !important;
+    padding: var(--mo-s1) !important;
+    gap: var(--mo-s1) !important;
+    border-color: var(--mo-line) !important;
+    border-radius: var(--mo-r-sm) !important;
+  }
+  .dlist .decktagpills {
+    padding-top: var(--mo-s1) !important;
+    margin-top: 2px !important;
+    gap: var(--mo-s1) !important;
+    border-top-color: var(--mo-line) !important;
+  }
+  .dlist [aria-label='Deck folders'] {
+    margin: var(--mo-s1) 0 !important;
+    padding: var(--mo-s1) !important;
+    gap: var(--mo-s1) !important;
+    border-color: var(--mo-line) !important;
+    border-radius: var(--mo-r-sm) !important;
+  }
+  .dlist .decktoolbar .u-chip,
+  .dlist .decktagpills .tagpill,
+  .dlist [aria-label='Deck folders'] button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    justify-content: center;
+  }
+
+  /* 3. Single slim card/filter toolbar rows */
+  .dtools.tbar {
+    padding: 2px var(--mo-s1) !important;
+    gap: 3px !important;
+    border-color: var(--mo-line) !important;
+    border-radius: var(--mo-r-sm) !important;
+  }
+  .lists > .dtools.tbar {
+    margin-top: var(--mo-s1) !important;
+    margin-bottom: var(--mo-s1) !important;
+    padding: 2px var(--mo-s1) !important;
+    gap: 3px !important;
+    border-radius: var(--mo-r-sm) !important;
+  }
+  .lists > .dtools.tbar > .tquick {
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 14px), rgba(0, 0, 0, 0.35) 100%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 14px), rgba(0, 0, 0, 0.35) 100%);
+  }
+  .lists > .dtools.tbar > .tquick::-webkit-scrollbar {
+    display: none;
+  }
+  .lists > .forgehint {
+    font-size: 10.5px !important;
+    line-height: 1.3 !important;
+    margin: 2px 0 6px !important;
+    opacity: 0.72;
+  }
+  .coll .coll-listbar {
+    border-color: var(--mo-line) !important;
+    border-radius: var(--mo-r-sm) var(--mo-r-sm) 0 0 !important;
+  }
+  .coll .collbar {
+    padding: 2px var(--mo-s1) !important;
+    gap: 3px !important;
+    border-color: var(--mo-line) !important;
+    border-radius: 0 0 var(--mo-r-sm) var(--mo-r-sm) !important;
+  }
+}

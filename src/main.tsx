@@ -20,6 +20,7 @@ import '@fontsource/space-mono/latin-700.css';
 import '@fontsource/special-elite/latin-400.css';
 import './legacy.css';
 import './tokens.css';
+import './app.css';
 
 registerSW({ immediate: true });
 // Ask the browser not to clear this site's storage under space pressure (keeps binders and sync).

@@ -1,0 +1,169 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Floating Liquid-Glass Dynamic Island + Forge Capsule + Morph Filter Drawer ── */
+.pillnav:is(.dock-top, .dock-bottom)::before,
+.pillnav:is(.dock-top, .dock-bottom)::after {
+  display: none !important;
+}
+.pillnav.dock-top:not(.floating):not(.collapsed) {
+  top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+  height: 46px;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+.pillnav.dock-bottom:not(.floating):not(.collapsed) {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  height: 46px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+}
+.pillnav:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed) .island-membrane {
+  border-radius: 999px !important;
+}
+.pillnav:not(.collapsed) .island-membrane {
+  background-color: rgba(14, 13, 18, 0.84) !important;
+  background-image:
+    radial-gradient(ellipse 68% 60% at 50% 114%, color-mix(in srgb, var(--island-accent, #e60012) 48%, transparent) 0%, transparent 74%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.22)) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.38);
+  backdrop-filter: blur(20px) saturate(1.38);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  transition: background-image 0.32s ease, background-color 0.24s ease, box-shadow 0.28s ease !important;
+}
+.pillnav.open:not(.collapsed) .island-membrane {
+  background-color: rgba(12, 12, 16, 0.9) !important;
+}
+html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) .island-membrane {
+  background-image: none !important;
+}
+.pillnav.forging-island {
+  height: auto !important;
+  min-height: 44px !important;
+  padding: 4px 10px !important;
+  border-radius: 26px !important;
+}
+.pillnav.forging-island .syncpill {
+  display: none !important;
+}
+@media (min-width: 701px) {
+  .pillnav.forging-island {
+    height: 46px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+  }
+  .pillnav.forging-island .forgetop .ftitle {
+    display: none !important;
+  }
+}
+.island-copies-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(520px, calc(100vw - 44px));
+}
+.island-copies-bar .icb-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 400 13px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  color: #ffffff;
+}
+.island-copies-bar .icb-badge b {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--mo-yellow);
+  color: #0a0a0a;
+  font: 700 11px/1 var(--mo-mono);
+}
+.island-copies-bar .icb-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: 600 12.5px/1.2 var(--mo-body);
+  color: var(--mo-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.island-copies-bar .icb-scry {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font: 700 11px/1 var(--mo-mono);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.island-copies-bar .icb-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.island-copies-bar .icb-close:hover {
+  background: var(--mo-red);
+}
+.pillnav.forging-island .island-membrane {
+  height: 100% !important;
+  border-radius: 26px !important;
+}
+.pillnav.forging-island:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed),
+.pillnav.forging-island:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed) .island-membrane {
+  border-radius: 26px !important;
+}
+.pillnav.forging-island.dock-left,
+.pillnav.forging-island.dock-left .island-membrane {
+  border-radius: 0 22px 22px 0 !important;
+}
+.pillnav.forging-island.dock-right,
+.pillnav.forging-island.dock-right .island-membrane {
+  border-radius: 22px 0 0 22px !important;
+}
+.dpage.forgemain,
+html.forging .dpage {
+  padding-top: 0 !important;
+}
+.stage:has(> .pillnav.dock-top:not(.collapsed)) {
+  padding-top: calc(var(--island-h, 46px) + 16px) !important;
+}
+html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
+  padding-top: calc(var(--island-h, 54px) + 16px) !important;
+}
+.stage:has(> .pillnav.dock-bottom:not(.collapsed)) {
+  padding-bottom: calc(var(--island-h, 46px) + 22px + env(safe-area-inset-bottom, 0px)) !important;
+}
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage:not(.forgemain) .lists > .dtools.tbar {
+  top: calc(var(--island-h, 46px) + 12px) !important;
+}
+html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
+  padding-top: 10px !important;
+}
+@media (max-width: 700px) {
+  .pillnav.forging-island {
+    padding: 4px 8px !important;
+  }
+  html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
+    padding-top: calc(var(--island-h, 96px) + 16px) !important;
+  }
+}

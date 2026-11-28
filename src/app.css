@@ -1,0 +1,23 @@
+/* App styles that used to live in src/tokens.css (cleanup Phase A step 1, Nov 28). Each file is one contiguous part of the
+   old file, imported here in the old order and unlayered as before, so the cascade is unchanged. src/tokens.css keeps
+   only the design tokens. Later Phase A steps fold these into each feature's own stylesheet. */
+@import './features/collection/collection.legacy.css';
+@import './features/brand/BrandMark.css';
+@import './features/discover/discover-tabs.css';
+@import './features/decks/deck-strip.css';
+@import './features/shared/phone-density.css';
+@import './features/discover/discover-hero.css';
+@import './features/island/island-forge.css';
+@import './features/decks/deck-bar-phone.css';
+@import './features/island/island-side-dock.css';
+@import './features/forge/forge-realm.css';
+@import './features/shared/phone-space.css';
+@import './features/island/island-glass.css';
+@import './features/commander/commander-hero.css';
+@import './features/shared/options-sheet.css';
+@import './features/shared/jumprail.css';
+@import './features/forge/suggestions.css';
+@import './features/decks/deck-stacks.css';
+@import './features/copies/your-copies.css';
+@import './features/jumpbar/jump-orb.css';
+@import './features/collection/folders-sheet.css';

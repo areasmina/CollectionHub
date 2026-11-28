@@ -1,0 +1,416 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Clean Interactive 3D 100-Card Commander Deck Stacks (MY DECKS) & Win/Loss Record Controls ── */
+.dgrid .dtile {
+  position: relative;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: var(--mo-r-md);
+  overflow: visible;
+}
+.dgrid .dtile .dcard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: inherit;
+  overflow: visible;
+}
+.dgrid .dtile .cart.dstack-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px 22px;
+  height: auto !important;
+  aspect-ratio: auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  perspective: 850px;
+  overflow: visible;
+}
+.dgrid .dtile .dstack-pile {
+  position: relative;
+  width: min(192px, 84%);
+  aspect-ratio: 488 / 680;
+  --stack-z: clamp(8px, calc(var(--deck-cards, 100) * 0.18px), 20px);
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rx, calc(9deg + var(--gyro-rx, 0deg)))) rotateY(var(--ry, calc(-11deg + var(--gyro-ry, 0deg))));
+  transition: transform 0.42s var(--mo-ease-spring);
+  will-change: transform;
+}
+.dgrid .dtile .dstack-pile.interacting {
+  transition: transform 0.08s linear;
+}
+.dgrid .dtile .dstack-base {
+  position: absolute;
+  inset: 0;
+  border-radius: 5% / 3.6%;
+  background: #0c0c12;
+  transform: translateZ(0px);
+  box-shadow:
+    0 18px 32px rgba(0, 0, 0, 0.86),
+    0 6px 24px color-mix(in srgb, var(--dc, #e60012) 34%, transparent);
+  pointer-events: none;
+  transition: box-shadow 0.25s ease;
+}
+.dgrid .dtile.off .dstack-base {
+  box-shadow: 0 14px 24px rgba(0, 0, 0, 0.78);
+}
+.dgrid .dtile.off .dstack-pile {
+  opacity: 0.62;
+  filter: saturate(0.72);
+}
+.dgrid .dtile .dstack-mid {
+  position: absolute;
+  inset: 0;
+  border-radius: 5% / 3.6%;
+  background: color-mix(in srgb, var(--dc, #e60012) 38%, #181822);
+  border: 1px solid color-mix(in srgb, var(--dc, #e60012) 66%, rgba(255, 255, 255, 0.22));
+  pointer-events: none;
+}
+.dgrid .dtile.off .dstack-mid {
+  background: #1b1b24;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.dgrid .dtile .dstack-mid-1 {
+  transform: translateZ(calc(var(--stack-z) * 0.35)) rotate(-1.8deg);
+}
+.dgrid .dtile .dstack-mid-2 {
+  transform: translateZ(calc(var(--stack-z) * 0.68)) rotate(1.4deg);
+}
+.dgrid .dtile .dstack-edge {
+  position: absolute;
+  pointer-events: none;
+  backface-visibility: hidden;
+}
+.dgrid .dtile .dstack-edge-right {
+  top: 3%;
+  bottom: 3%;
+  right: 0;
+  width: var(--stack-z);
+  transform-origin: right center;
+  transform: translateZ(var(--stack-z)) rotateY(90deg);
+  background: repeating-linear-gradient(
+    90deg,
+    #a6a39e 0px,
+    #a6a39e 1px,
+    #262630 1px,
+    #262630 2.2px,
+    #73706b 2.2px,
+    #73706b 3px
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+}
+.dgrid .dtile .dstack-edge-left {
+  top: 3%;
+  bottom: 3%;
+  left: 0;
+  width: var(--stack-z);
+  transform-origin: left center;
+  transform: translateZ(var(--stack-z)) rotateY(-90deg);
+  background: repeating-linear-gradient(
+    90deg,
+    #686662 0px,
+    #686662 1px,
+    #191921 1px,
+    #191921 2.2px,
+    #4c4a47 2.2px,
+    #4c4a47 3px
+  );
+}
+.dgrid .dtile .dstack-edge-bottom {
+  left: 3%;
+  right: 3%;
+  bottom: 0;
+  height: var(--stack-z);
+  transform-origin: center bottom;
+  transform: translateZ(var(--stack-z)) rotateX(-90deg);
+  background: repeating-linear-gradient(
+    180deg,
+    #b0ada8 0px,
+    #b0ada8 1px,
+    #282832 1px,
+    #282832 2.2px,
+    #787570 2.2px,
+    #787570 3px
+  );
+  border-radius: 0 0 4px 4px;
+}
+.dgrid .dtile .dstack-top {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: translateZ(var(--stack-z));
+  border-radius: 5% / 3.6%;
+  overflow: hidden;
+  background: #0f0f15;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.72);
+}
+.dgrid .dtile .dstack-top img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.dgrid .dtile .dstack-glare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--gx, 35%) var(--gy, 25%), rgba(255, 255, 255, 0.22), transparent 60%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.dgrid .dtile .dstack-blank {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font: 400 28px/1 var(--an, "Anton", sans-serif);
+  color: var(--mo-muted);
+  background: radial-gradient(circle at 50% 45%, #1d1d28, #0d0d12);
+}
+.dgrid .dtile .cinfo {
+  position: relative;
+  margin-top: -4px;
+  padding: 9px 12px 10px 34px !important;
+  gap: 5px !important;
+  background: rgba(13, 13, 18, 0.9) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-color: color-mix(in srgb, var(--dc, #e60012) 52%, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.62);
+}
+.dgrid .dtile.off .cinfo {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+.dgrid .dtile .cinfo .nm b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dgrid .dtile .cinfo .cmatch {
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+  border-radius: 6px;
+}
+.dgrid .dtile .cinfo .cmatch .cmatch-chev {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--mo-muted);
+  opacity: 0.72;
+  flex: none;
+}
+.dgrid .dtile .cinfo .cmatch b {
+  font: 700 12px/1 var(--mo-mono);
+  color: var(--mo-muted);
+}
+.dgrid .dtile .cinfo .u-meter {
+  flex: 1 1 auto;
+  height: 5px;
+  gap: 2px;
+}
+.dgrid .dtile .cinfo .u-meter i {
+  border-radius: 2px;
+  transform: none;
+}
+.dgrid .dtile .cinfo-more {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: max-height 0.26s ease, opacity 0.22s ease, transform 0.24s ease;
+}
+.dgrid .dtile[data-peek='true'] .cinfo-more {
+  max-height: 96px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  margin-top: 4px;
+}
+@media (hover: hover) {
+  .dgrid .dtile:hover .cinfo-more {
+    max-height: 96px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    margin-top: 4px;
+  }
+}
+.dgrid .dtile .dlegal {
+  z-index: 7;
+  top: -11px;
+  right: 10px;
+  left: auto;
+  max-width: calc(100% - 20px);
+}
+.dgrid > li > .dlight {
+  position: absolute !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: 4px !important;
+  left: 0 !important;
+  z-index: 6 !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.dgrid > li > .dlight > .dlight-txt {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dgrid > li > .dlight > i {
+  width: 6px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow: none !important;
+  transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.dgrid > li > .dlight.on > i {
+  background: var(--dc, #2bd65a) !important;
+  border: 0 !important;
+  box-shadow: 0 0 11px var(--dc, #2bd65a) !important;
+}
+.dgrid > li > .dlight:hover > i {
+  transform: scaleY(1.16);
+}
+.dactive-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 2px;
+}
+@media (max-width: 700px) {
+  .dgrid .dtile .cart.dstack-stage {
+    padding: 10px 10px 18px;
+  }
+  .dgrid .dtile .dstack-pile {
+    width: min(148px, 84%);
+  }
+  .dgrid .dtile .cinfo {
+    padding: 8px 10px 4px 28px !important;
+  }
+  .dgrid .dtile .cinfo .cmatch {
+    min-height: 44px;
+    align-items: center;
+  }
+  .dgrid > li > .dlight {
+    bottom: 8px !important;
+    left: -2px !important;
+  }
+  .dgrid .dtile .dlegal {
+    top: -10px;
+    right: 6px;
+    left: auto;
+    max-width: calc(100% - 14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dgrid .dtile,
+  .dgrid .dtile .dstack-pile,
+  .dgrid .dtile .cinfo-more {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+.dgrid .dtile .drec-badge {
+  flex: none;
+  white-space: nowrap;
+  font: 700 10px/1 var(--mo-mono);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--mo-line-2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mo-muted);
+}
+.dgrid .dtile .drec-badge.hot {
+  border-color: rgba(43, 214, 90, 0.45);
+  color: var(--mo-green);
+}
+
+.drecord {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  background: #101015;
+  border: 1px solid var(--mo-line-2);
+  border-radius: var(--mo-r-sm);
+}
+.drecord .drec-val {
+  font: 700 11px/1 var(--mo-mono);
+  color: var(--mo-text);
+  margin-right: 2px;
+}
+.drecord .drec-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 7px;
+  border-radius: 3px;
+  border: 1px solid var(--mo-line-2);
+  background: #17171f;
+  color: var(--mo-muted);
+  font: 700 11px/1 var(--mo-mono);
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.drecord .drec-btn.win {
+  color: var(--mo-green);
+  border-color: rgba(43, 214, 90, 0.35);
+}
+.drecord .drec-btn.win:hover {
+  background: rgba(43, 214, 90, 0.18);
+  border-color: var(--mo-green);
+}
+.drecord .drec-btn.loss {
+  color: #ff6b76;
+  border-color: rgba(230, 0, 18, 0.35);
+}
+.drecord .drec-btn.loss:hover {
+  background: rgba(230, 0, 18, 0.18);
+  border-color: var(--mo-red);
+}
+.drecord .drec-btn.reset:hover {
+  color: #ffffff;
+  background: #24242f;
+}
+@media (max-width: 700px) {
+  .drecord {
+    padding: 0 2px 0 8px;
+  }
+  .drecord .drec-btn {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 12px;
+  }
+}

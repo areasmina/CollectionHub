@@ -1,0 +1,20 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Collection's folders inside the FILTER sheet on phones (Nov 27): full 44px taps, wrapping like the other chips */
+.fsheet2 .fs-folders .coll-listbar {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.fsheet2 .fs-folders .list-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.fsheet2 .fs-folders :is(.list-tab, .list-del-btn, .list-new-inline button, .list-new-inline input, .list-new-inline select) {
+  min-height: 44px;
+}
+.fsheet2 .fs-folders .list-del-btn {
+  min-width: 44px;
+}

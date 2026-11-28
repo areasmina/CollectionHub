@@ -1,0 +1,340 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Animated Frameless Floating "Hand of Cards" (YOUR COPIES) ── */
+.backdrop.handback {
+  background: radial-gradient(ellipse 75% 60% at 50% 46%, rgba(16, 16, 24, 0.8) 0%, rgba(4, 4, 8, 0.88) 100%) !important;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+.yourcopies {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(940px, calc(100vw - 16px)) !important;
+  max-height: calc(100dvh - 16px) !important;
+  padding: 8px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow-x: clip !important;
+  overflow-y: auto !important;
+  pointer-events: none;
+}
+.yourcopies .yc-head {
+  pointer-events: auto;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  justify-content: center;
+  gap: 6px 10px !important;
+  max-width: min(560px, calc(100vw - 20px));
+  padding: 6px 8px 6px 16px;
+  background: rgba(14, 14, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+}
+.yourcopies .yc-head h2 {
+  flex: 0 0 auto;
+  font-size: 17px !important;
+  white-space: nowrap;
+}
+.yourcopies .yc-name {
+  flex: 0 1 auto;
+  max-width: min(320px, calc(100vw - 60px));
+  color: #ffffff;
+  font-size: 13px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-align: center;
+}
+.yourcopies .yc-scry {
+  flex: 0 0 auto;
+  border-radius: 999px !important;
+  min-height: 44px;
+  padding: 0 12px !important;
+}
+.yourcopies .close {
+  flex: 0 0 auto;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+.yourcopies .close:hover {
+  background: var(--mo-red) !important;
+}
+.yourcopies .yc-stage {
+  pointer-events: auto;
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  min-height: 320px;
+  overflow: visible;
+  user-select: none;
+  touch-action: pan-y;
+}
+.yourcopies .yc-row.yc-hand {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  display: block !important;
+  list-style: none;
+}
+.yourcopies .yc-hand > li.yc-li {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform-origin: 50% 115%;
+  --fan-step: 78px;
+  z-index: calc(20 - var(--fan-abs, 0));
+  transform:
+    translate(-50%, -50%)
+    translateX(calc(var(--fan-d, 0) * var(--fan-step)))
+    translateY(calc(var(--fan-abs, 0) * var(--fan-abs, 0) * 6px))
+    rotate(calc(var(--fan-d, 0) * 7.5deg))
+    scale(calc(1 - var(--fan-abs, 0) * 0.06));
+  transition: transform 0.34s var(--mo-ease-spring), opacity 0.24s ease, filter 0.24s ease;
+}
+.yourcopies .yc-hand > li.yc-li.on {
+  z-index: 30;
+  transform: translate(-50%, -54%) scale(1.03);
+}
+.yourcopies .yc-hand > li.yc-li[data-far='true'] {
+  opacity: 0;
+  pointer-events: none;
+  transform:
+    translate(-50%, -50%)
+    translateX(calc(var(--fan-sign, 1) * var(--fan-step) * 3.3))
+    translateY(56px)
+    rotate(calc(var(--fan-sign, 1) * 24deg))
+    scale(0.76);
+}
+.yourcopies .yc-copy {
+  width: 176px;
+  padding: 4px;
+  translate: none !important;
+  border-radius: 10px;
+  background: transparent;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease, box-shadow 0.24s ease;
+}
+.yourcopies .yc-copy .yc-img img {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.78);
+}
+.yourcopies .yc-copy .yc-tag {
+  align-self: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(12, 12, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.yourcopies .yc-copy.on {
+  border-color: var(--mo-yellow);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 248, 36, 0.35);
+  background: rgba(16, 16, 22, 0.72);
+}
+.yourcopies .yc-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 35;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 999px;
+  background: rgba(14, 14, 20, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, opacity 0.16s ease;
+}
+.yourcopies .yc-nav:hover:not(:disabled) {
+  background: var(--mo-red);
+  border-color: var(--mo-red);
+}
+.yourcopies .yc-nav.prev {
+  left: 6px;
+}
+.yourcopies .yc-nav.next {
+  right: 6px;
+}
+.yourcopies .yc-nav:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+.yourcopies .yc-edge-count {
+  position: absolute;
+  top: calc(50% + 28px);
+  z-index: 34;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #16161f;
+  border: 1px solid var(--mo-line-2);
+  color: var(--mo-yellow);
+  font: 700 10px/1.2 var(--mo-mono);
+  pointer-events: none;
+}
+.yourcopies .yc-edge-count.prev {
+  left: 8px;
+}
+.yourcopies .yc-edge-count.next {
+  right: 8px;
+}
+.yourcopies .yc-tools {
+  pointer-events: auto;
+  border-top: 0 !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.yourcopies .yc-which {
+  margin: 0 !important;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(14, 14, 20, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  text-align: center;
+}
+.yourcopies .yc-acts {
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 28px;
+  background: rgba(14, 14, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.72);
+}
+.yourcopies .yc-acts .u-btn {
+  border-radius: 999px !important;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  padding: 0 14px !important;
+  font: 400 13px/1 var(--mo-display) !important;
+  letter-spacing: 0.05em !important;
+}
+.yourcopies .yc-acts .u-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+.yourcopies .yc-step {
+  padding: 0 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.yourcopies .yc-step .u-btn {
+  border: 0 !important;
+  background: transparent !important;
+  min-width: 44px !important;
+  padding: 0 !important;
+}
+.yourcopies .yc-arts {
+  width: min(560px, calc(100vw - 24px));
+  max-height: 180px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(14, 14, 20, 0.95);
+  border: 1px solid var(--mo-line-2);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.82);
+}
+.yourcopies .yc-note {
+  margin: 0 !important;
+  font-size: 11px;
+  text-align: center;
+  text-shadow: 0 1px 4px #000000;
+}
+@media (max-width: 700px) {
+  .yourcopies {
+    inset: 0 !important;
+    translate: none !important;
+    width: 100vw !important;
+    max-height: 100dvh !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 10px calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+    box-shadow: none !important;
+  }
+  .yourcopies .yc-head h2 {
+    font-size: 15px !important;
+  }
+  .yourcopies .yc-stage,
+  .yourcopies .yc-row.yc-hand {
+    min-height: 265px;
+    height: 265px;
+  }
+  .yourcopies .yc-hand > li.yc-li {
+    --fan-step: 56px;
+  }
+  .yourcopies .yc-copy {
+    width: 142px;
+  }
+  .yourcopies .yc-acts {
+    border-radius: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yourcopies .yc-hand > li.yc-li {
+    transition: none !important;
+  }
+}
+
+/* ── Your Copies: one header, one row of actions ──
+   The Dynamic Island already shows COPIES n · name · SCRYFALL · ✕ while the sheet is open, so the sheet's own header
+   hides whenever the Island is docked top or bottom and showing it. Docked to a side, or held collapsed, the Island
+   cannot carry that bar, so the sheet keeps its header there. */
+html:has(.pillnav:is(.dock-top, .dock-bottom):not(.collapsed) .island-copies-bar) .yourcopies .yc-head {
+  display: none !important;
+}
+/* A side-docked Island is a 46px rail: no room for the copies bar, so it stays out and the sheet's header shows. */
+.pillnav:is(.dock-left, .dock-right) .island-copies-bar {
+  display: none;
+}
+/* MAKE FOIL left, the − ×n + stepper in the middle, CHANGE ARTWORK right; wraps only if a screen is too narrow. */
+.yourcopies .yc-acts {
+  flex-wrap: wrap;
+  align-items: center;
+}
+@media (max-width: 700px) {
+  .yourcopies .yc-acts {
+    gap: 4px;
+    padding: 5px;
+  }
+  .yourcopies .yc-acts > .u-btn {
+    padding: 0 10px !important;
+    font-size: 12px !important;
+  }
+}
+/* The Island's SCRYFALL and ✕ stay small to the eye but each takes a full 44px thumb. */
+.island-copies-bar .icb-close,
+.island-copies-bar .icb-scry {
+  position: relative;
+}
+.island-copies-bar .icb-close::after,
+.island-copies-bar .icb-scry::after {
+  content: '';
+  position: absolute;
+}
+.island-copies-bar .icb-close::after {
+  inset: -6px;
+}
+.island-copies-bar .icb-scry::after {
+  inset: -8px 0;
+}

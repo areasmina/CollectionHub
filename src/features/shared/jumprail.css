@@ -1,0 +1,94 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── JumpRail: auto-hide smoothly when dormant & stay bounded inside card-list lane ── */
+.jrail {
+  border-radius: 13px !important;
+  background: rgba(12, 12, 16, 0.78) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  opacity: 0 !important;
+  /* a short slide, small enough that the resting (faded) rail never pokes past a phone's edge */
+  transform: translateX(3px);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  scrollbar-width: none;
+}
+.jrail::-webkit-scrollbar {
+  display: none;
+}
+.jrail-wrap.awake > .jrail,
+.jrail:hover,
+.jrail:focus-within {
+  opacity: 1 !important;
+  transform: translateX(0);
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+.jrail-wrap:not(.awake) > .jrail:not(:hover):not(:focus-within) > button[aria-current='true'] {
+  background: transparent;
+  color: var(--mo-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .jrail {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+@media (max-width: 700px) {
+  .lists > .jrail-wrap {
+    display: block !important;
+    top: var(--jrail-top, 220px) !important;
+    bottom: auto !important;
+    z-index: 6 !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none !important;
+    /* a 2px slide in, not 10px: mid-slide the rail must never sit past a phone's right edge */
+    transform: translateX(2px) !important;
+    transition:
+      opacity 0.28s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0.28s;
+  }
+  .lists > .jrail-wrap.on {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0) !important;
+    transition:
+      opacity 0.28s ease,
+      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s;
+  }
+  .lists > .jrail-wrap > .jrail {
+    max-height: calc(100dvh - var(--jrail-top, 220px) - 72px) !important;
+    overflow-y: auto !important;
+  }
+  html.forging .lists > .jrail-wrap > .jrail {
+    max-height: calc(100dvh - var(--jrail-top, 220px) - 82px) !important;
+  }
+  .lists > .jrail-wrap:not(.on) > .jrail {
+    pointer-events: none !important;
+  }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .lists > .jrail-wrap {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+@media (min-width: 701px) {
+  .lists > .jrail-wrap {
+    top: 64px !important;
+    bottom: 16px !important;
+    right: 2px !important;
+  }
+  .jrail {
+    position: sticky !important;
+    top: max(128px, calc(50vh - 150px)) !important;
+    border-radius: 14px;
+    overflow-y: auto;
+    max-height: calc(100vh - 160px);
+  }
+}

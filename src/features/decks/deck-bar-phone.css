@@ -1,0 +1,60 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Saved deck (Forge) bar on phones, one row (Nov 27): ⋮ · search · view · size · + MY. ONLY (EVERY CARD) is
+   already in ⋮, so its button leaves the bar; the deck's tools (BALANCE, HAND & ODDS, RULE ZERO, HISTORY, HEADER) move
+   into ⋮ as its DECK row, and the strip above keeps just the deck's price and SHORT. Wider screens are unchanged. */
+@media (max-width: 700px) {
+  .forgemain .lists > .dtools.tbar {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+  .forgemain .lists > .dtools.tbar > .tquick {
+    display: contents !important;
+  }
+  .forgemain .lists > .dtools.tbar > .tbmore {
+    order: 1;
+    flex: none;
+  }
+  .forgemain .lists > .dtools.tbar > .tsearch {
+    order: 2;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+  .forgemain .lists > .dtools.tbar .qview-btn {
+    order: 3;
+  }
+  .forgemain .lists > .dtools.tbar .qzoom-btn {
+    order: 4;
+  }
+  .forgemain .lists > .dtools.tbar .qadd-btn {
+    order: 5;
+  }
+  .forgemain .lists > .dtools.tbar :is(.qview-btn, .qzoom-btn, .qadd-btn) {
+    flex: none;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    justify-content: center;
+  }
+  .forgemain .lists > .dtools.tbar .qview-btn .qc-lbl,
+  .forgemain .lists > .dtools.tbar .qz-word,
+  .forgemain .lists > .dtools.tbar .qa-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .deck-tools-row .chiprow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .deck-tools-row .chiprow > .u-btn {
+    min-height: 44px;
+  }
+}

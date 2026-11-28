@@ -142,8 +142,6 @@
 .dlist .dstats .pip-r b { color: #ff5240 !important; }
 .dlist .dstats .pip-g,
 .dlist .dstats .pip-g b { color: #40d478 !important; }
-@media (min-width: 701px) {
-    }
 @media (max-width: 700px) {
   .dlist .dstats {
     grid-template-columns: 1fr 1fr;
@@ -514,12 +512,10 @@
   }
   .dstrip > .dstatus {
     flex-basis: 100%;
-    order: 2;
     font-size: 12px;
     line-height: 1.4;
   }
   .dstrip > .dacts {
-    order: 1;
     margin: 0 !important;
   }
   /* In the Forge the strip scrolls away cleanly instead of floating over the cards on phones. */
@@ -626,25 +622,18 @@ html.forging .vhero {
   width: 72px !important;
   height: auto !important;
   aspect-ratio: 488 / 680;
-  object-fit: cover;
   border-radius: 4px !important;
   border: 2px solid #fff824 !important;
   box-shadow: 3px 3px 0 #0a0a0a;
   /* sacred card rule: a card picture is never tilted (the tilt lives on the tape and stamps, not on the card) */
   transform: none;
 }
-.dpage .wildcard .wacts {
-  flex-wrap: wrap;
-  gap: 10px !important;
-}
 .dpage .wildcard .wacts .btn {
-  min-height: 40px;
   border-radius: 0 !important;
 }
 .dpage .wildcard .wacts .btn-swap-in {
   border-radius: 0 !important;
   border: 2px solid #e60012 !important;
-  box-shadow: 3px 3px 0 #f4efe4 !important;
 }
 .dpage .wildcard .wacts .wreroll {
   background: #2bd65a !important;
@@ -672,24 +661,7 @@ html.forging .vhero {
 }
 
 /* ---------- 11. Collection: the lists + order panel sits snug, every row lined up ---------- */
-.coll .stats {
-  margin-bottom: var(--s3) !important;
-}
-.coll-listbar {
-  margin: 0 0 var(--s2) !important;
-  padding: var(--s2) var(--s3) !important;
-  gap: var(--s2) !important;
-}
 @media (max-width: 700px) {
-  .coll-listbar {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .coll-listbar .list-tabs {
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
   .coll-listbar .list-tabs > * {
     flex: 0 0 auto;
   }
@@ -729,7 +701,6 @@ html.forging .vhero {
     justify-content: center !important;
     align-items: center !important;
     gap: 4px 12px !important;
-    max-width: 220px;
     padding: 8px 14px !important;
   }
   .dlist .decktoolbar {
@@ -771,7 +742,7 @@ html.forging .vhero {
 @media (max-width: 520px) { .fbtn .flabel { display: none; } .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { padding: 0 8px; } .sortsel select { width: 54px; } }
 @media (max-width: 360px) { .sortsel select { width: 44px; } }
 
-.fchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 var(--sp3, 12px); }
+.fchips { align-items: center; margin: 0 0 var(--sp3, 12px); }
 .fchip, .fclear { min-height: 36px; padding: 0 10px; border: 2px solid var(--text); background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 .fchip { background: var(--text); color: #000; }
 .fclear { border-style: dashed; }
@@ -797,7 +768,7 @@ html.forging .vhero {
 /* Small phones: search gets its own full row (it was squeezed to two letters at 320px); view, options, filter and sort share the row under it */
 @media (max-width: 430px) {
   .dtools.tbar:not(.lists > *):has(> .sortsel) { flex-wrap: wrap; }
-  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { order: -1; flex: 1 1 100% !important; border-bottom: 2px solid var(--text) !important; }
+  .dtools.tbar:not(.lists > *):has(> .sortsel) > .tsearch { border-bottom: 2px solid var(--text) !important; }
   .dtools.tbar:not(.lists > *):has(> .sortsel) > .tquick { flex: 0 0 auto; border-left: 0; }
   .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { border-left: 2px solid var(--text); }
   .dtools.tbar > .sortsel { flex: 1 1 0; min-width: 70px; }
@@ -1071,13 +1042,9 @@ html.forging .vhero {
   .dtools.tbar .tbmore[open] .fbody label.sbox.pick select { min-height: 44px !important; font-size: 13px !important; }
   .cardmenu li.using .deck-chip { height: 44px !important; min-height: 44px !important; padding: 0 12px !important; }
   .swapnote .close, .note-pop .close, .importbox-pop .close { min-width: 44px !important; min-height: 44px !important; }
-  .bindermenu button { min-height: 44px !important; }
   .deckmenu .cwheel { width: 44px !important; height: 44px !important; }
 }
 /* My Decks keeps its SHOW / HIDE STATS fold; Collection's became the CARDS | ANALYTICS tab (Nov 15). */
-@media (max-width: 700px) {
-  /* phones: the two deck buttons share the row's width, the fold button keeps its own size at the end */
-    }
 
 /* ── Phase 2 follow-up (found with the real collection): nothing in the options sheet or the chip strip reads cut off ── */
 @media (max-width: 699px) {
@@ -1154,7 +1121,6 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .fcube { top: calc(var(--forgetop-h, 56px) + 46px); }
 }
 @media (max-width: 700px) {
-  html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
   html.forging .fsugg.up { z-index: 70 !important; }
   html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
   html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important; }
@@ -1184,13 +1150,6 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   .forgemain .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) { display: contents !important; }
   .forgemain .lists > .dtools.tbar > .tquick > .qonly-btn { display: none !important; }
   .forgemain .lists > .dtools.tbar > .tbmore > summary .fnow { display: none !important; }
-  .dpage .lists > .dtools.tbar > .tquick > .qsegs:not(.qviews),
-  .coll .dtools.tbar > .tquick > .qsegs:not(.qviews) { display: none !important; }
-  .dpage .lists > .dtools.tbar > .tquick > .qsegs.qviews,
-  .dpage .lists > .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews,
-  .coll .dtools.tbar > .tquick > .qsegs.qviews,
-  .coll .dtools.tbar > .tquick:has(> .qzoom-btn) > .qsegs.qviews { display: inline-flex !important; height: 48px !important; box-sizing: border-box !important; }
-  .coll .dtools.tbar > .tquick { display: inline-flex !important; }
   :is(.dpage .lists, .coll) > .dtools.tbar > .tquick > .qsegs.qviews > button,
   .coll .dtools.tbar > .tquick > .qsegs.qviews > button { min-width: 44px !important; min-height: 44px !important; padding: 0 !important; }
   :is(.dpage .lists, .coll) .dtools.tbar > .tquick > .qzoom-btn { min-height: 44px !important; }
@@ -1198,14 +1157,8 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   html.forging .deckgrid.forge-split .dpage .lists > .dtools.tbar > .tquick,
   html.forging .deckgrid.forge-split:not(.an-contracted):not(.sug-contracted) .dtools.tbar > .tquick { max-width: none !important; overflow: visible !important; }
   /* Collection's second row also holds ⋮, FILTER and the sort: tighter gaps so the sort's name still reads */
-  .coll .dtools.tbar > .tquick { gap: 6px !important; padding: 0 6px !important; }
-  .coll .dtools.tbar > .tquick > .qzoom-btn { padding: 0 8px !important; }
   /* Collection grid, ManaBox sizing: S = 4 across, M = 3 across (the start), L = 2 across — the same steps as a deck's grid */
-  .collbar[data-zoom='s'] ~ * .cgrid2, .collbar[data-zoom='s'] ~ .cgrid2 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 6px; }
-  .collbar[data-zoom='m'] ~ * .cgrid2, .collbar[data-zoom='m'] ~ .cgrid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
-  .collbar[data-zoom='l'] ~ * .cgrid2, .collbar[data-zoom='l'] ~ .cgrid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 700px) { .coll .dtools.tbar > .sortsel select { font-size: 14px !important; } }
 
 /* ── Card sections, every screen (owner's call, Nov 13: "as clean as Moxfield") ── Each section (Creatures, Instants,
    Lands …) is its own full-width block: a header row, then its cards in rows that fill the width and wrap as needed.
@@ -1396,7 +1349,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   vertical-align: -1px;
   fill: currentColor;
 }
-.ctile .cart > .price .pcrown { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25)); }
 
 /* ── Search that stays in reach (ManaBox benchmark, Nov 14) ──
    1. Collection and Discover: the bar was sticky only inside its own wrapper (.collbar / form.dfind), which is exactly
@@ -1456,7 +1408,6 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
   align-items: stretch;
   gap: 8px !important;
   padding: 8px !important;
-  box-shadow: 4px 4px 0 var(--accent, #e60012);
 }
 .decktoolbar .dsearchrow {
   display: flex;
@@ -1544,18 +1495,9 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 .dpage .lists > .dtools.tbar {
   transition: top 0.25s ease;
 }
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
-  top: 52px !important;
-}
 /* …but not the Forge's deck toolbar on a phone (Guillermo, Nov 19): there it is not pinned at all (it scrolls with the
    cards, styles.css), so the 52px landed as a plain shift that opened a gap under CARDS · ANALYSIS · TO BUY and slid
    the toolbar over the hint line below it. */
-@media (max-width: 700px) {
-  html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar { top: auto !important; }
-}
 @media (prefers-reduced-motion: reduce) {
   .dpage.coll .collbar, .dpage.disc > .dfind, .dpage.dlist > .decktoolbar, .dpage .lists > .dtools.tbar { transition: none; }
 }
@@ -1570,13 +1512,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   align-self: flex-start;
   display: inline-block;
   margin-top: 6px;
-  padding: 2px 8px;
   background: var(--accent, #e60012);
   color: #fff;
   transform: rotate(1deg);
   font: 400 11px var(--u-display, 'Anton', sans-serif);
   letter-spacing: 0.08em;
-  max-width: 100%;
   line-height: 1.35;
 }
 /* on a narrow tile the reason drops under NOT LEGAL instead of being cut off */
@@ -1651,17 +1591,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 /* ---------- Collection stats on phones (Guillermo, Nov 15): cards · unique · commanders as one even row of three,
    no full-width red banner, no dead space ---------- */
 @media (max-width: 700px) {
-  .coll .stats {
-    gap: 10px !important;
-  }
   .coll .stats > .stat {
     flex: 1 1 0 !important;
     min-width: 0 !important;
     min-height: 0 !important;
     padding: 10px 10px 8px !important;
-  }
-  .coll .stats > .stat b {
-    font-size: clamp(26px, 8vw, 34px) !important;
   }
   .coll .stats > .stat span:not(.worn, .spray) {
     font-size: 12px !important;
@@ -1713,38 +1647,10 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 
 /* ---------- Collection analytics (roadmap P2.5): same zine frame as the rest — torn cards, Anton numbers,
    typewriter labels. Quiet content, loud frame ---------- */
-.apanel {
-  margin: 0 0 var(--s4, 16px);
-  padding: 0;
-  background: none;
-  border: 0;
-  box-shadow: none;
-}
 .apanel .agrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-}
-.apanel .acard {
-  position: relative;
-  padding: 14px 16px 12px;
-  min-width: 0;
-  /* the same ink box, halftone dots and hard shadow as the stat tiles above (Guillermo, Nov 15) */
-  background: var(--ink, #0a0a0a);
-  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.6px);
-  background-size: 5px 5px;
-  border: 2px solid var(--u-text, #fff);
-  box-shadow: 4px 4px 0 #000;
-  transform: rotate(-0.5deg);
-}
-.apanel .acard:nth-child(even) {
-  transform: rotate(0.55deg);
-}
-.apanel .acard.awide {
-  transform: rotate(-0.25deg);
-}
-.apanel .acard.awide {
-  grid-column: 1 / -1;
 }
 .apanel .acard h3 {
   display: flex;
@@ -1757,12 +1663,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   font: 400 16px/1 var(--an, Anton, sans-serif);
   letter-spacing: 0.08em;
   color: #fff;
-}
-.apanel .acard h3 small {
-  font: 400 11px var(--se, monospace);
-  letter-spacing: 0;
-  color: #8a8a9a;
-  text-transform: none;
 }
 .apanel .abars {
   list-style: none;
@@ -1779,43 +1679,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   gap: 8px;
   min-height: 26px;
 }
-.apanel .alabel {
-  font: 400 12px var(--se, monospace);
-  color: #cfcfe0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.apanel .atrack {
-  height: 12px;
-  background: #1e1e26;
-  border: 1px solid #2c2c3a;
-}
-.apanel .afill {
-  display: block;
-  height: 100%;
-  width: var(--w, 0%);
-  min-width: 2px;
-  background: repeating-linear-gradient(135deg, #e60012 0 6px, #b3000e 6px 12px);
-}
-.apanel .abar.good .afill {
-  background: repeating-linear-gradient(135deg, #39ff88 0 6px, #22cc66 6px 12px);
-}
-.apanel .abar.col .afill {
-  background: repeating-linear-gradient(135deg, #ffcc00 0 6px, #e0a800 6px 12px);
-}
-.apanel .acount {
-  font: 400 13px var(--an, Anton, sans-serif);
-  color: #fff;
-  min-width: 3ch;
-  text-align: right;
-}
-.apanel .avalue {
-  font: 400 11px var(--u-mono, monospace);
-  color: #8a8a9a;
-  min-width: 7ch;
-  text-align: right;
-}
 .apanel .atrend {
   display: flex;
   align-items: baseline;
@@ -1827,39 +1690,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   font: 400 clamp(30px, 4vw, 42px)/1 var(--an, Anton, sans-serif);
   color: #fff;
 }
-.apanel .atrend span {
-  font: 400 12px var(--se, monospace);
-  color: #b5b5b5;
-}
-.apanel .atrend.up span {
-  color: #39ff88;
-}
-.apanel .atrend.down span {
-  color: #ff7777;
-}
-.apanel .aline {
-  display: block;
-  width: 100%;
-  height: 110px;
-  background: #0c0c0e;
-  border: 1px solid #2c2c3a;
-}
-.apanel .apath {
-  fill: none;
-  stroke: #39ff88;
-  stroke-width: 1.6;
-  vector-effect: non-scaling-stroke;
-}
-.apanel .aarea {
-  fill: rgba(57, 255, 136, 0.12);
-  stroke: none;
-}
-.apanel .afoot,
-.apanel .anone {
-  margin: 8px 0 0;
-  font: 400 11px/1.5 var(--se, monospace);
-  color: #8a8a9a;
-}
 /* Readings (Phase 2, Nov 23): a row of label + number pairs, the number loud, the label quiet; used by AT A GLANCE
    and beside the WORTH OVER TIME line. Money stays plain white here: the yellow tape belongs to price stickers. */
 .apanel .areads {
@@ -1867,41 +1697,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 8px 24px;
   margin: 0 0 12px;
-}
-.apanel .areads > div {
-  min-width: 0;
-}
-.apanel .areads dt {
-  font: 400 11px/1.2 var(--se, monospace);
-  color: #8a8a9a;
-}
-.apanel .areads dd {
-  margin: 4px 0 0;
-  font: 400 clamp(22px, 3vw, 30px)/1.05 var(--an, Anton, sans-serif);
-  color: #fff;
-}
-.apanel .areads dd small {
-  display: block;
-  margin-top: 4px;
-  overflow: hidden;
-  font: 400 12px/1.3 var(--se, monospace);
-  color: #b5b5b5;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.apanel .areads .up dd {
-  color: #39ff88;
-}
-.apanel .areads .down dd {
-  color: #ff7777;
-}
-@media (max-width: 700px) {
-  .apanel .agrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .apanel .abar {
-    grid-template-columns: minmax(58px, auto) minmax(0, 1fr) auto auto;
-  }
 }
 
 /* ---------- Collection: CARDS | ANALYTICS tabs (Guillermo, Nov 15) ----------
@@ -2025,17 +1820,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .lists > .jrail-wrap { width: 26px; }
 .jrail {
   width: 26px;
-  background: rgba(10, 10, 12, 0.42);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
   border-color: rgba(255, 255, 255, 0.14);
-  opacity: 0.03;
-  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.jrail-wrap.awake > .jrail,
-.jrail:hover,
-.jrail:focus-within {
-  opacity: 1;
 }
 .jrail > button {
   display: flex;
@@ -2049,9 +1834,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   height: 15px;
   display: block;
 }
-@media (prefers-reduced-motion: reduce) {
-  .jrail { transition: none; }
-}
 @media (max-width: 700px) {
   .deckgrid > .lists:has(> .jrail-wrap),
   html.forging .deckgrid.forge-split > .lists:has(> .jrail-wrap) { padding-right: 0 !important; }
@@ -2061,24 +1843,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    The ALL / UNLISTED / + NEW LIST ribbon used to float on its own, with a gap before the search bar and another before
    the view row: three separate things doing one job. They now share a frame, divided by hairlines, so the eye reads
    one control panel and the cards start higher up the screen. */
-.coll .coll-listbar {
-  margin: 0 0 -2px !important;
-  padding: 8px 10px !important;
-  background: #0c0c0e;
-  border: 2px solid var(--text, #fff);
-  border-radius: 0;
-  box-shadow: none;
-}
-.coll #cpane-cards {
-  margin-top: 0;
-}
-.dpage.coll .collbar {
-  margin-top: 0 !important;
-}
-.coll #cpane-cards > * > .dtools.tbar,
-.coll #cpane-cards .dtools.tbar {
-  margin-top: 0;
-}
 
 /* ── Deck colour: one rainbow wheel (Guillermo, Nov 15) ──
    The block of swatches and the separate CUSTOM SHADE box are gone. The circle is the whole control: hue round the
@@ -2216,10 +1980,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .dlist .dfilters {
   align-items: center;
 }
-.dlist .dfilters > .dsize {
-  margin-left: auto;
-  flex: none;
-}
 .dgrid .dtile .cfoot {
   flex-wrap: nowrap;
   min-width: 0;
@@ -2252,16 +2012,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   flex: 0 0 auto;
 }
 /* NOT LEGAL moves onto the card's corner: a tape, like COMMANDER on a collection card */
-.dgrid .dtile {
-  position: relative;
-}
 .dgrid .dtile .dlegal {
   position: absolute;
-  top: 6px;
-  left: -4px;
-  z-index: 3;
   margin: 0;
-  max-width: calc(100% - 12px);
   font-size: 10px;
   padding: 2px 7px;
   box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
@@ -2302,7 +2055,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .ztile .tacts > .morebtn,
 .ztile:not(.ctile) .tacts > .morebtn,
 .ztile.ctile > .morebtn {
-  opacity: 0.72;
   right: 0;
   background: none;
   text-shadow: none;
@@ -2368,11 +2120,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   border-bottom: 0;
   box-shadow: none;
 }
-.dpage.coll .ctabs:has(+ .coll-listbar) ~ #cpane-cards .collbar {
-  border: 2px solid var(--u-text, #fff);
-  border-top: 1px solid #2a2a33;
-  box-shadow: 5px 5px 0 #000;
-}
 @media (max-width: 700px) {
   /* The title keeps its ransom letters, at the size a phone can spare, and the binder tag moves up beside them
      instead of taking a line of its own. */
@@ -2383,56 +2130,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     gap: 6px;
     max-width: 100%;
     overflow: visible;
-    padding-top: 8px !important;
-    padding-bottom: 6px !important;
-  }
-  .coll .chead2 .titlewrap > .ztitle {
-    flex: 0 1 auto;
-    min-width: 0;
-  }
-  .coll .chead2 .titlewrap > .bindermenu {
-    flex: 0 1 auto;
-    min-width: 0;
-    margin: 0 !important;
-  }
-  .coll .chead2 .titlewrap > .bindermenu .bmbtn {
-    max-width: 38vw;
-    min-width: 0;
-    font-size: 13px;
-    padding-left: 8px;
-    padding-right: 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   /* The tag names the binder; the word BINDER above it only said the same thing twice. */
-  .coll .chead2 .titlewrap > .bindermenu .bmbtn .lbl {
-    display: none;
-  }
   /* The tag now sits at the right end of the title, so its menu hangs from that end and stays on the screen. */
-  .coll .chead2 .titlewrap > .bindermenu .bmenu {
-    left: auto !important;
-    right: 12px !important;
-  }
-  :is(.coll, .dlist) .ctabs {
-    margin: 6px 0 0;
-    padding: 5px;
-    gap: 6px;
-  }
-  :is(.coll, .dlist) .ctab {
-    min-height: 44px;
-    padding: 0 11px;
-  }
-  .coll .coll-listbar {
-    padding: 5px 8px !important;
-  }
-  .dpage.coll .collbar {
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-  }
-  .dpage.coll .collbar > .dtools.tbar {
-    gap: 6px !important;
-  }
 }
 
 /* ── Collection: swipe between CARDS and ANALYTICS (Guillermo, Nov 15) ──
@@ -2444,8 +2144,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 }
 :is(.coll, .dlist) .ctab-hint {
   position: absolute;
-  right: 8px;
-  bottom: -14px;
   z-index: 6;
   display: inline-flex;
   align-items: center;
@@ -2464,9 +2162,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     transform: rotate(-1.5deg) translateX(-6px);
   }
 }
-.coll.swipehint .ctabset {
-  animation: collnudge 1.5s 0.1s ease-in-out 2 both;
-}
 @keyframes collnudge {
   0%,
   62%,
@@ -2478,12 +2173,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   }
   44% {
     transform: translateX(4px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .coll.swipehint .ctabset,
-  :is(.coll, .dlist) .ctab-hint {
-    animation: none;
   }
 }
 
@@ -2533,11 +2222,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     rgba(12, 12, 14, 0.74) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.3);
   backdrop-filter: blur(22px) saturate(1.3);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow:
-    0 18px 44px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 .island-drawer::after {
   content: '';
@@ -2605,7 +2289,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    area, in the gap between SUGGESTIONS and TO BUY), with a small arrow when the sheet is down so it is plain that
    there is a panel to pull up. Everything they held is still there. */
 .forgetop {
-  min-height: 48px;
   padding-top: 2px;
   padding-bottom: 2px;
 }
@@ -2620,22 +2303,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     max-height: 58px !important;
   }
   html.forging .fsugg .fgrab {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 3;
-    width: 150px;
-    height: 44px;
     min-height: 44px !important;
     margin: 0 !important;
     padding-top: 3px !important;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: flex-start !important;
     gap: 1px !important;
-    background: transparent;
   }
   html.forging .fsugg:not(.up) .fgrab::after {
     content: '▲';
@@ -2654,9 +2326,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   }
   html.forging .fsugg .fpanes {
     margin-bottom: 0;
-  }
-  html.forging .fsugg .fpanes button {
-    min-height: 44px;
   }
 }
 
@@ -2708,7 +2377,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   .tbar .fbody .chiprow > .u-chip { height: 44px !important; min-height: 44px !important; padding: 0 14px !important; font-size: 12.5px !important; }
 }
 /* SHOW is the bar's ALL / OWNED / MISSING buttons wherever the bar has room for them: there it is not repeated here */
-@media (min-width: 701px) {  }
 
 /* The footer: always on the bottom edge of the sheet, APPLY taking the width it deserves */
 .tbar .fbody .sheetfoot {
@@ -2740,28 +2408,15 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    inside the one frame, divided by hairlines instead of gaps, and the lane that was empty on the right of
    the tools (the sort) takes that space so its words read in full. Nothing moved out of reach. */
 @media (max-width: 700px) {
-  .coll .chead2 { margin-bottom: 0 !important; padding: 2px 0 4px !important; }
-  .coll .chead2 .titlewrap { padding-top: 6px !important; padding-bottom: 4px !important; }
   :is(.coll, .dlist) .ctabs { margin: 4px 0 0 !important; padding: 3px 4px !important; gap: 4px !important; }
-  .coll .ctabs { flex-wrap: nowrap !important; }
-  .coll .ctabset { gap: 4px !important; }
   :is(.coll, .dlist) .ctab { min-height: 44px !important; padding: 0 8px !important; font-size: 13px !important; }
   :is(.coll, .dlist) .ctab-acts { gap: 4px !important; }
   :is(.coll, .dlist) .ctab-acts .slip-btn { min-height: 44px !important; padding: 0 8px !important; font-size: 12.5px !important; }
-  .coll .coll-listbar { padding: 3px 6px !important; }
-  .coll .coll-listbar .list-tab { min-height: 44px !important; padding: 0 10px !important; }
-  .dpage.coll .collbar { padding-top: 2px !important; padding-bottom: 2px !important; }
-  .dpage.coll .collbar > .dtools.tbar { gap: 2px !important; }
-  .coll .dtools.tbar > .tsearch { min-height: 44px !important; }
   /* the tool lane: view, size, ⋮, filter, then the sort taking the rest of the line */
-  .coll .dtools.tbar > .tquick { padding: 0 2px !important; gap: 6px !important; }
-  .coll .dtools.tbar > .sortsel { flex: 1 1 0 !important; min-width: 88px !important; }
   .coll .dtools.tbar > .sortsel select { width: 100% !important; font-size: 13px !important; }
 }
 /* The lanes are flush now, so the first-run tag can't hang on a seam without covering a control: while it shows,
    the tabs lane opens a strip of its own for it, at every width, and that strip goes away with the tag. */
-.coll.swipehint .ctabs { padding-bottom: 24px !important; }
-:is(.coll, .dlist) .ctab-hint { left: 10px; right: auto; bottom: 4px; }
 
 /* The GEAR and BUY UNDER tiles kept the full-size segmented control's 58px frame while their buttons were shrunk to
    28px inside the sheet, which left an empty white band under each one. The frame now takes the height of the tiles. */
@@ -2774,10 +2429,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 
 /* Tablet and desktop keep the same four flush lanes; only the air inside them is larger than a phone's. */
 @media (min-width: 701px) {
-  .coll .chead2 { margin-bottom: 0 !important; }
   :is(.coll, .dlist) .ctabs { margin: 8px 0 0 !important; padding: 5px 6px !important; }
-  .coll .coll-listbar { padding: 5px 8px !important; }
-  .dpage.coll .collbar { padding-top: 4px !important; padding-bottom: 4px !important; }
 }
 
 /* A panel longer than the screen scrolls inside itself, with its footer riding the bottom edge, rather than running
@@ -2821,12 +2473,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   gap: 6px 10px;
 }
 @media (min-width: 701px) {
-  .coll .chead2 .titlewrap {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px 10px;
-  }
   .coll .chead2 .titlewrap > .ztitle { flex: 0 0 auto; }
 }
 .dlist .decksbar .titlewrap > .ztitle { flex: 0 0 auto; }
@@ -2888,8 +2534,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     box-shadow: none !important;
     background: #0d0d10 !important;
   }
-  .coll .coll-listbar { border-top: 0 !important; border-radius: 6px 6px 0 0 !important; }
-  .dpage.coll #cpane-cards .collbar { border-radius: 0 0 6px 6px !important; }
 }
 
 /* ── ROUND 6 · THE SYNC BUBBLE READS LIKE THE ISLAND (Guillermo, Nov 15: "the font here is hard to read") ──
@@ -3034,17 +2678,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 }
 
 /* the closed rail: wide enough for words, and quiet */
-@media (min-width: 1100px) {
-  html.forging .deckgrid.forge-split.an-contracted {
-    grid-template-columns: 168px minmax(0, 1fr) 350px !important;
-  }
-  html.forging .deckgrid.forge-split.sug-contracted {
-    grid-template-columns: 320px minmax(0, 1fr) 168px !important;
-  }
-  html.forging .deckgrid.forge-split.an-contracted.sug-contracted {
-    grid-template-columns: 168px minmax(0, 1fr) 168px !important;
-  }
-}
 .fmeters.contracted .fmeters-header h3,
 .fsugg.contracted .fsugg-header h3 {
   display: flex !important;
@@ -3133,14 +2766,10 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 /* "your decks:" never runs past one line, however many you keep with this commander. The names wrap rather than
    running off a phone's screen, so the +N more button is always reachable. */
 .vhero .vmeta .mydecks {
-  display: inline;
   white-space: normal !important;
   overflow-wrap: anywhere;
 }
 .vhero .vmeta .mydecks-more {
-  margin-left: 6px;
-  padding: 2px 6px;
-  min-height: 0;
   background: transparent;
   border: 1px dashed var(--u-line2, #2c2c34);
   border-radius: 3px;
@@ -3165,9 +2794,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* The chart cards lose their white outline too (same note): a chart is read, not framed. They keep the ink, the
    halftone dots, the hard shadow and the tilt that tie them to the stat tiles — only the white line goes. */
-.apanel .acard {
-  border-color: #2c2c34 !important;
-}
 
 /* An island that has gone away is see-through and slid off its edge, but a sliver of it stays inside the screen (it
    rests a few px in from the edge). Invisible, it must not eat the tap meant for the button underneath it. */
@@ -3194,9 +2820,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* The chosen tab stays a white paper slab (a cut-out tab, not a frame round the content); only the list tabs lose
    their white outline. */
-.list-tab.active {
-  border-color: var(--accent, #e60012) !important;
-}
 
 /* The one tool bar: search, view, filter and sort are divided by hairlines, not white rules. */
 :is(.dtools, .collbar, .tbar) :is(.fbtn, .sortsel, .tquick, .vpill, .tsearch),
@@ -3251,25 +2874,11 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 }
 
 /* TOP 3: the same carbon paper as the tiles, its pen frame drawn in the hairline colour, its title on yellow tape. */
-.topwidget {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.2px, transparent 1.6px) !important;
-  background-size: 5px 5px !important;
-}
-.topwidget > .pen {
-  border-color: var(--edge2) !important;
-}
 
 /* The analytics cards sit in the same family. */
-.apanel .acard,
-.acard {
-  border-color: var(--edge2) !important;
-}
 
 /* The last white edges on the furniture: the chosen tab, the view segment, the first stat tile's left edge, and the
    colour pips on a deck tile. */
-.qsegs.qviews > button {
-  border-color: var(--edge) !important;
-}
 :is(.coll, .dlist) .stats .stat:first-child,
 .dlist .dstats > .stat:first-child {
   border-left-color: var(--edge2) !important;
@@ -3335,29 +2944,10 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* Collection: the appraised slip is a receipt, not a banner — it stops at a readable width so the row keeps its
    rhythm, and TOP 3 takes the space that is left. */
-@media (min-width: 701px) {
-  .coll .slip {
-    flex: 0 1 460px !important;
-    max-width: 460px !important;
-  }
-  .coll .topwidget {
-    flex: 1 1 320px !important;
-    max-width: 560px !important;
-  }
-}
 
 /* The worth line keeps a readable height instead of a tall empty box. (The analytics grid itself, spans and
    alignment, lives in the dashboard block at the end of this file: Phase 2 revision, Nov 23.) */
-.apanel .aline {
-  height: 132px !important;
-}
 /* TOP 3 holds three cards, so its frame stops after them instead of leaving an empty fourth slot. */
-@media (min-width: 701px) {
-  .coll .topwidget {
-    flex: 0 1 420px !important;
-    max-width: 420px !important;
-  }
-}
 
 /* The search box itself: a hairline, like the bar it sits in (it still had a white outline on phones). */
 .sbox {
@@ -3789,10 +3379,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* Phones: the cards start right under the tools (the one-block rule, Nov 15). With the ⋮ and the search sharing the
    top row the block is one row shorter; this keeps the breathing space under it in proportion. */
-@media (max-width: 700px) {
-  .coll .collbar { margin-bottom: 8px !important; }
-  .coll .cgrid2 { padding-top: 8px !important; }
-}
 
 /* ── Big binders stay quick (Phase 5A, Nov 20). The phone used to draw every card in the grid, even thousands of
    cards off screen, and a foil card's shine animated whether you could see it or not: past ~1,000 cards each
@@ -3801,14 +3387,6 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
      holds its exact place and the page never jumps; `auto` then remembers each card's real size once drawn.
    - the price tape, the copy counter and the ⋮ button reach a little past the card's edge: overflow-clip-margin
      keeps that room. A browser that can't keep the room (older Safari) draws every card as before. */
-@supports (content-visibility: auto) and (overflow-clip-margin: 1px) {
-  .cgrid2 > .ctile {
-    content-visibility: auto;
-    contain-intrinsic-size: auto none;
-    aspect-ratio: 63 / 88;
-    overflow-clip-margin: 32px;
-  }
-}
 
 /* ── My Decks wears Collection's top (Guillermo, Nov 19: "make the two sections look cohesive") ───────────
    DECKS | STATS are the same two stamps as CARDS | ANALYTICS, and + NEW DECK / IMPORT the same ink and red labels
@@ -3836,26 +3414,9 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 
 /* Collection's first-run "swipe ⇄" tag sat on top of the CARDS stamp when the tabs ride the title band (desktop and
    tablet): there it hangs just under the band instead, clear of every button. */
-.titlewrap > .titleacts .ctab-hint {
-  top: calc(100% + 6px);
-  bottom: auto;
-  left: 0;
-}
 
 /* Top 3 lies flat (Guillermo, Nov 19): no fan tilt on the cards or their price tags, so each card reads straight.
    The hover lift stays, without the turn. */
-.topwidget li,
-.topwidget .tw.price {
-  transform: none;
-}
-.topwidget li:hover {
-  transform: translateY(-4px) scale(1.05);
-}
-@media (prefers-reduced-motion: reduce) {
-  .topwidget li:hover {
-    transform: none;
-  }
-}
 
 /* Phones (Nov 19): deck theme and tag badges are read-only labels, a size you can read. A tap goes to the tile. */
 .dcard .dtags.plain .themebadge,
@@ -3917,158 +3478,13 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
    3. Wide screens: a 12-column grid with one gap everywhere. Worth over time takes 8 columns and AT A GLANCE the
       4 beside it; the six charts sit three to a row, every card in a row the same height, nothing tilted, so the
       edges line up like a dashboard. Phones keep one column and the slight tilt of the stat tiles. */
-.apanel .acard {
-  --ac: #e60012;
-}
-.apanel .ak-worth {
-  --ac: #39ff88;
-}
-.apanel .ak-glance {
-  --ac: #fff824;
-}
-.apanel .ak-decks {
-  --ac: #2bd65a;
-}
-.apanel .ak-colours {
-  --ac: #e8c35a;
-}
-.apanel .ak-curve {
-  --ac: #3b6cff;
-}
-.apanel .ak-types {
-  --ac: #b38cff;
-}
-.apanel .ak-rarity {
-  --ac: #ff8a3d;
-}
-.apanel .ak-sets {
-  --ac: #e60012;
-}
-.apanel .acard h3 {
-  border-bottom-color: var(--ac) !important;
-}
-.apanel .acard::before {
-  /* a strip of coloured tape on the top-left corner, the chart's colour */
-  content: '';
-  position: absolute;
-  top: -5px;
-  left: 14px;
-  width: 38px;
-  height: 9px;
-  background: var(--ac);
-  opacity: 0.9;
-  transform: rotate(-3deg);
-  clip-path: polygon(0 12%, 100% 0, 97% 100%, 3% 88%);
-  pointer-events: none;
-}
-.apanel .afig {
-  align-self: center;
-  padding: 2px 5px 1px;
-  border: 1px solid var(--ac);
-  font: 400 10px/1 var(--u-mono, monospace);
-  letter-spacing: 0.06em;
-  color: var(--ac);
-}
 /* bars: the chart's colour by default, in the same zine stripe as before */
-.apanel .abar {
-  --bar: var(--ac);
-}
-.apanel .afill,
-.apanel .abar.good .afill {
-  background: repeating-linear-gradient(135deg, var(--bar) 0 6px, color-mix(in srgb, var(--bar) 72%, #000) 6px 12px) !important;
-}
 /* COLOURS: each bar in its mana colour (readable on black; black mana as a violet-grey) */
-.apanel .ak-colours .k-W { --bar: #f3ecd2; }
-.apanel .ak-colours .k-U { --bar: #3b8bff; }
-.apanel .ak-colours .k-B { --bar: #9a86b8; }
-.apanel .ak-colours .k-R { --bar: #ff4a3d; }
-.apanel .ak-colours .k-G { --bar: #3fbf6a; }
-.apanel .ak-colours .k-C { --bar: #a9a9b4; }
-.apanel .ak-colours .k-M { --bar: #e8c35a; }
 /* RARITY: the set-symbol colours */
-.apanel .ak-rarity .k-common { --bar: #8f8f9c; }
-.apanel .ak-rarity .k-uncommon { --bar: #c4d2df; }
-.apanel .ak-rarity .k-rare { --bar: #e6c15a; }
-.apanel .ak-rarity .k-mythic { --bar: #ff6a2b; }
-.apanel .ak-rarity .k-other { --bar: #6b6b78; }
 /* IN YOUR DECKS: idle is grey, in a deck is ownership green */
-.apanel .ak-decks .k-idle { --bar: #6b6b78; }
-.apanel .abar .alabel::before {
-  /* a colour key beside every label, so a bar can be read by its colour too */
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 6px;
-  background: var(--bar);
-  vertical-align: 0;
-}
-
-@media (min-width: 701px) {
-  .apanel .agrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 24px 16px !important;
-    align-items: stretch !important;
-  }
-  .apanel .acard,
-  .apanel .acard:nth-child(even),
-  .apanel .acard.awide {
-    transform: none !important;
-  }
-  .apanel .acard.awide {
-    grid-column: 1 / -1 !important;
-  }
-}
-@media (min-width: 1100px) {
-  .apanel .agrid {
-    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
-    gap: 24px !important;
-  }
-  .apanel .acard {
-    grid-column: span 4 !important;
-  }
-  .apanel .acard.ahistory {
-    grid-column: span 8 !important;
-  }
-  .apanel .acard.aglance {
-    grid-column: span 4 !important;
-    display: flex;
-    flex-direction: column;
-  }
-  /* beside the line, AT A GLANCE reads top to bottom: three ruled rows */
-  .apanel .aglance .areads {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    margin: 0;
-    flex: 1;
-    align-content: space-between;
-  }
-  .apanel .aglance .areads > div {
-    padding: 10px 0;
-    border-bottom: 1px dashed #2c2c3a;
-  }
-  .apanel .aglance .areads > div:last-child {
-    border-bottom: 0;
-  }
-  .apanel .ahistory .aline {
-    height: 168px !important;
-  }
-}
 
 /* Every bar in a chart starts and ends on the same line: the rows share one set of columns (label, track, count,
    worth), so a long label no longer pushes its own track out of line with the others. */
-@supports (grid-template-columns: subgrid) {
-  .apanel .abars {
-    display: grid;
-    grid-template-columns: fit-content(40%) minmax(0, 1fr) auto auto;
-    column-gap: 8px;
-    row-gap: 6px;
-  }
-  .apanel .abars > .abar {
-    grid-column: 1 / -1;
-    grid-template-columns: subgrid !important;
-  }
-}
 
 /* ---------- My Decks: COMPARE (Nov 24, deck-analysis plan step 1) ----------
    Level 2 frame, Level 1 numbers: the same ink strip and hard shadow as the tab bar around the picks; inside, a plain
@@ -4215,21 +3631,15 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
    Every copy of one card, one card each, side by side; pick one to change only that copy. Level 2: an Anton heading
    and a hard accent shadow frame it; the cards themselves stay flat, straight and uncovered (sacred card rule). The
    fanned hand is step 2. Phones: a bottom sheet like the card menu; wider screens: a centred panel. */
-.backdrop.handback { position: fixed; inset: 0; z-index: 1009; background: rgba(0, 0, 0, 0.66); }
+.backdrop.handback { position: fixed; inset: 0; z-index: 1009; }
 .yourcopies {
-  position: fixed; z-index: 1010; left: 50%; top: 50%; translate: -50% -50%;
-  width: min(920px, calc(100vw - 2 * var(--sp5)));
-  max-height: calc(100dvh - 2 * var(--sp5)); overflow-y: auto; overscroll-behavior: contain;
-  background: var(--bg); color: var(--text);
-  border: 2px solid var(--text); box-shadow: 8px 8px 0 var(--accent);
-  padding: var(--sp3) var(--sp4) var(--sp4);
+  position: fixed; z-index: 1010; left: 50%; top: 50%; translate: -50% -50%; overscroll-behavior: contain; color: var(--text);
 }
-.yourcopies .yc-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp2) var(--sp3); }
-.yourcopies .yc-head h2 { margin: 0; font-family: var(--an); font-weight: 400; font-size: 26px; letter-spacing: 0.02em; line-height: 1; }
+.yourcopies .yc-head h2 { margin: 0; font-family: var(--an); font-weight: 400; letter-spacing: 0.02em; line-height: 1; }
 .yourcopies .yc-n { display: inline-block; background: var(--hazard); color: var(--ink); padding: 0 6px; margin-left: 4px; font-size: 0.8em; }
-.yourcopies .yc-name { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.yourcopies .yc-scry { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
-.yourcopies .close { min-width: 44px; min-height: 44px; background: var(--text); color: var(--bg); border: 0; font-size: 18px; cursor: pointer; }
+.yourcopies .yc-name { min-width: 0; font-weight: 700; }
+.yourcopies .yc-scry { display: inline-flex; align-items: center; text-decoration: none; }
+.yourcopies .close { min-width: 44px; min-height: 44px; border: 0; font-size: 18px; cursor: pointer; }
 
 /* the copies: one sideways row that snaps a card at a time (swipe on phones, wheel / arrows on computers) */
 .yourcopies .yc-row {
@@ -4239,11 +3649,9 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 }
 .yourcopies .yc-row > li { flex: none; scroll-snap-align: center; }
 .yourcopies .yc-copy {
-  display: flex; flex-direction: column; gap: var(--sp1); width: 168px; padding: var(--sp1);
-  background: none; color: inherit; border: 2px solid transparent; cursor: pointer; text-align: left;
-  transition: translate 0.18s ease, border-color 0.18s ease;
+  display: flex; flex-direction: column; gap: var(--sp1); color: inherit; cursor: pointer; text-align: left;
 }
-.yourcopies .yc-copy.on { border-color: var(--hazard); translate: 0 -6px; }
+.yourcopies .yc-copy.on { translate: 0 -6px; }
 .yourcopies .yc-copy:focus-visible { outline: 3px solid var(--hazard); outline-offset: 2px; }
 .yourcopies .yc-img { display: block; width: 100%; aspect-ratio: 488 / 680; }
 .yourcopies .yc-img img { width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4.5% / 3.2%; }
@@ -4252,31 +3660,27 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 .yourcopies .yc-more { align-self: center; font-family: 'Space Mono', monospace; color: var(--muted); padding: 0 var(--sp4); }
 
 /* this copy: what it is, then its controls */
-.yourcopies .yc-tools { border-top: 2px solid var(--raised); margin-top: var(--sp2); padding-top: var(--sp3); }
-.yourcopies .yc-which { margin: 0 0 var(--sp3); font-family: 'Space Mono', monospace; font-size: 13px; }
-.yourcopies .yc-acts { display: flex; flex-wrap: wrap; gap: var(--sp2); align-items: center; }
-.yourcopies .yc-acts .u-btn { min-height: 44px; }
+.yourcopies .yc-tools { padding-top: var(--sp3); }
+.yourcopies .yc-which { font-family: 'Space Mono', monospace; }
+.yourcopies .yc-acts { display: flex; }
 .yourcopies .yc-step { display: inline-flex; align-items: center; gap: var(--sp1); }
-.yourcopies .yc-step .u-btn { min-width: 44px; font-size: 20px; padding: 0; }
+.yourcopies .yc-step .u-btn { font-size: 20px; }
 .yourcopies .yc-qty { font-family: 'Space Mono', monospace; min-width: 3ch; text-align: center; }
-.yourcopies .yc-note { margin: var(--sp2) 0 0; color: var(--muted); }
-.yourcopies .yc-arts { list-style: none; margin: var(--sp3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp2); max-height: 300px; overflow-y: auto; }
+.yourcopies .yc-note { color: var(--muted); }
+.yourcopies .yc-arts { list-style: none; margin: var(--sp3) 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp2); overflow-y: auto; }
 .yourcopies .yc-arts button { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 2px; background: none; color: inherit; border: 2px solid transparent; cursor: pointer; }
 .yourcopies .yc-arts button[aria-pressed='true'] { border-color: var(--hazard); }
 .yourcopies .yc-arts img { width: 100%; border-radius: 4px; }
 .yourcopies .yc-arts small { font-family: 'Space Mono', monospace; font-size: 11px; }
 /* the undo note shows over the sheet */
-html:has(.yourcopies) .toast { z-index: 1020; }
-html:has(.yourcopies) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
 
 @media (max-width: 700px) {
   .yourcopies {
-    left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto; max-height: 88dvh;
-    border-bottom: 0; box-shadow: 0 -4px 0 var(--accent);
+    left: 0; right: 0; top: auto; bottom: 0;
+    border-bottom: 0;
     padding-bottom: calc(var(--sp4) + env(safe-area-inset-bottom));
   }
-  .yourcopies .yc-head h2 { font-size: 22px; }
-  .yourcopies .yc-copy { width: 42vw; max-width: 180px; }
+  .yourcopies .yc-copy { max-width: 180px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .yourcopies .yc-copy { transition: none; }
