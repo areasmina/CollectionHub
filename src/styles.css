@@ -2063,10 +2063,6 @@ ul.popnote .small {
 .swapnote .picks ul {
   margin-top: 6px;
 }
-.swapnote li button {
-  -webkit-touch-callout: none;
-  user-select: none;
-}
 .whys {
   display: flex;
   flex-wrap: wrap;
@@ -3152,10 +3148,6 @@ details.cat {
 .swapbtn.quiet:focus-visible {
   opacity: 1;
 }
-.swapnote .nh .was {
-  font-family: var(--se);
-  font-size: 13px;
-}
 .swapnote .swapq {
   display: flex;
   flex-direction: column;
@@ -3250,10 +3242,6 @@ details.cat {
     width: calc(100vw - 32px);
     transform: none;
   }
-}
-.swapnote .viewer.dropover img {
-  outline: 4px dashed var(--accent);
-  outline-offset: 4px;
 }
 .swapnote li button[draggable='true'] {
   cursor: grab;
@@ -4356,14 +4344,6 @@ details.cat {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.swapnote .swapq.top {
-  min-width: 0;
-}
-@media (max-width: 700px) {
-  .swapnote .nh > span:first-child {
-    max-width: calc(100% - 56px);
-  }
-}
 
 /* ===== One toolbar everywhere (Nov 6): SEARCH · GROUP / SORT / FILTERS · grid / list, in one frame, the same bar as the
    Collection's. Segments are split by thin rules; dropdowns open below the bar. ===== */
@@ -4521,7 +4501,6 @@ details.cat {
   padding: 1px 8px;
   color: #141414;
 }
-.swapnote:focus { outline: none; }
 
 /* Owner's rule (Nov 6), app-wide: a card tile has no name title outside the card; the name is read on the card itself.
    (The name stays for screen readers.) Price and copy pips sit on the card, shown on hover or when the card is selected. */
@@ -5281,17 +5260,6 @@ html.forging main {
   font-size: 20px;
   letter-spacing: 1px;
 }
-.fmeters .fmatch {
-  font-size: 15px;
-  color: var(--hazard);
-}
-.fmeters ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 5px;
-}
 .fm {
   display: grid;
   grid-template-columns: 74px 1fr 40px 34px;
@@ -5327,20 +5295,6 @@ html.forging main {
 .fm b {
   text-align: right;
 }
-.fdelta {
-  font-family: var(--an);
-  font-size: 13px;
-  padding: 0 4px;
-  animation: fdelta 2.2s ease-out forwards;
-}
-.fdelta.up {
-  color: #0a0a0a;
-  background: #39ff88;
-}
-.fdelta.down {
-  color: #fff;
-  background: var(--accent);
-}
 @keyframes fdelta {
   0% {
     transform: translateY(6px) scale(1.4);
@@ -5356,13 +5310,6 @@ html.forging main {
   100% {
     opacity: 0;
   }
-}
-.fcurve {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  height: 64px;
-  margin-top: 10px;
 }
 .fcurve span {
   display: flex;
@@ -5385,15 +5332,6 @@ html.forging main {
   font-family: var(--se);
   font-size: 11px;
   color: var(--muted);
-}
-.fneeds {
-  margin: 10px 0 0;
-  padding: 4px 8px;
-  background: var(--hazard);
-  color: var(--ink);
-  font-family: var(--an);
-  font-size: 15px;
-  letter-spacing: 0.5px;
 }
 
 /* SUGGESTIONS */
@@ -5452,10 +5390,6 @@ html.dragging * {
   html.forging .fmeters h3,
   html.forging .fcurve {
     display: none;
-  }
-  html.forging .fmeters ul {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
   }
   html.forging .fm {
     grid-template-columns: 1fr;

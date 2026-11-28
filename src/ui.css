@@ -2144,12 +2144,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Side panel: flat, hairlines only; folds to one line below desktop */
-.dpanel .fmeters {
-  background: none;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-}
 @media (max-width: 999px) {
   html.forging .dpanel .fmeters {
     background: var(--u-carbon);
@@ -3684,16 +3678,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Header bar composition */
-.swapnote .nh {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 14px !important;
-  padding: 12px 18px !important;
-  background: #181820 !important;
-  border-bottom: 1px solid #262632 !important;
-  flex: none !important;
-}
 
 .swapnote .nh .swap-title-wrap {
   display: flex !important;
@@ -3784,23 +3768,8 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Modal Body */
-.swapnote .swapbody {
-  display: flex !important;
-  gap: 20px !important;
-  padding: 18px 20px 20px !important;
-  overflow-y: auto !important;
-  max-height: calc(88dvh - 65px) !important;
-  flex: 1 1 auto !important;
-}
 
 /* Left Column: Viewer */
-.swapnote .viewer {
-  flex: 0 0 230px !important;
-  width: 230px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
 
 .swapnote .viewer img {
   width: 100% !important;
@@ -3856,12 +3825,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   color: #ffffff !important;
 }
 
-.swapnote .whycard .wparts {
-  margin: 0 0 4px !important;
-  padding-left: 14px !important;
-  list-style: square !important;
-}
-
 .swapnote .whycard .wparts li {
   margin-bottom: 2px !important;
   color: #a0a0b2 !important;
@@ -3885,12 +3848,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
 }
 
 /* Right Column: Picks & Suggestions */
-.swapnote .picks {
-  flex: 1 1 auto !important;
-  min-width: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
 
 .swapnote .picks ul {
   display: flex !important;
@@ -3906,32 +3863,11 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   margin-bottom: 10px !important;
 }
 
-.swapnote .undo {
-  width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  padding: 10px 14px !important;
-  border-radius: 6px !important;
-  background: linear-gradient(135deg, rgba(255, 212, 0, 0.14), rgba(255, 212, 0, 0.04)) !important;
-  border: 1.5px solid #ffd400 !important;
-  color: #ffd400 !important;
-  box-shadow: 0 4px 12px rgba(255, 212, 0, 0.08) !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-}
-
 .swapnote .undo:hover {
   background: rgba(255, 212, 0, 0.22) !important;
   border-color: #ffe033 !important;
   box-shadow: 0 4px 18px rgba(255, 212, 0, 0.22) !important;
   transform: translateY(-1px) !important;
-}
-
-.swapnote .undo span {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
 }
 
 .swapnote .undo b {
@@ -3980,23 +3916,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   transform: translateY(-1px) !important;
 }
 
-.swapnote li button img {
-  width: 54px !important;
-  height: 75px !important;
-  border-radius: 4px !important;
-  border: 1px solid #363646 !important;
-  object-fit: cover !important;
-  flex: none !important;
-}
-
-.swapnote li b {
-  font: 800 13px/1.2 var(--u-display, sans-serif) !important;
-  color: #ffffff !important;
-  letter-spacing: 0.02em !important;
-  margin-bottom: 4px !important;
-  display: block !important;
-}
-
 /* Reason Badges / Whys */
 .swapnote .whys {
   display: flex !important;
@@ -4020,18 +3939,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   color: #ffd400 !important;
   border: 1px solid rgba(255, 212, 0, 0.4) !important;
   font-weight: 700 !important;
-}
-
-.swapnote .whys > span.cwarn {
-  background: rgba(230, 0, 18, 0.18) !important;
-  color: #ff7777 !important;
-  border: 1px solid rgba(230, 0, 18, 0.45) !important;
-}
-
-.swapnote .whys > span.cgain {
-  background: rgba(180, 100, 255, 0.16) !important;
-  color: #d8b4fe !important;
-  border: 1px solid rgba(180, 100, 255, 0.35) !important;
 }
 
 /* In-use badge */
@@ -4067,73 +3974,6 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   width: 100% !important;
 }
 
-.swapnote .pin-btns {
-  display: flex !important;
-  gap: 10px !important;
-  width: 100% !important;
-}
-
-.swapnote .pin-btn {
-  flex: 1 1 50% !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  text-transform: uppercase !important;
-  background: #191920 !important;
-  color: #cccccc !important;
-  border: 1.5px solid #333342 !important;
-  cursor: pointer !important;
-  transition: all 0.15s cubic-bezier(0.2, 0, 0, 1) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
-}
-
-.swapnote .pin-btn .pin-tag-mark {
-  font-size: 13px !important;
-  font-weight: 900 !important;
-}
-
-.swapnote .pin-btn:hover:not(:disabled) {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
-  color: #ffffff !important;
-}
-
-.swapnote .pin-btn.pin-in:hover:not(:disabled) {
-  border-color: var(--u-green, #00f5a0) !important;
-  color: #00f5a0 !important;
-}
-
-.swapnote .pin-btn.pin-out:hover:not(:disabled) {
-  border-color: var(--u-red, #e60012) !important;
-  color: #ff6666 !important;
-}
-
-.swapnote .pin-btn:active:not(:disabled) {
-  transform: translateY(1px) !important;
-}
-
-.swapnote .pin-btn:disabled {
-  opacity: 0.35 !important;
-  cursor: not-allowed !important;
-}
-
-.swapnote .pin-btn.pin-in.is-active {
-  background: var(--u-green, #00f5a0) !important;
-  color: #000000 !important;
-  border-color: #00f5a0 !important;
-  box-shadow: 0 0 14px rgba(0, 245, 160, 0.4) !important;
-  transform: none !important;
-}
-
-.swapnote .pin-btn.pin-out.is-active {
-  background: var(--u-red, #e60012) !important;
-  color: #ffffff !important;
-  border-color: #e60012 !important;
-  box-shadow: 0 0 14px rgba(230, 0, 18, 0.4) !important;
-  transform: none !important;
-}
-
 .swapnote .pin-hint {
   display: block !important;
   width: 100% !important;
@@ -4156,31 +3996,10 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
     width: min(440px, 95vw) !important;
     max-height: 88dvh !important;
   }
-  .swapnote .nh {
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    padding: 10px 14px !important;
-  }
-  .swapnote .nh .swap-title-wrap {
-    max-width: calc(100% - 46px) !important;
-  }
   .swapnote .swapq.top {
     order: 3 !important;
     flex-basis: 100% !important;
     max-width: 100% !important;
-  }
-  .swapnote .swapbody {
-    flex-direction: column !important;
-    gap: 14px !important;
-    padding: 12px 14px 16px !important;
-  }
-  .swapnote .viewer {
-    flex: none !important;
-    width: 100% !important;
-    flex-direction: row !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    gap: 12px !important;
   }
   .swapnote .viewer img {
     width: 68px !important;
@@ -4531,57 +4350,8 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
 }
 
 /* Expand / Contract Buttons & Headers */
-.fmeters-header,
-.fsugg-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 8px !important;
-  margin-bottom: 8px !important;
-}
-.fmeters-header h3,
-.fsugg-header h3 {
-  margin: 0 !important;
-}
-.fsugg-header .fpanes-wrap {
-  flex: 1 !important;
-  min-width: 0 !important;
-}
-.fsugg-header .fpanes-wrap .fpanes {
-  margin-bottom: 0 !important;
-}
-
-.fexp-btn {
-  background: #18181b !important;
-  color: #f4efe4 !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.08em !important;
-  padding: 3px 8px !important;
-  border-radius: 2px !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 4px !important;
-  white-space: nowrap !important;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7) !important;
-}
-.fexp-btn:hover {
-  background: var(--u-red, #e60012) !important;
-  border-color: var(--u-red, #e60012) !important;
-  color: #ffffff !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.9) !important;
-}
 
 /* Contracted / Mini Analysis */
-.fmeters.contracted {
-  padding: 10px 8px !important;
-  box-shadow: 3px 3px 0 var(--accent, #e60012) !important;
-}
 .fmeters.contracted .fmeters-header {
   flex-direction: column !important;
   align-items: stretch !important;
@@ -4592,179 +4362,13 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
   display: flex !important;
   justify-content: space-between !important;
 }
-.fmeters.contracted .fmeters-header .fexp-btn {
-  width: 100% !important;
-  justify-content: center !important;
-  padding: 3px 4px !important;
-}
-.fmeters.contracted .fcurve.mini-curve {
-  height: 44px !important;
-  gap: 2px !important;
-  margin-top: 6px !important;
-  padding: 4px 2px !important;
-  background: rgba(0, 0, 0, 0.3) !important;
-  border-radius: 2px !important;
-  border: 1px dashed rgba(255, 255, 255, 0.15) !important;
-}
 .fmeters.contracted .fcurve.mini-curve small {
   display: none !important;
 }
-.fm-mini-body {
-  margin-top: 8px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-}
-.fm-mini-row {
-  display: flex !important;
-  justify-content: space-between !important;
-  gap: 4px !important;
-}
-.fm-mini-chip {
-  font-family: var(--se, monospace) !important;
-  font-size: 11px !important;
-  color: #cccccc !important;
-  background: #111114 !important;
-  padding: 2px 5px !important;
-  border-radius: 2px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  white-space: nowrap !important;
-}
-.fm-mini-chip b {
-  color: #ffffff !important;
-  font-family: var(--an, sans-serif) !important;
-}
-.fm-mini-dots {
-  display: flex !important;
-  justify-content: space-around !important;
-  gap: 3px !important;
-  padding: 4px !important;
-  background: #0d0d0f !important;
-  border-radius: 2px !important;
-}
-.fm-dot {
-  width: 10px !important;
-  height: 10px !important;
-  border-radius: 50% !important;
-  background: #555555 !important;
-  display: inline-block !important;
-}
-.fm-dot.ok {
-  background: #39ff88 !important;
-  box-shadow: 0 0 6px rgba(57, 255, 136, 0.5) !important;
-}
-.fm-dot.low {
-  background: var(--hazard, #ffcc00) !important;
-  box-shadow: 0 0 6px rgba(255, 204, 0, 0.5) !important;
-}
-.fm-dot.high {
-  background: #ff8a3d !important;
-  box-shadow: 0 0 6px rgba(255, 138, 61, 0.5) !important;
-}
 
 /* Expanded Analysis: Veteran MTG Features */
-.fm-velocity-bar {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 5px 8px !important;
-  margin: 6px 0 10px !important;
-  background: #111114 !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-radius: 2px !important;
-  font-family: var(--se, monospace) !important;
-  font-size: 11px !important;
-  color: var(--u-muted, #999999) !important;
-}
-.fm-velocity-bar b {
-  color: #39ff88 !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: 13px !important;
-}
-
-.fm-sec-title {
-  font-family: var(--an, sans-serif) !important;
-  font-size: 11px !important;
-  letter-spacing: 0.08em !important;
-  color: var(--u-muted, #888888) !important;
-  margin: 10px 0 4px !important;
-  text-transform: uppercase !important;
-}
-.fm-pips-sec {
-  margin-top: 10px !important;
-  padding-top: 8px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-.fm-pips-track {
-  display: flex !important;
-  height: 8px !important;
-  border-radius: 2px !important;
-  overflow: hidden !important;
-  background: #222226 !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  margin-bottom: 6px !important;
-}
-.fm-pip-bar {
-  display: block !important;
-  height: 100% !important;
-}
-.fm-pip-bar.col-W, .fm-pip-chip.col-W { background: #fef08a !important; color: #1c1917 !important; }
-.fm-pip-bar.col-U, .fm-pip-chip.col-U { background: #38bdf8 !important; color: #082f49 !important; }
-.fm-pip-bar.col-B, .fm-pip-chip.col-B { background: #71717a !important; color: #ffffff !important; }
-.fm-pip-bar.col-R, .fm-pip-chip.col-R { background: #ef4444 !important; color: #ffffff !important; }
-.fm-pip-bar.col-G, .fm-pip-chip.col-G { background: #22c55e !important; color: #052e16 !important; }
-
-.fm-pips-legend {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 4px !important;
-}
-.fm-pip-chip {
-  font-family: var(--se, monospace) !important;
-  font-size: 11px !important;
-  padding: 1px 6px !important;
-  border-radius: 2px !important;
-  font-weight: 700 !important;
-}
-.fm-pip-advice {
-  margin: 6px 0 0 !important;
-  font-family: var(--se, monospace) !important;
-  font-size: 11px !important;
-  line-height: 1.35 !important;
-  color: var(--u-muted, #aaaaaa) !important;
-}
-.fm-pip-advice b {
-  color: #ffffff !important;
-}
-
-.fm-types-sec {
-  margin-top: 10px !important;
-  padding-top: 8px !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-.fm-type-chips {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 4px !important;
-}
-.fm-type-chip {
-  background: #141416 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  padding: 2px 6px !important;
-  border-radius: 2px !important;
-  font-family: var(--se, monospace) !important;
-  font-size: 11px !important;
-  color: #cccccc !important;
-}
-.fm-type-chip b {
-  color: #ffffff !important;
-  font-family: var(--an, sans-serif) !important;
-}
 
 /* Contracted / Mini Suggestions */
-.fsugg.contracted {
-  padding: 10px 8px !important;
-}
 .fsugg.contracted .fsugg-header {
   flex-direction: column !important;
   align-items: stretch !important;
@@ -4774,57 +4378,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
   font-size: 14px !important;
   display: flex !important;
   justify-content: space-between !important;
-}
-.fsugg.contracted .fsugg-header .fexp-btn {
-  width: 100% !important;
-  justify-content: center !important;
-  padding: 3px 4px !important;
-}
-
-.fsugg-mini-body {
-  margin-top: 8px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 8px !important;
-}
-.fsugg-mini-label {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  font-family: var(--an, sans-serif) !important;
-  font-size: 11px !important;
-  letter-spacing: 0.08em !important;
-  color: var(--u-muted, #888888) !important;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.15) !important;
-  padding-bottom: 4px !important;
-}
-.fsugg-mini-cards {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 6px !important;
-}
-.fsugg-mini-card {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 4px !important;
-  background: #101013 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 2px !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-}
-.fsugg-mini-card:hover {
-  background: #1c1c22 !important;
-  border-color: var(--accent, #e60012) !important;
-  transform: translateX(2px) !important;
-}
-.fsugg-mini-card.owned {
-  border-left: 3px solid #39ff88 !important;
-}
-.fsugg-mini-card.placing {
-  border-color: var(--hazard, #ffcc00) !important;
-  background: rgba(255, 204, 0, 0.1) !important;
 }
 .mini-card-thumb {
   width: 32px !important;
@@ -4863,13 +4416,6 @@ ul.zgrid[data-zoom='l'] .ztile .tnote {
   font-family: var(--an, sans-serif) !important;
   font-size: 10px !important;
   color: #39ff88 !important;
-}
-
-.fsugg-mini-roles {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 3px !important;
-  margin-top: 2px !important;
 }
 .mini-role-pill {
   flex: 1 1 calc(50% - 3px) !important;

@@ -3,6 +3,7 @@
    only the design tokens. Later Phase A steps fold these into each feature's own stylesheet. */
 @import './features/collection/collection.legacy.css';
 @import './features/decks/decks.legacy.css';
+@import './features/forge/forge.legacy.css';
 @import './features/brand/BrandMark.css';
 @import './features/discover/discover-tabs.css';
 @import './features/decks/deck-strip.css';
