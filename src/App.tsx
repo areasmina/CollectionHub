@@ -520,7 +520,7 @@ export default function App() {
                     )}
                     {forgeState.undo && (
                       <button className="u-btn ghost fundo" onClick={() => (haptic('undo'), forgeState.undo?.run())} title="Undo (Ctrl+Z)">
-                        ↺ UNDO
+                        ↺ <span className="fword">UNDO</span>
                       </button>
                     )}
                     {forgeState.onSave && (
@@ -546,8 +546,12 @@ export default function App() {
               {forgeCube && (
                 <div className="fcube" role="tablist" aria-label="Deck faces: swipe sideways">
                   {(['CARDS', 'ANALYSIS', 'TO BUY'] as const).map((lbl, i) => (
-                    <button key={lbl} type="button" role="tab" aria-selected={forgeCube.face === i} onClick={() => forgeCube.onFace(i)}>
-                      {lbl}
+                    <button key={lbl} type="button" role="tab" aria-label={lbl} aria-selected={forgeCube.face === i} onClick={() => forgeCube.onFace(i)}>
+                      {/* narrow phones with UNDO and SAVE on the Island read the short word (Nov 28) */}
+                      <span className="fc-long">{lbl}</span>
+                      <span className="fc-short" aria-hidden="true">
+                        {lbl === 'ANALYSIS' ? 'STATS' : lbl === 'TO BUY' ? 'BUY' : lbl}
+                      </span>
                       {lbl === 'TO BUY' && forgeCube.buyCount ? <small>{forgeCube.buyCount}</small> : null}
                     </button>
                   ))}
