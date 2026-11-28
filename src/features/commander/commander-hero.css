@@ -1,0 +1,150 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Commander Hero: 1-line side-scrollable deck pills & calm Oversight-inspired hairline tiles */
+.vhero .vmeta .mydecks {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  white-space: nowrap !important;
+  padding: 2px 14px 2px 0;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 14px), transparent 100%);
+}
+.vhero .vmeta .mydecks:not(:has(.mydecks-pill + .mydecks-pill)):not(:has(.mydecks-more)) {
+  padding-right: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.vhero .vmeta .mydecks::-webkit-scrollbar {
+  display: none;
+}
+.vhero .vmeta .mydecks-lbl {
+  flex: 0 0 auto;
+  font: 400 11px var(--mo-mono);
+  color: var(--mo-muted);
+}
+.vhero .vmeta .mydecks-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  background: #141418;
+  border: 1px solid #2e2e38;
+  border-radius: 4px;
+}
+.vhero .vmeta .mydecks-pill .decklink {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 32px;
+  padding: 0 10px !important;
+  margin: 0 !important;
+  color: #f2f2f2 !important;
+  text-decoration: none !important;
+  font: 400 11px/1.2 var(--mo-mono) !important;
+  white-space: nowrap !important;
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vhero .vmeta .mydecks:not(:has(.mydecks-pill + .mydecks-pill)):not(:has(.mydecks-more)) .mydecks-pill .decklink {
+  max-width: min(280px, calc(100vw - 116px));
+}
+.vhero .vmeta .mydecks-pill .decklink:hover {
+  color: #fff824 !important;
+}
+.vhero .vmeta .mydecks-more {
+  flex: 0 0 auto;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 32px;
+  min-width: 44px;
+  margin-left: 0 !important;
+  padding: 0 10px !important;
+  white-space: nowrap !important;
+}
+@media (max-width: 700px) {
+  .vhero {
+    padding: 6px 8px !important;
+    gap: 6px 14px !important;
+    margin-bottom: 6px !important;
+  }
+  .vhero .vcard {
+    align-self: center;
+  }
+  .vhero .vname {
+    padding-left: 4px;
+  }
+  .vhero .vname > .vslash {
+    left: -4px !important;
+  }
+  .vhero .vmeta .mydecks-pill .decklink,
+  .vhero .vmeta .mydecks-more {
+    min-height: 44px !important;
+  }
+}
+.vhero .vtiles:has(details[open]) {
+  position: relative;
+  z-index: 60;
+}
+.vhero .vtile:not(.vnote) {
+  background: #101014;
+  border: 1px solid #24242e;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.vhero .vtile .vpop {
+  min-width: min(280px, calc(100vw - 32px)) !important;
+  max-width: min(380px, calc(100vw - 32px)) !important;
+}
+.vhero .vtile.salt-tile .vpop {
+  left: auto !important;
+  right: 0 !important;
+}
+.vtile.salt-tile .vpop .salt-expl {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--mo-muted);
+  line-height: 1.4;
+}
+@media (min-width: 900px) {
+  .vhero .vtiles.hasnote > .vtile.vnote {
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px !important;
+    background: transparent !important;
+    border: 1px solid #24242e !important;
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+  }
+}
+@media (max-width: 899px) {
+  .vhero .vtiles.hasnote > .vtile.vnote {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+    padding: 2px 2px 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+}
+.dstrip .dacts .u-btn:not(.primary) {
+  background: #121217;
+  border: 1px solid #2a2a35;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.dstrip .dacts .u-btn.tobuy {
+  border-color: #3a3418 !important;
+  background: #12110c !important;
+}

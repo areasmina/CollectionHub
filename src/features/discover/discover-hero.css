@@ -1,0 +1,129 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Discover Hero: 5-mana-color floating card fan + balanced spacing/composition */
+@keyframes mana-card-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes card-eye-blink {
+  0%, 92%, 100% { opacity: 0; }
+  95%, 97% { opacity: 0.92; }
+}
+.eyedoodle .mana-card-bob {
+  animation: mana-card-float 3.8s ease-in-out infinite;
+}
+.eyedoodle .mana-card-bob.mc1 { animation-delay: -0.75s; }
+.eyedoodle .mana-card-bob.mc2 { animation-delay: -1.5s; }
+.eyedoodle .mana-card-bob.mc3 { animation-delay: -2.25s; }
+.eyedoodle .mana-card-bob.mc4 { animation-delay: -3s; }
+.eyedoodle .card-eye-lid {
+  opacity: 0;
+  animation: card-eye-blink 6.5s ease-in-out infinite;
+}
+.eyedoodle .mana-card-bob.mc1 .card-eye-lid { animation-delay: -1.3s; }
+.eyedoodle .mana-card-bob.mc2 .card-eye-lid { animation-delay: -2.7s; }
+.eyedoodle .mana-card-bob.mc3 .card-eye-lid { animation-delay: -4.1s; }
+.eyedoodle .mana-card-bob.mc4 .card-eye-lid { animation-delay: -5.4s; }
+.eyedoodle .card-iris {
+  transition: transform 0.14s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eyedoodle .mana-card-bob,
+  .eyedoodle .card-eye-lid {
+    animation: none !important;
+  }
+}
+
+@media (min-width: 701px) {
+  .discohero {
+    padding: 14px 18px 12px !important;
+    margin: 4px 0 10px !important;
+  }
+  .titlewrap > .eyedoodle {
+    left: 75% !important;
+    top: 50% !important;
+    width: 48% !important;
+    max-width: 400px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Discover hero: compact, well-composed on phone so commander cards lead above the fold */
+  .discohero {
+    padding: 6px 8px 8px !important;
+    margin: 4px 0 6px !important;
+  }
+  .titlewrap > .eyedoodle {
+    left: 73% !important;
+    top: 50% !important;
+    width: 92% !important;
+    opacity: 0.92;
+  }
+  .discohero .ztitle {
+    gap: 4px !important;
+  }
+  .discohero .tanswer {
+    margin-top: 2px !important;
+  }
+  .discohero .tagline {
+    font-size: 11px !important;
+    margin-top: 2px !important;
+  }
+
+  /* My Decks tabs + action row: sleek hairline bar instead of heavy stacked white blocks */
+  .dlist .ctabs {
+    background: #0c0c10 !important;
+    border: 1px solid #23232a !important;
+    border-radius: 4px !important;
+    padding: 3px !important;
+    gap: 4px !important;
+  }
+  .dlist .ctab {
+    flex: 1 1 auto;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    border-radius: 3px !important;
+  }
+  .dlist .ctab-acts {
+    width: 100%;
+    display: flex !important;
+    gap: 4px !important;
+    margin-left: 0 !important;
+  }
+  .dlist .ctab-acts .slip-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 44px !important;
+    padding: 0 8px !important;
+    font-size: 12.5px !important;
+    border-radius: 3px !important;
+    background: #141418 !important;
+    color: #e8e8f0 !important;
+    border: 1px solid #2e2e38 !important;
+    box-shadow: none !important;
+  }
+  .dlist .ctab-acts .slip-btn.red {
+    background: var(--mo-red) !important;
+    color: #ffffff !important;
+    border-color: var(--mo-red) !important;
+  }
+
+  /* Collection stacked control rows: tighter vertical rhythm */
+  .coll .ctabs {
+    margin: 4px 0 0 !important;
+    padding: 3px !important;
+    gap: 4px !important;
+  }
+  .coll .ctab-acts {
+    gap: 4px !important;
+  }
+  .coll .coll-listbar {
+    padding: 4px !important;
+    gap: 4px !important;
+  }
+  .coll .collbar {
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+}

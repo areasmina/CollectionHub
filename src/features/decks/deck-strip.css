@@ -1,0 +1,93 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Saved Deck (.forgemain): clear top-docked Dynamic Island via .stage below (avoid stacking on top of .stage 52px) */
+html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has(> .vhero)) {
+  padding-top: 0 !important;
+}
+
+/* Saved Deck (.forgemain) status & utility strip: sleek minimalist hairline bar */
+.forgemain > .dstrip {
+  background: transparent;
+  border: 0;
+  padding: 6px 0 8px !important;
+  height: auto !important;
+  min-height: 0;
+  gap: 8px 12px !important;
+  align-items: center;
+}
+.forgemain > .dstrip > .dstatus {
+  font: 400 12px/1.35 var(--mo-mono);
+  color: var(--mo-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.forgemain > .dstrip > .dacts {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  background: #0c0c10;
+  border: 1px solid #282830;
+}
+.forgemain > .dstrip > .dacts > .u-btn {
+  min-height: 36px;
+  padding: 0 11px !important;
+  border: 0 !important;
+  border-right: 1px solid #24242c !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #d4d4de !important;
+  font: 400 13px/1 var(--mo-display) !important;
+  letter-spacing: 0.05em !important;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.forgemain > .dstrip > .dacts > .u-btn:last-child {
+  border-right: 0 !important;
+}
+.forgemain > .dstrip > .dacts > .u-btn:hover,
+.forgemain > .dstrip > .dacts > .u-btn:focus-visible {
+  background: #181820 !important;
+  color: #ffffff !important;
+}
+@media (max-width: 700px) {
+  .forgemain > .dstrip {
+    padding: 2px 0 4px !important;
+    gap: 4px !important;
+    margin: 0 !important;
+  }
+  .forgemain > .dstrip > .dstatus {
+    flex: 1 1 100%;
+    order: 0 !important;
+    font-size: 11px;
+    line-height: 1.25;
+    gap: 2px 8px;
+    padding: 0 2px;
+  }
+  .forgemain > .dstrip > .dacts {
+    order: 1 !important;
+    width: 100% !important;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    border-radius: var(--mo-r-sm);
+    border-color: var(--mo-line) !important;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 16px), transparent 100%);
+  }
+  .forgemain > .dstrip > .dacts::-webkit-scrollbar {
+    display: none;
+  }
+  .forgemain > .dstrip > .dacts > .u-btn {
+    flex: 1 0 auto !important;
+    min-height: 44px !important;
+    min-width: 44px !important;
+    padding: 0 8px !important;
+    font-size: 12px !important;
+    letter-spacing: 0.04em !important;
+    justify-content: center;
+  }
+}

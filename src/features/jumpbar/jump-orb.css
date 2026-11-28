@@ -1,0 +1,56 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Independent Floating Quick Jump Search Orb (.jump-orb) ── */
+.jump-orb {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+}
+html:has(.pillnav.dock-bottom:not(.collapsed)) .jump-orb {
+  bottom: calc(var(--island-h, 46px) + 22px + env(safe-area-inset-bottom, 0px));
+  right: 12px;
+}
+html:has(.pillnav.dock-right:not(.collapsed)) .jump-orb {
+  right: calc(var(--island-w, 46px) + 14px);
+}
+html.scrolling .jump-orb {
+  opacity: 0.24;
+  pointer-events: none;
+}
+html:is(.sheet-open, :has(.swapnote, .yourcopies, .cardmenu, .fsheet2, .deckmenu)) .jump-orb {
+  display: none !important;
+}
+@media (max-width: 700px) {
+  html.forging .jump-orb {
+    display: none !important;
+  }
+}
+
+@layer legacy {
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
+  html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
+    top: calc(var(--island-h, 46px) + 12px) !important;
+  }
+  @media (max-width: 700px) {
+    html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
+      top: auto !important;
+    }
+  }
+  html:has(.yourcopies) .pillnav {
+    translate: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    z-index: 1015 !important;
+  }
+  html:has(.yourcopies) .pillnav .syncpill {
+    display: none !important;
+  }
+  html:has(.yourcopies) .toast {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 1030 !important;
+  }
+  html:has(.yourcopies):has(.pillnav.dock-bottom:not(.collapsed)) .toast {
+    bottom: calc(var(--island-h, 46px) + 14px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}

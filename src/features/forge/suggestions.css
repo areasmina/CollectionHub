@@ -1,0 +1,52 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Suggestions Drawer: compact layout & side-scrollable filter/tag options ── */
+.fsugg .fchips,
+.fsugg .fthemes {
+  display: flex;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  overflow-x: auto !important;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  margin-bottom: 6px !important;
+  padding-bottom: 2px !important;
+}
+@media (max-width: 700px) {
+  html.forging .fsugg:not(.up) .fchips,
+  html.forging .fsugg:not(.up) .fthemes {
+    display: none !important;
+  }
+  .fsugg .fchips > button,
+  .fsugg .fthemes > button {
+    min-height: 44px !important;
+  }
+}
+.fsugg .fchips::-webkit-scrollbar,
+.fsugg .fthemes::-webkit-scrollbar {
+  display: none;
+}
+.fsugg .fchips > button,
+.fsugg .fthemes > button {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+.fsugg .just-build-banner {
+  margin: 4px 0 6px !important;
+}
+.fsugg .btn-just-build {
+  padding: 6px 10px !important;
+  min-height: 44px !important;
+}
+.fsugg .fsorts {
+  margin-bottom: 6px !important;
+}
+.fsugg label.sbox.fq {
+  min-height: 40px !important;
+  margin-bottom: 6px !important;
+}
+.fsugg label.sbox.fq > .tab {
+  font-size: 11px !important;
+  padding: 0 8px !important;
+}

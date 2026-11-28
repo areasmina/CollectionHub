@@ -1,0 +1,392 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* ── Context-Adaptive Dynamic Island (Supaste fluid + Forge Assistant) ── */
+.pillnav {
+  transition: transform 0.28s var(--mo-ease-out), opacity 0.22s ease;
+}
+.pillnav .island-membrane {
+  overflow: hidden;
+  transition:
+    transform 0.28s var(--mo-ease-out),
+    border-radius 0.28s var(--mo-ease-out),
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.pillnav .island-membrane .island-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--mo-red), #ff7a1a);
+  transition: width 0.25s var(--mo-ease-out);
+  pointer-events: none;
+}
+.pillnav .island-membrane .island-progress.warn {
+  background: var(--mo-yellow);
+}
+.pillnav .island-membrane .island-progress.ok {
+  background: var(--mo-green);
+}
+.pillnav .syncpill.act-busy {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.pillnav .syncpill.act-ok {
+  border-color: rgba(43, 214, 90, 0.5);
+}
+.pillnav .syncpill.act-ok .sync-lbl {
+  color: var(--mo-green);
+}
+.pillnav .syncpill.act-warn {
+  border-color: rgba(255, 248, 36, 0.5);
+}
+.pillnav .syncpill.act-warn .sync-lbl {
+  color: var(--mo-yellow);
+}
+.pillnav .syncpill.act-err {
+  border-color: rgba(230, 0, 18, 0.55);
+}
+.pillnav .syncpill.act-err .sync-lbl {
+  color: #ff6b76;
+}
+.pillnav.forging-island .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.2)),
+    rgba(10, 10, 13, 0.84) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  backdrop-filter: blur(20px) saturate(1.35);
+  border-color: rgba(230, 0, 18, 0.45) !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.68),
+    0 0 18px rgba(230, 0, 18, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  transition: all 0.36s var(--mo-ease-spring) !important;
+}
+.pillnav.forging-island .island-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px !important;
+  height: auto !important;
+  width: 100% !important;
+  transition: all 0.36s var(--mo-ease-spring) !important;
+}
+.pillnav.forging-island .syncpill,
+.pillnav.forging-island .island-lip {
+  display: none !important;
+}
+.forge-island-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  transition: all 0.36s var(--mo-ease-spring);
+}
+.pillnav .forgetop {
+  position: static !important;
+  top: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 4px !important;
+  width: 100% !important;
+  height: 38px;
+  min-height: 38px;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.pillnav .forgetop .fstamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 10px 0 8px;
+  border: 1px solid rgba(230, 0, 18, 0.38);
+  border-radius: var(--mo-r-pill);
+  background: rgba(230, 0, 18, 0.14);
+  color: #ffffff;
+  font: 400 12.5px/1 var(--mo-display);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.pillnav .forgetop .fstamp:hover,
+.pillnav .forgetop .fstamp:focus-visible {
+  background: rgba(230, 0, 18, 0.24);
+  border-color: rgba(230, 0, 18, 0.65);
+}
+.pillnav .forgetop .forge-nav-btn {
+  background: rgba(255, 255, 255, 0.07);
+}
+.forge-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  flex-shrink: 0;
+  background: transparent;
+  overflow: visible;
+}
+.forge-card-icon img {
+  width: 20px;
+  height: 26px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  filter: sepia(1) saturate(8) hue-rotate(-35deg) brightness(1.18) contrast(1.42) drop-shadow(0 0 4px #ff4500) drop-shadow(0 0 9px #e60012);
+}
+@keyframes forge-card-float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-2.5px) rotate(3deg); }
+}
+@keyframes island-flame-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(255, 69, 0, 0.55),
+      0 0 32px rgba(230, 0, 18, 0.36),
+      inset 0 0 12px rgba(255, 102, 0, 0.24),
+      0 10px 28px rgba(0, 0, 0, 0.78);
+    border-color: rgba(255, 88, 22, 0.85);
+  }
+  50% {
+    box-shadow:
+      0 0 22px rgba(255, 110, 0, 0.8),
+      0 0 44px rgba(230, 0, 18, 0.52),
+      inset 0 0 18px rgba(255, 68, 0, 0.36),
+      0 10px 28px rgba(0, 0, 0, 0.82);
+    border-color: rgba(255, 152, 42, 0.96);
+  }
+}
+/* Floating fiery card back pill in Forge Nav Mode: pure card floating without circle frame */
+.pillnav .pback.forge-back-pill {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin-left: 2px !important;
+}
+.pillnav .pback.forge-back-pill:hover,
+.pillnav .pback.forge-back-pill:focus-visible {
+  background: transparent !important;
+  transform: scale(1.08);
+}
+.pillnav .pback.forge-back-pill .forge-card-icon {
+  width: 24px;
+  height: 32px;
+  animation: forge-card-float 2.6s ease-in-out infinite;
+}
+.pillnav .pback.forge-back-pill .forge-card-icon img {
+  width: 24px;
+  height: 32px;
+}
+@media (max-width: 700px) {
+  .pillnav .pback.forge-back-pill {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+}
+/* Dynamic Island live-activity obsidian glass + crimson rim whenever Forge mode is active */
+html.forging .pillnav .island-membrane {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02) 44%, rgba(0, 0, 0, 0.2)),
+    rgba(10, 10, 13, 0.84) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  backdrop-filter: blur(20px) saturate(1.35);
+  border-color: rgba(230, 0, 18, 0.45) !important;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.68),
+    0 0 18px rgba(230, 0, 18, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pillnav .pback.forge-back-pill .forge-card-icon,
+  html.forging .pillnav .island-membrane {
+    animation: none !important;
+  }
+}
+.pillnav .forgetop .ftitle {
+  font: 400 10.5px/1 var(--mo-mono);
+  color: #cfcfe0;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+.pillnav .forgetop .u-btn:not(.primary) {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: var(--mo-r-pill);
+  border: 0;
+  background: transparent;
+  color: #d0d0dc;
+  font: 400 12px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.pillnav .forgetop .u-btn:not(.primary):hover,
+.pillnav .forgetop .u-btn:not(.primary):focus-visible {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+.pillnav .forgetop .u-btn.primary.forge {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--mo-r-pill);
+  border: 0;
+  background: var(--mo-red);
+  color: #ffffff;
+  font: 400 12px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 10px rgba(230, 0, 18, 0.45);
+  white-space: nowrap;
+}
+.pillnav .forgetop .u-btn.primary.forge:hover,
+.pillnav .forgetop .u-btn.primary.forge:focus-visible {
+  background: #ff1224;
+  color: #ffffff;
+}
+.pillnav .fcube {
+  display: none;
+}
+@media (max-width: 700px) {
+  .pillnav.forging-island {
+    max-width: calc(100vw - 16px);
+  }
+  .pillnav .forgetop {
+    height: 44px;
+    min-height: 44px;
+  }
+  .pillnav .forgetop .ftitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .pillnav .forgetop .fstamp,
+  .pillnav .forgetop .u-btn,
+  .pillnav .forgetop .forge-nav-btn {
+    min-height: 44px !important;
+    height: 44px !important;
+  }
+  .pillnav .fcube {
+    order: 3;
+    flex: 1 1 100%;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    align-items: stretch;
+    gap: 2px !important;
+    width: 100% !important;
+    padding: 2px !important;
+    margin: 0 !important;
+    position: static !important;
+    top: auto !important;
+    transform: none !important;
+    box-shadow: none !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 999px !important;
+  }
+  .pillnav .fcube > button {
+    min-height: 44px !important;
+    padding: 0 6px !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    background: transparent;
+    color: var(--mo-muted);
+    font: 400 12.5px/1 var(--mo-display);
+    letter-spacing: 0.06em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    white-space: nowrap;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .pillnav .fcube > button[aria-selected='true'] {
+    background: var(--mo-red);
+    color: #ffffff;
+    box-shadow: 0 2px 10px rgba(230, 0, 18, 0.45);
+  }
+  .pillnav .fcube > button > small {
+    background: #fff824 !important;
+    color: #0a0a0a !important;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font: 700 10px/1.2 var(--mo-mono);
+  }
+}
+
+/* Phone Forge Island, one row (Guillermo, Nov 27: "extend it, it uses a lot of space"): FORGE · CARDS / ANALYSIS /
+   TO BUY · ✕ · ☰ side by side across the top or bottom dock instead of two stacked rows. The words FORGE and LEAVE are
+   kept for screen readers only. A Forge with UNDO and SAVE too may still wrap the faces under, rather than squeeze. */
+@media (max-width: 700px) {
+  .pillnav.forging-island:is(.dock-top, .dock-bottom):not(.collapsed) {
+    width: calc(100vw - 16px) !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forge-island-wrap {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop {
+    display: contents !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fstamp {
+    order: 1;
+    min-width: 44px;
+    justify-content: center;
+    padding: 0 8px !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .fcube {
+    order: 2;
+    flex: 1 1 170px !important;
+    width: auto !important;
+    min-width: 0;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .fcube > button {
+    padding: 0 4px !important;
+    font-size: 12px !important;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fundo {
+    order: 3;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .u-btn.primary.forge {
+    order: 4;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fleave {
+    order: 5;
+    min-width: 44px;
+    padding: 0 !important;
+    justify-content: center;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .forge-nav-btn {
+    order: 6;
+  }
+  .pillnav.forging-island:is(.dock-top, .dock-bottom) .forgetop .fword {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

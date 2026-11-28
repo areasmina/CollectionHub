@@ -1,0 +1,76 @@
+/* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
+   unlayered as before, so nothing changes on screen. */
+/* Discover mode tabs: Minimalist sleek punk-zine hairline bar (matches .fcube) */
+.disc-tabs {
+  display: flex;
+  align-items: stretch;
+  padding: 0;
+  margin: 10px 0 0;
+  background: #0a0a0d;
+  border: 1px solid #282830;
+  border-bottom: 2px solid var(--mo-red);
+  border-radius: 0;
+}
+.disc-tabs:has(+ .dfind) {
+  border-bottom: 1px solid #282830;
+}
+.disc-tabs .ctabset {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+.disc-tabs .ctab {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid #24242c;
+  border-radius: 0;
+  color: var(--mo-muted);
+  font: 400 15px/1 var(--mo-display);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: none;
+  box-shadow: none;
+  transition: color 0.12s, background 0.12s;
+}
+.disc-tabs .ctab:last-child {
+  border-right: 0;
+}
+.disc-tabs .ctab:hover,
+.disc-tabs .ctab:focus-visible {
+  color: #ffffff;
+  background: #15151c;
+}
+.disc-tabs .ctab.on {
+  background: var(--mo-red);
+  color: #ffffff;
+  transform: none;
+  box-shadow: none;
+}
+.disc-tabs + .dfind {
+  margin-top: 0 !important;
+}
+.disc-tabs + .dfind > .dtools.tbar {
+  margin-top: 0 !important;
+  border-top: 0 !important;
+  border-radius: 0 !important;
+}
+@media (max-width: 700px) {
+  .disc-tabs {
+    margin: 6px 0 0;
+  }
+  .disc-tabs .ctab {
+    min-height: 44px;
+    padding: 0 6px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+}
