@@ -3005,9 +3005,6 @@ ul.popnote .small {
 .deckmenu li > button {
   font-size: 16px;
 }
-.deckmenu .danger {
-  font-weight: 700;
-}
 /* Right-click / hold the deck header for the same menu */
 
 /* Grid / list: two small icon buttons in the first card section, beside the commander */
@@ -3057,11 +3054,6 @@ details.cat {
   row-gap: 0;
   padding-top: 6px;
   padding-bottom: 6px;
-}
-.deckmenu li > button small {
-  flex-basis: 100%;
-  padding-left: 20px;
-  line-height: 1.2;
 }
 /* Group value in each card section header: a strip of yellow tape */
 .cat > summary .gval {
