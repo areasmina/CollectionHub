@@ -622,7 +622,6 @@ html.forging .vhero {
   width: 72px !important;
   height: auto !important;
   aspect-ratio: 488 / 680;
-  object-fit: cover;
   border-radius: 4px !important;
   border: 2px solid #fff824 !important;
   box-shadow: 3px 3px 0 #0a0a0a;
@@ -760,7 +759,7 @@ html.forging .vhero {
 @media (max-width: 520px) { .fbtn .flabel { display: none; } .dtools.tbar > .fbtn, .dtools.tbar > .sortsel { padding: 0 8px; } .sortsel select { width: 54px; } }
 @media (max-width: 360px) { .sortsel select { width: 44px; } }
 
-.fchips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 var(--sp3, 12px); }
+.fchips { align-items: center; margin: 0 0 var(--sp3, 12px); }
 .fchip, .fclear { min-height: 36px; padding: 0 10px; border: 2px solid var(--text); background: var(--bg); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 .fchip { background: var(--text); color: #000; }
 .fclear { border-style: dashed; }
@@ -1140,7 +1139,6 @@ html:has(.swapnote) .pillnav { opacity: 0 !important; visibility: hidden !import
   html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .fcube { top: calc(var(--forgetop-h, 56px) + 46px); }
 }
 @media (max-width: 700px) {
-  html.forging .fsugg { transition: max-height 0.3s ease, bottom 0.25s ease; }
   html.forging .fsugg.up { z-index: 70 !important; }
   html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(46px + env(safe-area-inset-bottom, 0px)) !important; }
   html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) { bottom: calc(118px + env(safe-area-inset-bottom, 0px)) !important; }
@@ -1527,18 +1525,9 @@ html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretchin
 .dpage .lists > .dtools.tbar {
   transition: top 0.25s ease;
 }
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.coll .collbar,
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.disc > .dfind,
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.dlist > .decktoolbar,
-html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar {
-  top: 52px !important;
-}
 /* …but not the Forge's deck toolbar on a phone (Guillermo, Nov 19): there it is not pinned at all (it scrolls with the
    cards, styles.css), so the 52px landed as a plain shift that opened a gap under CARDS · ANALYSIS · TO BUY and slid
    the toolbar over the hint line below it. */
-@media (max-width: 700px) {
-  html.forging:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.tbar { top: auto !important; }
-}
 @media (prefers-reduced-motion: reduce) {
   .dpage.coll .collbar, .dpage.disc > .dfind, .dpage.dlist > .decktoolbar, .dpage .lists > .dtools.tbar { transition: none; }
 }
@@ -2005,17 +1994,7 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
 .lists > .jrail-wrap { width: 26px; }
 .jrail {
   width: 26px;
-  background: rgba(10, 10, 12, 0.42);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
   border-color: rgba(255, 255, 255, 0.14);
-  opacity: 0.03;
-  transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.jrail-wrap.awake > .jrail,
-.jrail:hover,
-.jrail:focus-within {
-  opacity: 1;
 }
 .jrail > button {
   display: flex;
@@ -2028,9 +2007,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   width: 15px;
   height: 15px;
   display: block;
-}
-@media (prefers-reduced-motion: reduce) {
-  .jrail { transition: none; }
 }
 @media (max-width: 700px) {
   .deckgrid > .lists:has(> .jrail-wrap),
@@ -2228,16 +2204,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   flex: 0 0 auto;
 }
 /* NOT LEGAL moves onto the card's corner: a tape, like COMMANDER on a collection card */
-.dgrid .dtile {
-  position: relative;
-}
 .dgrid .dtile .dlegal {
   position: absolute;
-  top: 6px;
-  left: -4px;
-  z-index: 3;
   margin: 0;
-  max-width: calc(100% - 12px);
   font-size: 10px;
   padding: 2px 7px;
   box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.4);
@@ -2360,12 +2329,9 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     overflow: visible;
   }
   .coll .chead2 .titlewrap > .ztitle {
-    flex: 0 1 auto;
     min-width: 0;
   }
   .coll .chead2 .titlewrap > .bindermenu {
-    flex: 0 1 auto;
-    min-width: 0;
     margin: 0 !important;
   }
   .coll .chead2 .titlewrap > .bindermenu .bmbtn {
@@ -2552,7 +2518,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
    area, in the gap between SUGGESTIONS and TO BUY), with a small arrow when the sheet is down so it is plain that
    there is a panel to pull up. Everything they held is still there. */
 .forgetop {
-  min-height: 48px;
   padding-top: 2px;
   padding-bottom: 2px;
 }
@@ -2567,22 +2532,11 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
     max-height: 58px !important;
   }
   html.forging .fsugg .fgrab {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 3;
-    width: 150px;
-    height: 44px;
     min-height: 44px !important;
     margin: 0 !important;
     padding-top: 3px !important;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: flex-start !important;
     gap: 1px !important;
-    background: transparent;
   }
   html.forging .fsugg:not(.up) .fgrab::after {
     content: '▲';
@@ -2601,9 +2555,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage .lists > .dtools.t
   }
   html.forging .fsugg .fpanes {
     margin-bottom: 0;
-  }
-  html.forging .fsugg .fpanes button {
-    min-height: 44px;
   }
 }
 
@@ -3068,14 +3019,10 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 /* "your decks:" never runs past one line, however many you keep with this commander. The names wrap rather than
    running off a phone's screen, so the +N more button is always reachable. */
 .vhero .vmeta .mydecks {
-  display: inline;
   white-space: normal !important;
   overflow-wrap: anywhere;
 }
 .vhero .vmeta .mydecks-more {
-  margin-left: 6px;
-  padding: 2px 6px;
-  min-height: 0;
   background: transparent;
   border: 1px dashed var(--u-line2, #2c2c34);
   border-radius: 3px;
@@ -4146,21 +4093,15 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
    Every copy of one card, one card each, side by side; pick one to change only that copy. Level 2: an Anton heading
    and a hard accent shadow frame it; the cards themselves stay flat, straight and uncovered (sacred card rule). The
    fanned hand is step 2. Phones: a bottom sheet like the card menu; wider screens: a centred panel. */
-.backdrop.handback { position: fixed; inset: 0; z-index: 1009; background: rgba(0, 0, 0, 0.66); }
+.backdrop.handback { position: fixed; inset: 0; z-index: 1009; }
 .yourcopies {
-  position: fixed; z-index: 1010; left: 50%; top: 50%; translate: -50% -50%;
-  width: min(920px, calc(100vw - 2 * var(--sp5)));
-  max-height: calc(100dvh - 2 * var(--sp5)); overflow-y: auto; overscroll-behavior: contain;
-  background: var(--bg); color: var(--text);
-  border: 2px solid var(--text); box-shadow: 8px 8px 0 var(--accent);
-  padding: var(--sp3) var(--sp4) var(--sp4);
+  position: fixed; z-index: 1010; left: 50%; top: 50%; translate: -50% -50%; overscroll-behavior: contain; color: var(--text);
 }
-.yourcopies .yc-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp2) var(--sp3); }
-.yourcopies .yc-head h2 { margin: 0; font-family: var(--an); font-weight: 400; font-size: 26px; letter-spacing: 0.02em; line-height: 1; }
+.yourcopies .yc-head h2 { margin: 0; font-family: var(--an); font-weight: 400; letter-spacing: 0.02em; line-height: 1; }
 .yourcopies .yc-n { display: inline-block; background: var(--hazard); color: var(--ink); padding: 0 6px; margin-left: 4px; font-size: 0.8em; }
-.yourcopies .yc-name { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.yourcopies .yc-scry { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
-.yourcopies .close { min-width: 44px; min-height: 44px; background: var(--text); color: var(--bg); border: 0; font-size: 18px; cursor: pointer; }
+.yourcopies .yc-name { min-width: 0; font-weight: 700; }
+.yourcopies .yc-scry { display: inline-flex; align-items: center; text-decoration: none; }
+.yourcopies .close { min-width: 44px; min-height: 44px; border: 0; font-size: 18px; cursor: pointer; }
 
 /* the copies: one sideways row that snaps a card at a time (swipe on phones, wheel / arrows on computers) */
 .yourcopies .yc-row {
@@ -4170,11 +4111,9 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 }
 .yourcopies .yc-row > li { flex: none; scroll-snap-align: center; }
 .yourcopies .yc-copy {
-  display: flex; flex-direction: column; gap: var(--sp1); width: 168px; padding: var(--sp1);
-  background: none; color: inherit; border: 2px solid transparent; cursor: pointer; text-align: left;
-  transition: translate 0.18s ease, border-color 0.18s ease;
+  display: flex; flex-direction: column; gap: var(--sp1); color: inherit; cursor: pointer; text-align: left;
 }
-.yourcopies .yc-copy.on { border-color: var(--hazard); translate: 0 -6px; }
+.yourcopies .yc-copy.on { translate: 0 -6px; }
 .yourcopies .yc-copy:focus-visible { outline: 3px solid var(--hazard); outline-offset: 2px; }
 .yourcopies .yc-img { display: block; width: 100%; aspect-ratio: 488 / 680; }
 .yourcopies .yc-img img { width: 100%; height: 100%; object-fit: contain; display: block; border-radius: 4.5% / 3.2%; }
@@ -4183,31 +4122,27 @@ main.dpage:not(.forgemain) .dstrip:not(:has(.dacts > *)):not(:has(.dstatus > *))
 .yourcopies .yc-more { align-self: center; font-family: 'Space Mono', monospace; color: var(--muted); padding: 0 var(--sp4); }
 
 /* this copy: what it is, then its controls */
-.yourcopies .yc-tools { border-top: 2px solid var(--raised); margin-top: var(--sp2); padding-top: var(--sp3); }
-.yourcopies .yc-which { margin: 0 0 var(--sp3); font-family: 'Space Mono', monospace; font-size: 13px; }
-.yourcopies .yc-acts { display: flex; flex-wrap: wrap; gap: var(--sp2); align-items: center; }
-.yourcopies .yc-acts .u-btn { min-height: 44px; }
+.yourcopies .yc-tools { padding-top: var(--sp3); }
+.yourcopies .yc-which { font-family: 'Space Mono', monospace; }
+.yourcopies .yc-acts { display: flex; }
 .yourcopies .yc-step { display: inline-flex; align-items: center; gap: var(--sp1); }
-.yourcopies .yc-step .u-btn { min-width: 44px; font-size: 20px; padding: 0; }
+.yourcopies .yc-step .u-btn { font-size: 20px; }
 .yourcopies .yc-qty { font-family: 'Space Mono', monospace; min-width: 3ch; text-align: center; }
-.yourcopies .yc-note { margin: var(--sp2) 0 0; color: var(--muted); }
-.yourcopies .yc-arts { list-style: none; margin: var(--sp3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp2); max-height: 300px; overflow-y: auto; }
+.yourcopies .yc-note { color: var(--muted); }
+.yourcopies .yc-arts { list-style: none; margin: var(--sp3) 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp2); overflow-y: auto; }
 .yourcopies .yc-arts button { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; padding: 2px; background: none; color: inherit; border: 2px solid transparent; cursor: pointer; }
 .yourcopies .yc-arts button[aria-pressed='true'] { border-color: var(--hazard); }
 .yourcopies .yc-arts img { width: 100%; border-radius: 4px; }
 .yourcopies .yc-arts small { font-family: 'Space Mono', monospace; font-size: 11px; }
 /* the undo note shows over the sheet */
-html:has(.yourcopies) .toast { z-index: 1020; }
-html:has(.yourcopies) .pillnav { translate: 0 140% !important; pointer-events: none !important; }
 
 @media (max-width: 700px) {
   .yourcopies {
-    left: 0; right: 0; top: auto; bottom: 0; translate: none; width: auto; max-height: 88dvh;
-    border-bottom: 0; box-shadow: 0 -4px 0 var(--accent);
+    left: 0; right: 0; top: auto; bottom: 0;
+    border-bottom: 0;
     padding-bottom: calc(var(--sp4) + env(safe-area-inset-bottom));
   }
-  .yourcopies .yc-head h2 { font-size: 22px; }
-  .yourcopies .yc-copy { width: 42vw; max-width: 180px; }
+  .yourcopies .yc-copy { max-width: 180px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .yourcopies .yc-copy { transition: none; }

@@ -19,12 +19,6 @@
   border-radius: 999px !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
 }
-.pillnav.dock-top.away {
-  transform: translate(-50%, calc(-100% - 16px)) !important;
-}
-.pillnav.dock-bottom.away {
-  transform: translate(-50%, calc(100% + 18px)) !important;
-}
 .pillnav:is(.dock-top, .dock-bottom):not(.floating):not(.collapsed) .island-membrane {
   border-radius: 999px !important;
 }
@@ -46,7 +40,6 @@
   background-color: rgba(12, 12, 16, 0.9) !important;
 }
 html.scrolling .pillnav:not(.open):not(.floating):not(.collapsed):not(.stretching) .island-membrane {
-  background-color: transparent !important;
   background-image: none !important;
 }
 .pillnav.forging-island {
@@ -172,11 +165,5 @@ html:has(.pillnav:is(.dock-left, .dock-right, .collapsed)) .stage {
   }
   html.forging .stage:has(> .pillnav.dock-top.forging-island:not(.collapsed)) {
     padding-top: calc(var(--island-h, 96px) + 16px) !important;
-  }
-  html.forging:has(.pillnav.dock-bottom:not(.away):not(.collapsed)) .fsugg:not(.up) {
-    bottom: calc(var(--island-h, 46px) + 16px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  html.forging:has(.pillnav.dock-bottom.forging-island:not(.away):not(.collapsed)) .fsugg:not(.up) {
-    bottom: calc(var(--island-h, 96px) + 16px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }

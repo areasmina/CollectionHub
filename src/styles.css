@@ -5009,8 +5009,6 @@ main {
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  background: var(--bg);
-  border: 2px solid var(--text);
   box-shadow: 5px 5px 0 var(--accent);
   animation: tbdrop 0.16s ease-out both;
 }
@@ -5192,63 +5190,6 @@ main {
 .bmbtn.alert {
   box-shadow: 4px 4px 0 var(--hazard);
 }
-.bmenu {
-  position: absolute;
-  z-index: 60;
-  left: 0;
-  top: calc(100% + 8px);
-  width: min(300px, calc(100vw - 32px));
-  display: flex;
-  flex-direction: column;
-  padding: 6px;
-  background: var(--paper);
-  color: #141414;
-  border: 2px solid var(--ink);
-  box-shadow: 5px 5px 0 var(--accent);
-  animation: tbdrop 0.16s ease-out both;
-}
-.bmenu button {
-  text-align: left;
-  min-height: 42px;
-  padding: 0 10px;
-  background: none;
-  border: 0;
-  font-family: var(--an);
-  font-size: 16px;
-  letter-spacing: 0.5px;
-  color: #141414;
-  cursor: pointer;
-}
-.bmenu button:hover,
-.bmenu button:focus-visible {
-  background: var(--ink);
-  color: var(--hazard);
-}
-.bmenu button small {
-  font-family: var(--se);
-  font-size: 12px;
-  color: #555;
-}
-.bmenu button.danger {
-  color: #b00010;
-}
-.bmenu button.alert {
-  background: var(--hazard);
-}
-.bmenu button:disabled {
-  opacity: 0.4;
-}
-.bmenu hr {
-  border: 0;
-  border-top: 1px dashed #999;
-  margin: 4px 0;
-  width: 100%;
-}
-.bmenu .hapnote {
-  margin: 4px 10px;
-  font-family: var(--se);
-  font-size: 12px;
-}
 
 /* ADD / REPLACE: one slim row */
 
@@ -5315,11 +5256,6 @@ main {
 /* the decks row scrolls sideways and ends with SEE ALL */
 
 /* Phones: the eye sits a little further right so its art shows past the letters */
-@media (max-width: 700px) {
-  .titlewrap > .eyedoodle {
-    left: 76%;
-  }
-}
 /* Phones: the logo moves up, no empty black band above it (owner's call, Nov 6) */
 
 /* A) Coverage line under the tool bar: where the 99 comes from */

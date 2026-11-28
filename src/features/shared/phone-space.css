@@ -26,15 +26,9 @@
   }
 
   /* 2. Compact masthead, hero, & My Decks bands */
-  .coll .chead2 {
-    padding: 2px 0 !important;
-  }
   .dlist .decksbar {
     padding: var(--mo-s1) 0 !important;
     margin: 0 !important;
-  }
-  .dlist .ctabs {
-    margin: var(--mo-s1) 0 !important;
   }
   .dlist .decktoolbar {
     margin: var(--mo-s1) 0 !important;
@@ -62,11 +56,6 @@
     min-width: 44px !important;
     min-height: 44px !important;
     justify-content: center;
-  }
-  .vhero {
-    padding: var(--mo-s2) 10px !important;
-    gap: var(--mo-s2) 14px !important;
-    margin-bottom: 6px !important;
   }
 
   /* 3. Single slim card/filter toolbar rows */

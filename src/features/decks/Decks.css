@@ -317,11 +317,6 @@
   position: relative;
 }
 .dgrid > li > .dlight {
-  position: absolute;
-  top: var(--s2);
-  right: var(--s2);
-  min-height: 28px;
-  padding: 0 var(--s2);
   border-width: 1px;
   font-size: 12px;
 }

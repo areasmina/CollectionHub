@@ -1,9 +1,6 @@
 /* Moved from src/tokens.css (cleanup Phase A, Nov 28): imported in its original order from src/app.css,
    unlayered as before, so nothing changes on screen. */
 /* ── Context-Adaptive Dynamic Island (Supaste fluid + Forge Assistant) ── */
-.pillnav {
-  transition: transform 0.28s var(--mo-ease-out), opacity 0.22s ease;
-}
 .pillnav .island-membrane {
   overflow: hidden;
   transition:

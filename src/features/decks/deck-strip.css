@@ -61,7 +61,6 @@ html:has(.pillnav.dock-top:not(.away):not(.collapsed)) .dpage.forgemain:not(:has
   .forgemain > .dstrip > .dstatus {
     flex: 1 1 100%;
     order: 0 !important;
-    font-size: 11px;
     line-height: 1.25;
     gap: 2px 8px;
     padding: 0 2px;

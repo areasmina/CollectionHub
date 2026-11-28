@@ -6,7 +6,6 @@
 @media (max-width: 700px) {
   .forgemain .lists > .dtools.tbar {
     display: flex !important;
-    flex-wrap: nowrap !important;
     align-items: center !important;
     gap: 4px !important;
   }

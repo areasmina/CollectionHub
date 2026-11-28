@@ -998,8 +998,6 @@ main.dpage {
 @media (max-width: 700px) {
   .vhero {
     grid-template-columns: 112px minmax(0, 1fr);
-    gap: var(--s3) var(--s4);
-    padding: var(--s5) 0 var(--s4);
     align-items: start;
   }
   .vhero .vinfo {
@@ -1507,16 +1505,12 @@ main.dpage {
 .shortitem-deck-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
   align-items: center;
 }
 .shortitem-deck-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
-  background: #0e0e10;
-  border: 1px solid var(--u-line2, #383838);
   font: 400 11px var(--u-mono, monospace);
   color: var(--u-text, #f2f2f2);
 }
@@ -1525,14 +1519,9 @@ main.dpage {
   border: none;
   padding: 0;
   margin: 0;
-  color: #61afef;
   font: inherit;
   cursor: pointer;
-  text-decoration: underline;
   text-underline-offset: 2px;
-}
-.shortitem-deck-tag button.decklink:hover {
-  color: #98c379;
 }
 .shortitem-deck-tag.this-deck {
   background: rgba(230, 0, 18, 0.12);
@@ -1761,12 +1750,7 @@ position: sticky !important; /* sticky also anchors the ⋮ menu, and the bar st
   font-family: var(--u-mono, monospace) !important;
 }
 .tbar .fbody .cfilter {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
   padding-top: 10px;
-  border-top: 1px solid #242424;
 }
 .tbar .fbody .cfilter .sbox {
   background: #181818;
@@ -5884,10 +5868,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 .dgrid.cgrid {
   gap: var(--s4);
 }
-.dgrid .dtile .cinfo {
-  padding: var(--s3);
-  gap: var(--s2);
-}
 .dgrid .dtile .nm b {
   font-family: var(--u-display);
   text-transform: uppercase;
@@ -6038,7 +6018,6 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
   flex-direction: column;
   gap: 0;
   pointer-events: auto;
-  border: 1px solid var(--u-line2);
 }
 .jrail > button {
   min-height: var(--tap);
@@ -6074,12 +6053,7 @@ ul.zlist:not(.zcompact) > li.zrow .acts .morebtn:hover {
 @media (max-width: 700px) {
   .lists > .jrail-wrap {
     position: fixed;
-    top: 50%;
     right: 4px;
-    bottom: auto;
-    transform: translateY(-50%);
-    z-index: 5;
-    display: none;
   }
   .lists > .jrail-wrap.on {
     display: block;

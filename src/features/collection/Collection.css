@@ -401,12 +401,10 @@
 }
 .id-sync-status-title {
   font: 700 12px/1 var(--u-display, sans-serif);
-  letter-spacing: 0.05em;
   color: #ffffff;
 }
 .id-sync-status-sub {
   font: 400 11px/1.2 var(--u-mono, monospace);
-  color: #888888;
 }
 .id-sync-refresh-btn {
   display: inline-flex;
@@ -446,7 +444,6 @@
 .id-sync-desc {
   margin: 0;
   font: 400 12px/1.4 var(--u-mono, monospace);
-  color: #bbbbbb;
 }
 .id-btn-miku-primary {
   display: inline-flex;
@@ -524,67 +521,15 @@
   letter-spacing: 0.05em;
   cursor: pointer;
 }
-.id-sync-code-label {
-  font: 700 10px/1 var(--u-mono, monospace);
-  letter-spacing: 0.08em;
-  color: #888888;
-  text-transform: uppercase;
-}
-.id-sync-code-chip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: #111114;
-  border: 1px solid #282830;
-  border-radius: 6px;
-  padding: 8px 12px;
-}
-.id-code-mono {
-  font: 700 13px/1 var(--u-mono, monospace);
-  color: var(--miku-green, #00f5a0);
-  letter-spacing: 0.08em;
-  word-break: break-all;
-}
-.id-code-copy-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  color: #ffffff;
-  font: 700 10px/1 var(--u-display, sans-serif);
-  padding: 5px 9px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-.id-code-copy-btn.copied {
-  background: var(--miku-green, #00f5a0);
-  color: #000000;
-  border-color: var(--miku-green, #00f5a0);
-}
 .id-sync-act-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 8px;
   margin-top: 4px;
 }
-.id-btn-act {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  color: #cccccc;
-  font: 600 11px/1 var(--u-display, sans-serif);
-  padding: 7px 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
 .id-btn-act:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
-}
-.id-btn-act.danger {
-  color: #ff5566;
-  border-color: rgba(255, 85, 102, 0.25);
 }
 .id-btn-act.danger:hover {
   background: rgba(255, 85, 102, 0.15);
@@ -705,9 +650,6 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 10px 14px;
-  margin: 12px 0 16px;
   background: #111115;
   border: 1.5px solid #22222a;
   border-radius: 4px;
@@ -752,7 +694,6 @@
 .list-tab.active {
   background: #ffffff;
   color: #000000;
-  border-color: #ffffff;
   box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.4);
 }
 
